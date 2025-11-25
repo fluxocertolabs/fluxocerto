@@ -1,0 +1,29 @@
+# family-finance Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-11-25
+
+## Active Technologies
+
+- TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Tailwind CSS 4.1.17, shadcn/ui, Dexie.js 4.2.1, Zustand 5.0.8 (001-monorepo-base-structure)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+npm test && npm run lint
+
+## Code Style
+
+TypeScript 5.9.3: Follow standard conventions
+
+## Recent Changes
+
+- 001-monorepo-base-structure: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Tailwind CSS 4.1.17, shadcn/ui, Dexie.js 4.2.1, Zustand 5.0.8
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
