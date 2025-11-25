@@ -39,7 +39,9 @@ Secret Manager:  N/A (no secrets for MVP)
   "dexie": "4.2.1",
   "zustand": "5.0.8",
   "recharts": "3.5.0",
-  "zod": "4.1.13"
+  "zod": "4.1.13",
+  "clsx": "2.1.1",
+  "tailwind-merge": "3.4.0"
 }
 ```
 

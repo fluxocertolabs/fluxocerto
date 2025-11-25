@@ -24,7 +24,7 @@
 
 **Purpose**: Initialize package manager and dependencies
 
-- [ ] T001 Create package.json with all dependencies and scripts in package.json
+- [ ] T001 Create package.json with all dependencies, scripts, engines (node >=20), and packageManager (pnpm@10.12.1) in package.json
 - [ ] T002 Run pnpm install to generate pnpm-lock.yaml
 
 ---
@@ -42,7 +42,7 @@
 - [ ] T007 [P] Create PostCSS configuration in postcss.config.js
 - [ ] T008 Create shadcn/ui configuration in components.json
 - [ ] T009 [P] Create Git exclusion patterns in .gitignore
-- [ ] T010 Create directory structure with .gitkeep files for src/components/ui/, src/pages/, src/stores/, src/db/, src/types/
+- [ ] T010 Create directory structure with .gitkeep files for src/components/ui/, src/pages/, src/stores/, src/db/, src/types/, public/, docs/
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -266,6 +266,8 @@ Task T019-T020: US5 (Vitest config)
 - Tailwind v4 uses CSS-first configuration with `@import "tailwindcss"`
 - ESLint 9+ requires flat config format (eslint.config.js, not .eslintrc)
 - shadcn/ui requires clsx and tailwind-merge dependencies for cn() utility
+- AGENTS.md already exists at repository root (pre-existing, not created by this feature)
+- public/ will contain vite.svg (default Vite asset, created by Vite init or manually)
 - Commit after each task or logical group
 - Stop at any checkpoint to validate independently
 

@@ -87,16 +87,16 @@ As a developer, I want test tooling configured, so that I can write and run unit
 
 ### Edge Cases
 
-- What happens when Node.js version is below 20? Error message should indicate minimum version requirement.
-- What happens when pnpm is not installed? Error or clear guidance should be provided.
-- How does the project handle different operating systems? Configuration should be cross-platform compatible.
+- **Node.js version below 20**: The `engines` field in package.json will cause pnpm to fail installation with a clear error message indicating minimum version requirement. Handled by FR-001.
+- **pnpm not installed**: The `packageManager` field in package.json enables Corepack to auto-install pnpm when using `corepack enable`. Additionally, README should document pnpm installation. Handled by FR-001.
+- **Cross-platform compatibility**: All configuration files use forward slashes for paths. No OS-specific scripts or assumptions. Vite, TypeScript, and ESLint configs are inherently cross-platform. Handled by FR-015.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: Repository MUST include a `package.json` with all required dependencies and scripts
-- **FR-002**: Repository MUST use pnpm as the package manager with a `pnpm-lock.yaml` file
+- **FR-001**: Repository MUST include a `package.json` with all required dependencies, scripts, `engines` field (Node.js ≥20), and `packageManager` field (pnpm@10+)
+- **FR-002**: Repository MUST use pnpm as the package manager and include `pnpm-lock.yaml` for reproducible builds
 - **FR-003**: Repository MUST include TypeScript configuration (`tsconfig.json`) with strict mode enabled
 - **FR-004**: Repository MUST include Vite configuration (`vite.config.ts`) with React plugin and path aliases
 - **FR-005**: Repository MUST include Tailwind CSS v4 configuration (`tailwind.config.ts`) with design system tokens
@@ -108,7 +108,8 @@ As a developer, I want test tooling configured, so that I can write and run unit
 - **FR-011**: Repository MUST include `.gitignore` with appropriate exclusions for Node.js, Vite, and IDE files
 - **FR-012**: Repository MUST render a minimal placeholder when the dev server runs (empty state or "Family Finance" title)
 - **FR-013**: Repository MUST use exact pinned versions for all dependencies (no `^`, `~`, `*`, or `latest`)
-- **FR-014**: Repository MUST include `pnpm-lock.yaml` to ensure reproducible builds
+- **FR-014**: Repository MUST include `public/` directory with default Vite assets and `docs/` directory for documentation
+- **FR-015**: All configuration files MUST use cross-platform compatible paths (forward slashes, no OS-specific assumptions)
 
 ### Key Entities
 
@@ -127,6 +128,8 @@ As a developer, I want test tooling configured, so that I can write and run unit
 - zustand: 5.0.8
 - recharts: 3.5.0
 - zod: 4.1.13
+- clsx: 2.1.1 *(required for shadcn/ui cn() utility)*
+- tailwind-merge: 3.4.0 *(required for shadcn/ui cn() utility)*
 
 **Development**:
 - typescript: 5.9.3
@@ -140,7 +143,7 @@ As a developer, I want test tooling configured, so that I can write and run unit
 
 ### Measurable Outcomes
 
-- **SC-001**: Time from clone to running dev server is under 2 minutes on a standard development machine
+- **SC-001**: Time from clone to running dev server is under 2 minutes (assuming 50+ Mbps internet, SSD storage, 8GB+ RAM)
 - **SC-002**: All npm scripts (`dev`, `build`, `lint`, `typecheck`, `test`) execute without errors on a fresh install
 - **SC-003**: TypeScript compilation reports zero errors on the base structure
 - **SC-004**: ESLint reports zero errors or warnings on the base structure
