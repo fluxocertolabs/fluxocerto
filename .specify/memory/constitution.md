@@ -9,16 +9,58 @@
 ## TECH STACK
 
 ```
-Language:        TypeScript 5.x
-Framework:       React 19 + Vite 6
-Database:        IndexedDB (via Dexie.js) - local-first
-Testing:         Vitest + React Testing Library
-Build Tool:      Vite
-Package Manager: pnpm
+Language:        TypeScript 5.9.3
+Framework:       React 19.2.0 + Vite 7.2.4
+Database:        IndexedDB (via Dexie.js 4.2.1) - local-first
+State:           Zustand 5.0.8
+UI:              Tailwind CSS 4.1.17 + shadcn/ui
+Charts:          Recharts 3.5.0
+Testing:         Vitest 4.0.14 + React Testing Library 16.3.0
+Validation:      Zod 4.1.13
+Build Tool:      Vite 7.2.4
+Package Manager: pnpm 10+
 CI/CD:           GitHub Actions (future)
 Deployment:      Local development only (MVP), Vercel (future)
 Secret Manager:  N/A (no secrets for MVP)
 ```
+
+---
+
+## PINNED DEPENDENCIES
+
+> **IMPORTANT**: Always use exact pinned versions. Never use `@latest`, `^`, or `~`.
+> When adding new dependencies, check npm for the current latest version and pin it exactly.
+
+### Production Dependencies
+```json
+{
+  "react": "19.2.0",
+  "react-dom": "19.2.0",
+  "dexie": "4.2.1",
+  "zustand": "5.0.8",
+  "recharts": "3.5.0",
+  "zod": "4.1.13"
+}
+```
+
+### Development Dependencies
+```json
+{
+  "typescript": "5.9.3",
+  "vite": "7.2.4",
+  "@vitejs/plugin-react": "5.1.1",
+  "tailwindcss": "4.1.17",
+  "vitest": "4.0.14",
+  "@testing-library/react": "16.3.0"
+}
+```
+
+### Version Update Protocol
+1. **Before adding any dependency**: Run `npm view <package> version` to get latest
+2. **Pin exactly**: Use `pnpm add <package>@<version>` with exact version
+3. **No floating versions**: Never use `^`, `~`, `*`, or `latest`
+4. **Document updates**: When updating versions, update this section
+5. **Last verified**: 2025-11-25
 
 ---
 
@@ -86,7 +128,7 @@ family-finance/
 ├── package.json           # Dependencies
 ├── tsconfig.json          # TypeScript config
 ├── vite.config.ts         # Vite config
-├── tailwind.config.js     # Tailwind config
+├── tailwind.config.ts     # Tailwind config (v4 CSS-first)
 ├── components.json        # shadcn/ui config
 └── AGENTS.md              # AI collaboration protocols
 ```
@@ -98,7 +140,7 @@ family-finance/
 ### Prerequisites
 ```bash
 Node.js 20+
-pnpm 9+
+pnpm 10+
 ```
 
 ### Initial Setup
@@ -291,11 +333,11 @@ rm -rf node_modules/.vite
 ## KEY FILES & DIRECTORIES
 
 ### Configuration Files
-- `vite.config.ts` - Vite bundler config
-- `tsconfig.json` - TypeScript config
-- `tailwind.config.js` - Tailwind CSS config
+- `vite.config.ts` - Vite 7 bundler config
+- `tsconfig.json` - TypeScript 5.9 config
+- `tailwind.config.ts` - Tailwind CSS v4 config
 - `components.json` - shadcn/ui config
-- `.eslintrc.cjs` - ESLint config
+- `eslint.config.js` - ESLint flat config (ESLint 9+)
 
 ### Critical Source Files
 - `src/main.tsx` - App entry point
@@ -492,11 +534,12 @@ function calculateCashflow(
 - Works offline
 - Easy to migrate to cloud later (Dexie.js has sync adapters)
 
-### Why React + Vite (not Next.js)?
+### Why React 19 + Vite 7 (not Next.js)?
 - SPA is sufficient (no SEO needed)
 - Simpler setup for local-first app
-- Faster development iteration
+- Faster development iteration with Vite 7's improved HMR
 - No server-side complexity
+- React 19 concurrent features for smooth UI
 
 ### Why IndexedDB (via Dexie.js)?
 - Structured data storage in browser
