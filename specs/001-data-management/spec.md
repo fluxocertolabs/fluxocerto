@@ -110,7 +110,7 @@ The user needs to permanently remove an entity that was added by mistake or is n
 - **FR-006**: System MUST validate that account name is not empty
 
 **Projects (Income Sources):**
-- **FR-007**: System MUST allow users to create projects with name, amount, payment day (1-31), frequency (weekly/biweekly/monthly), certainty level (guaranteed/probable/uncertain), and active status
+- **FR-007**: System MUST allow users to create projects with name, amount, payment day (1-31), frequency (weekly/biweekly/monthly/one-time), certainty level (guaranteed/uncertain), and active status
 - **FR-008**: System MUST allow users to view all their projects
 - **FR-009**: System MUST allow users to update any field of a project
 - **FR-010**: System MUST allow users to delete projects
@@ -148,13 +148,13 @@ The user needs to permanently remove an entity that was added by mistake or is n
 
 ### Key Entities
 
-- **Bank Account**: Represents a financial account at a bank or institution. Key attributes: unique identifier, name, account type (checking/savings/investment), current balance. No relationships to other entities in this feature.
+- **Bank Account**: Represents a financial account at a bank or institution. Key attributes: unique identifier, name, account type (checking/savings/investment), current balance (stored in cents as integer). No relationships to other entities in this feature.
 
-- **Project**: Represents a source of income (job, freelance work, side gig). Key attributes: unique identifier, name, expected amount per payment, payment day of month, payment frequency (weekly/biweekly/monthly), certainty level indicating how reliable the income is (guaranteed/probable/uncertain), active status. No relationships to other entities in this feature.
+- **Project**: Represents a source of income (job, freelance work, side gig). Key attributes: unique identifier, name, expected amount per payment (stored in cents as integer), payment day of month, payment frequency (weekly/biweekly/monthly/one-time), certainty level indicating how reliable the income is (guaranteed/uncertain), active status. No relationships to other entities in this feature.
 
-- **Fixed Expense**: Represents a recurring bill or expense. Key attributes: unique identifier, name, amount, due day of month, active status. No relationships to other entities in this feature.
+- **Fixed Expense**: Represents a recurring bill or expense. Key attributes: unique identifier, name, amount (stored in cents as integer), due day of month, active status. No relationships to other entities in this feature.
 
-- **Credit Card**: Represents a credit card with a statement balance due. Key attributes: unique identifier, name, current statement balance, due day of month. No relationships to other entities in this feature.
+- **Credit Card**: Represents a credit card with a statement balance due. Key attributes: unique identifier, name, current statement balance (stored in cents as integer), due day of month. No relationships to other entities in this feature.
 
 ## Success Criteria *(mandatory)*
 
@@ -175,5 +175,5 @@ The user needs to permanently remove an entity that was added by mistake or is n
 - The application will be used by a single user (no multi-user support required)
 - Currency is assumed to be the user's local currency (no currency conversion)
 - Payment frequencies are limited to weekly, biweekly, and monthly (no custom frequencies)
-- Certainty levels are predefined categories, not custom user-defined values
+- Certainty levels are predefined categories (guaranteed/uncertain), not custom user-defined values
 - All monetary amounts are stored as numbers (decimal precision handling is implementation detail)

@@ -37,6 +37,7 @@ Secret Manager:  N/A (no secrets for MVP)
   "react": "19.2.0",
   "react-dom": "19.2.0",
   "dexie": "4.2.1",
+  "dexie-react-hooks": "4.2.0",
   "zustand": "5.0.8",
   "recharts": "3.5.0",
   "zod": "4.1.13",

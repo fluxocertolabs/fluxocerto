@@ -69,7 +69,7 @@ src/
     └── fixtures/        # Test data factories
 ```
 
-**Structure Decision**: Single unified finance store (not per-entity stores) to simplify cross-entity operations and maintain consistency. Dexie database in `src/db/index.ts` with all four tables. Zod schemas as single source of truth in `src/types/index.ts`.
+**Structure Decision**: Single unified finance store (not per-entity stores) to simplify cross-entity operations and maintain consistency. Dexie database in `src/db/index.ts` with all four tables. Zod schemas as single source of truth for validation AND TypeScript types in `src/types/index.ts` (note: constitution references `src/db/schema.ts` for data model, but this feature uses `src/db/index.ts` for Dexie schema definition and `src/types/index.ts` for Zod schemas/types).
 
 ## Architecture Decisions
 

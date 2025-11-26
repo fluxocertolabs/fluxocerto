@@ -143,10 +143,11 @@
 
 **Purpose**: Validation, error handling, and final verification
 
-- [ ] T028 Add comprehensive error handling for QuotaExceededError, ConstraintError, and InvalidStateError in src/stores/finance-store.ts
+- [ ] T028 Add comprehensive error handling for QuotaExceededError, ConstraintError, InvalidStateError, and IndexedDB unavailability with user-facing error messages in src/stores/finance-store.ts
 - [ ] T029 Verify all Zod validation error messages match spec requirements (see data-model.md validation rules)
 - [ ] T030 Run quickstart.md validation scenarios to verify end-to-end functionality
 - [ ] T031 Verify IndexedDB data persistence across browser sessions
+- [ ] T032 Verify useLiveQuery reactivity: confirm UI auto-updates when IndexedDB data changes without manual refresh
 
 ---
 
