@@ -55,7 +55,7 @@ A user wants to view all their financial entities organized by type. They can se
 
 **Acceptance Scenarios**:
 
-1. **Given** the user has financial data, **When** they access data management, **Then** they see organized sections for each entity type (accounts, projects, expenses, credit cards)
+1. **Given** the user has financial data, **When** they navigate to `/manage`, **Then** they see a tabbed interface with tabs for each entity type (Accounts, Projects, Expenses, Cards)
 2. **Given** the user views the projects list, **When** some projects are active and some inactive, **Then** active and inactive projects are visually distinguished
 3. **Given** the user views the expenses list, **When** some expenses are active and some inactive, **Then** active and inactive expenses are visually distinguished
 4. **Given** the user is viewing any entity list, **When** they scroll on mobile, **Then** the list remains readable and usable
@@ -125,8 +125,8 @@ A user wants to permanently remove a financial entity they no longer need. They 
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a way to access data management from the dashboard empty state
-- **FR-002**: System MUST provide a way to access data management from the main dashboard when data exists
+- **FR-001**: System MUST provide a CTA button in the dashboard empty state that navigates to the `/manage` route
+- **FR-002**: System MUST provide persistent navigation (header or similar) allowing access to `/manage` from the dashboard when data exists
 - **FR-003**: System MUST allow users to add bank accounts with name (required, max 100 chars), type (checking/savings/investment), and balance (non-negative number)
 - **FR-004**: System MUST allow users to add projects with name (required, max 100 chars), amount (positive number), payment day (1-31), frequency (weekly/biweekly/monthly), and certainty (guaranteed/probable/uncertain)
 - **FR-005**: System MUST set new projects to active by default
@@ -166,6 +166,12 @@ A user wants to permanently remove a financial entity they no longer need. They 
 - **SC-007**: Users can navigate between data management and dashboard with a single action
 - **SC-008**: 100% of invalid inputs are prevented from being saved (no negative amounts, empty names, or out-of-range days)
 
+## Clarifications
+
+### Session 2025-11-26
+
+- Q: How should users navigate between the Dashboard and Data Management? → A: Dedicated page with tab navigation (`/manage` route with tabs for Accounts, Projects, Expenses, Cards)
+
 ## Assumptions
 
 - Users have a modern browser with IndexedDB support
@@ -173,4 +179,4 @@ A user wants to permanently remove a financial entity they no longer need. They 
 - Maximum of approximately 20 entities per type is a reasonable upper bound
 - shadcn/ui components will be installed as needed (currently empty ui folder)
 - The existing Zustand store and Dexie.js database layer are stable and tested
-- Navigation pattern will be determined during implementation (sidebar, tabs, or modal approach)
+- Navigation uses a dedicated `/manage` route with tab navigation for each entity type (Accounts, Projects, Expenses, Cards); dashboard links to this route via CTA button and persistent navigation element
