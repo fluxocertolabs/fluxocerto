@@ -3,13 +3,13 @@
 **Feature Branch**: `005-data-management-ui`  
 **Created**: 2025-11-26  
 **Status**: Draft  
-**Input**: User description: "Build the Data Management UI for Family Finance - the forms and interfaces that allow users to manage their financial data (bank accounts, income sources/projects, fixed expenses, and credit cards)."
+**Input**: User description: "Build the Data Management UI for Family Finance - the forms and interfaces that allow users to manage their financial data (bank accounts, projects, fixed expenses, and credit cards)."
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Initial Financial Setup (Priority: P1)
 
-A first-time user opens the app and sees the empty state on the dashboard. The empty state provides clear guidance and a call-to-action to add their first financial data. The user can add bank accounts, income sources (projects), fixed expenses, and credit cards through intuitive forms. After adding data, the user returns to the dashboard to see their cashflow projection.
+A first-time user opens the app and sees the empty state on the dashboard. The empty state provides clear guidance and a call-to-action to add their first financial data. The user can add bank accounts, projects (income sources), fixed expenses, and credit cards through intuitive forms. After adding data, the user returns to the dashboard to see their cashflow projection.
 
 **Why this priority**: This is the core value proposition - without data entry, the app has no utility. Users must be able to input their financial information before they can see any cashflow projections. This enables the MVP experience.
 
@@ -128,7 +128,7 @@ A user wants to permanently remove a financial entity they no longer need. They 
 - **FR-001**: System MUST provide a CTA button in the dashboard empty state that navigates to the `/manage` route
 - **FR-002**: System MUST provide persistent navigation (header or similar) allowing access to `/manage` from the dashboard when data exists
 - **FR-003**: System MUST allow users to add bank accounts with name (required, max 100 chars), type (checking/savings/investment), and balance (non-negative number)
-- **FR-004**: System MUST allow users to add projects with name (required, max 100 chars), amount (positive number), payment day (1-31), frequency (weekly/biweekly/monthly), and certainty (guaranteed/probable/uncertain)
+- **FR-004**: System MUST allow users to add projects with name (required, max 100 chars), amount (positive number), payment day (1-31), frequency (weekly/biweekly/monthly/one-time), and certainty (guaranteed/uncertain)
 - **FR-005**: System MUST set new projects to active by default
 - **FR-006**: System MUST allow users to add fixed expenses with name (required, max 100 chars), amount (positive number), and due day (1-31)
 - **FR-007**: System MUST set new expenses to active by default
@@ -149,7 +149,7 @@ A user wants to permanently remove a financial entity they no longer need. They 
 ### Key Entities
 
 - **Bank Account**: Represents a financial account (checking, savings, or investment) with a current balance. Only checking accounts contribute to starting balance in cashflow calculations.
-- **Project (Income Source)**: Represents recurring income with payment schedule and certainty level. Can be active or inactive. Inactive projects are excluded from cashflow calculations.
+- **Project**: Represents recurring income with payment schedule and certainty level. Can be active or inactive. Inactive projects are excluded from cashflow calculations.
 - **Fixed Expense**: Represents recurring bills or expenses with a due date. Can be active or inactive. Inactive expenses are excluded from cashflow calculations.
 - **Credit Card**: Represents a credit card with monthly statement balance to be paid. Statement balance represents the amount due, not credit limit.
 
@@ -157,9 +157,9 @@ A user wants to permanently remove a financial entity they no longer need. They 
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can complete initial setup (add at least one of each entity type) in under 5 minutes
-- **SC-002**: Users can complete monthly balance updates (update all credit card and bank account balances) in under 2 minutes
-- **SC-003**: All form validation errors are displayed inline within 100ms of user input
+- **SC-001**: Users should be able to complete initial setup (add at least one of each entity type) in under 5 minutes (UX goal, not hard requirement)
+- **SC-002**: Users should be able to complete monthly balance updates (update all credit card and bank account balances) in under 2 minutes (UX goal, not hard requirement)
+- **SC-003**: All form validation errors are displayed inline immediately as user types (leveraging browser event loop)
 - **SC-004**: All data changes reflect in the dashboard within 1 second of saving
 - **SC-005**: Data persists across browser sessions (verified by refresh)
 - **SC-006**: All forms are usable on mobile screens (minimum 320px width)

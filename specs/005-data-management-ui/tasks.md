@@ -39,6 +39,7 @@
 - [ ] T009 [P] Create `src/components/manage/shared/entity-empty-state.tsx` for empty list states
 - [ ] T010 [P] Create `src/components/manage/shared/delete-confirmation.tsx` using AlertDialog
 - [ ] T011 [P] Create `src/components/manage/shared/inline-edit-input.tsx` for quick balance updates
+- [ ] T012-pre [P] Create `src/components/manage/shared/storage-error-toast.tsx` for IndexedDB error handling with retry option
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
