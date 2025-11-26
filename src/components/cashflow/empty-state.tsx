@@ -3,6 +3,8 @@
  * Provides guidance on how to get started.
  */
 
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export function EmptyState() {
@@ -43,6 +45,11 @@ export function EmptyState() {
         Start by adding your bank accounts, income sources, and expenses to see
         your 30-day cashflow projection.
       </p>
+
+      {/* CTA Button */}
+      <Button asChild size="lg" className="mb-6">
+        <Link to="/manage">Get Started</Link>
+      </Button>
 
       {/* Action hints */}
       <div className="flex flex-col sm:flex-row gap-3 text-sm">

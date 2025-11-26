@@ -1,0 +1,127 @@
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { CreditCardInputSchema, type CreditCard, type CreditCardInput } from '@/types'
+
+interface CreditCardFormProps {
+  card?: CreditCard
+  onSubmit: (data: CreditCardInput) => Promise<void>
+  onCancel: () => void
+  isSubmitting: boolean
+}
+
+export function CreditCardForm({
+  card,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: CreditCardFormProps) {
+  const [name, setName] = useState(card?.name ?? '')
+  const [statementBalance, setStatementBalance] = useState(
+    card?.statementBalance?.toString() ?? ''
+  )
+  const [dueDay, setDueDay] = useState(card?.dueDay?.toString() ?? '')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrors({})
+
+    const formData = {
+      name: name.trim(),
+      statementBalance: parseFloat(statementBalance) || 0,
+      dueDay: parseInt(dueDay, 10) || 0,
+    }
+
+    const result = CreditCardInputSchema.safeParse(formData)
+    if (!result.success) {
+      const fieldErrors = result.error.flatten().fieldErrors
+      setErrors(
+        Object.fromEntries(
+          Object.entries(fieldErrors).map(([k, v]) => [k, v?.[0] ?? ''])
+        )
+      )
+      return
+    }
+
+    await onSubmit(result.data)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid gap-2">
+        <Label htmlFor="name">Card Name</Label>
+        <Input
+          id="name"
+          type="text"
+          placeholder="e.g., Amex Gold"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={isSubmitting}
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? 'name-error' : undefined}
+        />
+        {errors.name && (
+          <p id="name-error" className="text-sm text-destructive">
+            {errors.name}
+          </p>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="statementBalance">Statement Balance</Label>
+          <Input
+            id="statementBalance"
+            type="number"
+            placeholder="0.00"
+            value={statementBalance}
+            onChange={(e) => setStatementBalance(e.target.value)}
+            min="0"
+            step="0.01"
+            disabled={isSubmitting}
+            aria-invalid={!!errors.statementBalance}
+            aria-describedby={errors.statementBalance ? 'statementBalance-error' : undefined}
+          />
+          {errors.statementBalance && (
+            <p id="statementBalance-error" className="text-sm text-destructive">
+              {errors.statementBalance}
+            </p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="dueDay">Due Day</Label>
+          <Input
+            id="dueDay"
+            type="number"
+            placeholder="1-31"
+            value={dueDay}
+            onChange={(e) => setDueDay(e.target.value)}
+            min="1"
+            max="31"
+            disabled={isSubmitting}
+            aria-invalid={!!errors.dueDay}
+            aria-describedby={errors.dueDay ? 'dueDay-error' : undefined}
+          />
+          {errors.dueDay && (
+            <p id="dueDay-error" className="text-sm text-destructive">
+              {errors.dueDay}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : card ? 'Update' : 'Add Credit Card'}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
