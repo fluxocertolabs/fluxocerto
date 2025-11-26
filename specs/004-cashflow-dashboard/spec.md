@@ -96,11 +96,11 @@ A user wants to understand what happens on a specific day - which income arrives
 - **FR-002**: System MUST render two distinct visual elements for optimistic and pessimistic scenarios using green for optimistic and amber/orange for pessimistic, with area fills under each line.
 - **FR-003**: System MUST display the X-axis as dates spanning the next 30 days from today.
 - **FR-004**: System MUST display the Y-axis as currency values with appropriate formatting.
-- **FR-005**: System MUST visually highlight danger days (negative balance) with distinct warning indicators.
+- **FR-005**: System MUST visually highlight danger days (negative balance) with red shading/reference areas on the chart (see US2 acceptance scenarios for details).
 - **FR-006**: System MUST display a summary statistics panel with: starting balance, total projected income (both scenarios), total projected expenses, projected ending balance (both scenarios), and danger day count.
 - **FR-007**: System MUST show day-level details when user interacts with a specific day on the chart.
 - **FR-008**: System MUST display an empty state with guidance when user has no financial data configured.
-- **FR-009**: System MUST load and render the dashboard within 1 second of navigation.
+- **FR-009**: System MUST load and render the dashboard within 1 second of navigation (total time from route change to visible chart, including data fetch and cashflow calculation).
 - **FR-009a**: System MUST display skeleton/shimmer placeholders (matching chart and summary panel shapes) while data loads.
 - **FR-010**: System MUST be responsive, displaying correctly on desktop and mobile screen sizes.
 - **FR-011**: System MUST use data from the existing Zustand store and Dexie.js database.

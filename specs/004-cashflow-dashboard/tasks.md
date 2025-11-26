@@ -29,8 +29,8 @@
 
 - [ ] T001 Install Recharts 3.5.0 dependency with `pnpm add recharts@3.5.0`
 - [ ] T002 Create cashflow component directory structure at src/components/cashflow/
-- [ ] T003 [P] Create view-layer types in src/components/cashflow/types.ts (ChartDataPoint, DangerRange, SummaryStats)
-- [ ] T004 [P] Create currency/date formatting utilities in src/lib/format.ts
+- [ ] T003 [P] Create view-layer types in src/components/cashflow/types.ts (ChartDataPoint, DangerRange, SummaryStats) [after T002]
+- [ ] T004 [P] Create currency/date formatting utilities in src/lib/format.ts (handle edge cases: large numbers with abbreviations, decimal precision for cents, locale-aware formatting) [after T002]
 
 ---
 
@@ -43,9 +43,9 @@
 - [ ] T005 Create useCashflowProjection hook in src/hooks/use-cashflow-projection.ts
 - [ ] T006 Create chart data transformation function (transformToChartData) in src/hooks/use-cashflow-projection.ts
 - [ ] T007 Create danger range consolidation function (getDangerRanges) in src/hooks/use-cashflow-projection.ts
-- [ ] T008 [P] Create loading skeleton component in src/components/cashflow/loading-skeleton.tsx
+- [ ] T008 [P] Create loading skeleton component (FR-009a) with shimmer placeholders matching chart and summary panel shapes in src/components/cashflow/loading-skeleton.tsx
 - [ ] T009 [P] Create empty state component in src/components/cashflow/empty-state.tsx
-- [ ] T010 [P] Create error state component in src/components/cashflow/error-state.tsx
+- [ ] T010 [P] Create error state component with inline error message and retry button click handler in src/components/cashflow/error-state.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -122,9 +122,20 @@
 - [ ] T032 [US4] Implement income events list in tooltip in src/components/cashflow/chart-tooltip.tsx
 - [ ] T033 [US4] Implement expense events list in tooltip in src/components/cashflow/chart-tooltip.tsx
 - [ ] T034 [US4] Handle empty events state (no income/expense on day) in src/components/cashflow/chart-tooltip.tsx
-- [ ] T035 [US4] Integrate ChartTooltip with CashflowChart Tooltip component in src/components/cashflow/cashflow-chart.tsx
+- [ ] T035 [US4] Integrate ChartTooltip with CashflowChart Tooltip component in src/components/cashflow/cashflow-chart.tsx (ensure mobile tap triggers tooltip via Recharts click event)
 
 **Checkpoint**: User Story 4 complete - day details accessible via hover/tap
+
+---
+
+## Phase 6.5: Integration Validation
+
+**Purpose**: Verify data flow integrity from engine to display (FR-011, FR-012, SC-006)
+
+- [ ] T035a [Validation] Verify useCashflowProjection hook correctly retrieves data from Dexie.js via existing hooks (FR-011)
+- [ ] T035b [Validation] Verify chart data transformation matches cashflow engine output exactly (FR-012, SC-006)
+
+**Checkpoint**: Data integrity validated - engine calculations match displayed values
 
 ---
 
@@ -170,8 +181,8 @@
 **Phase 1 (Setup)**:
 ```bash
 # After T002 completes, these can run in parallel:
-Task T003: "Create view-layer types in src/components/cashflow/types.ts"
-Task T004: "Create currency/date formatting utilities in src/lib/format.ts"
+Task T003: "Create view-layer types in src/components/cashflow/types.ts" [after T002]
+Task T004: "Create currency/date formatting utilities in src/lib/format.ts" [after T002]
 ```
 
 **Phase 2 (Foundational)**:
