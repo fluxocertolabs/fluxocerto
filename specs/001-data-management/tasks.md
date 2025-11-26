@@ -25,8 +25,8 @@
 
 **Purpose**: Project initialization and additional dependencies
 
-- [ ] T001 Install dexie-react-hooks@4.2.0 dependency via `pnpm add dexie-react-hooks@4.2.0`
-- [ ] T002 Verify existing dependencies (dexie@4.2.1, zustand@5.0.8, zod@4.1.13) via `pnpm list dexie zustand zod`
+- [X] T001 Install dexie-react-hooks@4.2.0 dependency via `pnpm add dexie-react-hooks@4.2.0`
+- [X] T002 Verify existing dependencies (dexie@4.2.1, zustand@5.0.8, zod@4.1.13) via `pnpm list dexie zustand zod`
 
 ---
 
@@ -38,23 +38,23 @@
 
 ### Type System (Zod Schemas)
 
-- [ ] T003 [P] Create BankAccount Zod schemas (BankAccountInputSchema, BankAccountSchema) and types in src/types/index.ts
-- [ ] T004 [P] Create Project Zod schemas (ProjectInputSchema, ProjectSchema) and types in src/types/index.ts
-- [ ] T005 [P] Create FixedExpense Zod schemas (FixedExpenseInputSchema, FixedExpenseSchema) and types in src/types/index.ts
-- [ ] T006 [P] Create CreditCard Zod schemas (CreditCardInputSchema, CreditCardSchema) and types in src/types/index.ts
+- [X] T003 [P] Create BankAccount Zod schemas (BankAccountInputSchema, BankAccountSchema) and types in src/types/index.ts
+- [X] T004 [P] Create Project Zod schemas (ProjectInputSchema, ProjectSchema) and types in src/types/index.ts
+- [X] T005 [P] Create FixedExpense Zod schemas (FixedExpenseInputSchema, FixedExpenseSchema) and types in src/types/index.ts
+- [X] T006 [P] Create CreditCard Zod schemas (CreditCardInputSchema, CreditCardSchema) and types in src/types/index.ts
 
 ### Database Layer (Dexie.js)
 
-- [ ] T007 Create FinanceDB class extending Dexie with typed tables (accounts, projects, expenses, creditCards) in src/db/index.ts
-- [ ] T008 Define version 1 schema with indexes (id, name, type for accounts; id, name, isActive for projects/expenses; id, name for creditCards) in src/db/index.ts
-- [ ] T009 Export db singleton instance from src/db/index.ts
+- [X] T007 Create FinanceDB class extending Dexie with typed tables (accounts, projects, expenses, creditCards) in src/db/index.ts
+- [X] T008 Define version 1 schema with indexes (id, name, type for accounts; id, name, isActive for projects/expenses; id, name for creditCards) in src/db/index.ts
+- [X] T009 Export db singleton instance from src/db/index.ts
 
 ### Store Layer (Zustand)
 
-- [ ] T010 Create Result<T> type for action return values in src/stores/finance-store.ts
-- [ ] T011 Create FinanceStore interface with all action signatures per store-api.md contract in src/stores/finance-store.ts
-- [ ] T012 Create useFinanceStore hook skeleton with empty action implementations in src/stores/finance-store.ts
-- [ ] T013 Create store exports in src/stores/index.ts
+- [X] T010 Create Result<T> type for action return values in src/stores/finance-store.ts
+- [X] T011 Create FinanceStore interface with all action signatures per store-api.md contract in src/stores/finance-store.ts
+- [X] T012 Create useFinanceStore hook skeleton with empty action implementations in src/stores/finance-store.ts
+- [X] T013 Create store exports in src/stores/index.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -68,10 +68,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Implement addAccount action with Zod validation, UUID generation, timestamps, and Dexie persistence in src/stores/finance-store.ts
-- [ ] T015 [P] [US1] Implement addProject action with Zod validation, UUID generation, timestamps, isActive default, and Dexie persistence in src/stores/finance-store.ts
-- [ ] T016 [P] [US1] Implement addExpense action with Zod validation, UUID generation, timestamps, isActive default, and Dexie persistence in src/stores/finance-store.ts
-- [ ] T017 [P] [US1] Implement addCreditCard action with Zod validation, UUID generation, timestamps, and Dexie persistence in src/stores/finance-store.ts
+- [X] T014 [P] [US1] Implement addAccount action with Zod validation, UUID generation, timestamps, and Dexie persistence in src/stores/finance-store.ts
+- [X] T015 [P] [US1] Implement addProject action with Zod validation, UUID generation, timestamps, isActive default, and Dexie persistence in src/stores/finance-store.ts
+- [X] T016 [P] [US1] Implement addExpense action with Zod validation, UUID generation, timestamps, isActive default, and Dexie persistence in src/stores/finance-store.ts
+- [X] T017 [P] [US1] Implement addCreditCard action with Zod validation, UUID generation, timestamps, and Dexie persistence in src/stores/finance-store.ts
 
 **Checkpoint**: User Story 1 complete - users can add all entity types and data persists via IndexedDB
 
@@ -85,8 +85,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [P] [US2] Implement updateAccount action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
-- [ ] T019 [P] [US2] Implement updateCreditCard action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
+- [X] T018 [P] [US2] Implement updateAccount action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
+- [X] T019 [P] [US2] Implement updateCreditCard action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
 
 **Checkpoint**: User Story 2 complete - users can update account and credit card balances
 
@@ -100,8 +100,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T020 [P] [US3] Implement toggleProjectActive action with existence check, isActive flip, and updatedAt timestamp in src/stores/finance-store.ts
-- [ ] T021 [P] [US3] Implement toggleExpenseActive action with existence check, isActive flip, and updatedAt timestamp in src/stores/finance-store.ts
+- [X] T020 [P] [US3] Implement toggleProjectActive action with existence check, isActive flip, and updatedAt timestamp in src/stores/finance-store.ts
+- [X] T021 [P] [US3] Implement toggleExpenseActive action with existence check, isActive flip, and updatedAt timestamp in src/stores/finance-store.ts
 
 **Checkpoint**: User Story 3 complete - users can toggle active status on projects and expenses
 
@@ -115,8 +115,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T022 [P] [US4] Implement updateProject action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
-- [ ] T023 [P] [US4] Implement updateExpense action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
+- [X] T022 [P] [US4] Implement updateProject action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
+- [X] T023 [P] [US4] Implement updateExpense action with partial input validation, existence check, and updatedAt timestamp in src/stores/finance-store.ts
 
 **Checkpoint**: User Story 4 complete - users can edit all entity fields
 
@@ -130,10 +130,10 @@
 
 ### Implementation for User Story 5
 
-- [ ] T024 [P] [US5] Implement deleteAccount action with existence check and Dexie removal in src/stores/finance-store.ts
-- [ ] T025 [P] [US5] Implement deleteProject action with existence check and Dexie removal in src/stores/finance-store.ts
-- [ ] T026 [P] [US5] Implement deleteExpense action with existence check and Dexie removal in src/stores/finance-store.ts
-- [ ] T027 [P] [US5] Implement deleteCreditCard action with existence check and Dexie removal in src/stores/finance-store.ts
+- [X] T024 [P] [US5] Implement deleteAccount action with existence check and Dexie removal in src/stores/finance-store.ts
+- [X] T025 [P] [US5] Implement deleteProject action with existence check and Dexie removal in src/stores/finance-store.ts
+- [X] T026 [P] [US5] Implement deleteExpense action with existence check and Dexie removal in src/stores/finance-store.ts
+- [X] T027 [P] [US5] Implement deleteCreditCard action with existence check and Dexie removal in src/stores/finance-store.ts
 
 **Checkpoint**: User Story 5 complete - users can delete any entity type
 
@@ -143,11 +143,11 @@
 
 **Purpose**: Validation, error handling, and final verification
 
-- [ ] T028 Add comprehensive error handling for QuotaExceededError, ConstraintError, InvalidStateError, and IndexedDB unavailability with user-facing error messages in src/stores/finance-store.ts
-- [ ] T029 Verify all Zod validation error messages match spec requirements (see data-model.md validation rules)
-- [ ] T030 Run quickstart.md validation scenarios to verify end-to-end functionality
-- [ ] T031 Verify IndexedDB data persistence across browser sessions
-- [ ] T032 Verify useLiveQuery reactivity: confirm UI auto-updates when IndexedDB data changes without manual refresh
+- [X] T028 Add comprehensive error handling for QuotaExceededError, ConstraintError, InvalidStateError, and IndexedDB unavailability with user-facing error messages in src/stores/finance-store.ts
+- [X] T029 Verify all Zod validation error messages match spec requirements (see data-model.md validation rules)
+- [X] T030 Run quickstart.md validation scenarios to verify end-to-end functionality
+- [X] T031 Verify IndexedDB data persistence across browser sessions
+- [X] T032 Verify useLiveQuery reactivity: confirm UI auto-updates when IndexedDB data changes without manual refresh
 
 ---
 

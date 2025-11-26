@@ -17,17 +17,19 @@
   "dependencies": {
     "clsx": "2.1.1",
     "dexie": "4.2.1",
+    "dexie-react-hooks": "4.2.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tailwind-merge": "3.4.0",
+    "zod": "4.1.13",
     "zustand": "5.0.8"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
-    "@types/node": "24.10.1",
     "@tailwindcss/vite": "4.1.17",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.0",
+    "@types/node": "24.10.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.1",
@@ -49,4 +51,3 @@
   },
   "packageManager": "pnpm@10.12.1"
 }
-
