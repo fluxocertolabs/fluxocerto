@@ -27,7 +27,7 @@ As a user performing my monthly financial update, I want a dedicated focused vie
 
 1. **Given** I am on the dashboard with existing accounts and credit cards, **When** I click "Update Balances", **Then** I see a focused view showing all bank account balances and credit card statement balances in a single list.
 
-2. **Given** I am in the Quick Balance Update view, **When** I see an account or credit card entry, **Then** I see the entity name, current balance displayed prominently, and the previous balance shown as reference (the balance before my current session changes).
+2. **Given** I am in the Quick Balance Update view, **When** I see an account or credit card entry, **Then** I see the entity name, current balance displayed as the primary editable field (larger font, high contrast), and the previous balance shown as secondary reference text (smaller, muted color).
 
 3. **Given** I am in the Quick Balance Update view, **When** I click on a balance field, **Then** I can directly edit the value inline without opening a modal or navigating away.
 
@@ -110,7 +110,7 @@ As a user completing my monthly update, I want to see a clear surplus or deficit
 - What happens when all accounts have zero balance? → Show €0 surplus/deficit, health indicator shows "Good" (no negative balances)
 - What happens when a user has only credit cards, no bank accounts? → Starting balance is €0 (only checking accounts count), projection runs normally, likely showing danger days
 - What happens when balance update is interrupted (browser closes)? → Changes are saved immediately on each field blur/change, so partial updates are preserved
-- What happens with very large projection periods (90 days) and many entities? → System should handle gracefully; if performance degrades, show loading indicator during calculation
+- What happens with very large projection periods (90 days) and many entities? → Projection recalculation must complete within 500ms; if exceeded, show loading indicator during calculation
 - What happens when "last updated" timestamp doesn't exist (legacy data)? → Treat as stale (assume needs update) and show stale data warning
 - What happens when auto-save fails (IndexedDB error)? → Show inline error on the specific field with a retry button; user can retry or continue editing other fields
 
@@ -143,6 +143,8 @@ As a user completing my monthly update, I want to see a clear surplus or deficit
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
+
+*Note: Time-based criteria (SC-001 through SC-004, SC-007) are validated through manual testing during development and QA. Automated performance tests may be added in future iterations.*
 
 - **SC-001**: Users can complete the monthly balance update ritual (updating all account and credit card balances) in under 2 minutes, measured from clicking "Update Balances" to returning to dashboard
 - **SC-002**: Users can identify their financial health status (Good/Warning/Danger) within 3 seconds of opening the dashboard

@@ -77,8 +77,7 @@ src/
 │   └── index.ts                      # MODIFY: Add version 2 migration
 ├── hooks/
 │   ├── use-cashflow-projection.ts    # MODIFY: Accept projection days param
-│   ├── use-user-preferences.ts       # NEW: Preferences hook
-│   └── use-balance-update.ts         # NEW: Auto-save balance hook
+│   └── use-user-preferences.ts       # NEW: Preferences hook
 ├── lib/
 │   ├── cashflow/
 │   │   └── calculate.ts              # Already supports projectionDays option

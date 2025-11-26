@@ -25,7 +25,7 @@
 
 - [ ] T001 Add `balanceUpdatedAt` optional field to `BankAccountSchema` in src/types/index.ts
 - [ ] T002 Add `balanceUpdatedAt` optional field to `CreditCardSchema` in src/types/index.ts
-- [ ] T003 Add `ProjectionDays` type (`7 | 14 | 30 | 60 | 90`) to src/types/index.ts
+- [ ] T003 Add `ProjectionDays` type (`7 | 14 | 30 | 60 | 90`) and `UserPreferences` interface to src/types/index.ts
 - [ ] T004 Add database version 2 migration for `balanceUpdatedAt` fields in src/db/index.ts
 
 ---
@@ -56,7 +56,7 @@
 
 - [ ] T010 [P] [US1] Create barrel export file in src/components/quick-update/index.ts
 - [ ] T011 [P] [US1] Create `BalanceItem` union type and `BalanceFieldState` interface in src/components/quick-update/types.ts
-- [ ] T012 [US1] Create `BalanceListItem` component with inline editing, auto-save on blur, and error display in src/components/quick-update/balance-list-item.tsx
+- [ ] T012 [US1] Create `BalanceListItem` component with entity type indicator (account/card icon), inline editing, auto-save on blur, and error display in src/components/quick-update/balance-list-item.tsx
 - [ ] T013 [US1] Create `BalanceList` component rendering accounts and credit cards with Tab navigation in src/components/quick-update/balance-list.tsx
 - [ ] T014 [P] [US1] Create `QuickUpdateEmptyState` component with link to Manage page in src/components/quick-update/empty-state.tsx
 - [ ] T015 [US1] Create `QuickUpdateView` full-screen modal with Done/Cancel buttons and Escape key handling in src/components/quick-update/quick-update-view.tsx
