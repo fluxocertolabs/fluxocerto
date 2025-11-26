@@ -39,7 +39,7 @@
 
 - [ ] T005 Implement Zod validation schemas in `src/lib/cashflow/validators.ts` for all input entities (BankAccount, Project, FixedExpense, CreditCard, CashflowEngineOptions)
 - [ ] T006 [P] Implement custom error class `CashflowCalculationError` with error codes in `src/lib/cashflow/types.ts`
-- [ ] T007 [P] Implement starting balance calculator (sum of checking accounts) in `src/lib/cashflow/calculate.ts`
+- [ ] T007 [P] Implement starting balance calculator (sum of checking accounts) in `src/lib/cashflow/calculate.ts` — returns 0 when no accounts exist (edge case from spec.md)
 - [ ] T008 Implement input validation wrapper function that validates and filters active entities in `src/lib/cashflow/validators.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
@@ -62,7 +62,7 @@
 
 - [ ] T009 [US1/2] Implement core `calculateCashflow` function signature in `src/lib/cashflow/calculate.ts` that returns `CashflowProjection`
 - [ ] T010 [US1/2] Implement daily snapshot generation loop (iterate through projection days) in `src/lib/cashflow/calculate.ts`
-- [ ] T011 [US1/2] Implement income event creation for monthly frequency (day-of-month matching) in `src/lib/cashflow/calculate.ts`
+- [ ] T011 [US1/2] Implement income event creation for monthly frequency (day-of-month matching) in `src/lib/cashflow/calculate.ts` — initial implementation, will be refactored in T021 to use frequency module
 - [ ] T012 [US1/2] Implement expense event creation for FixedExpense (monthly on due day) in `src/lib/cashflow/calculate.ts`
 - [ ] T013 [US1/2] Implement expense event creation for CreditCard (monthly on due day) in `src/lib/cashflow/calculate.ts`
 - [ ] T014 [US1/2] Implement dual balance tracking (optimistic includes all active, pessimistic includes only guaranteed) in `src/lib/cashflow/calculate.ts`
@@ -85,7 +85,7 @@
 - [ ] T018 [US3] Implement monthly frequency handler with day-of-month matching in `src/lib/cashflow/frequencies.ts`
 - [ ] T019 [US3] Implement biweekly frequency handler (every 14 days from first occurrence) in `src/lib/cashflow/frequencies.ts`
 - [ ] T020 [US3] Implement weekly frequency handler (every 7 days from first occurrence) in `src/lib/cashflow/frequencies.ts`
-- [ ] T021 [US3] Integrate frequency handlers into income event creation in `src/lib/cashflow/calculate.ts`
+- [ ] T021 [US3] Refactor income event creation to use frequency handlers module (replaces inline monthly logic from T011) in `src/lib/cashflow/calculate.ts`
 - [ ] T022 [US3] Track first occurrence per income source for biweekly/weekly calculations in `src/lib/cashflow/calculate.ts`
 
 **Checkpoint**: All three frequency types (weekly, biweekly, monthly) work correctly
@@ -132,12 +132,14 @@
 
 **Independent Test**: Generate a projection and verify the summary object contains accurate totals that match the sum of daily events
 
-### Implementation for User Story 6
+**Note**: Summary generation is implemented in T015 (`ScenarioSummary` generation). This phase focuses on validation and ensuring correctness.
 
-- [ ] T031 [US6] Verify `ScenarioSummary.totalIncome` accumulates correctly from all income events in `src/lib/cashflow/calculate.ts`
-- [ ] T032 [US6] Verify `ScenarioSummary.totalExpenses` accumulates correctly from all expense events in `src/lib/cashflow/calculate.ts`
-- [ ] T033 [US6] Verify `ScenarioSummary.endBalance` equals final day's balance in `src/lib/cashflow/calculate.ts`
-- [ ] T034 [US6] Add summary validation to ensure totals match sum of daily events in `src/lib/cashflow/calculate.ts`
+### Validation for User Story 6
+
+- [ ] T031 [US6] [VALIDATE] Write test asserting `ScenarioSummary.totalIncome` accumulates correctly from all income events in `src/lib/cashflow/calculate.test.ts`
+- [ ] T032 [US6] [VALIDATE] Write test asserting `ScenarioSummary.totalExpenses` accumulates correctly from all expense events in `src/lib/cashflow/calculate.test.ts`
+- [ ] T033 [US6] [VALIDATE] Write test asserting `ScenarioSummary.endBalance` equals final day's balance in `src/lib/cashflow/calculate.test.ts`
+- [ ] T034 [US6] [VALIDATE] Add runtime assertion in `calculateCashflow` to verify totals match sum of daily events (debug mode only) in `src/lib/cashflow/calculate.ts`
 
 **Checkpoint**: Summary statistics are accurate and match daily calculations
 

@@ -139,7 +139,7 @@ As a financial planner, I want summary statistics alongside the daily projection
 - **FR-013**: Engine MUST only include active income sources and expenses in calculations
 - **FR-014**: Engine MUST be implemented as pure functions with no side effects
 - **FR-015**: Engine MUST not mutate input data
-- **FR-016**: Engine MUST validate input and throw descriptive errors for invalid data (negative amounts, missing required fields, invalid frequency/certainty values)
+- **FR-016**: Engine MUST validate input and throw descriptive errors for invalid data (negative amounts, missing required fields, invalid frequency/certainty values). Error messages MUST include the field name and reason for failure (e.g., "amount: must be a positive number, received -100")
 
 ### Key Entities
 
@@ -162,7 +162,7 @@ As a financial planner, I want summary statistics alongside the daily projection
 - **SC-005**: Danger days are identified with 100% accuracy (no false positives or negatives)
 - **SC-006**: Optimistic and pessimistic scenarios diverge only based on income certainty levels
 - **SC-007**: Summary statistics match the sum of individual daily events exactly
-- **SC-008**: Engine can process 100 entities (accounts, income, expenses) with a 30-day projection in < 100ms
+- **SC-008**: Engine can process 100 total entities (combined count of bank accounts, income sources, fixed expenses, and credit cards) with a 30-day projection in < 100ms
 
 ## Clarifications
 
@@ -174,11 +174,20 @@ As a financial planner, I want summary statistics alongside the daily projection
 - Q: What should be explicitly out of scope for this engine? → A: Currency conversion, historical data storage, UI/visualization, notifications
 - Q: Should "Project" be renamed to a clearer term for income sources? → A: Yes, rename to `IncomeSource`
 
+## Terminology Glossary
+
+| Spec Term | Data Layer Term | Notes |
+|-----------|-----------------|-------|
+| IncomeSource | Project | The existing data layer uses "Project" to represent income sources. This engine uses "IncomeSource" for clarity. |
+| guaranteed | guaranteed | Income that will definitely be received |
+| uncertain | probable, uncertain | The data layer supports three certainty levels (`guaranteed`, `probable`, `uncertain`). For pessimistic scenario calculations, both `probable` and `uncertain` are treated as non-guaranteed income. |
+
 ## Assumptions
 
 - The existing data layer provides properly structured entity data matching the described schemas (note: data layer may use "Project" terminology which maps to `IncomeSource` in this engine)
 - All monetary amounts are in a single currency (no currency conversion needed)
-- Frequency reference points for biweekly/weekly payments are determined by the first occurrence within the projection period
+- **Frequency first occurrence logic**: For biweekly/weekly payments, the "first occurrence" is determined by finding the first day within the projection period where the payment day matches. If the configured `paymentDay` is before the projection start date's day-of-month, the first occurrence is the next matching day. For example: if `paymentDay=5` and projection starts on the 10th, the first occurrence is the 5th of the following month (or the next week for weekly).
 - Credit card payments are treated as single monthly expenses on the due day using the statementBalance amount
+- **Credit cards are always active**: Unlike IncomeSource and FixedExpense, CreditCard entities do not have an `isActive` flag - all credit cards with a non-zero `statementBalance` are included in calculations
 - The projection period uses calendar days (not business days)
-- Inactive entities are filtered out before being passed to the engine or the engine handles the isActive flag
+- Inactive entities (IncomeSource, FixedExpense) are filtered out before being passed to the engine or the engine handles the isActive flag

@@ -82,15 +82,16 @@ src/
 └── test/
     └── setup.ts               # Existing test setup
 
-tests/                         # Feature tests (new directory at root)
-└── unit/
-    └── cashflow/
-        ├── calculate.test.ts  # Core calculation tests
-        ├── frequencies.test.ts # Frequency handler tests
-        └── edge-cases.test.ts # Month-end, leap year tests
 ```
 
-**Structure Decision**: Single project structure. Engine lives in `/src/lib/cashflow/` as a pure module. Tests follow existing pattern but may add root-level `tests/` for better organization. Uses existing types from `/src/types/index.ts`.
+**Structure Decision**: Single project structure. Engine lives in `/src/lib/cashflow/` as a pure module. Tests are colocated following constitution pattern (`src/**/*.test.ts`). Uses existing types from `/src/types/index.ts`.
+
+**Test Files** (colocated per constitution):
+```text
+src/lib/cashflow/
+├── calculate.test.ts      # Core calculation tests
+├── frequencies.test.ts    # Frequency handler tests
+└── validators.test.ts     # Input validation tests
 
 ## Complexity Tracking
 
