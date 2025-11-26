@@ -71,7 +71,7 @@ A user wants to understand what happens on a specific day - which income arrives
 
 **Acceptance Scenarios**:
 
-1. **Given** a user views the chart, **When** they hover over or click a specific day, **Then** they see a detail view showing: the date, optimistic balance, pessimistic balance, list of income events (project name and amount), and list of expense events (expense/card name and amount).
+1. **Given** a user views the chart on desktop, **When** they hover over a specific day, **Then** they see a tooltip showing: the date, optimistic balance, pessimistic balance, list of income events (project name and amount), and list of expense events (expense/card name and amount).
 
 2. **Given** a day has no income or expense events, **When** the user views that day's details, **Then** the detail view shows the balances and indicates no events for that day.
 
@@ -86,13 +86,14 @@ A user wants to understand what happens on a specific day - which income arrives
 - What happens when a user has only savings/investment accounts (no checking)? Starting balance is zero per the engine's design (only checking accounts contribute).
 - How does the chart handle months with fewer than 31 days when expenses/income are due on day 31? The cashflow engine handles this (adjusts to last day of month).
 - What happens when the projection shows very large numbers (millions) or very small numbers (cents)? The chart scales appropriately and displays human-readable currency formatting.
+- What happens when the cashflow engine fails or data cannot be loaded? The chart area displays an inline error message with a "Retry" button, allowing users to attempt recovery without leaving the dashboard.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: System MUST display a 30-day cashflow projection chart when the user opens the dashboard.
-- **FR-002**: System MUST render two distinct visual elements for optimistic and pessimistic scenarios (different colors, fills, or line styles).
+- **FR-002**: System MUST render two distinct visual elements for optimistic and pessimistic scenarios using green for optimistic and amber/orange for pessimistic, with area fills under each line.
 - **FR-003**: System MUST display the X-axis as dates spanning the next 30 days from today.
 - **FR-004**: System MUST display the Y-axis as currency values with appropriate formatting.
 - **FR-005**: System MUST visually highlight danger days (negative balance) with distinct warning indicators.
@@ -100,6 +101,7 @@ A user wants to understand what happens on a specific day - which income arrives
 - **FR-007**: System MUST show day-level details when user interacts with a specific day on the chart.
 - **FR-008**: System MUST display an empty state with guidance when user has no financial data configured.
 - **FR-009**: System MUST load and render the dashboard within 1 second of navigation.
+- **FR-009a**: System MUST display skeleton/shimmer placeholders (matching chart and summary panel shapes) while data loads.
 - **FR-010**: System MUST be responsive, displaying correctly on desktop and mobile screen sizes.
 - **FR-011**: System MUST use data from the existing Zustand store and Dexie.js database.
 - **FR-012**: System MUST use the existing cashflow engine for all projection calculations.
@@ -124,8 +126,19 @@ A user wants to understand what happens on a specific day - which income arrives
 - **SC-006**: Chart data matches the output of the cashflow engine exactly (no discrepancies between engine calculations and displayed values).
 - **SC-007**: Users can access detailed information for any specific day within 2 interactions (hover/click).
 
+## Clarifications
+
+### Session 2025-11-26
+
+- Q: Which charting library should be used for the 30-day projection chart? → A: Recharts
+- Q: What loading state should be displayed while the cashflow engine calculates projections? → A: Skeleton/shimmer UI
+- Q: How should the dashboard handle errors (engine failure or data load failure)? → A: Inline error message with retry button
+- Q: How should day details be triggered on desktop vs mobile? → A: Hover tooltip on desktop, tap on mobile
+- Q: What color scheme should distinguish optimistic vs pessimistic scenarios? → A: Green for optimistic, amber/orange for pessimistic
+
 ## Assumptions
 
+- The dashboard chart will be implemented using **Recharts** (React-native composable charting library).
 - Currency is displayed in the user's locale format (the system will use browser locale for formatting).
 - The cashflow engine is already tested and produces correct calculations - this feature trusts the engine's output.
 - Users have modern browsers that support the charting library's requirements.
