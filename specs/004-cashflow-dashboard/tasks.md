@@ -27,10 +27,10 @@
 
 **Purpose**: Project initialization and dependency installation
 
-- [ ] T001 Install Recharts 3.5.0 dependency with `pnpm add recharts@3.5.0`
-- [ ] T002 Create cashflow component directory structure at src/components/cashflow/
-- [ ] T003 [P] Create view-layer types in src/components/cashflow/types.ts (ChartDataPoint, DangerRange, SummaryStats) [after T002]
-- [ ] T004 [P] Create currency/date formatting utilities in src/lib/format.ts (handle edge cases: large numbers with abbreviations, decimal precision for cents, locale-aware formatting) [after T002]
+- [X] T001 Install Recharts 3.5.0 dependency with `pnpm add recharts@3.5.0`
+- [X] T002 Create cashflow component directory structure at src/components/cashflow/
+- [X] T003 [P] Create view-layer types in src/components/cashflow/types.ts (ChartDataPoint, DangerRange, SummaryStats) [after T002]
+- [X] T004 [P] Create currency/date formatting utilities in src/lib/format.ts (handle edge cases: large numbers with abbreviations, decimal precision for cents, locale-aware formatting) [after T002]
 
 ---
 
@@ -40,12 +40,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create useCashflowProjection hook in src/hooks/use-cashflow-projection.ts
-- [ ] T006 Create chart data transformation function (transformToChartData) in src/hooks/use-cashflow-projection.ts
-- [ ] T007 Create danger range consolidation function (getDangerRanges) in src/hooks/use-cashflow-projection.ts
-- [ ] T008 [P] Create loading skeleton component (FR-009a) with shimmer placeholders matching chart and summary panel shapes in src/components/cashflow/loading-skeleton.tsx
-- [ ] T009 [P] Create empty state component in src/components/cashflow/empty-state.tsx
-- [ ] T010 [P] Create error state component with inline error message and retry button click handler in src/components/cashflow/error-state.tsx
+- [X] T005 Create useCashflowProjection hook in src/hooks/use-cashflow-projection.ts
+- [X] T006 Create chart data transformation function (transformToChartData) in src/hooks/use-cashflow-projection.ts
+- [X] T007 Create danger range consolidation function (getDangerRanges) in src/hooks/use-cashflow-projection.ts
+- [X] T008 [P] Create loading skeleton component (FR-009a) with shimmer placeholders matching chart and summary panel shapes in src/components/cashflow/loading-skeleton.tsx
+- [X] T009 [P] Create empty state component in src/components/cashflow/empty-state.tsx
+- [X] T010 [P] Create error state component with inline error message and retry button click handler in src/components/cashflow/error-state.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -59,13 +59,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Create CashflowChart component structure in src/components/cashflow/cashflow-chart.tsx
-- [ ] T012 [US1] Implement gradient definitions for optimistic (green) and pessimistic (amber) areas in src/components/cashflow/cashflow-chart.tsx
-- [ ] T013 [US1] Implement AreaChart with dual Area components for both scenarios in src/components/cashflow/cashflow-chart.tsx
-- [ ] T014 [US1] Add XAxis (dates) and YAxis (currency) with proper formatting in src/components/cashflow/cashflow-chart.tsx
-- [ ] T015 [US1] Add ResponsiveContainer wrapper for responsive sizing in src/components/cashflow/cashflow-chart.tsx
-- [ ] T016 [US1] Create Dashboard page with chart integration in src/pages/dashboard.tsx
-- [ ] T017 [US1] Wire dashboard to useCashflowProjection hook with loading/empty/error states in src/pages/dashboard.tsx
+- [X] T011 [US1] Create CashflowChart component structure in src/components/cashflow/cashflow-chart.tsx
+- [X] T012 [US1] Implement gradient definitions for optimistic (green) and pessimistic (amber) areas in src/components/cashflow/cashflow-chart.tsx
+- [X] T013 [US1] Implement AreaChart with dual Area components for both scenarios in src/components/cashflow/cashflow-chart.tsx
+- [X] T014 [US1] Add XAxis (dates) and YAxis (currency) with proper formatting in src/components/cashflow/cashflow-chart.tsx
+- [X] T015 [US1] Add ResponsiveContainer wrapper for responsive sizing in src/components/cashflow/cashflow-chart.tsx
+- [X] T016 [US1] Create Dashboard page with chart integration in src/pages/dashboard.tsx
+- [X] T017 [US1] Wire dashboard to useCashflowProjection hook with loading/empty/error states in src/pages/dashboard.tsx
 
 **Checkpoint**: User Story 1 complete - chart displays 30-day projection with both scenarios
 
@@ -79,9 +79,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Add ReferenceLine at y=0 (zero balance line) in src/components/cashflow/cashflow-chart.tsx
-- [ ] T019 [US2] Implement ReferenceArea components for danger day ranges in src/components/cashflow/cashflow-chart.tsx
-- [ ] T020 [US2] Add conditional danger styling based on scenario (optimistic vs pessimistic) in src/components/cashflow/cashflow-chart.tsx
+- [X] T018 [US2] Add ReferenceLine at y=0 (zero balance line) in src/components/cashflow/cashflow-chart.tsx
+- [X] T019 [US2] Implement ReferenceArea components for danger day ranges in src/components/cashflow/cashflow-chart.tsx
+- [X] T020 [US2] Add conditional danger styling based on scenario (optimistic vs pessimistic) in src/components/cashflow/cashflow-chart.tsx
 
 **Checkpoint**: User Story 2 complete - danger days are visually highlighted on chart
 
@@ -95,14 +95,14 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Create SummaryPanel component structure in src/components/cashflow/summary-panel.tsx
-- [ ] T022 [US3] Implement starting balance card in src/components/cashflow/summary-panel.tsx
-- [ ] T023 [US3] Implement income totals cards (optimistic/pessimistic) in src/components/cashflow/summary-panel.tsx
-- [ ] T024 [US3] Implement expense totals card in src/components/cashflow/summary-panel.tsx
-- [ ] T025 [US3] Implement ending balance cards (optimistic/pessimistic) in src/components/cashflow/summary-panel.tsx
-- [ ] T026 [US3] Implement danger day count indicator with warning styling in src/components/cashflow/summary-panel.tsx
-- [ ] T027 [US3] Add responsive grid layout (2 cols mobile, 4 cols desktop) in src/components/cashflow/summary-panel.tsx
-- [ ] T028 [US3] Integrate SummaryPanel into Dashboard page in src/pages/dashboard.tsx
+- [X] T021 [US3] Create SummaryPanel component structure in src/components/cashflow/summary-panel.tsx
+- [X] T022 [US3] Implement starting balance card in src/components/cashflow/summary-panel.tsx
+- [X] T023 [US3] Implement income totals cards (optimistic/pessimistic) in src/components/cashflow/summary-panel.tsx
+- [X] T024 [US3] Implement expense totals card in src/components/cashflow/summary-panel.tsx
+- [X] T025 [US3] Implement ending balance cards (optimistic/pessimistic) in src/components/cashflow/summary-panel.tsx
+- [X] T026 [US3] Implement danger day count indicator with warning styling in src/components/cashflow/summary-panel.tsx
+- [X] T027 [US3] Add responsive grid layout (2 cols mobile, 4 cols desktop) in src/components/cashflow/summary-panel.tsx
+- [X] T028 [US3] Integrate SummaryPanel into Dashboard page in src/pages/dashboard.tsx
 
 **Checkpoint**: User Story 3 complete - summary statistics panel displays all metrics
 
@@ -116,13 +116,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T029 [US4] Create ChartTooltip component structure in src/components/cashflow/chart-tooltip.tsx
-- [ ] T030 [US4] Implement date header formatting in tooltip in src/components/cashflow/chart-tooltip.tsx
-- [ ] T031 [US4] Implement optimistic/pessimistic balance display in tooltip in src/components/cashflow/chart-tooltip.tsx
-- [ ] T032 [US4] Implement income events list in tooltip in src/components/cashflow/chart-tooltip.tsx
-- [ ] T033 [US4] Implement expense events list in tooltip in src/components/cashflow/chart-tooltip.tsx
-- [ ] T034 [US4] Handle empty events state (no income/expense on day) in src/components/cashflow/chart-tooltip.tsx
-- [ ] T035 [US4] Integrate ChartTooltip with CashflowChart Tooltip component in src/components/cashflow/cashflow-chart.tsx (ensure mobile tap triggers tooltip via Recharts click event)
+- [X] T029 [US4] Create ChartTooltip component structure in src/components/cashflow/chart-tooltip.tsx
+- [X] T030 [US4] Implement date header formatting in tooltip in src/components/cashflow/chart-tooltip.tsx
+- [X] T031 [US4] Implement optimistic/pessimistic balance display in tooltip in src/components/cashflow/chart-tooltip.tsx
+- [X] T032 [US4] Implement income events list in tooltip in src/components/cashflow/chart-tooltip.tsx
+- [X] T033 [US4] Implement expense events list in tooltip in src/components/cashflow/chart-tooltip.tsx
+- [X] T034 [US4] Handle empty events state (no income/expense on day) in src/components/cashflow/chart-tooltip.tsx
+- [X] T035 [US4] Integrate ChartTooltip with CashflowChart Tooltip component in src/components/cashflow/cashflow-chart.tsx (ensure mobile tap triggers tooltip via Recharts click event)
 
 **Checkpoint**: User Story 4 complete - day details accessible via hover/tap
 
@@ -132,8 +132,8 @@
 
 **Purpose**: Verify data flow integrity from engine to display (FR-011, FR-012, SC-006)
 
-- [ ] T035a [Validation] Verify useCashflowProjection hook correctly retrieves data from Dexie.js via existing hooks (FR-011)
-- [ ] T035b [Validation] Verify chart data transformation matches cashflow engine output exactly (FR-012, SC-006)
+- [X] T035a [Validation] Verify useCashflowProjection hook correctly retrieves data from Dexie.js via existing hooks (FR-011)
+- [X] T035b [Validation] Verify chart data transformation matches cashflow engine output exactly (FR-012, SC-006)
 
 **Checkpoint**: Data integrity validated - engine calculations match displayed values
 
@@ -143,10 +143,10 @@
 
 **Purpose**: Final integration, exports, and validation
 
-- [ ] T036 [P] Create barrel export file in src/components/cashflow/index.ts
-- [ ] T037 [P] Add mobile-responsive X-axis label interval in src/components/cashflow/cashflow-chart.tsx
-- [ ] T038 [P] Add chart height responsiveness (300px mobile, 400px desktop) in src/components/cashflow/cashflow-chart.tsx
-- [ ] T039 Add dashboard route to App.tsx router configuration in src/App.tsx
+- [X] T036 [P] Create barrel export file in src/components/cashflow/index.ts
+- [X] T037 [P] Add mobile-responsive X-axis label interval in src/components/cashflow/cashflow-chart.tsx
+- [X] T038 [P] Add chart height responsiveness (300px mobile, 400px desktop) in src/components/cashflow/cashflow-chart.tsx
+- [X] T039 Add dashboard route to App.tsx router configuration in src/App.tsx
 - [ ] T040 Run quickstart.md validation (manual testing checklist)
 
 ---
