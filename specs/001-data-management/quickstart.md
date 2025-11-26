@@ -15,7 +15,7 @@
 
 ```bash
 cd /home/delucca/Workspaces/src/sandbox/family-finance
-pnpm add dexie-react-hooks@5.0.0
+pnpm add dexie-react-hooks@4.2.0
 ```
 
 Note: Zod is already in `package.json` per CONSTITUTION.md (version 4.1.13).
