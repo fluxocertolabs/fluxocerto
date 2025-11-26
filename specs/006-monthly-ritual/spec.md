@@ -5,6 +5,14 @@
 **Status**: Draft  
 **Input**: User description: "Build the Monthly Ritual Enhancement feature for Family Finance - a streamlined experience for the monthly balance update workflow that is the core recurring use case."
 
+## Clarifications
+
+### Session 2025-11-26
+
+- Q: FR-005 states balances are auto-saved on field blur, but FR-014 says "Cancel" discards session changes. What should "Cancel" do? → A: Cancel discards only unsaved changes (auto-saved values persist)
+- Q: What should happen when an auto-save operation fails? → A: Show inline error on the specific field with retry option
+- Q: Where should the health indicator be positioned on the dashboard? → A: Top of dashboard, above the chart (first visible element)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Quick Balance Update Mode (Priority: P1)
@@ -27,7 +35,7 @@ As a user performing my monthly financial update, I want a dedicated focused vie
 
 5. **Given** I have made balance updates, **When** I click "Done", **Then** I am returned to the dashboard and all my changes have been saved.
 
-6. **Given** I am in the Quick Balance Update view, **When** I click "Cancel" or press Escape, **Then** I am returned to the dashboard without saving any changes.
+6. **Given** I am in the Quick Balance Update view, **When** I click "Cancel" or press Escape, **Then** I am returned to the dashboard; any already auto-saved changes persist, only the currently unsaved field (if any) is discarded.
 
 7. **Given** I have no bank accounts or credit cards configured, **When** I click "Update Balances", **Then** I see an empty state prompting me to add accounts/cards first with a link to the Manage page.
 
@@ -104,6 +112,7 @@ As a user completing my monthly update, I want to see a clear surplus or deficit
 - What happens when balance update is interrupted (browser closes)? → Changes are saved immediately on each field blur/change, so partial updates are preserved
 - What happens with very large projection periods (90 days) and many entities? → System should handle gracefully; if performance degrades, show loading indicator during calculation
 - What happens when "last updated" timestamp doesn't exist (legacy data)? → Treat as stale (assume needs update) and show stale data warning
+- What happens when auto-save fails (IndexedDB error)? → Show inline error on the specific field with a retry button; user can retry or continue editing other fields
 
 ## Requirements *(mandatory)*
 
@@ -113,16 +122,16 @@ As a user completing my monthly update, I want to see a clear surplus or deficit
 - **FR-002**: Quick Balance Update view MUST display all bank accounts and credit cards in a single scrollable list
 - **FR-003**: Each balance entry MUST show: entity name, entity type indicator (account/card), current editable balance field, and previous balance as reference
 - **FR-004**: Balance fields MUST support inline editing with keyboard navigation (Tab to move between fields)
-- **FR-005**: System MUST save balance changes immediately when a field loses focus (auto-save pattern)
+- **FR-005**: System MUST save balance changes immediately when a field loses focus (auto-save pattern); on save failure, display inline error on the field with a retry option
 - **FR-006**: System MUST track "last updated" timestamp for each bank account and credit card balance
-- **FR-007**: System MUST display a health indicator on the dashboard showing: Good (green), Warning (amber), or Danger (red) status
+- **FR-007**: System MUST display a health indicator at the top of the dashboard (above the chart, first visible element) showing: Good (green), Warning (amber), or Danger (red) status
 - **FR-008**: Health indicator MUST show "Stale data" warning when any balance hasn't been updated in 30+ days
 - **FR-009**: System MUST allow users to select projection period from: 7, 14, 30 (default), 60, or 90 days
 - **FR-010**: System MUST persist the user's projection period preference in local storage
 - **FR-011**: System MUST recalculate all projections, charts, and summaries when projection period changes
 - **FR-012**: System MUST display surplus/deficit amount (end balance minus starting balance) for both scenarios
 - **FR-013**: Surplus MUST be displayed in green; deficit MUST be displayed in red
-- **FR-014**: Quick Balance Update view MUST provide "Done" button to return to dashboard and "Cancel" to discard session changes
+- **FR-014**: Quick Balance Update view MUST provide "Done" button to return to dashboard and "Cancel" to exit without saving the currently active field (auto-saved values persist)
 - **FR-015**: System MUST show empty state in Quick Balance Update when no accounts or credit cards exist
 
 ### Key Entities *(include if feature involves data)*
