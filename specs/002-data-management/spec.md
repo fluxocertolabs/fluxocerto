@@ -1,6 +1,6 @@
 # Feature Specification: Core Data Management Layer
 
-**Feature Branch**: `001-data-management`  
+**Feature Branch**: `002-data-management`  
 **Created**: 2025-11-26  
 **Status**: Draft  
 **Input**: User description: "Implement the core data management layer for Family Finance. This feature establishes the foundation for all financial data operations."

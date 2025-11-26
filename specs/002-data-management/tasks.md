@@ -1,6 +1,6 @@
 # Tasks: Core Data Management Layer
 
-**Input**: Design documents from `/specs/001-data-management/`
+**Input**: Design documents from `/specs/002-data-management/`
 **Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, data-model.md ✅, contracts/store-api.md ✅, quickstart.md ✅
 
 **Tests**: Not explicitly requested - test tasks omitted per specification.

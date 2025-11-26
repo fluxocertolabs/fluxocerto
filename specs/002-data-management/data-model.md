@@ -1,6 +1,6 @@
 # Data Model: Core Data Management Layer
 
-**Feature**: 001-data-management  
+**Feature**: 002-data-management  
 **Date**: 2025-11-26  
 **Source of Truth**: Zod schemas in `src/types/index.ts`
 

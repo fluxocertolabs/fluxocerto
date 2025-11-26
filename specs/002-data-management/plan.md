@@ -1,7 +1,7 @@
 # Implementation Plan: Core Data Management Layer
 
-**Branch**: `001-data-management` | **Date**: 2025-11-26 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-data-management/spec.md`
+**Branch**: `002-data-management` | **Date**: 2025-11-26 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/002-data-management/spec.md`
 
 ## Summary
 
@@ -38,7 +38,7 @@ Implement the foundational data management layer for Family Finance, enabling CR
 ### Documentation (this feature)
 
 ```text
-specs/001-data-management/
+specs/002-data-management/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output - integration patterns research
 ├── data-model.md        # Phase 1 output - entity definitions with Zod

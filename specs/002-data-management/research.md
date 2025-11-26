@@ -1,6 +1,6 @@
 # Research: Core Data Management Layer
 
-**Feature**: 001-data-management  
+**Feature**: 002-data-management  
 **Date**: 2025-11-26  
 **Status**: Complete
 

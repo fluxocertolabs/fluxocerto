@@ -1,6 +1,6 @@
 # Store API Contract: Finance Store
 
-**Feature**: 001-data-management  
+**Feature**: 002-data-management  
 **Date**: 2025-11-26  
 **Location**: `src/stores/finance-store.ts`
 
