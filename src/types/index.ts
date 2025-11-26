@@ -11,6 +11,7 @@ export const BankAccountSchema = BankAccountInputSchema.extend({
   id: z.string().uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  balanceUpdatedAt: z.date().optional(),
 })
 
 export type BankAccountInput = z.infer<typeof BankAccountInputSchema>
@@ -63,8 +64,25 @@ export const CreditCardSchema = CreditCardInputSchema.extend({
   id: z.string().uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  balanceUpdatedAt: z.date().optional(),
 })
 
 export type CreditCardInput = z.infer<typeof CreditCardInputSchema>
 export type CreditCard = z.infer<typeof CreditCardSchema>
+
+// === Projection Days ===
+export const ProjectionDaysSchema = z.union([
+  z.literal(7),
+  z.literal(14),
+  z.literal(30),
+  z.literal(60),
+  z.literal(90),
+])
+
+export type ProjectionDays = z.infer<typeof ProjectionDaysSchema>
+
+// === User Preferences ===
+export interface UserPreferences {
+  projectionDays: ProjectionDays
+}
 

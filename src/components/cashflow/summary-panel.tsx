@@ -1,10 +1,11 @@
 /**
  * SummaryPanel - Statistics summary cards for the dashboard.
- * Displays starting balance, income, expenses, ending balance, and danger day count.
+ * Displays starting balance, income, expenses, ending balance, danger day count, and surplus/deficit.
  */
 
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
+import { SurplusDeficit } from './surplus-deficit'
 import type { SummaryStats } from './types'
 
 interface SummaryPanelProps {
@@ -102,6 +103,14 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
         }
         variant={getBalanceVariant(optimistic.endBalance)}
       />
+
+      {/* Surplus/Deficit */}
+      <div className="col-span-2 md:col-span-2">
+        <SurplusDeficit
+          optimistic={optimistic.surplus}
+          pessimistic={pessimistic.surplus}
+        />
+      </div>
 
       {/* Danger Days (only show if there are any) */}
       {hasDangerDays && (

@@ -90,6 +90,8 @@ export interface CashflowEngineInput {
   projects: Project[]
   expenses: FixedExpense[]
   creditCards: CreditCard[]
+  /** Shorthand for options.projectionDays (takes precedence) */
+  projectionDays?: number
   options?: z.infer<typeof CashflowEngineOptionsSchema>
 }
 
@@ -117,8 +119,14 @@ export interface ValidatedInput {
  * @throws {CashflowCalculationError} If validation fails
  */
 export function validateAndFilterInput(input: CashflowEngineInput): ValidatedInput {
+  // Merge top-level projectionDays into options (top-level takes precedence)
+  const mergedOptions = {
+    ...input.options,
+    ...(input.projectionDays !== undefined ? { projectionDays: input.projectionDays } : {}),
+  }
+
   // Validate options
-  const optionsResult = CashflowEngineOptionsSchema.safeParse(input.options ?? {})
+  const optionsResult = CashflowEngineOptionsSchema.safeParse(mergedOptions)
   if (!optionsResult.success) {
     throw new CashflowCalculationError(
       `Invalid options: ${optionsResult.error.message}`,

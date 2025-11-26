@@ -52,6 +52,13 @@ interface FinanceStore {
     input: Partial<CreditCardInput>
   ) => Promise<Result<void>>
   deleteCreditCard: (id: string) => Promise<Result<void>>
+
+  // Balance Update Actions (for Quick Balance Update feature)
+  updateAccountBalance: (id: string, balance: number) => Promise<Result<void>>
+  updateCreditCardBalance: (
+    id: string,
+    statementBalance: number
+  ) => Promise<Result<void>>
 }
 
 // Helper to handle common IndexedDB errors
@@ -310,6 +317,53 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       await db.creditCards.delete(id)
+      return { success: true, data: undefined }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  // === Balance Update Actions ===
+  updateAccountBalance: async (id, balance) => {
+    try {
+      if (balance < 0) {
+        return { success: false, error: 'Balance cannot be negative' }
+      }
+
+      const existing = await db.accounts.get(id)
+      if (!existing) {
+        return { success: false, error: 'Account not found' }
+      }
+
+      const now = new Date()
+      await db.accounts.update(id, {
+        balance,
+        balanceUpdatedAt: now,
+        updatedAt: now,
+      })
+      return { success: true, data: undefined }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  updateCreditCardBalance: async (id, statementBalance) => {
+    try {
+      if (statementBalance < 0) {
+        return { success: false, error: 'Balance cannot be negative' }
+      }
+
+      const existing = await db.creditCards.get(id)
+      if (!existing) {
+        return { success: false, error: 'Credit card not found' }
+      }
+
+      const now = new Date()
+      await db.creditCards.update(id, {
+        statementBalance,
+        balanceUpdatedAt: now,
+        updatedAt: now,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)

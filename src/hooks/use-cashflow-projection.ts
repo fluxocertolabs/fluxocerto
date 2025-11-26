@@ -8,8 +8,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { calculateCashflow } from '@/lib/cashflow'
 import { formatChartDate } from '@/lib/format'
+import { usePreferencesStore } from '@/stores/preferences-store'
 import type { CashflowProjection, DailySnapshot } from '@/lib/cashflow/types'
 import type { ChartDataPoint, DangerRange, SummaryStats } from '@/components/cashflow/types'
+import type { ProjectionDays } from '@/types'
 
 /**
  * Transform DailySnapshot array to chart-compatible format.
@@ -89,21 +91,32 @@ export function getDangerRanges(chartData: ChartDataPoint[]): DangerRange[] {
  * Converts cents to dollars for display.
  */
 function transformToSummaryStats(projection: CashflowProjection): SummaryStats {
+  const startingBalance = projection.startingBalance / 100
+  const optimisticEndBalance = projection.optimistic.endBalance / 100
+  const pessimisticEndBalance = projection.pessimistic.endBalance / 100
+
   return {
-    startingBalance: projection.startingBalance / 100,
+    startingBalance,
     optimistic: {
       totalIncome: projection.optimistic.totalIncome / 100,
       totalExpenses: projection.optimistic.totalExpenses / 100,
-      endBalance: projection.optimistic.endBalance / 100,
+      endBalance: optimisticEndBalance,
       dangerDayCount: projection.optimistic.dangerDayCount,
+      surplus: optimisticEndBalance - startingBalance,
     },
     pessimistic: {
       totalIncome: projection.pessimistic.totalIncome / 100,
       totalExpenses: projection.pessimistic.totalExpenses / 100,
-      endBalance: projection.pessimistic.endBalance / 100,
+      endBalance: pessimisticEndBalance,
       dangerDayCount: projection.pessimistic.dangerDayCount,
+      surplus: pessimisticEndBalance - startingBalance,
     },
   }
+}
+
+export interface UseCashflowProjectionOptions {
+  /** Override projection days (defaults to user preference) */
+  projectionDays?: ProjectionDays
 }
 
 export interface UseCashflowProjectionResult {
@@ -123,6 +136,8 @@ export interface UseCashflowProjectionResult {
   error: Error | null
   /** Retry function for error recovery */
   retry: () => void
+  /** Current projection days being used */
+  projectionDays: ProjectionDays
 }
 
 /**
@@ -135,9 +150,14 @@ type CalculationResult =
 /**
  * Hook to compute and provide cashflow projection data.
  * Automatically updates when underlying database changes.
+ * @param options - Optional configuration for projection
  */
-export function useCashflowProjection(): UseCashflowProjectionResult {
+export function useCashflowProjection(
+  options?: UseCashflowProjectionOptions
+): UseCashflowProjectionResult {
   const [retryCount, setRetryCount] = useState(0)
+  const preferencesDays = usePreferencesStore((state) => state.projectionDays)
+  const projectionDays = options?.projectionDays ?? preferencesDays
 
   // Fetch all data from database with live queries
   const accounts = useLiveQuery(
@@ -182,6 +202,7 @@ export function useCashflowProjection(): UseCashflowProjectionResult {
         projects: projects ?? [],
         expenses: expenses ?? [],
         creditCards: creditCards ?? [],
+        projectionDays,
       })
       return { success: true, projection }
     } catch (err) {
@@ -190,7 +211,7 @@ export function useCashflowProjection(): UseCashflowProjectionResult {
         error: err instanceof Error ? err : new Error('Failed to calculate projection'),
       }
     }
-  }, [isLoading, accounts, projects, expenses, creditCards])
+  }, [isLoading, accounts, projects, expenses, creditCards, projectionDays])
 
   // Extract projection and error from result
   const projection = calculationResult?.success ? calculationResult.projection : null
@@ -227,6 +248,7 @@ export function useCashflowProjection(): UseCashflowProjectionResult {
     hasData,
     error,
     retry,
+    projectionDays,
   }
 }
 

@@ -51,6 +51,8 @@ export interface SummaryStats {
     totalExpenses: number
     endBalance: number
     dangerDayCount: number
+    /** Surplus (positive) or deficit (negative): endBalance - startingBalance */
+    surplus: number
   }
   /** Pessimistic scenario totals */
   pessimistic: {
@@ -58,6 +60,8 @@ export interface SummaryStats {
     totalExpenses: number
     endBalance: number
     dangerDayCount: number
+    /** Surplus (positive) or deficit (negative): endBalance - startingBalance */
+    surplus: number
   }
 }
 

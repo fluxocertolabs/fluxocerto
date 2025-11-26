@@ -23,10 +23,10 @@
 
 **Purpose**: Database schema migration and type definitions required by all user stories
 
-- [ ] T001 Add `balanceUpdatedAt` optional field to `BankAccountSchema` in src/types/index.ts
-- [ ] T002 Add `balanceUpdatedAt` optional field to `CreditCardSchema` in src/types/index.ts
-- [ ] T003 Add `ProjectionDays` type (`7 | 14 | 30 | 60 | 90`) and `UserPreferences` interface to src/types/index.ts
-- [ ] T004 Add database version 2 migration for `balanceUpdatedAt` fields in src/db/index.ts
+- [X] T001 Add `balanceUpdatedAt` optional field to `BankAccountSchema` in src/types/index.ts
+- [X] T002 Add `balanceUpdatedAt` optional field to `CreditCardSchema` in src/types/index.ts
+- [X] T003 Add `ProjectionDays` type (`7 | 14 | 30 | 60 | 90`) and `UserPreferences` interface to src/types/index.ts
+- [X] T004 Add database version 2 migration for `balanceUpdatedAt` fields in src/db/index.ts
 
 ---
 
@@ -36,11 +36,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create preferences store with `projectionDays` state and localStorage persistence in src/stores/preferences-store.ts
-- [ ] T006 [P] Create staleness utility functions (`isStale`, `STALE_THRESHOLD_DAYS`) in src/lib/staleness.ts
-- [ ] T007 [P] Add `updateAccountBalance` action (sets balance + balanceUpdatedAt) to src/stores/finance-store.ts
-- [ ] T008 [P] Add `updateCreditCardBalance` action (sets statementBalance + balanceUpdatedAt) to src/stores/finance-store.ts
-- [ ] T009 Modify `useCashflowProjection` hook to accept optional `projectionDays` parameter in src/hooks/use-cashflow-projection.ts
+- [X] T005 Create preferences store with `projectionDays` state and localStorage persistence in src/stores/preferences-store.ts
+- [X] T006 [P] Create staleness utility functions (`isStale`, `STALE_THRESHOLD_DAYS`) in src/lib/staleness.ts
+- [X] T007 [P] Add `updateAccountBalance` action (sets balance + balanceUpdatedAt) to src/stores/finance-store.ts
+- [X] T008 [P] Add `updateCreditCardBalance` action (sets statementBalance + balanceUpdatedAt) to src/stores/finance-store.ts
+- [X] T009 Modify `useCashflowProjection` hook to accept optional `projectionDays` parameter in src/hooks/use-cashflow-projection.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -54,14 +54,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Create barrel export file in src/components/quick-update/index.ts
-- [ ] T011 [P] [US1] Create `BalanceItem` union type and `BalanceFieldState` interface in src/components/quick-update/types.ts
-- [ ] T012 [US1] Create `BalanceListItem` component with entity type indicator (account/card icon), inline editing, auto-save on blur, and error display in src/components/quick-update/balance-list-item.tsx
-- [ ] T013 [US1] Create `BalanceList` component rendering accounts and credit cards with Tab navigation in src/components/quick-update/balance-list.tsx
-- [ ] T014 [P] [US1] Create `QuickUpdateEmptyState` component with link to Manage page in src/components/quick-update/empty-state.tsx
-- [ ] T015 [US1] Create `QuickUpdateView` full-screen modal with Done/Cancel buttons and Escape key handling in src/components/quick-update/quick-update-view.tsx
-- [ ] T016 [US1] Add "Update Balances" button and quick update modal state to src/pages/dashboard.tsx
-- [ ] T017 [US1] Wire up `QuickUpdateView` modal rendering in src/pages/dashboard.tsx
+- [X] T010 [P] [US1] Create barrel export file in src/components/quick-update/index.ts
+- [X] T011 [P] [US1] Create `BalanceItem` union type and `BalanceFieldState` interface in src/components/quick-update/types.ts
+- [X] T012 [US1] Create `BalanceListItem` component with entity type indicator (account/card icon), inline editing, auto-save on blur, and error display in src/components/quick-update/balance-list-item.tsx
+- [X] T013 [US1] Create `BalanceList` component rendering accounts and credit cards with Tab navigation in src/components/quick-update/balance-list.tsx
+- [X] T014 [P] [US1] Create `QuickUpdateEmptyState` component with link to Manage page in src/components/quick-update/empty-state.tsx
+- [X] T015 [US1] Create `QuickUpdateView` full-screen modal with Done/Cancel buttons and Escape key handling in src/components/quick-update/quick-update-view.tsx
+- [X] T016 [US1] Add "Update Balances" button and quick update modal state to src/pages/dashboard.tsx
+- [X] T017 [US1] Wire up `QuickUpdateView` modal rendering in src/pages/dashboard.tsx
 
 **Checkpoint**: User Story 1 is fully functional - users can complete monthly balance updates in under 2 minutes
 
@@ -75,10 +75,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Create `useHealthIndicator` hook computing status from projection danger days and staleness in src/hooks/use-health-indicator.ts
-- [ ] T019 [US2] Create `HealthIndicator` component with Good/Warning/Danger states and stale data badge in src/components/cashflow/health-indicator.tsx
-- [ ] T020 [US2] Integrate `HealthIndicator` at top of dashboard (above chart) in src/pages/dashboard.tsx
-- [ ] T021 [US2] Wire up stale data badge click to open Quick Balance Update modal in src/pages/dashboard.tsx
+- [X] T018 [US2] Create `useHealthIndicator` hook computing status from projection danger days and staleness in src/hooks/use-health-indicator.ts
+- [X] T019 [US2] Create `HealthIndicator` component with Good/Warning/Danger states and stale data badge in src/components/cashflow/health-indicator.tsx
+- [X] T020 [US2] Integrate `HealthIndicator` at top of dashboard (above chart) in src/pages/dashboard.tsx
+- [X] T021 [US2] Wire up stale data badge click to open Quick Balance Update modal in src/pages/dashboard.tsx
 
 **Checkpoint**: User Story 2 is fully functional - users can identify financial health status within 3 seconds of opening dashboard
 
@@ -92,9 +92,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Create `ProjectionSelector` dropdown component with 7/14/30/60/90 day options in src/components/cashflow/projection-selector.tsx
-- [ ] T023 [US3] Integrate `ProjectionSelector` in dashboard header area in src/pages/dashboard.tsx
-- [ ] T024 [US3] Connect projection selector to preferences store and cashflow projection hook in src/pages/dashboard.tsx
+- [X] T022 [US3] Create `ProjectionSelector` dropdown component with 7/14/30/60/90 day options in src/components/cashflow/projection-selector.tsx
+- [X] T023 [US3] Integrate `ProjectionSelector` in dashboard header area in src/pages/dashboard.tsx
+- [X] T024 [US3] Connect projection selector to preferences store and cashflow projection hook in src/pages/dashboard.tsx
 
 **Checkpoint**: User Story 3 is fully functional - users can change projection period and see updated results within 2 seconds
 
@@ -108,9 +108,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T025 [US4] Add surplus calculation (endBalance - startingBalance) to projection summary in src/hooks/use-cashflow-projection.ts
-- [ ] T026 [US4] Create `SurplusDeficit` component displaying surplus (green) or deficit (red) for both scenarios in src/components/cashflow/surplus-deficit.tsx
-- [ ] T027 [US4] Integrate `SurplusDeficit` component into summary panel in src/components/cashflow/summary-panel.tsx
+- [X] T025 [US4] Add surplus calculation (endBalance - startingBalance) to projection summary in src/hooks/use-cashflow-projection.ts
+- [X] T026 [US4] Create `SurplusDeficit` component displaying surplus (green) or deficit (red) for both scenarios in src/components/cashflow/surplus-deficit.tsx
+- [X] T027 [US4] Integrate `SurplusDeficit` component into summary panel in src/components/cashflow/summary-panel.tsx
 
 **Checkpoint**: User Story 4 is fully functional - users can answer "How much can I save this month?" by viewing surplus/deficit
 
@@ -120,9 +120,9 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T028 [P] Verify keyboard Tab navigation works correctly across all balance fields in Quick Update view
-- [ ] T029 [P] Verify mobile responsiveness of ProjectionSelector and Quick Update view
-- [ ] T030 Run quickstart.md validation scenarios to confirm all success criteria are met
+- [X] T028 [P] Verify keyboard Tab navigation works correctly across all balance fields in Quick Update view
+- [X] T029 [P] Verify mobile responsiveness of ProjectionSelector and Quick Update view
+- [X] T030 Run quickstart.md validation scenarios to confirm all success criteria are met
 
 ---
 
