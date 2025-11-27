@@ -17,6 +17,7 @@ Auto-generated from all feature plans. Last updated: 2025-11-25
 - Supabase PostgreSQL (replacing IndexedDB/Dexie.js) (008-supabase-migration)
 - TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, @supabase/supabase-js 2.86.0, react-router-dom 7.9.6, Zustand 5.0.8 (010-invite-auth)
 - Supabase PostgreSQL (cloud-hosted) (010-invite-auth)
+- N/A (documentation only) + Resend (external service), Supabase Dashboard (011-resend-smtp-integration)
 
 - TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Tailwind CSS 4.1.17, shadcn/ui, Dexie.js 4.2.1, Zustand 5.0.8 (001-monorepo-base-structure)
 
@@ -36,9 +37,9 @@ npm test && npm run lint
 TypeScript 5.9.3: Follow standard conventions
 
 ## Recent Changes
+- 011-resend-smtp-integration: Added N/A (documentation only) + Resend (external service), Supabase Dashboard
 - 010-invite-auth: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, @supabase/supabase-js 2.86.0, react-router-dom 7.9.6, Zustand 5.0.8
 - 009-vercel-deploy: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
-- 008-supabase-migration: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0
 
 
 <!-- MANUAL ADDITIONS START -->
