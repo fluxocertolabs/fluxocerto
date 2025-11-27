@@ -66,7 +66,7 @@ A user has an existing twice-monthly project that was created with a single amou
 - What happens when the user enters the same amount for both fields? → System accepts it (valid use case, even if unusual)
 - What happens when one amount field is left empty or zero? → Validation error prevents saving; both amounts are required when variable amounts is enabled
 - What happens when variable amounts toggle is disabled after setting different amounts? → First amount becomes the single amount; second amount is discarded
-- How does the project list display variable amounts? → Shows the combined total or range (e.g., "R$ 3.000 / R$ 500") to indicate variable amounts
+- How does the project list display variable amounts? → Shows slash format (e.g., "R$ 3.000 / R$ 500") displaying both amounts in order (first / second)
 
 ## Requirements *(mandatory)*
 
@@ -85,7 +85,7 @@ A user has an existing twice-monthly project that was created with a single amou
 
 ### Key Entities *(include if feature involves data)*
 
-- **TwiceMonthlySchedule (Updated)**: Extended to optionally include `firstAmount` and `secondAmount` fields. When present, these override the project's base amount for their respective payment days.
+- **TwiceMonthlySchedule (Updated)**: Extended to optionally include `firstAmount` and `secondAmount` fields within the existing `payment_schedule` JSONB structure (e.g., `{ type: 'twiceMonthly', firstDay: 5, secondDay: 20, firstAmount: 300000, secondAmount: 50000 }`). When present, these override the project's base amount for their respective payment days.
 - **Project**: No changes to the base Project entity. The amount field continues to serve as the default/fallback amount.
 
 ## Success Criteria *(mandatory)*
@@ -96,6 +96,13 @@ A user has an existing twice-monthly project that was created with a single amou
 - **SC-002**: Existing twice-monthly projects continue to work without any user action (100% backward compatibility)
 - **SC-003**: Cashflow projections accurately reflect the correct amount on each payment day for 100% of configured variable amount projects
 - **SC-004**: Users can distinguish between fixed and variable amount projects at a glance in the project list
+
+## Clarifications
+
+### Session 2025-11-27
+
+- Q: Where should variable amounts be stored (JSONB vs separate columns)? → A: Inside `payment_schedule` JSONB
+- Q: What format for project list display of variable amounts? → A: Slash format "R$ 3.000 / R$ 500"
 
 ## Assumptions
 
