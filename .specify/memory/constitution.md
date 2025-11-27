@@ -19,8 +19,8 @@ Testing:         Vitest 4.0.14 + React Testing Library 16.3.0
 Validation:      Zod 4.1.13
 Build Tool:      Vite 7.2.4
 Package Manager: pnpm 10+
-CI/CD:           GitHub Actions (future)
-Deployment:      Local development only (MVP), Vercel (future)
+CI/CD:           GitHub Actions
+Deployment:      Vercel (production), Local development (dev)
 Secret Manager:  Environment variables (.env)
 ```
 

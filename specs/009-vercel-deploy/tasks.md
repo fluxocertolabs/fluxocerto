@@ -3,7 +3,7 @@
 **Input**: Design documents from `/specs/009-vercel-deploy/`
 **Prerequisites**: plan.md ✓, spec.md ✓, research.md ✓, data-model.md ✓, contracts/ ✓, quickstart.md ✓
 
-**Tests**: Not explicitly requested in the feature specification. Test tasks are omitted.
+**Tests**: Verification tasks are included inline (T006, T012, T015, T019, T020, T023, T025, T026) to validate success criteria SC-001 through SC-007.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -49,10 +49,10 @@ Based on plan.md structure:
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Create CI workflow file at `.github/workflows/ci.yml` from `specs/009-vercel-deploy/contracts/ci-workflow.yml`
-- [ ] T004 [US1] Connect Vercel to GitHub repository via Vercel Dashboard (manual step - see quickstart.md Step 1)
+- [ ] T003 [US1] Create CI workflow file at `.github/workflows/ci.yml` from `specs/009-vercel-deploy/contracts/ci-workflow.yml`. Note: CI workflow uses Node.js 20 (FR-011) and includes `cancel-in-progress: true` for handling simultaneous deployments.
+- [ ] T004 [US1] Connect Vercel to GitHub repository via Vercel Dashboard (manual step - see quickstart.md Step 1). Verify Vercel's default behavior cancels pending deployments when new commits arrive.
 - [ ] T005 [US1] Configure Vercel project settings: Framework=Vite, Build Command=`pnpm build`, Output Directory=`dist`
-- [ ] T006 [US1] Verify automatic deployment triggers on push to main branch
+- [ ] T006 [US1] Verify automatic deployment triggers on push to main branch. Confirm GitHub commit status checks are reported by Vercel (FR-012).
 
 **Checkpoint**: At this point, pushing to main should trigger both CI workflow and Vercel deployment
 
@@ -101,8 +101,8 @@ Based on plan.md structure:
 
 ### Implementation for User Story 4
 
-- [ ] T016 [US4] Add `VITE_SUPABASE_URL` environment variable in Vercel Dashboard for Production, Preview, Development scopes
-- [ ] T017 [US4] Add `VITE_SUPABASE_ANON_KEY` environment variable in Vercel Dashboard for Production, Preview, Development scopes
+- [ ] T016 [US4] Add `VITE_SUPABASE_URL` environment variable in Vercel Dashboard for Production, Preview, Development scopes. Verify build fails with clear error if variable is missing.
+- [ ] T017 [US4] Add `VITE_SUPABASE_ANON_KEY` environment variable in Vercel Dashboard for Production, Preview, Development scopes. Verify build fails with clear error if variable is missing.
 - [ ] T018 [US4] Trigger redeployment after adding environment variables
 - [ ] T019 [US4] Verify deployed application successfully connects to Supabase backend (SC-007)
 - [ ] T020 [US4] Verify no credentials are committed to repository (grep for Supabase URL patterns)
