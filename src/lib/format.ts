@@ -8,17 +8,17 @@
  * Handles edge cases: large numbers with abbreviations, decimal precision.
  *
  * @param cents - Amount in cents (integer)
- * @returns Formatted currency string (e.g., "$1,234" or "$1.2M")
+ * @returns Formatted currency string (e.g., "R$ 1.234" or "R$ 1.2M")
  */
 export function formatCurrency(cents: number): string {
-  const dollars = cents / 100
+  const reais = cents / 100
 
   // For very large numbers, use abbreviations
-  if (Math.abs(dollars) >= 1_000_000) {
-    const millions = dollars / 1_000_000
+  if (Math.abs(reais) >= 1_000_000) {
+    const millions = reais / 1_000_000
     return new Intl.NumberFormat(navigator.language, {
       style: 'currency',
-      currency: 'USD',
+      currency: 'BRL',
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     })
@@ -26,11 +26,11 @@ export function formatCurrency(cents: number): string {
       .replace(/[\d,.]+/, `${millions.toFixed(1)}`) + 'M'
   }
 
-  if (Math.abs(dollars) >= 10_000) {
-    const thousands = dollars / 1_000
+  if (Math.abs(reais) >= 10_000) {
+    const thousands = reais / 1_000
     return new Intl.NumberFormat(navigator.language, {
       style: 'currency',
-      currency: 'USD',
+      currency: 'BRL',
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     })
@@ -38,49 +38,49 @@ export function formatCurrency(cents: number): string {
       .replace(/[\d,.]+/, `${thousands.toFixed(1)}`) + 'K'
   }
 
-  // Standard formatting without cents for whole dollar amounts
+  // Standard formatting without cents for whole amounts
   return new Intl.NumberFormat(navigator.language, {
     style: 'currency',
-    currency: 'USD',
+    currency: 'BRL',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(dollars)
+  }).format(reais)
 }
 
 /**
  * Format currency for chart Y-axis (compact format).
  * Used by Recharts tickFormatter.
  *
- * @param dollars - Amount in dollars (already converted from cents)
- * @returns Compact formatted string (e.g., "$1.2K", "$500")
+ * @param reais - Amount in reais (already converted from cents)
+ * @returns Compact formatted string (e.g., "R$ 1.2K", "R$ 500")
  */
-export function formatChartCurrency(dollars: number): string {
-  if (Math.abs(dollars) >= 1_000_000) {
-    return `$${(dollars / 1_000_000).toFixed(1)}M`
+export function formatChartCurrency(reais: number): string {
+  if (Math.abs(reais) >= 1_000_000) {
+    return `R$ ${(reais / 1_000_000).toFixed(1)}M`
   }
 
-  if (Math.abs(dollars) >= 1_000) {
-    return `$${(dollars / 1_000).toFixed(1)}K`
+  if (Math.abs(reais) >= 1_000) {
+    return `R$ ${(reais / 1_000).toFixed(1)}K`
   }
 
-  return `$${Math.round(dollars)}`
+  return `R$ ${Math.round(reais)}`
 }
 
 /**
  * Format currency with cents for detailed display.
  *
  * @param cents - Amount in cents (integer)
- * @returns Formatted currency string with cents (e.g., "$1,234.56")
+ * @returns Formatted currency string with cents (e.g., "R$ 1.234,56")
  */
 export function formatCurrencyWithCents(cents: number): string {
-  const dollars = cents / 100
+  const reais = cents / 100
 
   return new Intl.NumberFormat(navigator.language, {
     style: 'currency',
-    currency: 'USD',
+    currency: 'BRL',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(dollars)
+  }).format(reais)
 }
 
 /**
