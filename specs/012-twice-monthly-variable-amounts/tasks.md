@@ -19,8 +19,8 @@
 
 **Purpose**: Extend the Zod schema to support optional variable amounts in TwiceMonthlySchedule
 
-- [ ] T001 Extend TwiceMonthlyScheduleSchema with optional firstAmount and secondAmount fields in src/types/index.ts
-- [ ] T002 Add Zod refinement to validate both amounts present or both absent in src/types/index.ts
+- [ ] T001 Extend TwiceMonthlyScheduleSchema with optional `firstAmount: z.number().positive().optional()` and `secondAmount: z.number().positive().optional()` fields in src/types/index.ts
+- [ ] T002 Add Zod refinement to enforce "both amounts present or both absent" rule (separate from T001's field definitions) in src/types/index.ts
 
 **Checkpoint**: Type system ready - cashflow engine and UI can now use the extended schema
 
@@ -43,7 +43,7 @@
 - [ ] T006 [US1] Implement toggle enable behavior: pre-populate firstAmount from existing amount in src/components/manage/projects/project-form.tsx
 - [ ] T007 [US1] Implement toggle disable behavior: use firstAmount as single amount in src/components/manage/projects/project-form.tsx
 - [ ] T008 [US1] Update buildPaymentSchedule() to include variable amounts when enabled in src/components/manage/projects/project-form.tsx
-- [ ] T009 [US1] Add form validation error handling for variable amount fields in src/components/manage/projects/project-form.tsx
+- [ ] T009 [US1] Add inline Zod validation error display under each variable amount field (show "First amount must be positive" / "Second amount must be positive" / "Both amounts are required when variable amounts is enabled") in src/components/manage/projects/project-form.tsx
 
 **Checkpoint**: Users can create twice-monthly projects with variable amounts through the form UI
 
@@ -91,7 +91,7 @@
 **Purpose**: Display formatting and final integration
 
 - [ ] T018 [P] Update formatCurrency display to show slash format for variable amounts in src/components/manage/projects/project-list-item.tsx
-- [ ] T019 Run manual testing checklist from quickstart.md
+- [ ] T019 Run manual testing checklist (see quickstart.md lines 81-88: toggle visibility, field population, save/load, cashflow display, project list format)
 - [ ] T020 Verify backward compatibility: existing twice-monthly projects without variable amounts continue to work
 
 ---
@@ -164,6 +164,8 @@ Task: "Add unit test: handles month-end edge cases with variable amounts in src/
 | `src/lib/cashflow/calculate.ts` | Update createIncomeEvents for variable amount resolution |
 | `src/components/manage/projects/project-form.tsx` | Add toggle, amount fields, state management |
 | `src/components/manage/projects/project-list-item.tsx` | Update amount display format |
+
+**Note**: `src/lib/cashflow/frequencies.ts` (referenced in plan.md) does NOT require changes—the `isTwiceMonthlyPaymentDue` function only determines IF a payment is due, not the amount. Amount resolution is handled entirely in `calculate.ts` (T014, T015).
 
 ---
 

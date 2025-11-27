@@ -25,6 +25,8 @@ A freelancer has a client that pays different amounts on different days of the m
 
 4. **Given** a user is editing a project with a frequency other than "Duas vezes por mês", **When** they view the form, **Then** the variable amounts toggle is not visible
 
+5. **Given** a user has saved a twice-monthly project with firstAmount=R$ 3.000 and secondAmount=R$ 500, **When** they view the project list, **Then** the amount column displays "R$ 3.000 / R$ 500" (first amount / second amount)
+
 ---
 
 ### User Story 2 - Cashflow Reflects Variable Amounts (Priority: P1)
@@ -92,10 +94,10 @@ A user has an existing twice-monthly project that was created with a single amou
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can configure twice-monthly projects with different amounts in under 30 seconds
+- **SC-001**: Users can configure twice-monthly projects with different amounts in under 30 seconds (validated via manual testing: enable toggle + enter two amounts + save)
 - **SC-002**: Existing twice-monthly projects continue to work without any user action (100% backward compatibility)
 - **SC-003**: Cashflow projections accurately reflect the correct amount on each payment day for 100% of configured variable amount projects
-- **SC-004**: Users can distinguish between fixed and variable amount projects at a glance in the project list
+- **SC-004**: Users can distinguish between fixed and variable amount projects at a glance in the project list (variable amounts show "R$ X / R$ Y" format vs single "R$ X" for fixed)
 
 ## Clarifications
 
@@ -108,6 +110,6 @@ A user has an existing twice-monthly project that was created with a single amou
 
 - The variable amounts feature is specific to twice-monthly frequency; other frequencies do not need this capability
 - Users will most commonly use the simple single-amount mode; variable amounts is an advanced option
-- The toggle should be visually subtle to avoid overwhelming users who don't need this feature
+- The toggle should use the standard shadcn/ui Switch component without emphasis styling (no bold labels, no highlight colors) to avoid overwhelming users who don't need this feature
 - All UI text will be in Brazilian Portuguese (pt-BR) as per existing application conventions
 - Variable amounts can be any positive number; there's no requirement for the second amount to be less than the first
