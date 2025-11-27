@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm db:start && pnpm dev:app",
+    "dev:app": "vite",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:reset": "npx supabase db reset",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
