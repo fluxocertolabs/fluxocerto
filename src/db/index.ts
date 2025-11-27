@@ -28,6 +28,16 @@ export class FinanceDB extends Dexie {
       expenses: 'id, name, isActive',
       creditCards: 'id, name',
     })
+
+    // Version 3: Add frequency index for flexible payment schedule feature
+    // paymentSchedule is stored as JSON within the project record (no schema change needed)
+    // frequency index added for potential filtering by payment frequency
+    this.version(3).stores({
+      accounts: 'id, name, type',
+      projects: 'id, name, isActive, frequency',
+      expenses: 'id, name, isActive',
+      creditCards: 'id, name',
+    })
   }
 }
 

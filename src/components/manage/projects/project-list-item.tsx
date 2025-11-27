@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
-import type { Project } from '@/types'
+import type { Project, PaymentSchedule } from '@/types'
 
 interface ProjectListItemProps {
   project: Project
@@ -13,6 +13,7 @@ interface ProjectListItemProps {
 const FREQUENCY_LABELS: Record<Project['frequency'], string> = {
   weekly: 'Weekly',
   biweekly: 'Biweekly',
+  'twice-monthly': 'Twice a month',
   monthly: 'Monthly',
 }
 
@@ -34,6 +35,34 @@ function formatCurrency(value: number): string {
     currency: 'BRL',
     minimumFractionDigits: 2,
   }).format(value)
+}
+
+const WEEKDAY_LABELS: Record<number, string> = {
+  1: 'Monday',
+  2: 'Tuesday',
+  3: 'Wednesday',
+  4: 'Thursday',
+  5: 'Friday',
+  6: 'Saturday',
+  7: 'Sunday',
+}
+
+function formatPaymentSchedule(schedule: PaymentSchedule | undefined, legacyPaymentDay?: number): string {
+  if (schedule) {
+    switch (schedule.type) {
+      case 'dayOfWeek':
+        return WEEKDAY_LABELS[schedule.dayOfWeek] || `Day ${schedule.dayOfWeek}`
+      case 'dayOfMonth':
+        return `Day ${schedule.dayOfMonth}`
+      case 'twiceMonthly':
+        return `Days ${schedule.firstDay} & ${schedule.secondDay}`
+    }
+  }
+  // Legacy fallback
+  if (legacyPaymentDay !== undefined) {
+    return `Day ${legacyPaymentDay}`
+  }
+  return 'Not set'
 }
 
 export function ProjectListItem({
@@ -66,7 +95,7 @@ export function ProjectListItem({
           )}
         </div>
         <div className="text-sm text-muted-foreground mt-1">
-          Day {project.paymentDay}
+          {formatPaymentSchedule(project.paymentSchedule, project.paymentDay)}
         </div>
       </div>
 

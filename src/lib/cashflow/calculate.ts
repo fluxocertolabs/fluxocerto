@@ -11,6 +11,8 @@ import {
   isMonthlyPaymentDue,
   isBiweeklyPaymentDue,
   isWeeklyPaymentDue,
+  isDayOfWeekPaymentDue,
+  isTwiceMonthlyPaymentDue,
 } from './frequencies'
 import type {
   CashflowProjection,
@@ -42,6 +44,7 @@ export function calculateStartingBalance(accounts: BankAccount[]): number {
 
 /**
  * Create income events for a specific day based on project payment schedules.
+ * Supports both new PaymentSchedule system and legacy paymentDay field for backward compatibility.
  */
 function createIncomeEvents(
   date: Date,
@@ -53,17 +56,56 @@ function createIncomeEvents(
 
   for (const project of projects) {
     let isDue = false
+    const schedule = project.paymentSchedule
 
-    switch (project.frequency) {
-      case 'monthly':
-        isDue = isMonthlyPaymentDue(date, project.paymentDay)
-        break
-      case 'biweekly':
-        isDue = isBiweeklyPaymentDue(date, dayOffset, project.paymentDay, project.id, firstOccurrences)
-        break
-      case 'weekly':
-        isDue = isWeeklyPaymentDue(date, dayOffset, project.paymentDay, project.id, firstOccurrences)
-        break
+    // Use new PaymentSchedule system if available
+    if (schedule) {
+      switch (project.frequency) {
+        case 'monthly':
+          if (schedule.type === 'dayOfMonth') {
+            isDue = isMonthlyPaymentDue(date, schedule.dayOfMonth)
+          }
+          break
+        case 'twice-monthly':
+          if (schedule.type === 'twiceMonthly') {
+            isDue = isTwiceMonthlyPaymentDue(date, schedule.firstDay, schedule.secondDay)
+          }
+          break
+        case 'biweekly':
+          if (schedule.type === 'dayOfWeek') {
+            // For biweekly with day-of-week: check if it's the right day AND 14-day interval
+            if (isDayOfWeekPaymentDue(date, schedule.dayOfWeek)) {
+              // Track first occurrence for biweekly interval
+              if (!firstOccurrences.has(project.id)) {
+                firstOccurrences.set(project.id, dayOffset)
+                isDue = true
+              } else {
+                const firstOccurrence = firstOccurrences.get(project.id)!
+                const daysSinceFirst = dayOffset - firstOccurrence
+                isDue = daysSinceFirst > 0 && daysSinceFirst % 14 === 0
+              }
+            }
+          }
+          break
+        case 'weekly':
+          if (schedule.type === 'dayOfWeek') {
+            isDue = isDayOfWeekPaymentDue(date, schedule.dayOfWeek)
+          }
+          break
+      }
+    } else if (project.paymentDay !== undefined) {
+      // Backward compatibility: fall back to legacy paymentDay field
+      switch (project.frequency) {
+        case 'monthly':
+          isDue = isMonthlyPaymentDue(date, project.paymentDay)
+          break
+        case 'biweekly':
+          isDue = isBiweeklyPaymentDue(date, dayOffset, project.paymentDay, project.id, firstOccurrences)
+          break
+        case 'weekly':
+          isDue = isWeeklyPaymentDue(date, dayOffset, project.paymentDay, project.id, firstOccurrences)
+          break
+      }
     }
 
     if (isDue) {

@@ -17,21 +17,115 @@ export const BankAccountSchema = BankAccountInputSchema.extend({
 export type BankAccountInput = z.infer<typeof BankAccountInputSchema>
 export type BankAccount = z.infer<typeof BankAccountSchema>
 
+// === Payment Schedule (Flexible Payment Schedule Feature) ===
+
+/**
+ * Payment schedule for weekly/biweekly frequencies.
+ * Uses ISO 8601 day numbering: 1 = Monday, 7 = Sunday
+ */
+export const DayOfWeekScheduleSchema = z.object({
+  type: z.literal('dayOfWeek'),
+  dayOfWeek: z.number().int().min(1).max(7, 'Day of week must be 1-7 (Monday-Sunday)'),
+})
+
+/**
+ * Payment schedule for monthly frequency.
+ * Day of month (1-31), with month-end handling for shorter months.
+ */
+export const DayOfMonthScheduleSchema = z.object({
+  type: z.literal('dayOfMonth'),
+  dayOfMonth: z.number().int().min(1).max(31, 'Day of month must be 1-31'),
+})
+
+/**
+ * Payment schedule for twice-monthly frequency.
+ * Two distinct days of month (1-31).
+ */
+export const TwiceMonthlyScheduleSchema = z
+  .object({
+    type: z.literal('twiceMonthly'),
+    firstDay: z.number().int().min(1).max(31, 'First day must be 1-31'),
+    secondDay: z.number().int().min(1).max(31, 'Second day must be 1-31'),
+  })
+  .refine((data) => data.firstDay !== data.secondDay, {
+    message: 'Both payment days must be different',
+    path: ['secondDay'],
+  })
+
+/**
+ * Discriminated union for all payment schedule types.
+ */
+export const PaymentScheduleSchema = z.discriminatedUnion('type', [
+  DayOfWeekScheduleSchema,
+  DayOfMonthScheduleSchema,
+  TwiceMonthlyScheduleSchema,
+])
+
+export type DayOfWeekSchedule = z.infer<typeof DayOfWeekScheduleSchema>
+export type DayOfMonthSchedule = z.infer<typeof DayOfMonthScheduleSchema>
+export type TwiceMonthlySchedule = z.infer<typeof TwiceMonthlyScheduleSchema>
+export type PaymentSchedule = z.infer<typeof PaymentScheduleSchema>
+
+/**
+ * Frequency options ordered by occurrence rate (most frequent first).
+ */
+export const FrequencySchema = z.enum(['weekly', 'biweekly', 'twice-monthly', 'monthly'])
+export type Frequency = z.infer<typeof FrequencySchema>
+
+/**
+ * Validation helper for form submission.
+ * Ensures payment schedule type matches frequency.
+ */
+export function validateFrequencyScheduleMatch(
+  frequency: Frequency,
+  schedule: PaymentSchedule
+): boolean {
+  switch (frequency) {
+    case 'weekly':
+    case 'biweekly':
+      return schedule.type === 'dayOfWeek'
+    case 'twice-monthly':
+      return schedule.type === 'twiceMonthly'
+    case 'monthly':
+      return schedule.type === 'dayOfMonth'
+  }
+}
+
 // === Project (Income Source) ===
-export const ProjectInputSchema = z.object({
+
+// Base schema without refinement (for extension)
+const ProjectInputBaseSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(100),
   amount: z.number().positive('Amount must be positive'),
-  paymentDay: z.number().int().min(1).max(31, 'Payment day must be 1-31'),
-  frequency: z.enum(['weekly', 'biweekly', 'monthly']),
+  frequency: FrequencySchema,
+  paymentSchedule: PaymentScheduleSchema,
   certainty: z.enum(['guaranteed', 'probable', 'uncertain']),
   isActive: z.boolean().default(true),
 })
 
-export const ProjectSchema = ProjectInputSchema.extend({
+// Input schema with frequency-schedule validation
+export const ProjectInputSchema = ProjectInputBaseSchema.refine(
+  (data) => validateFrequencyScheduleMatch(data.frequency, data.paymentSchedule),
+  {
+    message: 'Payment schedule type must match frequency',
+    path: ['paymentSchedule'],
+  }
+)
+
+// Full schema with system fields
+export const ProjectSchema = ProjectInputBaseSchema.extend({
   id: z.string().uuid(),
+  // Legacy field - kept for backward compatibility during migration
+  paymentDay: z.number().int().min(1).max(31).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-})
+}).refine(
+  (data) => validateFrequencyScheduleMatch(data.frequency, data.paymentSchedule),
+  {
+    message: 'Payment schedule type must match frequency',
+    path: ['paymentSchedule'],
+  }
+)
 
 export type ProjectInput = z.infer<typeof ProjectInputSchema>
 export type Project = z.infer<typeof ProjectSchema>
@@ -85,4 +179,3 @@ export type ProjectionDays = z.infer<typeof ProjectionDaysSchema>
 export interface UserPreferences {
   projectionDays: ProjectionDays
 }
-

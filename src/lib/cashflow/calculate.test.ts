@@ -33,16 +33,34 @@ function createTestProject(overrides: Partial<{
   name: string
   amount: number
   paymentDay: number
-  frequency: 'weekly' | 'biweekly' | 'monthly'
+  frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
   certainty: 'guaranteed' | 'probable' | 'uncertain'
   isActive: boolean
+  paymentSchedule: { type: 'dayOfWeek'; dayOfWeek: number } | { type: 'dayOfMonth'; dayOfMonth: number } | { type: 'twiceMonthly'; firstDay: number; secondDay: number }
 }> = {}) {
+  const frequency = overrides.frequency ?? 'monthly'
+  const paymentDay = overrides.paymentDay ?? 15
+
+  // Build appropriate paymentSchedule based on frequency if not explicitly provided
+  let paymentSchedule = overrides.paymentSchedule
+  if (!paymentSchedule) {
+    if (frequency === 'weekly' || frequency === 'biweekly') {
+      // Default to Friday (5) for weekly/biweekly
+      paymentSchedule = { type: 'dayOfWeek', dayOfWeek: 5 }
+    } else if (frequency === 'twice-monthly') {
+      paymentSchedule = { type: 'twiceMonthly', firstDay: 1, secondDay: 15 }
+    } else {
+      paymentSchedule = { type: 'dayOfMonth', dayOfMonth: paymentDay }
+    }
+  }
+
   return {
     id: overrides.id ?? crypto.randomUUID(),
     name: overrides.name ?? 'Test Project',
     amount: overrides.amount ?? 50000, // $500
-    paymentDay: overrides.paymentDay ?? 15,
-    frequency: overrides.frequency ?? 'monthly',
+    paymentDay: overrides.paymentDay ?? 15, // Legacy field for backward compatibility
+    frequency,
+    paymentSchedule,
     certainty: overrides.certainty ?? 'guaranteed',
     isActive: overrides.isActive ?? true,
     createdAt: new Date(),

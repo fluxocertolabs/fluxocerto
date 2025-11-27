@@ -5,7 +5,7 @@
  * based on different frequency types (monthly, biweekly, weekly).
  */
 
-import { getDate, getDaysInMonth } from 'date-fns'
+import { getDate, getDaysInMonth, getISODay } from 'date-fns'
 
 // =============================================================================
 // MONTH-END HANDLING
@@ -130,5 +130,46 @@ export function isWeeklyPaymentDue(
   const daysSinceFirst = dayOffset - firstOccurrence
 
   return daysSinceFirst > 0 && daysSinceFirst % 7 === 0
+}
+
+// =============================================================================
+// DAY-OF-WEEK FREQUENCY (FOR FLEXIBLE PAYMENT SCHEDULE)
+// =============================================================================
+
+/**
+ * Check if a payment is due on a specific day of week.
+ * Used for weekly and biweekly frequencies with the new PaymentSchedule system.
+ *
+ * @param date - The date to check
+ * @param dayOfWeek - The configured day of week (1-7, ISO 8601: 1=Monday, 7=Sunday)
+ * @returns True if the date falls on the specified day of week
+ */
+export function isDayOfWeekPaymentDue(date: Date, dayOfWeek: number): boolean {
+  return getISODay(date) === dayOfWeek
+}
+
+// =============================================================================
+// TWICE-MONTHLY FREQUENCY
+// =============================================================================
+
+/**
+ * Check if a twice-monthly payment is due on a specific date.
+ * Payment occurs on two fixed days each month.
+ * Handles month-end edge cases (e.g., day 31 in February → last day of February).
+ *
+ * @param date - The date to check
+ * @param firstDay - The first payment day of month (1-31)
+ * @param secondDay - The second payment day of month (1-31)
+ * @returns True if payment is due on this date
+ */
+export function isTwiceMonthlyPaymentDue(
+  date: Date,
+  firstDay: number,
+  secondDay: number
+): boolean {
+  const currentDay = getDate(date)
+  const effectiveFirstDay = getEffectiveDay(firstDay, date)
+  const effectiveSecondDay = getEffectiveDay(secondDay, date)
+  return currentDay === effectiveFirstDay || currentDay === effectiveSecondDay
 }
 
