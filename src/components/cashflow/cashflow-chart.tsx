@@ -46,7 +46,7 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
   return (
     <div className={cn('rounded-xl border border-border bg-card p-4')}>
       <h2 className="text-lg font-semibold text-foreground mb-4">
-        30-Day Cashflow Projection
+        Projeção de Fluxo de Caixa
       </h2>
 
       <div className="h-[300px] md:h-[400px]">
@@ -125,7 +125,7 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
                 strokeWidth: 2,
                 fill: 'hsl(var(--card))',
               }}
-              name="Pessimistic"
+              name="Pessimista"
             />
 
             {/* Optimistic area (rendered on top) */}
@@ -142,7 +142,7 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
                 strokeWidth: 2,
                 fill: 'hsl(var(--card))',
               }}
-              name="Optimistic"
+              name="Otimista"
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -155,21 +155,21 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
             className="h-3 w-3 rounded-full"
             style={{ backgroundColor: COLORS.optimistic }}
           />
-          <span className="text-muted-foreground">Optimistic</span>
+          <span className="text-muted-foreground">Otimista</span>
         </div>
         <div className="flex items-center gap-2">
           <div
             className="h-3 w-3 rounded-full"
             style={{ backgroundColor: COLORS.pessimistic }}
           />
-          <span className="text-muted-foreground">Pessimistic</span>
+          <span className="text-muted-foreground">Pessimista</span>
         </div>
         <div className="flex items-center gap-2">
           <div
             className="h-3 w-3 rounded-full"
             style={{ backgroundColor: COLORS.danger }}
           />
-          <span className="text-muted-foreground">Danger Zone</span>
+          <span className="text-muted-foreground">Zona de Perigo</span>
         </div>
       </div>
     </div>

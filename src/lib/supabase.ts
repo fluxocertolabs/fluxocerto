@@ -301,6 +301,6 @@ export function handleSupabaseError<T = never>(error: unknown): Result<T> {
 
   return {
     success: false,
-    error: 'An unexpected error occurred.',
+    error: 'Ocorreu um erro inesperado.',
   }
 }

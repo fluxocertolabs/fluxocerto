@@ -199,7 +199,7 @@ export function useCashflowProjection(
     } catch (err) {
       return {
         success: false,
-        error: err instanceof Error ? err : new Error('Failed to calculate projection'),
+        error: err instanceof Error ? err : new Error('Falha ao calcular projeção'),
       }
     }
   }, [isLoading, accounts, projects, expenses, creditCards, projectionDays, _retryTrigger])

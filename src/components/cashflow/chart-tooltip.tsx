@@ -16,6 +16,13 @@ const COLORS = {
   expense: '#ef4444',
 } as const
 
+// Certainty labels in Portuguese
+const CERTAINTY_LABELS: Record<string, string> = {
+  guaranteed: 'garantido',
+  probable: 'provável',
+  uncertain: 'incerto',
+}
+
 interface ChartTooltipProps {
   active?: boolean
   payload?: Array<{ payload: ChartDataPoint }>
@@ -49,7 +56,7 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
       {/* Balance section */}
       <div className="space-y-1 mb-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Optimistic:</span>
+          <span className="text-sm text-muted-foreground">Otimista:</span>
           <span
             className={cn(
               'text-sm font-medium',
@@ -61,7 +68,7 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Pessimistic:</span>
+          <span className="text-sm text-muted-foreground">Pessimista:</span>
           <span
             className={cn(
               'text-sm font-medium',
@@ -77,7 +84,7 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
       {/* Income events */}
       {snapshot.incomeEvents.length > 0 && (
         <div className="border-t border-border pt-2 mb-2">
-          <p className="text-xs font-medium text-muted-foreground mb-1">Income</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Receitas</p>
           <div className="space-y-1">
             {snapshot.incomeEvents.map((event, index) => (
               <div key={index} className="flex justify-between items-center text-sm">
@@ -85,7 +92,7 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
                   {event.projectName}
                   {event.certainty !== 'guaranteed' && (
                     <span className="text-xs text-muted-foreground ml-1">
-                      ({event.certainty})
+                      ({CERTAINTY_LABELS[event.certainty] || event.certainty})
                     </span>
                   )}
                 </span>
@@ -101,7 +108,7 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
       {/* Expense events */}
       {snapshot.expenseEvents.length > 0 && (
         <div className="border-t border-border pt-2">
-          <p className="text-xs font-medium text-muted-foreground mb-1">Expenses</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Despesas</p>
           <div className="space-y-1">
             {snapshot.expenseEvents.map((event, index) => (
               <div key={index} className="flex justify-between items-center text-sm">
@@ -123,7 +130,7 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
       {/* No events message */}
       {snapshot.incomeEvents.length === 0 && snapshot.expenseEvents.length === 0 && (
         <p className="text-xs text-muted-foreground border-t border-border pt-2">
-          No transactions on this day
+          Nenhuma transação neste dia
         </p>
       )}
     </div>

@@ -136,7 +136,7 @@ export function BalanceListItem({
               'w-32 pl-7 text-right',
               isSaving && 'opacity-50'
             )}
-            aria-label={`Balance for ${name}`}
+            aria-label={`Saldo de ${name}`}
           />
         </div>
 

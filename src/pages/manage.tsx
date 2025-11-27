@@ -95,7 +95,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to add account:', err)
     } finally {
       setIsSubmitting(false)
@@ -113,7 +113,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to update account:', err)
     } finally {
       setIsSubmitting(false)
@@ -132,7 +132,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to delete account:', err)
     } finally {
       setIsDeleting(false)
@@ -158,7 +158,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to add project:', err)
     } finally {
       setIsSubmitting(false)
@@ -176,7 +176,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to update project:', err)
     } finally {
       setIsSubmitting(false)
@@ -195,7 +195,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to delete project:', err)
     } finally {
       setIsDeleting(false)
@@ -221,7 +221,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to add expense:', err)
     } finally {
       setIsSubmitting(false)
@@ -239,7 +239,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to update expense:', err)
     } finally {
       setIsSubmitting(false)
@@ -258,7 +258,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to delete expense:', err)
     } finally {
       setIsDeleting(false)
@@ -284,7 +284,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to add credit card:', err)
     } finally {
       setIsSubmitting(false)
@@ -302,7 +302,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to update credit card:', err)
     } finally {
       setIsSubmitting(false)
@@ -321,7 +321,7 @@ export function ManagePage() {
         setError(result.error)
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError('Ocorreu um erro inesperado')
       console.error('Failed to delete credit card:', err)
     } finally {
       setIsDeleting(false)

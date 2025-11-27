@@ -119,7 +119,7 @@ export function useFinanceData(): UseFinanceDataReturn {
       setExpenses((expensesResult.data ?? []).map(mapExpenseFromDb))
       setCreditCards((creditCardsResult.data ?? []).map(mapCreditCardFromDb))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch data'
+      const message = err instanceof Error ? err.message : 'Falha ao carregar dados'
       setError(message)
       console.error('Error fetching finance data:', err)
     } finally {
@@ -307,7 +307,7 @@ export function useFinanceData(): UseFinanceDataReturn {
         .subscribe((status, err) => {
           if (status === 'CHANNEL_ERROR') {
             console.error('Realtime channel error:', err)
-            setError('Failed to connect to realtime updates')
+            setError('Falha ao conectar às atualizações em tempo real')
           }
           if (status === 'TIMED_OUT') {
             console.warn('Realtime subscription timed out')

@@ -25,7 +25,7 @@ export function LoadingSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-live="polite" className="space-y-6">
       {/* Screen reader text */}
-      <span className="sr-only">Loading cashflow dashboard...</span>
+      <span className="sr-only">Carregando painel de fluxo de caixa...</span>
       {/* Summary panel skeleton */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <SkeletonCard />
