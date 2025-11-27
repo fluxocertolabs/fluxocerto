@@ -366,6 +366,7 @@ import 'date-fns'
 import '@/components/ui/button'
 import '@/components/ui/input'
 import '@/components/ui/label'
+import '@/components/ui/switch'
 import '@/components/ui/select'
 import '@/types'
 export function ProjectForm()
@@ -641,6 +642,7 @@ import './validators'
 import 'date-fns'
 import '../../types'
 import './frequencies'
+import 'date-fns'
 import './types'
 import './validators'
 export function calculateStartingBalance(accounts: BankAccount[])
@@ -959,6 +961,11 @@ export interface AuthError {
     property code: string
     property message: string
 }
+</file>
+
+<file path="src/types/index.test.ts">
+import 'vitest'
+import './index'
 </file>
 
 <file path="src/types/index.ts">

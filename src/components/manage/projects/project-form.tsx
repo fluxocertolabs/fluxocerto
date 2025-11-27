@@ -424,12 +424,12 @@ export function ProjectForm({
           <Input
             id="amount"
             type="number"
-            placeholder="0,00"
-            value={amount}
+            placeholder={frequency === 'twice-monthly' && variableAmountsEnabled ? 'Usando valores variáveis' : '0,00'}
+            value={frequency === 'twice-monthly' && variableAmountsEnabled ? '' : amount}
             onChange={(e) => setAmount(e.target.value)}
             min="0.01"
             step="0.01"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (frequency === 'twice-monthly' && variableAmountsEnabled)}
             aria-invalid={!!errors.amount}
             aria-describedby={errors.amount ? 'amount-error' : undefined}
           />
