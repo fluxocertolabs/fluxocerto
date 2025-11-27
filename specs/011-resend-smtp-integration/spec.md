@@ -5,6 +5,14 @@
 **Status**: Draft  
 **Input**: User description: "Implement Resend SMTP integration for Magic Link email delivery in production."
 
+## Clarifications
+
+### Session 2025-11-27
+
+- Q: When a Magic Link email fails to deliver (rate limit hit, Resend outage, etc.), how should the user be informed? → A: Silent failure - user sees standard "Check your email" message (current spec behavior)
+- Q: Which domain will be used for the sender email address? → A: noreply@financas.fflo.me
+- Q: Should the setup documentation include steps for monitoring email delivery health? → A: Minimal - just mention Resend dashboard exists for troubleshooting
+
 ## Context
 
 Family Finance uses Supabase Magic Link authentication (implemented in spec 010-invite-auth) for passwordless email login. Currently:
@@ -33,7 +41,7 @@ A family member attempts to log in to the production Family Finance app. They en
 **Acceptance Scenarios**:
 
 1. **Given** a user enters their approved email on the production login page, **When** they click "Send Magic Link", **Then** they receive a Magic Link email in their real inbox within 30 seconds
-2. **Given** a user receives a Magic Link email in production, **When** they view the email, **Then** the sender shows the custom domain address (e.g., noreply@yourdomain.com)
+2. **Given** a user receives a Magic Link email in production, **When** they view the email, **Then** the sender shows the custom domain address (noreply@financas.fflo.me)
 3. **Given** a user clicks the Magic Link in their real inbox, **When** the authentication completes, **Then** they are successfully logged into the production app
 
 ---
@@ -86,7 +94,7 @@ SMTP credentials (Resend API key) are stored securely and never committed to the
 - **FR-001**: Production environment MUST use Resend SMTP for Magic Link email delivery
 - **FR-002**: SMTP configuration MUST be done via Supabase Dashboard (Project Settings → Authentication → SMTP)
 - **FR-003**: SMTP credentials MUST NOT be committed to the repository
-- **FR-004**: Sender email MUST use a custom domain (e.g., noreply@yourdomain.com)
+- **FR-004**: Sender email MUST be `noreply@financas.fflo.me`
 
 **Local Development Preservation:**
 
@@ -100,13 +108,14 @@ SMTP credentials (Resend API key) are stored securely and never committed to the
 - **FR-009**: Setup guide MUST document Supabase Dashboard SMTP configuration steps
 - **FR-010**: Setup guide MUST include a testing checklist to verify email delivery works
 - **FR-011**: Documentation MUST specify Resend free tier limits (3,000/month, 100/day)
+- **FR-012**: Documentation MUST mention Resend dashboard for troubleshooting delivery issues
 
 **SMTP Configuration Values:**
 
-- **FR-012**: SMTP host MUST be `smtp.resend.com`
-- **FR-013**: SMTP port MUST be `465`
-- **FR-014**: SMTP username MUST be `resend`
-- **FR-015**: SMTP password MUST be the Resend API key (configured in Supabase Dashboard, not stored in code)
+- **FR-013**: SMTP host MUST be `smtp.resend.com`
+- **FR-014**: SMTP port MUST be `465`
+- **FR-015**: SMTP username MUST be `resend`
+- **FR-016**: SMTP password MUST be the Resend API key (configured in Supabase Dashboard, not stored in code)
 
 ### Key Entities
 
@@ -114,21 +123,21 @@ SMTP credentials (Resend API key) are stored securely and never committed to the
 
 - **Supabase SMTP Configuration**: Dashboard settings for production email delivery. Contains: host, port, username, password (API key), sender email address.
 
-- **Custom Domain**: DNS-verified domain used as email sender. Requires: SPF, DKIM, and optionally DMARC records configured with domain registrar.
+- **Custom Domain**: DNS-verified domain (`financas.fflo.me`) used as email sender. Requires: SPF, DKIM, and optionally DMARC records configured with domain registrar.
 
 ## Success Criteria
 
 ### Measurable Outcomes
 
 - **SC-001**: Magic Link emails are delivered to real email addresses in production within 30 seconds of request
-- **SC-002**: Email sender displays custom domain address (not generic Supabase domain)
+- **SC-002**: Email sender displays `noreply@financas.fflo.me` (not generic Supabase domain)
 - **SC-003**: Repository contains zero production secrets or API keys (verified by grep/search)
 - **SC-004**: Local development with Inbucket works identically to before this feature (no regressions)
 - **SC-005**: Setup documentation enables a new administrator to configure Resend in under 30 minutes
 
 ## Assumptions
 
-- Administrator has access to a domain they can configure DNS records for (SPF, DKIM)
+- Administrator has access to `financas.fflo.me` domain and can configure DNS records for it (SPF, DKIM)
 - Administrator has access to Supabase Dashboard for the production project
 - Resend free tier limits (3,000/month, 100/day) are sufficient for family use (~5 users)
 - Resend service maintains reasonable uptime and delivery rates
