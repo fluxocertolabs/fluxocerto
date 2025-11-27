@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Build a Page Loading Experience enhancement feature for Family Finance that eliminates UI flickering and provides a polished, professional loading experience across all pages."
 
+## Clarifications
+
+### Session 2025-11-27
+
+- Q: What skeleton/loading implementation approach should be used? → A: React Suspense with dedicated Skeleton components
+- Q: What accessibility approach should skeleton/loading states use? → A: ARIA live regions with polite announcements
+- Q: What should be explicitly declared out of scope? → A: Loading states for individual components (buttons, cards)
+- Q: What animation style should skeleton-to-content transitions use? → A: Fade transition (opacity 0→1, 200-300ms duration)
+- Q: What observability approach should be used for loading performance? → A: Console logging in development only
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Smooth Dashboard Loading (Priority: P1)
@@ -87,6 +97,10 @@ As a user, when a genuine error occurs during data loading, I want to see a help
 - How does the system behave when the user refreshes the page during loading? Loading should restart cleanly with skeleton displayed.
 - What happens if authentication expires during data loading? Redirect to authentication flow without showing error state.
 
+## Out of Scope
+
+- Loading states for individual components (buttons, cards, inline refreshes) — this feature focuses on page-level and modal-level loading experiences only.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -103,6 +117,13 @@ As a user, when a genuine error occurs during data loading, I want to see a help
 - **FR-010**: System MUST display Dashboard-specific skeleton matching the projection chart, balance cards, and transaction list layout.
 - **FR-011**: System MUST display Manage page-specific skeleton matching the income/expense configuration layout.
 - **FR-012**: System MUST display Quick Update modal skeleton when modal opens during data loading.
+- **FR-013**: System MUST use ARIA live regions with polite announcements to inform screen reader users of loading state changes without interrupting current speech.
+
+### Technical Approach
+
+- **Implementation Pattern**: React Suspense with dedicated Skeleton components for declarative loading boundaries and modern React concurrent features integration.
+- **Transition Animation**: Fade transition (opacity 0→1) with 200-300ms duration for skeleton-to-content transitions, ensuring GPU-accelerated performance without layout shifts.
+- **Observability**: Console logging in development mode only for load times and state transitions; manual CLS/Web Vitals testing during development.
 
 ### Key Entities
 
