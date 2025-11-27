@@ -75,8 +75,8 @@ docs/
 
 ## Phase 1 Output
 
-- [ ] `quickstart.md` - Administrator setup guide
-- [ ] `docs/smtp-setup.md` - Production documentation (to be created in implementation phase)
+- [x] `quickstart.md` - Administrator setup guide (detailed, spec folder)
+- [ ] `docs/smtp-setup.md` - Production documentation (copy of quickstart.md for main docs folder discoverability)
 
 ## Implementation Notes
 
@@ -90,16 +90,18 @@ Per spec "Out of Scope":
 - In-app email configuration UI
 - Automated monitoring or alerting
 
-### Key Configuration Values (from spec)
+### Key Configuration Values
 
-| Setting | Value |
-|---------|-------|
-| SMTP Host | `smtp.resend.com` |
-| SMTP Port | `465` |
-| SMTP Username | `resend` |
-| SMTP Password | Resend API key (stored in Supabase Dashboard) |
-| Sender Email | `noreply@financas.fflo.me` |
-| Sender Name | `Family Finance` (or similar) |
+> **Source of Truth**: See spec.md FR-013 through FR-016 for authoritative SMTP configuration values.
+
+| Setting | Value | Spec Reference |
+|---------|-------|----------------|
+| SMTP Host | `smtp.resend.com` | FR-013 |
+| SMTP Port | `465` | FR-014 |
+| SMTP Username | `resend` | FR-015 |
+| SMTP Password | Resend API key (stored in Supabase Dashboard) | FR-016 |
+| Sender Email | `noreply@financas.fflo.me` | FR-004 |
+| Sender Name | `Family Finance` | - |
 
 ### Success Criteria Checklist
 

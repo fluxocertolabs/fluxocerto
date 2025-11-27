@@ -116,13 +116,16 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 
 ## Verification Checklist
 
+> **Note**: This checklist aligns with spec.md Success Criteria (SC-001 through SC-005).
+
 - [ ] Resend account created
 - [ ] Domain `financas.fflo.me` verified in Resend
 - [ ] API key created with "Sending access" permission
 - [ ] Supabase SMTP configured with Resend credentials
-- [ ] Production Magic Link emails delivered successfully
-- [ ] Sender shows `noreply@financas.fflo.me`
-- [ ] Local development still uses Inbucket
+- [ ] Production Magic Link emails delivered successfully (SC-001)
+- [ ] Sender shows `noreply@financas.fflo.me` (SC-002)
+- [ ] Repository contains no secrets (SC-003)
+- [ ] Local development still uses Inbucket (SC-004)
 
 ## Troubleshooting
 

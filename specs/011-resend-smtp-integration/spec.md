@@ -80,7 +80,7 @@ SMTP credentials (Resend API key) are stored securely and never committed to the
 
 ### Edge Cases
 
-- What happens when Resend's free tier limit is reached? → Users attempting to log in will not receive Magic Link emails until the limit resets (daily for 100/day, monthly for 3,000/month). The app shows the standard "Check your email" message but no email arrives. Administrator should monitor usage.
+- What happens when Resend's free tier limit is reached? → Users attempting to log in will not receive Magic Link emails until the limit resets (daily for 100/day, monthly for 3,000/month). The app shows the standard "Check your email" message but no email arrives. Administrator should configure usage alerts in Resend Dashboard (Settings → Alerts) to receive notifications before limits are reached.
 - What happens when Resend service is temporarily unavailable? → Magic Link emails are not delivered. Users see "Check your email" but nothing arrives. They can retry after a few minutes.
 - What happens when the custom domain DNS is misconfigured? → Emails may be rejected by recipient mail servers or marked as spam. Administrator must verify domain setup in Resend dashboard.
 - What happens when switching from one SMTP provider to another? → Update credentials in Supabase Dashboard. No code changes required.
@@ -123,17 +123,17 @@ SMTP credentials (Resend API key) are stored securely and never committed to the
 
 - **Supabase SMTP Configuration**: Dashboard settings for production email delivery. Contains: host, port, username, password (API key), sender email address.
 
-- **Custom Domain**: DNS-verified domain (`financas.fflo.me`) used as email sender. Requires: SPF, DKIM, and optionally DMARC records configured with domain registrar.
+- **Custom Domain**: DNS-verified domain (`financas.fflo.me`) used as email sender. Requires: SPF and DKIM records configured with domain registrar. DMARC record is optional but recommended for improved deliverability and abuse monitoring.
 
 ## Success Criteria
 
 ### Measurable Outcomes
 
-- **SC-001**: Magic Link emails are delivered to real email addresses in production within 30 seconds of request
+- **SC-001**: Magic Link emails arrive in the user's inbox within 30 seconds of request (measured from button click to email appearing in inbox, under normal network conditions)
 - **SC-002**: Email sender displays `noreply@financas.fflo.me` (not generic Supabase domain)
 - **SC-003**: Repository contains zero production secrets or API keys (verified by grep/search)
 - **SC-004**: Local development with Inbucket works identically to before this feature (no regressions)
-- **SC-005**: Setup documentation enables a new administrator to configure Resend in under 30 minutes
+- **SC-005**: Setup documentation enables a new administrator to configure Resend in under 30 minutes of active work (excluding DNS propagation wait time, which may take up to 48 hours)
 
 ## Assumptions
 

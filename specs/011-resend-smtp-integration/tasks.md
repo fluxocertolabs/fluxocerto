@@ -28,7 +28,9 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 **Purpose**: Create documentation file structure
 
-- [ ] T001 Create production SMTP setup guide at `docs/smtp-setup.md`
+> **Note**: `quickstart.md` (in this spec folder) serves as the detailed administrator guide during development. `docs/smtp-setup.md` is a production-ready copy placed in the main docs folder for discoverability. Both should contain the same content.
+
+- [ ] T001 Create production SMTP setup guide at `docs/smtp-setup.md` (copy content from quickstart.md; must include FR-011 rate limits, FR-012 troubleshooting dashboard reference)
 
 ---
 
@@ -58,19 +60,13 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Navigate to Supabase Dashboard → Project Settings → Authentication (external)
-- [ ] T010 [US1] Enable Custom SMTP in Supabase Dashboard (external)
-- [ ] T011 [US1] Configure SMTP host as `smtp.resend.com` (external)
-- [ ] T012 [US1] Configure SMTP port as `465` (external)
-- [ ] T013 [US1] Configure SMTP username as `resend` (external)
-- [ ] T014 [US1] Configure SMTP password with Resend API key (external)
-- [ ] T015 [US1] Configure sender email as `noreply@financas.fflo.me` (external)
-- [ ] T016 [US1] Configure sender name as `Family Finance` (external)
-- [ ] T017 [US1] Save SMTP configuration in Supabase Dashboard (external)
-- [ ] T018 [US1] Test Magic Link email delivery in production (manual verification)
-- [ ] T019 [US1] Verify email arrives within 30 seconds (SC-001)
-- [ ] T020 [US1] Verify sender shows `noreply@financas.fflo.me` (SC-002)
-- [ ] T021 [US1] Verify Magic Link completes authentication successfully
+- [ ] T009 [US1] Navigate to Supabase Dashboard → Project Settings → Authentication → SMTP Settings (external)
+- [ ] T010 [US1] Configure SMTP settings in Supabase Dashboard (external): Enable Custom SMTP, set host=smtp.resend.com, port=465, username=resend, password=API key, sender=noreply@financas.fflo.me, name=Family Finance (see spec.md FR-013 through FR-016)
+- [ ] T011 [US1] Save SMTP configuration and verify settings are persisted (external)
+- [ ] T012 [US1] Test Magic Link email delivery in production (manual verification)
+- [ ] T013 [US1] Verify email arrives within 30 seconds (SC-001)
+- [ ] T014 [US1] Verify sender shows `noreply@financas.fflo.me` (SC-002)
+- [ ] T015 [US1] Verify Magic Link completes authentication successfully
 
 **Checkpoint**: User Story 1 complete - production Magic Link emails work
 
@@ -84,12 +80,12 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Verify `supabase/config.toml` has Inbucket enabled (no changes needed)
-- [ ] T023 [US2] Run `supabase start` locally
-- [ ] T024 [US2] Request Magic Link in local development
-- [ ] T025 [US2] Verify email appears in Inbucket at `http://localhost:54324`
-- [ ] T026 [US2] Verify email is NOT sent via Resend (check Resend Dashboard logs)
-- [ ] T027 [US2] Verify local authentication flow works unchanged (SC-004)
+- [ ] T016 [US2] Verify `supabase/config.toml` has Inbucket enabled (no changes needed)
+- [ ] T017 [US2] Run `supabase start` locally
+- [ ] T018 [US2] Request Magic Link in local development
+- [ ] T019 [US2] Verify email appears in Inbucket at `http://localhost:54324`
+- [ ] T020 [US2] Verify email is NOT sent via Resend (check Resend Dashboard logs)
+- [ ] T021 [US2] Verify local authentication flow works unchanged (SC-004)
 
 **Checkpoint**: User Story 2 complete - local development unchanged
 
@@ -103,11 +99,11 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Search repository for Resend API keys with `grep -r "re_" --include="*"` (manual verification)
-- [ ] T029 [US3] Search repository for SMTP passwords with `grep -ri "smtp.*password" --include="*"` (manual verification)
-- [ ] T030 [US3] Verify no production credentials in any config files
-- [ ] T031 [US3] Verify `docs/smtp-setup.md` guides users to Supabase Dashboard (not code)
-- [ ] T032 [US3] Confirm SC-003: Repository contains zero production secrets
+- [ ] T022 [US3] Search repository for Resend API keys with `grep -r "re_" --include="*"` (manual verification)
+- [ ] T023 [US3] Search repository for SMTP passwords with `grep -ri "smtp.*password" --include="*"` (manual verification)
+- [ ] T024 [US3] Verify no production credentials in any config files
+- [ ] T025 [US3] Verify `docs/smtp-setup.md` guides users to Supabase Dashboard (not code)
+- [ ] T026 [US3] Confirm SC-003: Repository contains zero production secrets
 
 **Checkpoint**: User Story 3 complete - credentials secure
 
@@ -117,12 +113,12 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 **Purpose**: Documentation completion and final validation
 
-- [ ] T033 [P] Update `docs/smtp-setup.md` with troubleshooting section
-- [ ] T034 [P] Document Resend free tier limits in `docs/smtp-setup.md` (FR-011)
-- [ ] T035 [P] Document Resend dashboard for troubleshooting in `docs/smtp-setup.md` (FR-012)
-- [ ] T036 Validate `quickstart.md` steps match actual configuration process
-- [ ] T037 Run full end-to-end verification using `quickstart.md` checklist
-- [ ] T038 Verify SC-005: Setup documentation enables configuration in under 30 minutes
+- [ ] T027 [P] Update `docs/smtp-setup.md` with troubleshooting section (if not already copied from quickstart.md)
+- [ ] T028 [P] Verify Resend free tier limits documented in `docs/smtp-setup.md` (FR-011)
+- [ ] T029 [P] Verify Resend dashboard for troubleshooting documented in `docs/smtp-setup.md` (FR-012)
+- [ ] T030 Validate `quickstart.md` steps match actual configuration process
+- [ ] T031 Run full end-to-end verification using `quickstart.md` checklist
+- [ ] T032 Verify SC-005: Setup documentation enables configuration in under 30 minutes of active work
 
 ---
 
@@ -152,7 +148,7 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 - T004, T005, T006 (DNS records) can be added in parallel
 - US2 and US3 verification can run in parallel with US1 completion
-- T033, T034, T035 (documentation updates) can run in parallel
+- T027, T028, T029 (documentation updates) can run in parallel
 
 ---
 
@@ -202,6 +198,6 @@ Since this is a documentation/configuration feature:
 - DNS propagation may take up to 48 hours (usually much faster)
 - Manual verification required - no automated tests for external service configuration
 - `quickstart.md` already contains detailed step-by-step instructions
-- Commit after documentation tasks (T001, T033-T036)
+- Commit after documentation tasks (T001, T027-T030)
 - Stop at any checkpoint to validate story independently
 
