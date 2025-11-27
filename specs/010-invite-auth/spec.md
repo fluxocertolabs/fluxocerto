@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Implement invite-only authentication for Family Finance using Supabase Magic Link (passwordless email login)."
 
+## Clarifications
+
+### Session 2025-11-27
+
+- Q: How should email case-insensitivity be enforced? → A: Use PostgreSQL `citext` type for email column (automatic case-insensitive comparison)
+- Q: What should happen when Magic Link email delivery fails or is delayed? → A: Always show success message ("Check your email") regardless of delivery status - user retries if not received (prevents email enumeration attacks)
+- Q: How long should authenticated user sessions remain valid? → A: 7 days with automatic refresh (Supabase default session handling)
+- Q: Should users be allowed concurrent sessions across multiple devices? → A: Yes, allow unlimited concurrent sessions (family convenience, no single-device restriction)
+- Q: What should happen if the before-user-created hook encounters a system error? → A: Fail closed - block signup and show generic error (secure default; user can retry)
+
 ## Context
 
 Family Finance currently uses Supabase anonymous authentication (implemented in spec 008-supabase-migration). This means:
@@ -31,7 +41,7 @@ A family member visits the app, enters their email address, receives a login lin
 
 **Acceptance Scenarios**:
 
-1. **Given** a user with an approved email visits the app, **When** they enter their email and click "Send Magic Link", **Then** they see a success message: "Check your email for the login link"
+1. **Given** a user enters any email and clicks "Send Magic Link", **When** the request completes, **Then** they always see a success message: "Check your email for the login link" (regardless of whether email is approved or delivery succeeds - prevents email enumeration)
 2. **Given** a user receives a Magic Link email, **When** they click the link within 1 hour, **Then** they are authenticated and redirected to the dashboard
 3. **Given** a user is authenticated, **When** they refresh the browser, **Then** they remain logged in (session persists)
 
@@ -47,7 +57,7 @@ Only family members whose email addresses have been pre-approved by an administr
 
 **Acceptance Scenarios**:
 
-1. **Given** a user with a non-approved email enters their address, **When** they attempt to sign up, **Then** they see the error: "Access is invite-only. Please contact the family administrator."
+1. **Given** a user with a non-approved email enters their address, **When** they attempt to sign up, **Then** they see the same success message as approved users (no email enumeration); the rejection occurs silently (no Magic Link sent)
 2. **Given** an administrator adds an email to the allowed list via Supabase dashboard, **When** that user attempts to sign up, **Then** they can successfully receive a Magic Link
 3. **Given** an administrator removes an email from the allowed list, **When** that user's session expires and they try to log in again, **Then** they are blocked with the invite-only error
 
@@ -118,14 +128,15 @@ Users receive clear, actionable feedback when authentication issues occur (expir
 - **FR-001**: System MUST use Supabase Magic Link (OTP via email) as the sole authentication method
 - **FR-002**: System MUST NOT require or store passwords
 - **FR-003**: Magic Links MUST expire after 1 hour (Supabase default)
-- **FR-004**: System MUST persist user sessions across browser refreshes using Supabase session storage
+- **FR-004**: System MUST persist user sessions across browser refreshes using Supabase session storage (7-day session duration with automatic token refresh; unlimited concurrent sessions allowed across devices)
 
 **Invite-Only Access Control:**
 
 - **FR-005**: System MUST maintain an `allowed_emails` table containing pre-approved email addresses
 - **FR-006**: System MUST use a Supabase `before-user-created` database hook to validate email addresses during signup
 - **FR-007**: The hook MUST reject signup attempts for emails NOT in the `allowed_emails` table
-- **FR-008**: Rejected users MUST see the message: "Access is invite-only. Please contact the family administrator."
+- **FR-007a**: The hook MUST fail closed on system errors (database issues, timeouts) - block signup rather than allow unauthorized access; user sees generic error and can retry
+- **FR-008**: Rejected users MUST see the same "Check your email" success message as approved users (prevents email enumeration); no Magic Link is actually sent
 - **FR-009**: Administrators MUST be able to manage the allowed emails list via Supabase dashboard (no in-app admin UI required)
 
 **Shared Family Data:**
@@ -155,7 +166,7 @@ Users receive clear, actionable feedback when authentication issues occur (expir
 
 ### Key Entities
 
-- **allowed_emails**: Table storing pre-approved email addresses for invite-only access. Contains: id (UUID primary key), email (text, unique, case-insensitive), created_at (timestamp), created_by (text, optional - for audit purposes)
+- **allowed_emails**: Table storing pre-approved email addresses for invite-only access. Contains: id (UUID primary key), email (citext, unique - uses PostgreSQL citext extension for automatic case-insensitive comparison), created_at (timestamp), created_by (text, optional - for audit purposes)
 
 - **User Session**: Managed by Supabase Auth. Contains: user id, email, session token, expiration. Persisted in browser storage.
 
