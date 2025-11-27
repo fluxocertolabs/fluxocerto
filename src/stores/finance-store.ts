@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { z } from 'zod'
-import { db } from '../db'
+import {
+  getSupabase,
+  getCurrentUserId,
+  handleSupabaseError,
+  isSupabaseConfigured,
+} from '../lib/supabase'
 import {
   BankAccountInputSchema,
   ProjectInputSchema,
@@ -61,64 +66,87 @@ interface FinanceStore {
   ) => Promise<Result<void>>
 }
 
-// Helper to handle common IndexedDB errors
+// Helper to handle common errors (Zod validation + Supabase errors)
 function handleDatabaseError(error: unknown): Result<never> {
   if (error instanceof z.ZodError) {
     return { success: false, error: 'Validation failed', details: error.issues }
   }
 
-  if (error instanceof Error) {
-    if (error.name === 'QuotaExceededError') {
-      return {
-        success: false,
-        error: 'Storage full. Please delete some data.',
-      }
-    }
-    if (error.name === 'ConstraintError') {
-      return { success: false, error: 'A record with this ID already exists.' }
-    }
-    if (error.name === 'InvalidStateError') {
-      return {
-        success: false,
-        error: 'Database is unavailable. Please refresh the page.',
-      }
+  return handleSupabaseError(error)
+}
+
+// Helper to check if Supabase is configured
+function checkSupabaseConfigured(): Result<never> | null {
+  if (!isSupabaseConfigured()) {
+    return {
+      success: false,
+      error: 'Supabase is not configured. Please set up your environment variables.',
     }
   }
-
-  return { success: false, error: 'An unexpected error occurred.' }
+  return null
 }
 
 export const useFinanceStore = create<FinanceStore>()(() => ({
   // === Bank Account Actions ===
   addAccount: async (input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
       const validated = BankAccountInputSchema.parse(input)
-      const id = crypto.randomUUID()
-      const now = new Date()
-      await db.accounts.add({
-        ...validated,
-        id,
-        createdAt: now,
-        updatedAt: now,
-      })
-      return { success: true, data: id }
+      const userId = await getCurrentUserId()
+      
+      if (!userId) {
+        return { success: false, error: 'Not authenticated' }
+      }
+
+      const { data, error } = await getSupabase()
+        .from('accounts')
+        .insert({
+          user_id: userId,
+          name: validated.name,
+          type: validated.type,
+          balance: validated.balance,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
   updateAccount: async (id, input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.accounts.get(id)
-      if (!existing) {
+      const validated = BankAccountInputSchema.partial().parse(input)
+      
+      // Build update object with snake_case keys
+      const updateData: Record<string, unknown> = {}
+      if (validated.name !== undefined) updateData.name = validated.name
+      if (validated.type !== undefined) updateData.type = validated.type
+      if (validated.balance !== undefined) updateData.balance = validated.balance
+
+      const { error, count } = await getSupabase()
+        .from('accounts')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Account not found' }
       }
 
-      const validated = BankAccountInputSchema.partial().parse(input)
-      await db.accounts.update(id, {
-        ...validated,
-        updatedAt: new Date(),
-      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -126,13 +154,23 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   deleteAccount: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.accounts.get(id)
-      if (!existing) {
+      const { error, count } = await getSupabase()
+        .from('accounts')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Account not found' }
       }
 
-      await db.accounts.delete(id)
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -141,34 +179,70 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
   // === Project Actions ===
   addProject: async (input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
       const validated = ProjectInputSchema.parse(input)
-      const id = crypto.randomUUID()
-      const now = new Date()
-      await db.projects.add({
-        ...validated,
-        id,
-        createdAt: now,
-        updatedAt: now,
-      })
-      return { success: true, data: id }
+      const userId = await getCurrentUserId()
+      
+      if (!userId) {
+        return { success: false, error: 'Not authenticated' }
+      }
+
+      const { data, error } = await getSupabase()
+        .from('projects')
+        .insert({
+          user_id: userId,
+          name: validated.name,
+          amount: validated.amount,
+          frequency: validated.frequency,
+          payment_schedule: validated.paymentSchedule,
+          certainty: validated.certainty,
+          is_active: validated.isActive,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
   updateProject: async (id, input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.projects.get(id)
-      if (!existing) {
+      const validated = ProjectInputSchema.partial().parse(input)
+      
+      // Build update object with snake_case keys
+      const updateData: Record<string, unknown> = {}
+      if (validated.name !== undefined) updateData.name = validated.name
+      if (validated.amount !== undefined) updateData.amount = validated.amount
+      if (validated.frequency !== undefined) updateData.frequency = validated.frequency
+      if (validated.paymentSchedule !== undefined) updateData.payment_schedule = validated.paymentSchedule
+      if (validated.certainty !== undefined) updateData.certainty = validated.certainty
+      if (validated.isActive !== undefined) updateData.is_active = validated.isActive
+
+      const { error, count } = await getSupabase()
+        .from('projects')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Project not found' }
       }
 
-      const validated = ProjectInputSchema.partial().parse(input)
-      await db.projects.update(id, {
-        ...validated,
-        updatedAt: new Date(),
-      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -176,13 +250,23 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   deleteProject: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.projects.get(id)
-      if (!existing) {
+      const { error, count } = await getSupabase()
+        .from('projects')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Project not found' }
       }
 
-      await db.projects.delete(id)
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -190,16 +274,34 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   toggleProjectActive: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.projects.get(id)
-      if (!existing) {
-        return { success: false, error: 'Project not found' }
+      // First, fetch current state
+      const { data: existing, error: fetchError } = await getSupabase()
+        .from('projects')
+        .select('is_active')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) {
+        if (fetchError.code === 'PGRST116') {
+          return { success: false, error: 'Project not found' }
+        }
+        return handleSupabaseError(fetchError)
       }
 
-      await db.projects.update(id, {
-        isActive: !existing.isActive,
-        updatedAt: new Date(),
-      })
+      // Toggle the value
+      const { error: updateError } = await getSupabase()
+        .from('projects')
+        .update({ is_active: !existing.is_active })
+        .eq('id', id)
+
+      if (updateError) {
+        return handleSupabaseError(updateError)
+      }
+
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -208,34 +310,66 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
   // === Fixed Expense Actions ===
   addExpense: async (input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
       const validated = FixedExpenseInputSchema.parse(input)
-      const id = crypto.randomUUID()
-      const now = new Date()
-      await db.expenses.add({
-        ...validated,
-        id,
-        createdAt: now,
-        updatedAt: now,
-      })
-      return { success: true, data: id }
+      const userId = await getCurrentUserId()
+      
+      if (!userId) {
+        return { success: false, error: 'Not authenticated' }
+      }
+
+      const { data, error } = await getSupabase()
+        .from('expenses')
+        .insert({
+          user_id: userId,
+          name: validated.name,
+          amount: validated.amount,
+          due_day: validated.dueDay,
+          is_active: validated.isActive,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
   updateExpense: async (id, input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.expenses.get(id)
-      if (!existing) {
+      const validated = FixedExpenseInputSchema.partial().parse(input)
+      
+      // Build update object with snake_case keys
+      const updateData: Record<string, unknown> = {}
+      if (validated.name !== undefined) updateData.name = validated.name
+      if (validated.amount !== undefined) updateData.amount = validated.amount
+      if (validated.dueDay !== undefined) updateData.due_day = validated.dueDay
+      if (validated.isActive !== undefined) updateData.is_active = validated.isActive
+
+      const { error, count } = await getSupabase()
+        .from('expenses')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Expense not found' }
       }
 
-      const validated = FixedExpenseInputSchema.partial().parse(input)
-      await db.expenses.update(id, {
-        ...validated,
-        updatedAt: new Date(),
-      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -243,13 +377,23 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   deleteExpense: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.expenses.get(id)
-      if (!existing) {
+      const { error, count } = await getSupabase()
+        .from('expenses')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Expense not found' }
       }
 
-      await db.expenses.delete(id)
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -257,16 +401,34 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   toggleExpenseActive: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.expenses.get(id)
-      if (!existing) {
-        return { success: false, error: 'Expense not found' }
+      // First, fetch current state
+      const { data: existing, error: fetchError } = await getSupabase()
+        .from('expenses')
+        .select('is_active')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) {
+        if (fetchError.code === 'PGRST116') {
+          return { success: false, error: 'Expense not found' }
+        }
+        return handleSupabaseError(fetchError)
       }
 
-      await db.expenses.update(id, {
-        isActive: !existing.isActive,
-        updatedAt: new Date(),
-      })
+      // Toggle the value
+      const { error: updateError } = await getSupabase()
+        .from('expenses')
+        .update({ is_active: !existing.is_active })
+        .eq('id', id)
+
+      if (updateError) {
+        return handleSupabaseError(updateError)
+      }
+
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -275,34 +437,64 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
   // === Credit Card Actions ===
   addCreditCard: async (input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
       const validated = CreditCardInputSchema.parse(input)
-      const id = crypto.randomUUID()
-      const now = new Date()
-      await db.creditCards.add({
-        ...validated,
-        id,
-        createdAt: now,
-        updatedAt: now,
-      })
-      return { success: true, data: id }
+      const userId = await getCurrentUserId()
+      
+      if (!userId) {
+        return { success: false, error: 'Not authenticated' }
+      }
+
+      const { data, error } = await getSupabase()
+        .from('credit_cards')
+        .insert({
+          user_id: userId,
+          name: validated.name,
+          statement_balance: validated.statementBalance,
+          due_day: validated.dueDay,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
   updateCreditCard: async (id, input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.creditCards.get(id)
-      if (!existing) {
+      const validated = CreditCardInputSchema.partial().parse(input)
+      
+      // Build update object with snake_case keys
+      const updateData: Record<string, unknown> = {}
+      if (validated.name !== undefined) updateData.name = validated.name
+      if (validated.statementBalance !== undefined) updateData.statement_balance = validated.statementBalance
+      if (validated.dueDay !== undefined) updateData.due_day = validated.dueDay
+
+      const { error, count } = await getSupabase()
+        .from('credit_cards')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Credit card not found' }
       }
 
-      const validated = CreditCardInputSchema.partial().parse(input)
-      await db.creditCards.update(id, {
-        ...validated,
-        updatedAt: new Date(),
-      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -310,13 +502,23 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   deleteCreditCard: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
-      const existing = await db.creditCards.get(id)
-      if (!existing) {
+      const { error, count } = await getSupabase()
+        .from('credit_cards')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Credit card not found' }
       }
 
-      await db.creditCards.delete(id)
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -325,22 +527,31 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
   // === Balance Update Actions ===
   updateAccountBalance: async (id, balance) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
       if (balance < 0) {
         return { success: false, error: 'Balance cannot be negative' }
       }
 
-      const existing = await db.accounts.get(id)
-      if (!existing) {
+      const now = new Date().toISOString()
+      const { error, count } = await getSupabase()
+        .from('accounts')
+        .update({
+          balance,
+          balance_updated_at: now,
+        })
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Account not found' }
       }
 
-      const now = new Date()
-      await db.accounts.update(id, {
-        balance,
-        balanceUpdatedAt: now,
-        updatedAt: now,
-      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -348,26 +559,34 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   updateCreditCardBalance: async (id, statementBalance) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
     try {
       if (statementBalance < 0) {
         return { success: false, error: 'Balance cannot be negative' }
       }
 
-      const existing = await db.creditCards.get(id)
-      if (!existing) {
+      const now = new Date().toISOString()
+      const { error, count } = await getSupabase()
+        .from('credit_cards')
+        .update({
+          statement_balance: statementBalance,
+          balance_updated_at: now,
+        })
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
         return { success: false, error: 'Credit card not found' }
       }
 
-      const now = new Date()
-      await db.creditCards.update(id, {
-        statementBalance,
-        balanceUpdatedAt: now,
-        updatedAt: now,
-      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 }))
-

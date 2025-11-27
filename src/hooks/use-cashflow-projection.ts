@@ -1,11 +1,10 @@
 /**
  * Hook to compute cashflow projection from database.
- * Uses Dexie live queries for reactive updates.
+ * Uses Supabase realtime subscriptions for reactive updates.
  */
 
 import { useMemo, useCallback, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
+import { useFinanceData } from '@/hooks/use-finance-data'
 import { calculateCashflow } from '@/lib/cashflow'
 import { formatChartDate } from '@/lib/format'
 import { usePreferencesStore } from '@/stores/preferences-store'
@@ -159,49 +158,41 @@ export function useCashflowProjection(
   const preferencesDays = usePreferencesStore((state) => state.projectionDays)
   const projectionDays = options?.projectionDays ?? preferencesDays
 
-  // Fetch all data from database with live queries
-  const accounts = useLiveQuery(
-    () => db.accounts.toArray(),
-    [retryCount]
-  )
-  const projects = useLiveQuery(
-    () => db.projects.toArray(),
-    [retryCount]
-  )
-  const expenses = useLiveQuery(
-    () => db.expenses.toArray(),
-    [retryCount]
-  )
-  const creditCards = useLiveQuery(
-    () => db.creditCards.toArray(),
-    [retryCount]
-  )
+  // Fetch all data from database with realtime subscriptions
+  const {
+    accounts,
+    projects,
+    expenses,
+    creditCards,
+    isLoading,
+    error: fetchError,
+  } = useFinanceData()
 
-  // Determine loading state (undefined means still loading)
-  const isLoading =
-    accounts === undefined ||
-    projects === undefined ||
-    expenses === undefined ||
-    creditCards === undefined
+  // Force re-render on retry by including retryCount in dependency
+  // This is a no-op but ensures the hook re-evaluates
+  const _retryTrigger = retryCount
 
   // Determine if any data exists
   const hasData = !isLoading && (
-    (accounts?.length ?? 0) > 0 ||
-    (projects?.length ?? 0) > 0 ||
-    (expenses?.length ?? 0) > 0 ||
-    (creditCards?.length ?? 0) > 0
+    accounts.length > 0 ||
+    projects.length > 0 ||
+    expenses.length > 0 ||
+    creditCards.length > 0
   )
 
   // Calculate projection (memoized, pure computation)
   const calculationResult = useMemo((): CalculationResult | null => {
+    // Include retryCount to force recalculation on retry
+    void _retryTrigger
+    
     if (isLoading) return null
 
     try {
       const projection = calculateCashflow({
-        accounts: accounts ?? [],
-        projects: projects ?? [],
-        expenses: expenses ?? [],
-        creditCards: creditCards ?? [],
+        accounts,
+        projects,
+        expenses,
+        creditCards,
         projectionDays,
       })
       return { success: true, projection }
@@ -211,11 +202,12 @@ export function useCashflowProjection(
         error: err instanceof Error ? err : new Error('Failed to calculate projection'),
       }
     }
-  }, [isLoading, accounts, projects, expenses, creditCards, projectionDays])
+  }, [isLoading, accounts, projects, expenses, creditCards, projectionDays, _retryTrigger])
 
   // Extract projection and error from result
   const projection = calculationResult?.success ? calculationResult.projection : null
-  const error = calculationResult && !calculationResult.success ? calculationResult.error : null
+  const calculationError = calculationResult && !calculationResult.success ? calculationResult.error : null
+  const error = fetchError ? new Error(fetchError) : calculationError
 
   // Transform to chart data (memoized)
   const chartData = useMemo(() => {
@@ -251,4 +243,3 @@ export function useCashflowProjection(
     projectionDays,
   }
 }
-

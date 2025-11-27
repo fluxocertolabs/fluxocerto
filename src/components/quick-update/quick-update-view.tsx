@@ -4,8 +4,7 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
+import { useFinanceData } from '@/hooks/use-finance-data'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { BalanceList } from './balance-list'
@@ -20,19 +19,17 @@ interface QuickUpdateViewProps {
 
 export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
   // Fetch data to check if empty and capture initial balances
-  const accounts = useLiveQuery(() => db.accounts.toArray())
-  const creditCards = useLiveQuery(() => db.creditCards.toArray())
+  const { accounts, creditCards, isLoading } = useFinanceData()
 
-  const isLoading = accounts === undefined || creditCards === undefined
   const isEmpty =
-    !isLoading && (accounts?.length ?? 0) === 0 && (creditCards?.length ?? 0) === 0
+    !isLoading && accounts.length === 0 && creditCards.length === 0
 
   // Use ref to capture initial balances exactly once when data becomes available
   const initialBalancesRef = useRef<Map<string, number> | null>(null)
 
   // Capture initial balances once when data is first available
   useEffect(() => {
-    if (initialBalancesRef.current === null && accounts && creditCards) {
+    if (initialBalancesRef.current === null && !isLoading && (accounts.length > 0 || creditCards.length > 0)) {
       const balances = new Map<string, number>()
 
       for (const account of accounts) {
@@ -45,7 +42,7 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
 
       initialBalancesRef.current = balances
     }
-  }, [accounts, creditCards])
+  }, [accounts, creditCards, isLoading])
 
   // Provide a stable empty map until data is loaded
   const initialBalances = initialBalancesRef.current ?? new Map<string, number>()
@@ -130,4 +127,3 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
     </div>
   )
 }
-

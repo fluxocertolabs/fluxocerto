@@ -1,6 +1,6 @@
 # Family Finance
 
-A **local-first** cashflow projection app for households with variable income. See your next 30-90 days of cashflow at a glance, with danger warnings before you overdraft.
+A **cloud-powered** cashflow projection app for households with variable income. See your next 30-90 days of cashflow at a glance, with danger warnings before you overdraft.
 
 > **Unlike** spreadsheets and complex budgeting apps, Family Finance shows you whether you can pay your mortgage next week—in 30 seconds, once a month.
 
@@ -45,11 +45,11 @@ Dual-income households with variable income streams (freelancers, contractors, p
 - Staleness indicators for outdated balances
 - Auto-save on field blur
 
-### ✅ Local-First Architecture
-- **Zero server costs**: All data stored in browser (IndexedDB via Dexie.js)
-- **Privacy-first**: Your financial data never leaves your device
-- **Offline capable**: Works without internet connection
-- **Instant**: No network latency for any operation
+### ✅ Cloud-Powered Architecture
+- **Supabase backend**: Secure PostgreSQL database with real-time sync
+- **Anonymous authentication**: No sign-up required, data tied to your browser session
+- **Real-time updates**: Changes sync instantly across tabs
+- **Row-level security**: Your data is isolated and protected
 
 ## Tech Stack
 
@@ -60,7 +60,7 @@ Dual-income households with variable income streams (freelancers, contractors, p
 | **Styling** | Tailwind CSS 4 |
 | **Components** | Radix UI primitives |
 | **Charts** | Recharts |
-| **Database** | Dexie.js (IndexedDB wrapper) |
+| **Database** | Supabase PostgreSQL |
 | **State** | Zustand |
 | **Validation** | Zod |
 | **Routing** | React Router 7 |
@@ -72,6 +72,7 @@ Dual-income households with variable income streams (freelancers, contractors, p
 ### Prerequisites
 - Node.js 20+
 - pnpm 10+
+- Supabase account (free tier works)
 
 ### Installation
 
@@ -83,7 +84,26 @@ cd family-finance
 # Install dependencies
 pnpm install
 
-# Start development server
+# Copy environment template
+cp .env.example .env
+```
+
+### Supabase Setup
+
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Go to **Settings → API** and copy:
+   - **Project URL** → `VITE_SUPABASE_URL`
+   - **anon public** key → `VITE_SUPABASE_ANON_KEY`
+4. Add these values to your `.env` file
+5. Go to **SQL Editor** and run the migration from `supabase/migrations/001_initial_schema.sql`
+6. Enable **Anonymous Sign-Ins** in **Authentication → Providers**
+
+See `specs/008-supabase-migration/quickstart.md` for detailed setup instructions.
+
+### Start Development Server
+
+```bash
 pnpm dev
 ```
 
@@ -146,26 +166,31 @@ src/
 │   │   ├── expenses/
 │   │   └── credit-cards/
 │   ├── quick-update/      # Balance update modal
+│   ├── setup-required.tsx # Setup screen for missing config
 │   └── ui/                # Shared UI components (Radix-based)
-├── db/                    # Dexie.js database setup
 ├── hooks/                 # React hooks
 │   ├── use-cashflow-projection.ts
-│   ├── use-finance-data.ts
+│   ├── use-finance-data.ts  # Supabase realtime subscriptions
 │   └── use-health-indicator.ts
 ├── lib/
 │   ├── cashflow/          # Core calculation engine
 │   │   ├── calculate.ts   # Main projection logic
 │   │   ├── frequencies.ts # Payment frequency helpers
 │   │   └── validators.ts  # Input validation
+│   ├── supabase.ts        # Supabase client + auth helpers
 │   ├── format.ts          # Currency/date formatting
 │   └── staleness.ts       # Balance staleness detection
 ├── pages/
 │   ├── dashboard.tsx      # Main cashflow view
 │   └── manage.tsx         # Data management view
 ├── stores/                # Zustand stores
-│   ├── finance-store.ts   # CRUD operations
+│   ├── finance-store.ts   # CRUD operations via Supabase
 │   └── preferences-store.ts
 └── types/                 # TypeScript types + Zod schemas
+
+supabase/
+└── migrations/
+    └── 001_initial_schema.sql  # Database schema + RLS policies
 ```
 
 ## Data Model
@@ -239,7 +264,7 @@ All monetary values are stored in **cents** (integers) to avoid floating-point p
 
 ## Browser Support
 
-The app uses IndexedDB for storage, which is supported in all modern browsers. Tested on:
+The app requires a modern browser with JavaScript enabled. Tested on:
 - Chrome 90+
 - Firefox 90+
 - Safari 14+

@@ -4,8 +4,7 @@
  */
 
 import { useMemo, useRef } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
+import { useFinanceData } from '@/hooks/use-finance-data'
 import { useFinanceStore } from '@/stores/finance-store'
 import { BalanceListItem } from './balance-list-item'
 import type { BalanceItem } from './types'
@@ -19,23 +18,18 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
   const { updateAccountBalance, updateCreditCardBalance } = useFinanceStore()
 
   // Fetch accounts and credit cards
-  const accounts = useLiveQuery(() => db.accounts.toArray())
-  const creditCards = useLiveQuery(() => db.creditCards.toArray())
+  const { accounts, creditCards, isLoading } = useFinanceData()
 
   // Combine into balance items list (accounts first, then cards)
   const items: BalanceItem[] = useMemo(() => {
     const result: BalanceItem[] = []
 
-    if (accounts) {
-      for (const account of accounts) {
-        result.push({ type: 'account', entity: account })
-      }
+    for (const account of accounts) {
+      result.push({ type: 'account', entity: account })
     }
 
-    if (creditCards) {
-      for (const card of creditCards) {
-        result.push({ type: 'card', entity: card })
-      }
+    for (const card of creditCards) {
+      result.push({ type: 'card', entity: card })
     }
 
     return result
@@ -62,7 +56,7 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
     }
   }
 
-  if (!accounts || !creditCards) {
+  if (isLoading) {
     return (
       <div className="space-y-3">
         {/* Loading skeleton */}
@@ -124,4 +118,3 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
     </div>
   )
 }
-

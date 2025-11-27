@@ -3,8 +3,7 @@
  */
 
 import { useMemo } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db'
+import { useFinanceData } from '@/hooks/use-finance-data'
 import { isStale } from '@/lib/staleness'
 import type { SummaryStats } from '@/components/cashflow/types'
 
@@ -71,10 +70,7 @@ export function useHealthIndicator(
   summaryStats: SummaryStats | null
 ): UseHealthIndicatorResult {
   // Fetch accounts and credit cards for staleness check
-  const accounts = useLiveQuery(() => db.accounts.toArray())
-  const creditCards = useLiveQuery(() => db.creditCards.toArray())
-
-  const isLoading = accounts === undefined || creditCards === undefined
+  const { accounts, creditCards, isLoading } = useFinanceData()
 
   // Calculate stale entities
   const staleEntities = useMemo((): StaleEntity[] => {
@@ -82,27 +78,23 @@ export function useHealthIndicator(
 
     const stale: StaleEntity[] = []
 
-    if (accounts) {
-      for (const account of accounts) {
-        if (isStale(account.balanceUpdatedAt)) {
-          stale.push({
-            id: account.id,
-            name: account.name,
-            type: 'account',
-          })
-        }
+    for (const account of accounts) {
+      if (isStale(account.balanceUpdatedAt)) {
+        stale.push({
+          id: account.id,
+          name: account.name,
+          type: 'account',
+        })
       }
     }
 
-    if (creditCards) {
-      for (const card of creditCards) {
-        if (isStale(card.balanceUpdatedAt)) {
-          stale.push({
-            id: card.id,
-            name: card.name,
-            type: 'card',
-          })
-        }
+    for (const card of creditCards) {
+      if (isStale(card.balanceUpdatedAt)) {
+        stale.push({
+          id: card.id,
+          name: card.name,
+          type: 'card',
+        })
       }
     }
 
@@ -144,4 +136,3 @@ export function useHealthIndicator(
     isLoading,
   }
 }
-

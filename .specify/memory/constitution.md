@@ -11,7 +11,7 @@
 ```
 Language:        TypeScript 5.9.3
 Framework:       React 19.2.0 + Vite 7.2.4
-Database:        IndexedDB (via Dexie.js 4.2.1) - local-first
+Database:        Supabase PostgreSQL (@supabase/supabase-js 2.86.0)
 State:           Zustand 5.0.8
 UI:              Tailwind CSS 4.1.17 + shadcn/ui
 Charts:          Recharts 3.5.0
@@ -21,7 +21,7 @@ Build Tool:      Vite 7.2.4
 Package Manager: pnpm 10+
 CI/CD:           GitHub Actions (future)
 Deployment:      Local development only (MVP), Vercel (future)
-Secret Manager:  N/A (no secrets for MVP)
+Secret Manager:  Environment variables (.env)
 ```
 
 ---
@@ -37,8 +37,7 @@ Secret Manager:  N/A (no secrets for MVP)
   "react": "19.2.0",
   "react-dom": "19.2.0",
   "react-router-dom": "7.9.6",
-  "dexie": "4.2.1",
-  "dexie-react-hooks": "4.2.0",
+  "@supabase/supabase-js": "2.86.0",
   "zustand": "5.0.8",
   "recharts": "3.5.0",
   "zod": "4.1.13",
@@ -71,29 +70,30 @@ Secret Manager:  N/A (no secrets for MVP)
 ## ARCHITECTURE OVERVIEW
 
 ### Pattern
-Single-Page Application (SPA) with local-first data persistence
+Single-Page Application (SPA) with cloud-powered data persistence via Supabase
 
 ### Key Components
 
 - `/src/components` - React UI components (shadcn/ui based)
 - `/src/pages` - Page-level components (Dashboard, Settings, etc.)
-- `/src/stores` - State management (Zustand stores)
-- `/src/db` - Dexie.js database schema and operations
+- `/src/stores` - State management (Zustand stores with Supabase operations)
+- `/src/lib/supabase.ts` - Supabase client, auth helpers, error handling
 - `/src/lib` - Utilities, cashflow calculation engine
 - `/src/types` - TypeScript type definitions
 
 ### Data Flow
 ```
-User Input → React Components → Zustand Store → Dexie.js → IndexedDB
+User Input → React Components → Zustand Store → Supabase Client → PostgreSQL
                     ↓
             Cashflow Engine (calculates projections)
                     ↓
             Recharts Visualization
+                    
+Supabase Realtime → useFinanceData hook → React State → UI Updates
 ```
 
 ### External Dependencies
-- None for MVP (local-first, no external APIs)
-- Future: Potential cloud sync service (Supabase, etc.)
+- Supabase (PostgreSQL database, authentication, realtime subscriptions)
 
 ---
 
@@ -108,27 +108,34 @@ family-finance/
 │   │   ├── projects/      # Income/project components
 │   │   ├── expenses/      # Expense components
 │   │   ├── credit-cards/  # Credit card components
-│   │   └── cashflow/      # Cashflow chart & projections
+│   │   ├── cashflow/      # Cashflow chart & projections
+│   │   └── setup-required.tsx  # Setup screen for missing config
 │   ├── pages/             # Page components
 │   │   ├── Dashboard.tsx  # Main cashflow view
 │   │   └── Settings.tsx   # Manage accounts, projects, expenses
-│   ├── stores/            # Zustand state stores
-│   ├── db/                # Dexie.js database layer
-│   │   ├── index.ts       # Database instance
-│   │   └── schema.ts      # Table definitions
+│   ├── stores/            # Zustand state stores (Supabase operations)
+│   ├── hooks/             # React hooks
+│   │   ├── use-finance-data.ts      # Supabase realtime subscriptions
+│   │   ├── use-cashflow-projection.ts
+│   │   └── use-health-indicator.ts
 │   ├── lib/               # Business logic
-│   │   ├── cashflow.ts    # Cashflow calculation engine
+│   │   ├── supabase.ts    # Supabase client, auth, error handling
+│   │   ├── cashflow/      # Cashflow calculation engine
 │   │   └── utils.ts       # Helper functions
 │   ├── types/             # TypeScript types
-│   │   └── index.ts       # Domain types
+│   │   └── index.ts       # Domain types (Zod schemas)
 │   ├── App.tsx            # Root component
-│   ├── main.tsx           # Entry point
+│   ├── main.tsx           # Entry point (auth initialization)
 │   └── index.css          # Global styles (Tailwind)
+├── supabase/
+│   └── migrations/
+│       └── 001_initial_schema.sql  # Database schema + RLS policies
 ├── public/                # Static assets
 ├── docs/                  # Documentation
 │   ├── CONSTITUTION.md    # This file
 │   ├── PMF.md             # Product-market fit
 │   └── USER_STORIES.md    # User stories
+├── .env.example           # Environment variable template
 ├── package.json           # Dependencies
 ├── tsconfig.json          # TypeScript config
 ├── vite.config.ts         # Vite config
@@ -162,20 +169,20 @@ pnpm dev
 
 ### Environment Variables
 ```bash
-# None required for MVP (local-first app)
-# Future cloud sync may require:
-# VITE_SUPABASE_URL=
-# VITE_SUPABASE_ANON_KEY=
+# Required for Supabase connection
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
 ### Hot Reload & Background Services
 - **Hot reload status**: Yes - Vite HMR enabled
-- **Required background services**: None (local-first)
+- **Required background services**: Supabase (cloud-hosted)
 - **Port usage**: 5173 (Vite dev server)
 
 ### Common Gotchas
-- IndexedDB data persists in browser - clear browser data to reset
-- Different browsers have separate IndexedDB instances
+- Supabase requires anonymous sign-ins to be enabled in Authentication → Providers
+- Database migration must be run before first use (see supabase/migrations/)
+- Missing env vars will show a setup screen instead of crashing
 
 ---
 
@@ -206,7 +213,7 @@ pnpm test src/lib/cashflow.test.ts
 - **Coverage requirements**: Focus on cashflow calculation engine
 - **Required test types**: Unit tests for `lib/cashflow.ts`
 - **Test data**: Use factory functions for test fixtures
-- **Mocking strategy**: Mock Dexie.js for component tests
+- **Mocking strategy**: Mock Supabase client for component tests
 
 ---
 
@@ -328,8 +335,9 @@ pnpm install
 # Clear Vite cache
 rm -rf node_modules/.vite
 
-# Reset IndexedDB (in browser DevTools)
-# Application → IndexedDB → Delete database
+# Reset Supabase data (via Supabase dashboard)
+# Go to Table Editor → Select table → Delete rows
+# Or re-run migration to recreate tables
 ```
 
 ---
@@ -344,10 +352,11 @@ rm -rf node_modules/.vite
 - `eslint.config.js` - ESLint flat config (ESLint 9+)
 
 ### Critical Source Files
-- `src/main.tsx` - App entry point
-- `src/db/schema.ts` - Database schema (source of truth for data model)
-- `src/lib/cashflow.ts` - Core cashflow calculation logic
-- `src/types/index.ts` - Domain type definitions
+- `src/main.tsx` - App entry point (initializes Supabase auth)
+- `src/lib/supabase.ts` - Supabase client, auth, and error handling
+- `src/types/index.ts` - Domain type definitions (Zod schemas - source of truth)
+- `supabase/migrations/001_initial_schema.sql` - Database schema + RLS policies
+- `src/lib/cashflow/calculate.ts` - Core cashflow calculation logic
 
 ### Generated Files (Don't Edit)
 - `dist/` - Build output
@@ -517,41 +526,36 @@ function calculateCashflow(
 
 ## SECURITY REQUIREMENTS
 
-### MVP Security
-- No authentication required
-- Data stored locally in browser (IndexedDB)
-- No sensitive data transmitted over network
-- Financial data stays on user's device
+### Current Security
+- **Anonymous authentication**: Users get a unique ID without sign-up
+- **Row-Level Security (RLS)**: Each user can only access their own data
+- **HTTPS only**: All Supabase connections use TLS
+- **Anon key is safe**: RLS policies protect data, anon key is meant to be public
 
-### Future Considerations (Cloud Sync)
-- Implement authentication (OAuth)
-- Encrypt data at rest
-- Use HTTPS only
-- Consider data privacy implications
+### Security Features
+- Data isolated per user via `user_id` column and RLS policies
+- Anonymous sessions persist in browser storage
+- No passwords or PII required
+- Session can be upgraded to permanent account later (future feature)
 
 ---
 
 ## DESIGN DECISIONS & TRADE-OFFS
 
-### Why Local-First?
-- Simplifies MVP (no backend, no auth, no hosting)
-- Privacy: financial data stays on device
-- Works offline
-- Easy to migrate to cloud later (Dexie.js has sync adapters)
+### Why Supabase?
+- **Cloud persistence**: Data syncs across devices and survives browser clears
+- **Real-time subscriptions**: UI updates instantly when data changes
+- **Row-Level Security**: Built-in user isolation without complex backend code
+- **Anonymous auth**: No sign-up friction while still having user-scoped data
+- **Free tier**: Generous limits for personal use
+- **PostgreSQL**: Reliable, powerful database with great tooling
 
 ### Why React 19 + Vite 7 (not Next.js)?
 - SPA is sufficient (no SEO needed)
-- Simpler setup for local-first app
+- Simpler setup for client-side app
 - Faster development iteration with Vite 7's improved HMR
 - No server-side complexity
 - React 19 concurrent features for smooth UI
-
-### Why IndexedDB (via Dexie.js)?
-- Structured data storage in browser
-- Persists across sessions
-- Queryable (unlike localStorage)
-- Dexie.js provides great TypeScript DX
-- Migration path to cloud sync exists
 
 ### Why shadcn/ui?
 - Beautiful, modern components
@@ -561,8 +565,8 @@ function calculateCashflow(
 
 ### Known Technical Debt
 - No data export/import for MVP (add later)
-- No data backup mechanism (browser only)
-- Single-device for MVP (no sync)
+- Anonymous sessions can be lost if browser data is cleared
+- No account upgrade flow yet (anonymous → permanent)
 
 ---
 
