@@ -30,7 +30,7 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 > **Note**: `quickstart.md` (in this spec folder) serves as the detailed administrator guide during development. `docs/smtp-setup.md` is a production-ready copy placed in the main docs folder for discoverability. Both should contain the same content.
 
-- [ ] T001 Create production SMTP setup guide at `docs/smtp-setup.md` (copy content from quickstart.md; must include FR-011 rate limits, FR-012 troubleshooting dashboard reference)
+- [X] T001 Create production SMTP setup guide at `docs/smtp-setup.md` (copy content from quickstart.md; must include FR-011 rate limits, FR-012 troubleshooting dashboard reference)
 
 ---
 
@@ -40,13 +40,13 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 **⚠️ CRITICAL**: No user story verification can proceed until this phase is complete
 
-- [ ] T002 Create Resend account at resend.com (external)
-- [ ] T003 Add domain `financas.fflo.me` in Resend Dashboard (external)
-- [ ] T004 Configure SPF DNS record for domain verification (external - DNS provider)
-- [ ] T005 Configure DKIM DNS record for domain verification (external - DNS provider)
-- [ ] T006 [P] Configure DMARC DNS record (optional but recommended) (external - DNS provider)
-- [ ] T007 Verify domain in Resend Dashboard (external - may require DNS propagation wait)
-- [ ] T008 Create "Sending access" API key restricted to `financas.fflo.me` (external - Resend Dashboard)
+- [X] T002 Create Resend account at resend.com (external)
+- [X] T003 Add domain `financas.fflo.me` in Resend Dashboard (external)
+- [X] T004 Configure SPF DNS record for domain verification (external - DNS provider)
+- [X] T005 Configure DKIM DNS record for domain verification (external - DNS provider)
+- [X] T006 [P] Configure DMARC DNS record (optional but recommended) (external - DNS provider)
+- [X] T007 Verify domain in Resend Dashboard (external - may require DNS propagation wait)
+- [X] T008 Create "Sending access" API key restricted to `financas.fflo.me` (external - Resend Dashboard)
 
 **Checkpoint**: Resend account ready with verified domain and API key
 
@@ -60,9 +60,9 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Navigate to Supabase Dashboard → Project Settings → Authentication → SMTP Settings (external)
-- [ ] T010 [US1] Configure SMTP settings in Supabase Dashboard (external): Enable Custom SMTP, set host=smtp.resend.com, port=465, username=resend, password=API key, sender=noreply@financas.fflo.me, name=Family Finance (see spec.md FR-013 through FR-016)
-- [ ] T011 [US1] Save SMTP configuration and verify settings are persisted (external)
+- [X] T009 [US1] Navigate to Supabase Dashboard → Project Settings → Authentication → SMTP Settings (external)
+- [X] T010 [US1] Configure SMTP settings in Supabase Dashboard (external): Enable Custom SMTP, set host=smtp.resend.com, port=465, username=resend, password=API key, sender=noreply@financas.fflo.me, name=Family Finance (see spec.md FR-013 through FR-016)
+- [X] T011 [US1] Save SMTP configuration and verify settings are persisted (external)
 - [ ] T012 [US1] Test Magic Link email delivery in production (manual verification)
 - [ ] T013 [US1] Verify email arrives within 30 seconds (SC-001)
 - [ ] T014 [US1] Verify sender shows `noreply@financas.fflo.me` (SC-002)
@@ -99,11 +99,11 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Search repository for Resend API keys with `grep -r "re_" --include="*"` (manual verification)
-- [ ] T023 [US3] Search repository for SMTP passwords with `grep -ri "smtp.*password" --include="*"` (manual verification)
-- [ ] T024 [US3] Verify no production credentials in any config files
-- [ ] T025 [US3] Verify `docs/smtp-setup.md` guides users to Supabase Dashboard (not code)
-- [ ] T026 [US3] Confirm SC-003: Repository contains zero production secrets
+- [X] T022 [US3] Search repository for Resend API keys with `grep -r "re_" --include="*"` (manual verification)
+- [X] T023 [US3] Search repository for SMTP passwords with `grep -ri "smtp.*password" --include="*"` (manual verification)
+- [X] T024 [US3] Verify no production credentials in any config files
+- [X] T025 [US3] Verify `docs/smtp-setup.md` guides users to Supabase Dashboard (not code)
+- [X] T026 [US3] Confirm SC-003: Repository contains zero production secrets
 
 **Checkpoint**: User Story 3 complete - credentials secure
 
@@ -113,10 +113,10 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 
 **Purpose**: Documentation completion and final validation
 
-- [ ] T027 [P] Update `docs/smtp-setup.md` with troubleshooting section (if not already copied from quickstart.md)
-- [ ] T028 [P] Verify Resend free tier limits documented in `docs/smtp-setup.md` (FR-011)
-- [ ] T029 [P] Verify Resend dashboard for troubleshooting documented in `docs/smtp-setup.md` (FR-012)
-- [ ] T030 Validate `quickstart.md` steps match actual configuration process
+- [X] T027 [P] Update `docs/smtp-setup.md` with troubleshooting section (if not already copied from quickstart.md)
+- [X] T028 [P] Verify Resend free tier limits documented in `docs/smtp-setup.md` (FR-011)
+- [X] T029 [P] Verify Resend dashboard for troubleshooting documented in `docs/smtp-setup.md` (FR-012)
+- [X] T030 Validate `quickstart.md` steps match actual configuration process
 - [ ] T031 Run full end-to-end verification using `quickstart.md` checklist
 - [ ] T032 Verify SC-005: Setup documentation enables configuration in under 30 minutes of active work
 
