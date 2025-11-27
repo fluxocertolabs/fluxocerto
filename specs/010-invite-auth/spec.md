@@ -57,7 +57,7 @@ Only family members whose email addresses have been pre-approved by an administr
 
 **Acceptance Scenarios**:
 
-1. **Given** a user with a non-approved email enters their address, **When** they attempt to sign up, **Then** they see the same success message as approved users (no email enumeration); the rejection occurs silently (no Magic Link sent)
+1. **Given** a user with a non-approved email enters their address, **When** they attempt to sign up, **Then** they see the same success message as approved users per FR-008 (no email enumeration); the rejection occurs silently (no Magic Link sent)
 2. **Given** an administrator adds an email to the allowed list via Supabase dashboard, **When** that user attempts to sign up, **Then** they can successfully receive a Magic Link
 3. **Given** an administrator removes an email from the allowed list, **When** that user's session expires and they try to log in again, **Then** they are blocked with the invite-only error
 
@@ -174,8 +174,8 @@ Users receive clear, actionable feedback when authentication issues occur (expir
 
 ### Measurable Outcomes
 
-- **SC-001**: Users with approved emails can complete the full login flow (request link → receive email → click link → access app) in under 2 minutes
-- **SC-002**: Users with non-approved emails are blocked within 3 seconds of attempting signup, with clear error message
+- **SC-001**: Users with approved emails can complete the full login flow (request link → receive email → click link → access app) in under 2 minutes wall-clock time from form submission to dashboard render (note: email delivery latency is outside application control and may vary by provider)
+- **SC-002**: Users with non-approved emails are blocked within 3 seconds of the before-user-created hook invocation (hook response time); user sees generic success message per FR-008
 - **SC-003**: All authenticated family members see identical data when viewing the same screen
 - **SC-004**: Session persists across browser refresh without requiring re-authentication
 - **SC-005**: Sign-out completes and redirects to login page within 1 second

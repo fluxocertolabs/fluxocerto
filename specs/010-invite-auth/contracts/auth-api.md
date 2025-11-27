@@ -223,6 +223,35 @@ interface VerifyOtpResponse {
 
 **Trigger**: Automatically called by Supabase Auth before creating a new user.
 
+### Webhook Signature Verification
+
+The Edge Function MUST verify the webhook signature using the `standardwebhooks` library to ensure requests are authentic from Supabase Auth.
+
+**Implementation**:
+```typescript
+import { Webhook } from "standardwebhooks";
+
+// Secret from Supabase Dashboard: Authentication → Hooks → before-user-created
+const hookSecret = Deno.env.get("BEFORE_USER_CREATED_HOOK_SECRET");
+
+async function verifyWebhook(req: Request): Promise<BeforeUserCreatedPayload> {
+  const payload = await req.text();
+  const headers = Object.fromEntries(req.headers);
+  
+  const wh = new Webhook(hookSecret);
+  
+  // Throws if signature is invalid
+  const verifiedPayload = wh.verify(payload, headers) as BeforeUserCreatedPayload;
+  
+  return verifiedPayload;
+}
+```
+
+**Required Headers** (provided by Supabase):
+- `webhook-id`: Unique identifier for the webhook event
+- `webhook-timestamp`: Unix timestamp of when the webhook was sent
+- `webhook-signature`: HMAC signature for verification
+
 **Input Payload** (from Supabase):
 ```typescript
 interface BeforeUserCreatedPayload {

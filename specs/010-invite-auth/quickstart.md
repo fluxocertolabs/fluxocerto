@@ -115,6 +115,24 @@ Visit `http://localhost:5173` - you should see the login page.
 3. Try navigating to `/` directly
 4. Verify redirect back to login
 
+### Test 5: Rate Limiting
+
+1. Navigate to `http://localhost:5173/login`
+2. Enter any email address
+3. Click "Send Magic Link" rapidly 5+ times in succession
+4. Verify rate limiting message appears: "Too many requests. Please wait a few minutes and try again."
+5. Wait 2-3 minutes, then retry
+6. Verify Magic Link request succeeds
+
+### Test 6: Empty allowed_emails Table
+
+1. Clear all rows from `allowed_emails` table via Supabase dashboard
+2. Navigate to `http://localhost:5173/login`
+3. Enter any email address and click "Send Magic Link"
+4. Verify success message appears (no email enumeration)
+5. Verify no Magic Link email is received
+6. **Note**: This is expected behavior - admin must add at least one email before anyone can sign up
+
 ---
 
 ## Key Files Modified/Created

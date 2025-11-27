@@ -24,6 +24,7 @@
 
 **Purpose**: Project initialization and database schema changes
 
+- [ ] T000 Create migration file supabase/migrations/002_invite_auth.sql with header comment
 - [ ] T001 Enable citext extension in supabase/migrations/002_invite_auth.sql
 - [ ] T002 Create allowed_emails table with citext email column in supabase/migrations/002_invite_auth.sql
 - [ ] T003 [P] Create auth types file in src/types/auth.ts
@@ -87,9 +88,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T029 [US2] Verify before-user-created hook validates email against allowed_emails table in supabase/functions/before-user-created/index.ts
-- [ ] T030 [US2] Ensure hook returns 400 error for non-approved emails in supabase/functions/before-user-created/index.ts
-- [ ] T031 [US2] Ensure hook fails closed on system errors (500 response) in supabase/functions/before-user-created/index.ts
+> **Note**: T016 (Foundational phase) implements the Edge Function. These tasks are verification checkpoints to confirm the implementation meets US2 requirements.
+
+- [ ] T029 [US2] **VERIFY** before-user-created hook validates email against allowed_emails table (implemented in T016)
+- [ ] T030 [US2] **VERIFY** hook returns 400 error for non-approved emails (implemented in T016)
+- [ ] T031 [US2] **VERIFY** hook fails closed on system errors with 500 response (implemented in T016)
 - [ ] T032 [US2] Ensure LoginForm always shows success message regardless of email approval status in src/components/auth/login-form.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - approved users can login, non-approved users are silently blocked
@@ -104,11 +107,13 @@
 
 ### Implementation for User Story 3
 
+> **Note**: T019 (Foundational phase) removes user_id filtering from realtime subscriptions. These tasks complete the CRUD operation changes in the same file.
+
 - [ ] T033 [US3] Remove user_id from insert operations in src/hooks/use-finance-data.ts
 - [ ] T034 [US3] Remove user_id from select queries in src/hooks/use-finance-data.ts
 - [ ] T035 [US3] Remove user_id from update operations in src/hooks/use-finance-data.ts
 - [ ] T036 [US3] Remove user_id from delete operations in src/hooks/use-finance-data.ts
-- [ ] T037 [US3] Verify realtime subscriptions work without user_id filter in src/hooks/use-finance-data.ts
+- [ ] T037 [US3] **VERIFY** realtime subscriptions work without user_id filter (implemented in T019)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should work - all authenticated users share the same data
 
@@ -156,9 +161,10 @@
 - [ ] T047 Disable anonymous authentication in Supabase dashboard (manual step)
 - [ ] T048 Remove anonymous auth initialization code from src/main.tsx
 - [ ] T049 Add allowed_emails seed data for testing via Supabase SQL Editor (manual step)
-- [ ] T050 Configure Supabase redirect URLs for /auth/confirm (manual step)
-- [ ] T051 Deploy before-user-created Edge Function to Supabase (manual step)
+- [ ] T050 Configure Supabase redirect URLs for /auth/confirm (manual step) — **Verify**: Attempt Magic Link login and confirm redirect works
+- [ ] T051 Deploy before-user-created Edge Function to Supabase (manual step) — **Verify**: Run `npx supabase functions logs before-user-created` and confirm deployment; test with non-approved email
 - [ ] T052 Run quickstart.md validation tests
+- [ ] T053 Update constitution.md security section to reflect Magic Link auth (replace anonymous auth documentation)
 
 ---
 
@@ -274,15 +280,15 @@ Execute phases sequentially in priority order:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | 52 |
-| **Setup Tasks** | 3 |
+| **Total Tasks** | 54 |
+| **Setup Tasks** | 4 (includes T000) |
 | **Foundational Tasks** | 16 |
 | **User Story 1 Tasks** | 9 |
-| **User Story 2 Tasks** | 4 |
-| **User Story 3 Tasks** | 5 |
+| **User Story 2 Tasks** | 4 (3 are verification checkpoints) |
+| **User Story 3 Tasks** | 5 (1 is verification checkpoint) |
 | **User Story 4 Tasks** | 3 |
 | **User Story 5 Tasks** | 6 |
-| **Polish Tasks** | 6 |
+| **Polish Tasks** | 7 (includes T053 constitution update) |
 | **Parallel Opportunities** | 20 tasks marked [P] |
 | **Suggested MVP Scope** | User Stories 1-3 (P1 priority) |
 

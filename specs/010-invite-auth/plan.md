@@ -90,7 +90,10 @@ src/
 │   ├── use-auth.ts              # NEW: Auth state management
 │   └── use-finance-data.ts      # MODIFY: Remove user_id filtering
 ├── lib/
-│   └── supabase.ts              # MODIFY: Magic Link auth methods
+│   ├── supabase.ts              # MODIFY: Magic Link auth methods
+│   └── auth-errors.ts           # NEW: Auth error message mapping
+├── types/
+│   └── auth.ts                  # NEW: Auth-related TypeScript types
 ├── App.tsx                      # MODIFY: Add routes, auth guard
 └── main.tsx                     # MODIFY: Update auth initialization
 
