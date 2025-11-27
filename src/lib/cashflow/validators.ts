@@ -48,8 +48,25 @@ export const ProjectEngineSchema = z.object({
   id: z.string(),
   name: z.string(),
   amount: z.number().positive('Amount must be positive'),
-  paymentDay: z.number().int().min(1).max(31, 'Payment day must be 1-31'),
-  frequency: z.enum(['weekly', 'biweekly', 'monthly']),
+  paymentDay: z.number().int().min(1).max(31, 'Payment day must be 1-31').optional(),
+  paymentSchedule: z.union([
+    z.object({
+      type: z.literal('dayOfWeek'),
+      dayOfWeek: z.number().int().min(1).max(7),
+    }),
+    z.object({
+      type: z.literal('dayOfMonth'),
+      dayOfMonth: z.number().int().min(1).max(31),
+    }),
+    z.object({
+      type: z.literal('twiceMonthly'),
+      firstDay: z.number().int().min(1).max(31),
+      secondDay: z.number().int().min(1).max(31),
+      firstAmount: z.number().positive().optional(),
+      secondAmount: z.number().positive().optional(),
+    }),
+  ]).optional(),
+  frequency: z.enum(['weekly', 'biweekly', 'twice-monthly', 'monthly']),
   certainty: z.enum(['guaranteed', 'probable', 'uncertain']),
   isActive: z.boolean(),
   createdAt: z.date(),

@@ -37,6 +37,18 @@ function formatCurrency(value: number): string {
   }).format(value)
 }
 
+/**
+ * Format project amount, showing slash format for variable amounts.
+ * e.g., "R$ 3.000,00 / R$ 500,00" for variable amounts
+ */
+function formatProjectAmount(project: Project): string {
+  const schedule = project.paymentSchedule
+  if (schedule?.type === 'twiceMonthly' && schedule.firstAmount !== undefined && schedule.secondAmount !== undefined) {
+    return `${formatCurrency(schedule.firstAmount)} / ${formatCurrency(schedule.secondAmount)}`
+  }
+  return formatCurrency(project.amount)
+}
+
 const WEEKDAY_LABELS: Record<number, string> = {
   1: 'Segunda-feira',
   2: 'Terça-feira',
@@ -101,7 +113,7 @@ export function ProjectListItem({
 
       <div className="flex items-center gap-3">
         <span className="font-medium text-muted-foreground">
-          {formatCurrency(project.amount)}
+          {formatProjectAmount(project)}
         </span>
         
         <div className="flex items-center gap-1">

@@ -3,6 +3,7 @@ import { getISODay } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -56,12 +57,18 @@ function getInitialScheduleState(project?: Project): {
   dayOfMonth: number
   firstDay: number
   secondDay: number
+  firstAmount: string
+  secondAmount: string
+  variableAmountsEnabled: boolean
 } {
   const defaultState = {
     dayOfWeek: 5, // Friday
     dayOfMonth: 1,
     firstDay: 1,
     secondDay: 15,
+    firstAmount: '',
+    secondAmount: '',
+    variableAmountsEnabled: false,
   }
 
   if (!project) return defaultState
@@ -74,8 +81,17 @@ function getInitialScheduleState(project?: Project): {
         return { ...defaultState, dayOfWeek: schedule.dayOfWeek }
       case 'dayOfMonth':
         return { ...defaultState, dayOfMonth: schedule.dayOfMonth }
-      case 'twiceMonthly':
-        return { ...defaultState, firstDay: schedule.firstDay, secondDay: schedule.secondDay }
+      case 'twiceMonthly': {
+        const hasVariableAmounts = schedule.firstAmount !== undefined && schedule.secondAmount !== undefined
+        return {
+          ...defaultState,
+          firstDay: schedule.firstDay,
+          secondDay: schedule.secondDay,
+          firstAmount: hasVariableAmounts ? schedule.firstAmount!.toString() : '',
+          secondAmount: hasVariableAmounts ? schedule.secondAmount!.toString() : '',
+          variableAmountsEnabled: hasVariableAmounts,
+        }
+      }
     }
   }
 
@@ -252,6 +268,11 @@ export function ProjectForm({
   const [firstDay, setFirstDay] = useState(initialSchedule.firstDay)
   const [secondDay, setSecondDay] = useState(initialSchedule.secondDay)
 
+  // Variable amounts state (for twice-monthly)
+  const [variableAmountsEnabled, setVariableAmountsEnabled] = useState(initialSchedule.variableAmountsEnabled)
+  const [firstAmount, setFirstAmount] = useState(initialSchedule.firstAmount)
+  const [secondAmount, setSecondAmount] = useState(initialSchedule.secondAmount)
+
   // Clear schedule when frequency changes to prevent invalid data combinations
   const handleFrequencyChange = (newFrequency: Frequency) => {
     setFrequency(newFrequency)
@@ -262,14 +283,40 @@ export function ProjectForm({
       case 'weekly':
       case 'biweekly':
         setDayOfWeek(5) // Friday
+        // Reset variable amounts when switching away from twice-monthly
+        setVariableAmountsEnabled(false)
+        setFirstAmount('')
+        setSecondAmount('')
         break
       case 'monthly':
         setDayOfMonth(1)
+        // Reset variable amounts when switching away from twice-monthly
+        setVariableAmountsEnabled(false)
+        setFirstAmount('')
+        setSecondAmount('')
         break
       case 'twice-monthly':
         setFirstDay(1)
         setSecondDay(15)
         break
+    }
+  }
+
+  // Handle variable amounts toggle
+  const handleVariableAmountsToggle = (enabled: boolean) => {
+    setVariableAmountsEnabled(enabled)
+    setErrors({})
+    if (enabled) {
+      // Pre-populate first amount with the current amount field value
+      setFirstAmount(amount)
+      setSecondAmount('')
+    } else {
+      // When disabling, use first amount as the single amount (if it was set)
+      if (firstAmount) {
+        setAmount(firstAmount)
+      }
+      setFirstAmount('')
+      setSecondAmount('')
     }
   }
 
@@ -279,8 +326,21 @@ export function ProjectForm({
       case 'weekly':
       case 'biweekly':
         return { type: 'dayOfWeek', dayOfWeek }
-      case 'twice-monthly':
-        return { type: 'twiceMonthly', firstDay, secondDay }
+      case 'twice-monthly': {
+        const schedule: PaymentSchedule = { type: 'twiceMonthly', firstDay, secondDay }
+        if (variableAmountsEnabled) {
+          const parsedFirst = parseFloat(firstAmount) || 0
+          const parsedSecond = parseFloat(secondAmount) || 0
+          if (parsedFirst > 0 && parsedSecond > 0) {
+            return {
+              ...schedule,
+              firstAmount: parsedFirst,
+              secondAmount: parsedSecond,
+            }
+          }
+        }
+        return schedule
+      }
       case 'monthly':
         return { type: 'dayOfMonth', dayOfMonth }
     }
@@ -320,6 +380,10 @@ export function ProjectForm({
             formattedErrors['dayOfWeek'] = error.message
           } else if (error.path[1] === 'dayOfMonth') {
             formattedErrors['dayOfMonth'] = error.message
+          } else if (error.path[1] === 'firstAmount' || error.message.includes('First amount')) {
+            formattedErrors['firstAmount'] = error.message
+          } else if (error.path[1] === 'secondAmount' || error.message.includes('Second amount') || error.message.includes('Both amounts')) {
+            formattedErrors['secondAmount'] = error.message
           } else {
             formattedErrors['paymentSchedule'] = error.message
           }
@@ -419,15 +483,76 @@ export function ProjectForm({
       )}
 
       {frequency === 'twice-monthly' && (
-        <TwiceMonthlyInput
-          firstDay={firstDay}
-          secondDay={secondDay}
-          onFirstDayChange={setFirstDay}
-          onSecondDayChange={setSecondDay}
-          disabled={isSubmitting}
-          firstDayError={errors.firstDay}
-          secondDayError={errors.secondDay}
-        />
+        <>
+          <TwiceMonthlyInput
+            firstDay={firstDay}
+            secondDay={secondDay}
+            onFirstDayChange={setFirstDay}
+            onSecondDayChange={setSecondDay}
+            disabled={isSubmitting}
+            firstDayError={errors.firstDay}
+            secondDayError={errors.secondDay}
+          />
+
+          {/* Variable amounts toggle */}
+          <div className="flex items-center gap-3">
+            <Switch
+              id="variableAmounts"
+              checked={variableAmountsEnabled}
+              onCheckedChange={handleVariableAmountsToggle}
+              disabled={isSubmitting}
+            />
+            <Label htmlFor="variableAmounts" className="cursor-pointer text-sm font-normal">
+              Valores diferentes para cada dia
+            </Label>
+          </div>
+
+          {/* Variable amount fields */}
+          {variableAmountsEnabled && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="firstAmount">Valor do 1º pagamento</Label>
+                <Input
+                  id="firstAmount"
+                  type="number"
+                  placeholder="0,00"
+                  value={firstAmount}
+                  onChange={(e) => setFirstAmount(e.target.value)}
+                  min="0.01"
+                  step="0.01"
+                  disabled={isSubmitting}
+                  aria-invalid={!!errors.firstAmount}
+                  aria-describedby={errors.firstAmount ? 'firstAmount-error' : undefined}
+                />
+                {errors.firstAmount && (
+                  <p id="firstAmount-error" className="text-sm text-destructive">
+                    {errors.firstAmount}
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="secondAmount">Valor do 2º pagamento</Label>
+                <Input
+                  id="secondAmount"
+                  type="number"
+                  placeholder="0,00"
+                  value={secondAmount}
+                  onChange={(e) => setSecondAmount(e.target.value)}
+                  min="0.01"
+                  step="0.01"
+                  disabled={isSubmitting}
+                  aria-invalid={!!errors.secondAmount}
+                  aria-describedby={errors.secondAmount ? 'secondAmount-error' : undefined}
+                />
+                {errors.secondAmount && (
+                  <p id="secondAmount-error" className="text-sm text-destructive">
+                    {errors.secondAmount}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="grid gap-2">

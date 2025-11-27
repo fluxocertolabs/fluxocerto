@@ -36,7 +36,10 @@ function createTestProject(overrides: Partial<{
   frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
   certainty: 'guaranteed' | 'probable' | 'uncertain'
   isActive: boolean
-  paymentSchedule: { type: 'dayOfWeek'; dayOfWeek: number } | { type: 'dayOfMonth'; dayOfMonth: number } | { type: 'twiceMonthly'; firstDay: number; secondDay: number }
+  paymentSchedule:
+    | { type: 'dayOfWeek'; dayOfWeek: number }
+    | { type: 'dayOfMonth'; dayOfMonth: number }
+    | { type: 'twiceMonthly'; firstDay: number; secondDay: number; firstAmount?: number; secondAmount?: number }
 }> = {}) {
   const frequency = overrides.frequency ?? 'monthly'
   const paymentDay = overrides.paymentDay ?? 15
@@ -524,6 +527,183 @@ describe('calculateCashflow - danger days', () => {
 // =============================================================================
 // EDGE CASES
 // =============================================================================
+
+// =============================================================================
+// TWICE-MONTHLY VARIABLE AMOUNTS TESTS (US2)
+// =============================================================================
+
+describe('calculateCashflow - twice-monthly variable amounts', () => {
+  it('uses firstAmount on first payment day (T010)', () => {
+    const startDate = new Date('2025-01-01')
+
+    const input: CashflowEngineInput = {
+      accounts: [createTestAccount({ balance: 100000 })],
+      projects: [
+        createTestProject({
+          frequency: 'twice-monthly',
+          amount: 100000, // Base amount (fallback)
+          paymentSchedule: {
+            type: 'twiceMonthly',
+            firstDay: 5,
+            secondDay: 20,
+            firstAmount: 300000, // R$ 3.000
+            secondAmount: 50000, // R$ 500
+          },
+        }),
+      ],
+      expenses: [],
+      creditCards: [],
+      options: { startDate, projectionDays: 10 },
+    }
+
+    const projection = calculateCashflow(input)
+
+    // Find the day with date matching day 5 of the month
+    const day5 = projection.days.find((d) => d.date.getDate() === 5)
+    expect(day5).toBeDefined()
+    expect(day5!.incomeEvents.length).toBe(1)
+    expect(day5!.incomeEvents[0].amount).toBe(300000)
+  })
+
+  it('uses secondAmount on second payment day (T011)', () => {
+    const startDate = new Date('2025-01-01')
+
+    const input: CashflowEngineInput = {
+      accounts: [createTestAccount({ balance: 100000 })],
+      projects: [
+        createTestProject({
+          frequency: 'twice-monthly',
+          amount: 100000, // Base amount (fallback)
+          paymentSchedule: {
+            type: 'twiceMonthly',
+            firstDay: 5,
+            secondDay: 20,
+            firstAmount: 300000, // R$ 3.000
+            secondAmount: 50000, // R$ 500
+          },
+        }),
+      ],
+      expenses: [],
+      creditCards: [],
+      options: { startDate, projectionDays: 25 },
+    }
+
+    const projection = calculateCashflow(input)
+
+    // Find the day with date matching day 20 of the month
+    const day20 = projection.days.find((d) => d.date.getDate() === 20)
+    expect(day20).toBeDefined()
+    expect(day20!.incomeEvents.length).toBe(1)
+    expect(day20!.incomeEvents[0].amount).toBe(50000)
+  })
+
+  it('falls back to project.amount when no variable amounts (T012)', () => {
+    const startDate = new Date('2025-01-01')
+
+    const input: CashflowEngineInput = {
+      accounts: [createTestAccount({ balance: 100000 })],
+      projects: [
+        createTestProject({
+          frequency: 'twice-monthly',
+          amount: 150000, // Base amount
+          paymentSchedule: {
+            type: 'twiceMonthly',
+            firstDay: 5,
+            secondDay: 20,
+            // No firstAmount/secondAmount - should fallback to project.amount
+          },
+        }),
+      ],
+      expenses: [],
+      creditCards: [],
+      options: { startDate, projectionDays: 25 },
+    }
+
+    const projection = calculateCashflow(input)
+
+    // Find the day with date matching day 5 of the month
+    const day5 = projection.days.find((d) => d.date.getDate() === 5)
+    expect(day5).toBeDefined()
+    expect(day5!.incomeEvents.length).toBe(1)
+    expect(day5!.incomeEvents[0].amount).toBe(150000)
+
+    // Find the day with date matching day 20 of the month
+    const day20 = projection.days.find((d) => d.date.getDate() === 20)
+    expect(day20).toBeDefined()
+    expect(day20!.incomeEvents.length).toBe(1)
+    expect(day20!.incomeEvents[0].amount).toBe(150000)
+  })
+
+  it('handles month-end edge cases with variable amounts (T013)', () => {
+    // February 2025 has 28 days, so day 31 should adjust to day 28
+    const startDate = new Date('2025-02-01')
+
+    const input: CashflowEngineInput = {
+      accounts: [createTestAccount({ balance: 100000 })],
+      projects: [
+        createTestProject({
+          frequency: 'twice-monthly',
+          amount: 100000,
+          paymentSchedule: {
+            type: 'twiceMonthly',
+            firstDay: 15,
+            secondDay: 31, // Should adjust to day 28 in February
+            firstAmount: 200000,
+            secondAmount: 100000,
+          },
+        }),
+      ],
+      expenses: [],
+      creditCards: [],
+      options: { startDate, projectionDays: 30 }, // Extended to ensure we capture day 28
+    }
+
+    const projection = calculateCashflow(input)
+
+    // Find the day with date matching day 15 of the month (February)
+    const day15 = projection.days.find((d) => d.date.getDate() === 15 && d.date.getMonth() === 1)
+    expect(day15).toBeDefined()
+    expect(day15!.incomeEvents.length).toBe(1)
+    expect(day15!.incomeEvents[0].amount).toBe(200000)
+
+    // Find the day with date matching day 28 (adjusted from day 31) in February
+    const day28 = projection.days.find((d) => d.date.getDate() === 28 && d.date.getMonth() === 1)
+    expect(day28).toBeDefined()
+    expect(day28!.incomeEvents.length).toBe(1)
+    expect(day28!.incomeEvents[0].amount).toBe(100000)
+  })
+
+  it('accumulates correct total income with variable amounts', () => {
+    const startDate = new Date('2025-01-01')
+
+    const input: CashflowEngineInput = {
+      accounts: [createTestAccount({ balance: 0 })],
+      projects: [
+        createTestProject({
+          frequency: 'twice-monthly',
+          amount: 100000,
+          certainty: 'guaranteed',
+          paymentSchedule: {
+            type: 'twiceMonthly',
+            firstDay: 5,
+            secondDay: 20,
+            firstAmount: 300000,
+            secondAmount: 50000,
+          },
+        }),
+      ],
+      expenses: [],
+      creditCards: [],
+      options: { startDate, projectionDays: 30 },
+    }
+
+    const projection = calculateCashflow(input)
+
+    // Total income should be firstAmount + secondAmount
+    expect(projection.optimistic.totalIncome).toBe(350000)
+    expect(projection.pessimistic.totalIncome).toBe(350000)
+  })
+})
 
 describe('calculateCashflow - edge cases', () => {
   it('handles 0 projection days gracefully', () => {

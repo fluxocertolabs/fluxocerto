@@ -40,17 +40,33 @@ export const DayOfMonthScheduleSchema = z.object({
 /**
  * Payment schedule for twice-monthly frequency.
  * Two distinct days of month (1-31).
+ * Optionally supports different amounts for each payment day.
  */
 export const TwiceMonthlyScheduleSchema = z
   .object({
     type: z.literal('twiceMonthly'),
     firstDay: z.number().int().min(1).max(31, 'First day must be 1-31'),
     secondDay: z.number().int().min(1).max(31, 'Second day must be 1-31'),
+    // Optional variable amounts (in cents, matching project.amount format)
+    firstAmount: z.number().positive('First amount must be positive').optional(),
+    secondAmount: z.number().positive('Second amount must be positive').optional(),
   })
   .refine((data) => data.firstDay !== data.secondDay, {
     message: 'Both payment days must be different',
     path: ['secondDay'],
   })
+  .refine(
+    (data) => {
+      const hasFirst = data.firstAmount !== undefined
+      const hasSecond = data.secondAmount !== undefined
+      // Either both present or both absent
+      return hasFirst === hasSecond
+    },
+    {
+      message: 'Both amounts are required when variable amounts is enabled',
+      path: ['secondAmount'],
+    }
+  )
 
 /**
  * Discriminated union for all payment schedule types.

@@ -13,7 +13,9 @@ import {
   isWeeklyPaymentDue,
   isDayOfWeekPaymentDue,
   isTwiceMonthlyPaymentDue,
+  getEffectiveDay,
 } from './frequencies'
+import { getDate } from 'date-fns'
 import type {
   CashflowProjection,
   DailySnapshot,
@@ -39,6 +41,42 @@ export function calculateStartingBalance(accounts: BankAccount[]): number {
 }
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Get the amount for a twice-monthly payment on a specific day.
+ * Uses variable amounts if configured, otherwise falls back to project's base amount.
+ *
+ * @param project - The project with payment configuration
+ * @param schedule - The twice-monthly schedule with optional variable amounts
+ * @param date - The date to check (used to determine which payment day)
+ * @returns The amount for this payment day
+ */
+function getAmountForTwiceMonthlyPayment(
+  project: Project,
+  schedule: { firstDay: number; secondDay: number; firstAmount?: number; secondAmount?: number },
+  date: Date
+): number {
+  const currentDay = getDate(date)
+  const effectiveFirstDay = getEffectiveDay(schedule.firstDay, date)
+  const effectiveSecondDay = getEffectiveDay(schedule.secondDay, date)
+
+  // Check if variable amounts are configured (both must be present)
+  if (schedule.firstAmount !== undefined && schedule.secondAmount !== undefined) {
+    if (currentDay === effectiveFirstDay) {
+      return schedule.firstAmount
+    }
+    if (currentDay === effectiveSecondDay) {
+      return schedule.secondAmount
+    }
+  }
+
+  // Fallback to project's base amount
+  return project.amount
+}
+
+// =============================================================================
 // EVENT CREATION
 // =============================================================================
 
@@ -56,6 +94,7 @@ function createIncomeEvents(
 
   for (const project of projects) {
     let isDue = false
+    let resolvedAmount = project.amount // Default to project's base amount
     const schedule = project.paymentSchedule
 
     // Use new PaymentSchedule system if available
@@ -69,6 +108,10 @@ function createIncomeEvents(
         case 'twice-monthly':
           if (schedule.type === 'twiceMonthly') {
             isDue = isTwiceMonthlyPaymentDue(date, schedule.firstDay, schedule.secondDay)
+            if (isDue) {
+              // Use variable amounts if configured
+              resolvedAmount = getAmountForTwiceMonthlyPayment(project, schedule, date)
+            }
           }
           break
         case 'biweekly':
@@ -112,7 +155,7 @@ function createIncomeEvents(
       events.push({
         projectId: project.id,
         projectName: project.name,
-        amount: project.amount,
+        amount: resolvedAmount,
         certainty: project.certainty,
       })
     }
