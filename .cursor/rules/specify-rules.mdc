@@ -13,6 +13,8 @@ Auto-generated from all feature plans. Last updated: 2025-11-25
 - TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Dexie.js 4.2.1, Zustand 5.0.8, shadcn/ui, Tailwind CSS 4.1.17 (006-monthly-ritual)
 - IndexedDB (via Dexie.js 4.2.1) - local-first (006-monthly-ritual)
 - TypeScript 5.9.3 + React 19.2.0, Zod 4.1.13, date-fns, Dexie.js 4.2.1 (007-flexible-payment-schedule)
+- TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0 (008-supabase-migration)
+- Supabase PostgreSQL (replacing IndexedDB/Dexie.js) (008-supabase-migration)
 
 - TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Tailwind CSS 4.1.17, shadcn/ui, Dexie.js 4.2.1, Zustand 5.0.8 (001-monorepo-base-structure)
 
@@ -32,9 +34,9 @@ npm test && npm run lint
 TypeScript 5.9.3: Follow standard conventions
 
 ## Recent Changes
+- 008-supabase-migration: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0
 - 007-flexible-payment-schedule: Added TypeScript 5.9.3 + React 19.2.0, Zod 4.1.13, date-fns, Dexie.js 4.2.1
 - 006-monthly-ritual: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Dexie.js 4.2.1, Zustand 5.0.8, shadcn/ui, Tailwind CSS 4.1.17
-- 005-data-management-ui: Added TypeScript 5.9.3 + React 19.2.0, Zustand 5.0.8, Dexie.js 4.2.1, shadcn/ui, Zod 4.1.13
 
 
 <!-- MANUAL ADDITIONS START -->
