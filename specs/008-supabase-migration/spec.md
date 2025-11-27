@@ -34,8 +34,8 @@ Users should be able to add, update, and delete financial entities (accounts, pr
 **Acceptance Scenarios**:
 
 1. **Given** a user adds a checking account "Main Checking" with balance R$5,000, **When** they refresh the browser, **Then** the account still appears with correct details
-2. **Given** a user has existing data in Supabase, **When** they open the app, **Then** all their data loads within 2 seconds
-3. **Given** a user updates a credit card balance, **When** the update completes, **Then** the UI reflects the change immediately
+2. **Given** a user has existing data in Supabase (<100 entities), **When** they open the app, **Then** all their data loads within 2 seconds
+3. **Given** a user updates a credit card balance, **When** the update completes, **Then** the UI reflects the change within 500ms
 
 ---
 
@@ -49,8 +49,8 @@ The UI should update in real-time when data changes, similar to the current `use
 
 **Acceptance Scenarios**:
 
-1. **Given** the dashboard is open, **When** a new expense is added via the Manage page, **Then** the cashflow projection updates without page refresh
-2. **Given** the Quick Update modal is open, **When** an account balance is updated, **Then** the balance list reflects the change immediately
+1. **Given** the dashboard is open, **When** a new expense is added via the Manage page, **Then** the cashflow projection updates without page refresh (within 500ms)
+2. **Given** the Quick Update modal is open, **When** an account balance is updated, **Then** the balance list reflects the change within 500ms
 
 ---
 
@@ -64,17 +64,17 @@ The application should handle network errors gracefully, showing appropriate err
 
 **Acceptance Scenarios**:
 
-1. **Given** the network is unavailable, **When** a user tries to add an account, **Then** a clear error message explains the issue
-2. **Given** a Supabase operation fails, **When** the error occurs, **Then** the UI does not crash and shows a recovery option
+1. **Given** the network is unavailable, **When** a user tries to add an account, **Then** a toast notification displays: "Unable to save. Please check your internet connection and try again."
+2. **Given** a Supabase operation fails, **When** the error occurs, **Then** the UI does not crash and shows a toast with error details and a "Retry" option
 
 ---
 
 ### Edge Cases
 
-- What happens when Supabase connection times out during a write? Show retry option with clear messaging.
-- What happens when a user has no Supabase account/project configured? App should fail gracefully with setup instructions.
-- What happens when Supabase returns a constraint violation? Show appropriate validation error to user.
-- What happens when the user's Supabase quota is exceeded? Show storage limit error with guidance.
+- What happens when Supabase connection times out during a write? Show toast: "Request timed out. Please try again." with Retry button.
+- What happens when a user has no Supabase account/project configured? App displays a setup screen with instructions to configure environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) and link to quickstart.md.
+- What happens when Supabase returns a constraint violation? Show toast with specific validation error (e.g., "An account with this name already exists").
+- What happens when the user's Supabase quota is exceeded? Show toast: "Storage limit reached. Please upgrade your Supabase plan or delete unused data."
 
 ## Clarifications
 
@@ -128,7 +128,9 @@ The application should handle network errors gracefully, showing appropriate err
 
 ### Key Entities
 
-The following tables will be created in Supabase PostgreSQL. All tables include a `user_id` column (UUID, foreign key to `auth.users`) for RLS filtering and future multi-user support:
+The following tables will be created in Supabase PostgreSQL. All tables include a `user_id` column (UUID, foreign key to `auth.users`) for RLS filtering and future multi-user support.
+
+**Naming Convention**: TypeScript uses camelCase (e.g., `balanceUpdatedAt`), PostgreSQL uses snake_case (e.g., `balance_updated_at`). The Supabase client layer handles this mapping automatically.
 
 - **accounts**: Same fields as BankAccount type, with `id` as UUID primary key. Contains: user_id (UUID, FK to auth.users), name (text), type (enum: checking/savings/investment), balance (integer - cents), balanceUpdatedAt (timestamp), createdAt (timestamp), updatedAt (timestamp)
 - **projects**: Same fields as Project type, with `id` as UUID primary key, `payment_schedule` as JSONB. Contains: user_id (UUID, FK to auth.users), name (text), amount (integer - cents), frequency (text), paymentSchedule (JSONB), certainty (text), isActive (boolean), createdAt (timestamp), updatedAt (timestamp)

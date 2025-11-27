@@ -43,8 +43,9 @@
   - Realtime publication for all tables
 - [ ] T006 Create Supabase client singleton in src/lib/supabase.ts with:
   - createClient initialization using VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-  - Environment variable validation (throw descriptive error if missing)
+  - Environment variable validation with user-friendly error: if missing, throw error that will be caught by error boundary
   - TypeScript Database type definition for type-safe queries
+  - Export getMissingEnvVars() function to check which env vars are missing (used by setup screen)
 - [ ] T007 Create anonymous auth initialization helper in src/lib/supabase.ts:
   - initializeAuth() function that checks getSession() and calls signInAnonymously() if no session
   - Export function for use in app initialization
@@ -69,6 +70,8 @@
   - Map Supabase/PostgREST error codes to user-friendly messages
   - Return Result<T> type matching existing store interface
   - Handle: network errors, unique violations (23505), RLS violations (42501), not found (PGRST116)
+  - Handle: quota exceeded (54000) with message "Storage limit reached. Please upgrade your Supabase plan or delete unused data."
+  - Handle: timeout errors with message "Request timed out. Please try again."
 - [ ] T010 [US1] Update src/stores/finance-store.ts - Replace Dexie imports with Supabase client:
   - Import supabase from src/lib/supabase.ts
   - Remove import of db from ../db
@@ -190,6 +193,11 @@
   - Ensure components using useFinanceData handle isLoading and error states
   - Show appropriate loading indicators during initial fetch
   - Show error message with retry option when fetch fails
+- [ ] T038.1 [US3] Create setup error screen component in src/components/setup-required.tsx:
+  - Display when Supabase environment variables are missing (detected via getMissingEnvVars())
+  - Show list of missing variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+  - Include link to quickstart.md or README setup instructions
+  - Render this screen in App.tsx when env validation fails instead of crashing
 
 **Checkpoint**: All user stories should now be independently functional - persistence, reactivity, and error handling all work
 
@@ -201,8 +209,19 @@
 
 - [ ] T039 [P] Delete src/db/index.ts (Dexie database definition)
 - [ ] T040 [P] Remove any remaining Dexie imports from codebase (grep for 'dexie' and 'db/')
-- [ ] T041 Update README.md with Supabase setup instructions per quickstart.md
+- [ ] T041 Update README.md with Supabase setup instructions:
+  - Add "Prerequisites" section mentioning Supabase account requirement
+  - Add "Environment Setup" section with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY configuration
+  - Add "Database Setup" section referencing supabase/migrations/001_initial_schema.sql
+  - Reference quickstart.md for detailed step-by-step instructions
 - [ ] T042 Run quickstart.md verification checklist to validate migration
+- [ ] T043 Update .specify/memory/constitution.md to reflect Supabase migration:
+  - Tech Stack: Replace "IndexedDB (via Dexie.js 4.2.1) - local-first" with "Supabase PostgreSQL (@supabase/supabase-js 2.86.0)"
+  - PINNED DEPENDENCIES: Remove dexie@4.2.1 and dexie-react-hooks@4.2.0, add @supabase/supabase-js@2.86.0
+  - PROJECT STRUCTURE: Remove /src/db directory entries, add /src/lib/supabase.ts
+  - ARCHITECTURE OVERVIEW: Update Data Flow diagram from "Zustand Store → Dexie.js → IndexedDB" to "Zustand Store → Supabase Client → PostgreSQL"
+  - ENVIRONMENT SETUP: Move VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from "Future" comment to required env vars
+  - Update "Why IndexedDB" section to "Why Supabase" with updated rationale
 
 ---
 
@@ -282,7 +301,9 @@ Task T023: "Update addCreditCard action in src/stores/finance-store.ts"
 | src/stores/finance-store.ts | UPDATE | US1 |
 | src/hooks/use-finance-data.ts | UPDATE | US2 |
 | src/components/manage/shared/storage-error-toast.tsx | UPDATE | US3 |
+| src/components/setup-required.tsx | NEW | US3 |
 | src/db/index.ts | DELETE | Cleanup |
+| .specify/memory/constitution.md | UPDATE | Cleanup |
 
 ---
 
