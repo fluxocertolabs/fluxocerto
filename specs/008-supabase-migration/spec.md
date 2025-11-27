@@ -69,30 +69,22 @@ The application should handle network errors gracefully, showing appropriate err
 
 ---
 
-### User Story 4 - Data Migration from IndexedDB (Priority: P4)
-
-Existing users with data in IndexedDB should have their data migrated to Supabase on first use. This should be a one-time, seamless operation.
-
-**Why this priority**: Existing users should not lose their data during the migration. However, this is a one-time operation.
-
-**Independent Test**: Populate IndexedDB with test data, deploy Supabase version, verify data appears in Supabase after migration.
-
-**Acceptance Scenarios**:
-
-1. **Given** a user has existing data in IndexedDB, **When** they open the new Supabase version, **Then** their data is automatically migrated
-2. **Given** migration is in progress, **When** the user waits, **Then** a progress indicator shows migration status
-3. **Given** migration completes successfully, **When** the user uses the app, **Then** IndexedDB data is cleared to avoid duplicates
-
----
-
 ### Edge Cases
 
 - What happens when Supabase connection times out during a write? Show retry option with clear messaging.
 - What happens when a user has no Supabase account/project configured? App should fail gracefully with setup instructions.
 - What happens when Supabase returns a constraint violation? Show appropriate validation error to user.
 - What happens when the user's Supabase quota is exceeded? Show storage limit error with guidance.
-- What happens if migration fails midway? Preserve original IndexedDB data and allow retry.
-- What happens if the same data exists in both IndexedDB and Supabase? Skip duplicates based on entity ID.
+
+## Clarifications
+
+### Session 2025-11-27
+
+- Q: How should the app authenticate with Supabase for single-user mode? → A: Use Supabase anonymous auth (auto-creates anonymous session, RLS works)
+- Q: Should all tables include a `user_id` column from the start? → A: Yes, add `user_id` column to all tables now (future-proof, RLS ready)
+- Q: Should migration from IndexedDB be automatic or user-initiated? → A: No migration needed; no existing data, switching directly to Supabase
+- Q: Should Dexie.js be completely removed or kept as fallback? → A: Complete removal (delete Dexie.js, all IndexedDB code, and dependency)
+- Q: Should real-time subscriptions filter by user_id or listen to entire tables? → A: Subscribe filtered by user_id (efficient, multi-user ready)
 
 ## Requirements
 
@@ -103,12 +95,15 @@ Existing users with data in IndexedDB should have their data migrated to Supabas
 - **FR-001**: System MUST use Supabase PostgreSQL as the primary database
 - **FR-002**: System MUST create tables matching the existing data model (accounts, projects, expenses, credit_cards)
 - **FR-003**: System MUST use Row Level Security (RLS) policies for data isolation (prepare for future multi-user support)
+- **FR-003.1**: System MUST use Supabase anonymous authentication to establish user sessions
+- **FR-003.2**: RLS policies MUST filter data by the anonymous user's `auth.uid()`
 - **FR-004**: System MUST store monetary values as integers (cents) to match existing convention
 
 **Data Access:**
 
 - **FR-005**: System MUST replace Dexie.js database instance with Supabase client
 - **FR-006**: System MUST replace `useLiveQuery` hooks with Supabase real-time subscriptions for reactive updates
+- **FR-006.1**: Real-time subscriptions MUST filter by `user_id` to receive only the current user's data changes
 - **FR-007**: System MUST maintain the existing Zustand store interface (action signatures unchanged)
 - **FR-008**: System MUST keep Zod validation as the source of truth for data validation
 
@@ -119,12 +114,11 @@ Existing users with data in IndexedDB should have their data migrated to Supabas
 - **FR-011**: System MUST handle loading states during initial data fetch
 - **FR-012**: System MUST handle error states from Supabase operations
 
-**Migration:**
+**Cleanup:**
 
-- **FR-013**: System MUST detect existing IndexedDB data on app startup
-- **FR-014**: System MUST migrate IndexedDB data to Supabase if detected
-- **FR-015**: System MUST clear IndexedDB after successful migration
-- **FR-016**: System MUST show migration progress to users
+- **FR-013**: System MUST remove Dexie.js dependency from package.json
+- **FR-014**: System MUST remove all IndexedDB/Dexie-related code (database instance, hooks, imports)
+- **FR-015**: System MUST remove `dexie-react-hooks` dependency
 
 **Configuration:**
 
@@ -134,12 +128,12 @@ Existing users with data in IndexedDB should have their data migrated to Supabas
 
 ### Key Entities
 
-No changes to entity structure. The following tables will be created in Supabase PostgreSQL:
+The following tables will be created in Supabase PostgreSQL. All tables include a `user_id` column (UUID, foreign key to `auth.users`) for RLS filtering and future multi-user support:
 
-- **accounts**: Same fields as BankAccount type, with `id` as UUID primary key. Contains: name (text), type (enum: checking/savings/investment), balance (integer - cents), balanceUpdatedAt (timestamp), createdAt (timestamp), updatedAt (timestamp)
-- **projects**: Same fields as Project type, with `id` as UUID primary key, `payment_schedule` as JSONB. Contains: name (text), amount (integer - cents), frequency (text), paymentSchedule (JSONB), certainty (text), isActive (boolean), createdAt (timestamp), updatedAt (timestamp)
-- **expenses**: Same fields as FixedExpense type, with `id` as UUID primary key. Contains: name (text), amount (integer - cents), dueDay (integer), isActive (boolean), createdAt (timestamp), updatedAt (timestamp)
-- **credit_cards**: Same fields as CreditCard type, with `id` as UUID primary key. Contains: name (text), statementBalance (integer - cents), dueDay (integer), balanceUpdatedAt (timestamp), createdAt (timestamp), updatedAt (timestamp)
+- **accounts**: Same fields as BankAccount type, with `id` as UUID primary key. Contains: user_id (UUID, FK to auth.users), name (text), type (enum: checking/savings/investment), balance (integer - cents), balanceUpdatedAt (timestamp), createdAt (timestamp), updatedAt (timestamp)
+- **projects**: Same fields as Project type, with `id` as UUID primary key, `payment_schedule` as JSONB. Contains: user_id (UUID, FK to auth.users), name (text), amount (integer - cents), frequency (text), paymentSchedule (JSONB), certainty (text), isActive (boolean), createdAt (timestamp), updatedAt (timestamp)
+- **expenses**: Same fields as FixedExpense type, with `id` as UUID primary key. Contains: user_id (UUID, FK to auth.users), name (text), amount (integer - cents), dueDay (integer), isActive (boolean), createdAt (timestamp), updatedAt (timestamp)
+- **credit_cards**: Same fields as CreditCard type, with `id` as UUID primary key. Contains: user_id (UUID, FK to auth.users), name (text), statementBalance (integer - cents), dueDay (integer), balanceUpdatedAt (timestamp), createdAt (timestamp), updatedAt (timestamp)
 
 ## Success Criteria
 
@@ -148,17 +142,15 @@ No changes to entity structure. The following tables will be created in Supabase
 - **SC-001**: All existing CRUD operations work identically from user perspective
 - **SC-002**: Initial data load completes in under 2 seconds for typical data volumes (<100 entities)
 - **SC-003**: UI updates within 500ms of data changes (real-time subscriptions)
-- **SC-004**: Migration from IndexedDB completes in under 10 seconds for typical data volumes
-- **SC-005**: Zero data loss during migration (all IndexedDB records appear in Supabase)
-- **SC-006**: All existing tests pass after migration (with appropriate mocking)
-- **SC-007**: Application gracefully handles network errors without crashing
+- **SC-004**: All existing tests pass after migration (with appropriate mocking)
+- **SC-005**: Application gracefully handles network errors without crashing
 
 ## Assumptions
 
 - User will create their own Supabase project and provide credentials
-- Single-user usage continues (no authentication required initially)
+- Single-user usage continues with Supabase anonymous authentication (no sign-up required; session persists via browser storage)
 - Supabase free tier is sufficient for typical household usage
 - Real-time subscriptions are available on Supabase free tier
 - PostgreSQL JSONB type can store the PaymentSchedule discriminated union
-- Existing IndexedDB schema matches the documented data model
+- No existing user data in IndexedDB requires migration (clean switch to Supabase)
 - Users have stable internet connectivity for normal operations (offline mode is graceful degradation, not full offline support)
