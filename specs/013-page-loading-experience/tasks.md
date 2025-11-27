@@ -53,7 +53,7 @@
 
 - [ ] T006 [US1] Create `DashboardSkeleton` component in `src/components/loading/dashboard-skeleton.tsx`
 - [ ] T007 [US1] Integrate `useCoordinatedLoading` and `PageLoadingWrapper` into `src/pages/dashboard.tsx`
-- [ ] T008 [US1] Verify Dashboard skeleton matches actual content layout (zero CLS)
+- [ ] T008 [US1] Verify Dashboard skeleton matches actual content layout: CLS = 0 via Chrome DevTools Performance panel, skeleton dimensions within 2px of content
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -69,7 +69,7 @@
 
 - [ ] T009 [US2] Create `ManageSkeleton` component in `src/components/loading/manage-skeleton.tsx`
 - [ ] T010 [US2] Integrate `useCoordinatedLoading` and `PageLoadingWrapper` into `src/pages/manage.tsx`
-- [ ] T011 [US2] Verify Manage skeleton matches actual content layout (zero CLS)
+- [ ] T011 [US2] Verify Manage skeleton matches actual content layout: CLS = 0 via Chrome DevTools Performance panel, skeleton dimensions within 2px of content
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -85,7 +85,7 @@
 
 - [ ] T012 [US3] Create `ModalSkeleton` component in `src/components/loading/modal-skeleton.tsx`
 - [ ] T013 [US3] Integrate loading states into `src/components/quick-update/quick-update-view.tsx`
-- [ ] T014 [US3] Verify modal skeleton matches actual modal content layout
+- [ ] T014 [US3] Verify modal skeleton matches actual modal content layout: no visible layout shift on transition, skeleton structure mirrors form fields
 
 **Checkpoint**: User Stories 1, 2, and 3 should all work independently
 
@@ -101,7 +101,7 @@
 
 - [ ] T015 [US4] Verify timeout logic in `useCoordinatedLoading` hook (5-second threshold)
 - [ ] T016 [US4] Verify error state integration with existing `ErrorState` component in `src/components/cashflow/error-state.tsx`
-- [ ] T017 [US4] Test retry mechanism works across all pages and modal
+- [ ] T017 [US4] Test retry mechanism works across all pages and modal: retry clears error state, re-triggers data fetch, skeleton displays during retry
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -116,6 +116,11 @@
 - [ ] T020 Manual CLS testing across all pages with slow network throttling
 - [ ] T021 Screen reader testing for ARIA live region announcements
 - [ ] T022 Run quickstart.md validation checklist
+- [ ] T023 [P] Verify rapid navigation between pages clears pending states without residual skeleton/error (Edge Case 1 / FR-008)
+- [ ] T024 [P] Verify partial data load scenario displays available content with indicators for failed sections (Edge Case 3)
+- [ ] T025 [P] Verify authentication expiry during loading redirects to auth flow without error state (Edge Case 5)
+- [ ] T026 [P] Verify intermittent connectivity gracefully continues loading with error only after confirmed failure (Edge Case 2)
+- [ ] T027 [P] Verify page refresh during loading restarts cleanly with skeleton displayed (Edge Case 4)
 
 ---
 
@@ -209,16 +214,18 @@ With multiple developers:
 |-----------|---------|--------|
 | `src/types/loading.ts` | T001 | NEW |
 | `src/components/loading/skeleton-primitives.tsx` | T002 | NEW |
-| `src/hooks/use-coordinated-loading.ts` | T003 | NEW |
+| `src/hooks/use-coordinated-loading.ts` | T003, T015 | NEW |
 | `src/components/loading/page-loading-wrapper.tsx` | T004 | NEW |
 | `src/components/loading/index.ts` | T005 | NEW |
 | `src/components/loading/dashboard-skeleton.tsx` | T006 | NEW |
-| `src/pages/dashboard.tsx` | T007 | MODIFY |
+| `src/pages/dashboard.tsx` | T007, T008 | MODIFY |
 | `src/components/loading/manage-skeleton.tsx` | T009 | NEW |
-| `src/pages/manage.tsx` | T010 | MODIFY |
+| `src/pages/manage.tsx` | T010, T011 | MODIFY |
 | `src/components/loading/modal-skeleton.tsx` | T012 | NEW |
-| `src/components/quick-update/quick-update-view.tsx` | T013 | MODIFY |
+| `src/components/quick-update/quick-update-view.tsx` | T013, T014 | MODIFY |
+| `src/components/cashflow/error-state.tsx` | T016 | VERIFY |
 | `src/components/cashflow/loading-skeleton.tsx` | T018 | EVALUATE |
+| (Manual verification) | T017, T020-T027 | VERIFY |
 
 ---
 
@@ -232,4 +239,6 @@ With multiple developers:
 - This is a frontend-only feature - no API contracts or database changes
 - All transitions use CSS opacity fade (250ms) for GPU-accelerated performance
 - ARIA live regions use `polite` announcements to avoid interrupting screen readers
+- T023-T027 are edge case verification tasks that can run in parallel during Polish phase
+- Verification tasks (T008, T011, T014, T017) include specific measurable acceptance criteria
 

@@ -122,7 +122,7 @@ As a user, when a genuine error occurs during data loading, I want to see a help
 ### Technical Approach
 
 - **Implementation Pattern**: React Suspense with dedicated Skeleton components for declarative loading boundaries and modern React concurrent features integration.
-- **Transition Animation**: Fade transition (opacity 0→1) with 200-300ms duration for skeleton-to-content transitions, ensuring GPU-accelerated performance without layout shifts.
+- **Transition Animation**: Fade transition (opacity 0→1) with 250ms duration for skeleton-to-content transitions, ensuring GPU-accelerated performance without layout shifts.
 - **Observability**: Console logging in development mode only for load times and state transitions; manual CLS/Web Vitals testing during development.
 
 ### Key Entities

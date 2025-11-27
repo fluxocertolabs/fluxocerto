@@ -64,10 +64,12 @@ src/
 │   └── loading.ts                  # NEW: Loading state type definitions
 ├── components/
 │   └── loading/                    # NEW: Loading experience components
+│       ├── skeleton-primitives.tsx     # NEW: Reusable skeleton building blocks
 │       ├── page-loading-wrapper.tsx    # Wrapper with ARIA + transitions
 │       ├── dashboard-skeleton.tsx      # Dashboard-specific skeleton
 │       ├── manage-skeleton.tsx         # Manage page skeleton  
-│       └── modal-skeleton.tsx          # Quick Update modal skeleton
+│       ├── modal-skeleton.tsx          # Quick Update modal skeleton
+│       └── index.ts                    # Barrel export file
 ├── hooks/
 │   └── use-coordinated-loading.ts  # NEW: Coordinated loading state hook
 ├── pages/
