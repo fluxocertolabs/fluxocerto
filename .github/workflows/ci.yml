@@ -1,0 +1,60 @@
+# GitHub Actions CI Workflow Contract
+# This file defines the CI workflow that will be created at .github/workflows/ci.yml
+#
+# Purpose: Run quality gates (typecheck, lint, test, build) on all pushes and PRs
+# Deployment: Handled by Vercel's native Git integration (not this workflow)
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup pnpm (reads version from package.json packageManager field)
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      # Step 3: Setup Node.js with pnpm cache
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Step 5: Run TypeScript type checking (FR-002)
+      - name: Type check
+        run: pnpm typecheck
+
+      # Step 6: Run ESLint (FR-003)
+      - name: Lint
+        run: pnpm lint
+
+      # Step 7: Run tests (FR-004)
+      - name: Test
+        run: pnpm test run
+
+      # Step 8: Build project (FR-010, verifies production build works)
+      - name: Build
+        run: pnpm build
+

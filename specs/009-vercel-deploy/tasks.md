@@ -26,8 +26,8 @@ Based on plan.md structure:
 
 **Purpose**: Create necessary directory structure and configuration files
 
-- [ ] T001 Create `.github/workflows/` directory structure
-- [ ] T002 [P] Verify existing `.env.example` includes required Supabase variables
+- [x] T001 Create `.github/workflows/` directory structure
+- [x] T002 [P] Verify existing `.env.example` includes required Supabase variables
 
 ---
 
@@ -49,7 +49,7 @@ Based on plan.md structure:
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Create CI workflow file at `.github/workflows/ci.yml` from `specs/009-vercel-deploy/contracts/ci-workflow.yml`. Note: CI workflow uses Node.js 20 (FR-011) and includes `cancel-in-progress: true` for handling simultaneous deployments.
+- [x] T003 [US1] Create CI workflow file at `.github/workflows/ci.yml` from `specs/009-vercel-deploy/contracts/ci-workflow.yml`. Note: CI workflow uses Node.js 20 (FR-011) and includes `cancel-in-progress: true` for handling simultaneous deployments.
 - [ ] T004 [US1] Connect Vercel to GitHub repository via Vercel Dashboard (manual step - see quickstart.md Step 1). Verify Vercel's default behavior cancels pending deployments when new commits arrive.
 - [ ] T005 [US1] Configure Vercel project settings: Framework=Vite, Build Command=`pnpm build`, Output Directory=`dist`
 - [ ] T006 [US1] Verify automatic deployment triggers on push to main branch. Confirm GitHub commit status checks are reported by Vercel (FR-012).
@@ -66,10 +66,10 @@ Based on plan.md structure:
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Verify CI workflow includes TypeScript type checking step (`pnpm typecheck`)
-- [ ] T008 [US2] Verify CI workflow includes ESLint checking step (`pnpm lint`)
-- [ ] T009 [US2] Verify CI workflow includes test execution step (`pnpm test run`)
-- [ ] T010 [US2] Verify CI workflow includes build verification step (`pnpm build`)
+- [x] T007 [US2] Verify CI workflow includes TypeScript type checking step (`pnpm typecheck`)
+- [x] T008 [US2] Verify CI workflow includes ESLint checking step (`pnpm lint`)
+- [x] T009 [US2] Verify CI workflow includes test execution step (`pnpm test run`)
+- [x] T010 [US2] Verify CI workflow includes build verification step (`pnpm build`)
 - [ ] T011 [US2] Configure GitHub branch protection on `main` branch requiring `quality` check to pass (manual step - see quickstart.md Step 4)
 - [ ] T012 [US2] Test quality gate by creating PR with intentional lint error and verifying merge is blocked
 
@@ -105,7 +105,7 @@ Based on plan.md structure:
 - [ ] T017 [US4] Add `VITE_SUPABASE_ANON_KEY` environment variable in Vercel Dashboard for Production, Preview, Development scopes. Verify build fails with clear error if variable is missing.
 - [ ] T018 [US4] Trigger redeployment after adding environment variables
 - [ ] T019 [US4] Verify deployed application successfully connects to Supabase backend (SC-007)
-- [ ] T020 [US4] Verify no credentials are committed to repository (grep for Supabase URL patterns)
+- [x] T020 [US4] Verify no credentials are committed to repository (grep for Supabase URL patterns)
 
 **Checkpoint**: Environment variables securely managed, application connects to Supabase (FR-008)
 
@@ -119,8 +119,8 @@ Based on plan.md structure:
 
 ### Implementation for User Story 5
 
-- [ ] T021 [US5] Verify `.env.example` exists with placeholder values for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-- [ ] T022 [US5] Verify `.env` is listed in `.gitignore`
+- [x] T021 [US5] Verify `.env.example` exists with placeholder values for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+- [x] T022 [US5] Verify `.env` is listed in `.gitignore`
 - [ ] T023 [US5] Test local development setup: copy `.env.example` to `.env`, add real values, run `pnpm dev`
 
 **Checkpoint**: Local development environment matches production configuration pattern (FR-009, SC-005)
@@ -131,7 +131,7 @@ Based on plan.md structure:
 
 **Purpose**: Optional enhancements and final verification
 
-- [ ] T024 [P] Optionally create `vercel.json` at repository root from `specs/009-vercel-deploy/contracts/vercel-config.json` (only if Vercel doesn't auto-detect settings)
+- [x] T024 [P] Optionally create `vercel.json` at repository root from `specs/009-vercel-deploy/contracts/vercel-config.json` (only if Vercel doesn't auto-detect settings)
 - [ ] T025 Run full quickstart.md verification checklist
 - [ ] T026 Verify all success criteria are met (SC-001 through SC-007)
 
