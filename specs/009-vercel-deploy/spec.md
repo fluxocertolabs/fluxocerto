@@ -89,9 +89,9 @@ As a developer, I want local development to mirror the production environment co
 
 ### Edge Cases
 
-- What happens when a deployment fails mid-way? The system should roll back or maintain the previous stable deployment.
+- What happens when a deployment fails mid-way? The system automatically rolls back to the previous stable deployment (Vercel's instant rollback feature).
 - What happens when the Supabase backend is unreachable during deployment? The deployment should still succeed (frontend-only), but the application should display appropriate error states.
-- What happens when multiple deployments are triggered simultaneously? The system should queue or handle concurrent deployments gracefully.
+- What happens when multiple deployments are triggered simultaneously? The system cancels previous pending deployments and only runs the latest (prevents resource waste on outdated code).
 - What happens when environment variables are missing or misconfigured? The build should fail with a clear error message indicating which variables are missing.
 
 ## Requirements *(mandatory)*
@@ -109,13 +109,13 @@ As a developer, I want local development to mirror the production environment co
 - **FR-009**: System MUST support local development using `.env` files for environment configuration.
 - **FR-010**: System MUST build the application using the `pnpm build` command.
 - **FR-011**: System MUST use Node.js 20 or higher for all build processes.
-- **FR-012**: System MUST report deployment status (success/failure) with relevant details.
+- **FR-012**: System MUST report deployment status (success/failure) via GitHub commit status checks (Vercel default integration).
 
 ### Key Entities
 
-- **Deployment Pipeline**: The automated workflow that orchestrates quality checks and deployment steps. Contains stages for type checking, linting, testing, and deployment.
+- **Deployment Pipeline**: The automated workflow that orchestrates quality checks and deployment steps. Quality checks (TypeScript, ESLint, tests) run in GitHub Actions; Vercel handles deployment only after checks pass.
 - **Environment Configuration**: The set of environment variables required for the application to function. Includes Supabase connection details and any other runtime configuration.
-- **Preview Deployment**: A temporary deployment instance created for pull requests. Linked to a specific PR and destroyed when the PR is closed/merged.
+- **Preview Deployment**: A temporary deployment instance created for pull requests. Linked to a specific PR and destroyed when the PR is closed/merged. Connects to the same Supabase project as production (shared database).
 - **Production Deployment**: The live deployment accessible to end users. Connected to the main branch and updated on each successful merge.
 
 ## Success Criteria *(mandatory)*
@@ -129,6 +129,16 @@ As a developer, I want local development to mirror the production environment co
 - **SC-005**: New developers can set up local development environment in under 15 minutes using provided documentation.
 - **SC-006**: Failed quality checks block deployment 100% of the time with clear failure messages.
 - **SC-007**: The deployed application successfully connects to and operates with the Supabase backend.
+
+## Clarifications
+
+### Session 2025-11-27
+
+- Q: What should happen when a deployment fails mid-way - automatic rollback, manual rollback, or maintain broken state? → A: Automatic rollback to previous version (Vercel default - instant)
+- Q: Should preview deployments use the same Supabase database as production or isolated environments? → A: Same Supabase project (shared database, simpler setup)
+- Q: How should the team be notified of deployment status (success/failure)? → A: GitHub commit status checks only (Vercel default)
+- Q: Should quality checks run in GitHub Actions or rely on Vercel's build process? → A: GitHub Actions for checks, Vercel for deploy only (faster feedback, clearer separation)
+- Q: How should multiple simultaneous deployments be handled? → A: Cancel previous pending deployments (only latest runs)
 
 ## Assumptions
 
