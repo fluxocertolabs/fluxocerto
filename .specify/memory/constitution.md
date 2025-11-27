@@ -411,9 +411,10 @@ interface Project {
   id: string
   name: string                    // "Client X Retainer"
   amount: number                  // Payment amount in cents
-  paymentDay: number              // Day of month (1-31)
-  frequency: 'weekly' | 'biweekly' | 'monthly' | 'one-time'
-  certainty: 'guaranteed' | 'uncertain'
+  paymentDay: number              // Day of month (1-31) - DEPRECATED: use paymentSchedule
+  paymentSchedule?: PaymentSchedule // New flexible schedule (see 007-flexible-payment-schedule)
+  frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
+  certainty: 'guaranteed' | 'probable' | 'uncertain'
   isActive: boolean
   createdAt: Date
   updatedAt: Date

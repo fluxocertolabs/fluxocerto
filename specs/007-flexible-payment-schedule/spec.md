@@ -15,6 +15,12 @@
 - Q: What should happen when a user opens an existing weekly project with invalid legacy day-of-month data? → A: Auto-select a default weekday (map legacy day to weekday of current month), allow user to change
 - Q: In what order should the frequency options appear in the dropdown? → A: By frequency (most frequent first): Weekly, Biweekly, Twice a month, Monthly
 
+### Terminology Note
+
+- **UI Display**: "Twice a month" (user-friendly)
+- **Code Enum**: `'twice-monthly'` (kebab-case, consistent with other enum values)
+- **Removed**: `'one-time'` frequency is not supported in this feature (was never implemented in codebase)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Configure Weekly Payment on a Specific Day of Week (Priority: P1)
@@ -131,7 +137,7 @@ As a user changing the payment frequency, I want the form to immediately update 
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can successfully create and save projects for all four frequency types (weekly, biweekly, semi-monthly, monthly) within 30 seconds.
+- **SC-001**: Users can successfully create and save projects for all four frequency types (weekly, biweekly, twice a month, monthly) within 30 seconds.
 - **SC-002**: 100% of weekly frequency projects display payments on the correct day of week in cashflow projections.
 - **SC-003**: 100% of "Twice a month" frequency projects display exactly two payments per month on the configured days.
 - **SC-004**: Form input type changes within 100ms of frequency selection change (perceived as instant).

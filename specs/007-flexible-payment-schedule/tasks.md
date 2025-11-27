@@ -24,12 +24,14 @@
 
 **Purpose**: Define the new data types and update database schema
 
-- [ ] T001 Add PaymentSchedule union type schemas (DayOfWeekScheduleSchema, DayOfMonthScheduleSchema, TwiceMonthlyScheduleSchema, PaymentScheduleSchema) in src/types/index.ts
-- [ ] T002 Add validateFrequencyScheduleMatch helper function in src/types/index.ts
-- [ ] T003 Update FrequencySchema to include 'twice-monthly' option in src/types/index.ts
-- [ ] T004 Update ProjectInputSchema to use paymentSchedule field with frequency-schedule validation refinement in src/types/index.ts
-- [ ] T005 Update ProjectSchema to include optional legacy paymentDay field for backward compatibility in src/types/index.ts
-- [ ] T006 Add Dexie version 3 migration with frequency index in src/db/index.ts
+**File Context**: `src/types/index.ts` currently has 88 lines. Add new types after line 37 (after existing Project types, before FixedExpense).
+
+- [ ] T001 Add PaymentSchedule union type schemas (DayOfWeekScheduleSchema, DayOfMonthScheduleSchema, TwiceMonthlyScheduleSchema, PaymentScheduleSchema) in src/types/index.ts — insert after line 37, before FixedExpense section
+- [ ] T002 Add validateFrequencyScheduleMatch helper function in src/types/index.ts — insert after PaymentSchedule types from T001
+- [ ] T003 Update FrequencySchema to include 'twice-monthly' option in src/types/index.ts — modify existing ProjectInputSchema.frequency enum at line 25
+- [ ] T004 Update ProjectInputSchema to use paymentSchedule field with frequency-schedule validation refinement in src/types/index.ts — modify lines 21-28
+- [ ] T005 Update ProjectSchema to include optional legacy paymentDay field for backward compatibility in src/types/index.ts — modify lines 30-34
+- [ ] T006 Add Dexie version 3 migration with frequency index in src/db/index.ts — current version is 2, add version(3) after line 30
 
 ---
 
@@ -43,7 +45,7 @@
 - [ ] T008 [P] Create isTwiceMonthlyPaymentDue function with month-end handling in src/lib/cashflow/frequencies.ts
 - [ ] T009 Update createIncomeEvents to read from paymentSchedule instead of paymentDay in src/lib/cashflow/calculate.ts
 - [ ] T010 Update weekly frequency handler to use isDayOfWeekPaymentDue in src/lib/cashflow/calculate.ts
-- [ ] T011 Update biweekly frequency handler to use isDayOfWeekPaymentDue in src/lib/cashflow/calculate.ts
+- [ ] T011 Update biweekly frequency handler to use isDayOfWeekPaymentDue in src/lib/cashflow/calculate.ts (FR-008: biweekly uses day-of-week, consistent with weekly)
 - [ ] T012 Add twice-monthly frequency handler using isTwiceMonthlyPaymentDue in src/lib/cashflow/calculate.ts
 - [ ] T013 Add backward compatibility fallback for legacy paymentDay field in src/lib/cashflow/calculate.ts
 
@@ -85,9 +87,8 @@
 - [ ] T022 [US1] Wire DayOfWeekSelect to form state for weekly frequency in src/components/manage/projects/project-form.tsx
 - [ ] T023 [US1] Add convertLegacyPaymentDay helper for weekly projects with old day-of-month data in src/components/manage/projects/project-form.tsx
 - [ ] T024 [US1] Implement auto-selection of default weekday when editing legacy weekly project in src/components/manage/projects/project-form.tsx
-- [ ] T025 [US1] Verify weekly payments appear on correct day-of-week in cashflow projections (manual test)
 
-**Checkpoint**: Weekly payment configuration fully functional
+**Checkpoint**: Weekly payment configuration fully functional — verify in T033
 
 ---
 
@@ -99,11 +100,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Wire existing DayOfMonthInput to form state for monthly frequency in src/components/manage/projects/project-form.tsx
-- [ ] T027 [US2] Ensure month-end handling works for day 31 in shorter months (verify existing getEffectiveDay logic)
-- [ ] T028 [US2] Verify existing monthly projects continue to work without re-configuration (backward compatibility test)
+- [ ] T025 [US2] Wire existing DayOfMonthInput to form state for monthly frequency in src/components/manage/projects/project-form.tsx
+- [ ] T026 [US2] Ensure month-end handling works for day 31 in shorter months (verify existing getEffectiveDay logic)
+- [ ] T027 [US2] Verify existing monthly projects continue to work without re-configuration (backward compatibility test)
 
-**Checkpoint**: Monthly payment configuration works (existing behavior preserved)
+**Checkpoint**: Monthly payment configuration works (existing behavior preserved) — verify in T033
 
 ---
 
@@ -115,12 +116,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Wire TwiceMonthlyInput to form state for twice-monthly frequency in src/components/manage/projects/project-form.tsx
-- [ ] T030 [US3] Add inline validation error for same-day selection ("Both payment days must be different") in src/components/manage/projects/project-form.tsx
-- [ ] T031 [US3] Verify twice-monthly payments appear on both configured days in cashflow projections (manual test)
-- [ ] T032 [US3] Verify month-end handling for day 31 in shorter months for twice-monthly (February edge case)
+- [ ] T028 [US3] Wire TwiceMonthlyInput to form state for twice-monthly frequency in src/components/manage/projects/project-form.tsx
+- [ ] T029 [US3] Add inline validation error for same-day selection ("Both payment days must be different") in src/components/manage/projects/project-form.tsx
+- [ ] T030 [US3] Verify month-end handling for day 31 in shorter months for twice-monthly (February edge case)
 
-**Checkpoint**: All frequency types fully functional
+**Checkpoint**: All frequency types fully functional — verify in T033
 
 ---
 
@@ -128,11 +128,12 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T033 [P] Update biweekly frequency to use day-of-week selection (consistent with weekly per FR-008)
-- [ ] T034 [P] Verify form input type changes within 100ms of frequency selection (SC-004 performance requirement)
-- [ ] T035 Run quickstart.md validation checklist
-- [ ] T036 Final TypeScript compilation check (pnpm typecheck)
-- [ ] T037 Final lint check (pnpm lint)
+- [ ] T031 [P] Verify form input type changes within 100ms of frequency selection (SC-004 performance requirement) — use browser DevTools Performance tab
+- [ ] T032 [P] Verify all frequency types persist correctly to IndexedDB (FR-009) — create project for each frequency, refresh page, verify data loads
+- [ ] T033 Verify cashflow recalculates correctly for all frequency types (FR-010) — consolidated verification for weekly/monthly/twice-monthly edge cases
+- [ ] T034 Run quickstart.md validation checklist
+- [ ] T035 Final TypeScript compilation check (pnpm typecheck)
+- [ ] T036 Final lint check (pnpm lint)
 
 ---
 
@@ -163,7 +164,7 @@
 ### Parallel Opportunities
 
 - T007, T008 can run in parallel (different functions in same file)
-- T033, T034 can run in parallel (different concerns)
+- T031, T032 can run in parallel (different verification concerns)
 - After US4 completion: US1, US2, US3 can theoretically run in parallel
 
 ---
@@ -226,5 +227,6 @@ Phase 6 (US3): Twice-monthly payment configuration
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
 - No test tasks included (not explicitly requested in spec)
-- Biweekly frequency update (T033) deferred to Polish phase to minimize scope
+- Biweekly day-of-week support (FR-008) is handled in T011 (Phase 2) alongside weekly
+- Total tasks: 36 (T001-T036)
 
