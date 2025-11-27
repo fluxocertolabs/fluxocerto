@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { z } from 'zod'
 import {
   getSupabase,
-  getCurrentUserId,
   handleSupabaseError,
   isSupabaseConfigured,
 } from '../lib/supabase'
@@ -88,22 +87,17 @@ function checkSupabaseConfigured(): Result<never> | null {
 
 export const useFinanceStore = create<FinanceStore>()(() => ({
   // === Bank Account Actions ===
+  // Note: user_id removed - all authenticated users share data
   addAccount: async (input) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
     try {
       const validated = BankAccountInputSchema.parse(input)
-      const userId = await getCurrentUserId()
-      
-      if (!userId) {
-        return { success: false, error: 'Not authenticated' }
-      }
 
       const { data, error } = await getSupabase()
         .from('accounts')
         .insert({
-          user_id: userId,
           name: validated.name,
           type: validated.type,
           balance: validated.balance,
@@ -184,16 +178,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = ProjectInputSchema.parse(input)
-      const userId = await getCurrentUserId()
-      
-      if (!userId) {
-        return { success: false, error: 'Not authenticated' }
-      }
 
       const { data, error } = await getSupabase()
         .from('projects')
         .insert({
-          user_id: userId,
           name: validated.name,
           amount: validated.amount,
           frequency: validated.frequency,
@@ -315,16 +303,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = FixedExpenseInputSchema.parse(input)
-      const userId = await getCurrentUserId()
-      
-      if (!userId) {
-        return { success: false, error: 'Not authenticated' }
-      }
 
       const { data, error } = await getSupabase()
         .from('expenses')
         .insert({
-          user_id: userId,
           name: validated.name,
           amount: validated.amount,
           due_day: validated.dueDay,
@@ -442,16 +424,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = CreditCardInputSchema.parse(input)
-      const userId = await getCurrentUserId()
-      
-      if (!userId) {
-        return { success: false, error: 'Not authenticated' }
-      }
 
       const { data, error } = await getSupabase()
         .from('credit_cards')
         .insert({
-          user_id: userId,
           name: validated.name,
           statement_balance: validated.statementBalance,
           due_day: validated.dueDay,

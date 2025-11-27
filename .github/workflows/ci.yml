@@ -1,10 +1,16 @@
-# GitHub Actions CI Workflow Contract
-# This file defines the CI workflow that will be created at .github/workflows/ci.yml
+# GitHub Actions CI/CD Workflow
+# Purpose: Run quality gates (typecheck, lint, test, build) and deploy to Vercel only if all checks pass
 #
-# Purpose: Run quality gates (typecheck, lint, test, build) on all pushes and PRs
-# Deployment: Handled by Vercel's native Git integration (not this workflow)
+# Deployment Strategy:
+# - Preview deployments: On pull requests (after quality checks pass)
+# - Production deployments: On push to main (after quality checks pass)
+#
+# Required Secrets:
+# - VERCEL_TOKEN: Vercel API token
+# - VERCEL_ORG_ID: Vercel organization ID
+# - VERCEL_PROJECT_ID: Vercel project ID
 
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -42,19 +48,113 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Step 5: Run TypeScript type checking (FR-002)
+      # Step 5: Run TypeScript type checking
       - name: Type check
         run: pnpm typecheck
 
-      # Step 6: Run ESLint (FR-003)
+      # Step 6: Run ESLint
       - name: Lint
         run: pnpm lint
 
-      # Step 7: Run tests (FR-004)
+      # Step 7: Run tests
       - name: Test
         run: pnpm test run
 
-      # Step 8: Build project (FR-010, verifies production build works)
+      # Step 8: Build project (verifies production build works)
       - name: Build
         run: pnpm build
 
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'pull_request'
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Vercel CLI
+        run: pnpm add -g vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel (Preview)
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with Preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 **Preview Deployment Ready!**\n\n' +
+                    '| Environment | URL |\n' +
+                    '|-------------|-----|\n' +
+                    '| Preview | ${{ steps.deploy.outputs.url }} |\n\n' +
+                    '_This preview was deployed after all quality checks passed._'
+            })
+
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Vercel CLI
+        run: pnpm add -g vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel (Production)
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> $GITHUB_OUTPUT

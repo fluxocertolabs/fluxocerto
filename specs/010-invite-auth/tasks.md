@@ -24,10 +24,10 @@
 
 **Purpose**: Project initialization and database schema changes
 
-- [ ] T000 Create migration file supabase/migrations/002_invite_auth.sql with header comment
-- [ ] T001 Enable citext extension in supabase/migrations/002_invite_auth.sql
-- [ ] T002 Create allowed_emails table with citext email column in supabase/migrations/002_invite_auth.sql
-- [ ] T003 [P] Create auth types file in src/types/auth.ts
+- [X] T000 Create migration file supabase/migrations/002_invite_auth.sql with header comment
+- [X] T001 Enable citext extension in supabase/migrations/002_invite_auth.sql
+- [X] T002 Create allowed_emails table with citext email column in supabase/migrations/002_invite_auth.sql
+- [X] T003 [P] Create auth types file in src/types/auth.ts
 
 ---
 
@@ -37,22 +37,22 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Drop existing user_id-based RLS policies on accounts table in supabase/migrations/002_invite_auth.sql
-- [ ] T005 [P] Drop existing user_id-based RLS policies on projects table in supabase/migrations/002_invite_auth.sql
-- [ ] T006 [P] Drop existing user_id-based RLS policies on expenses table in supabase/migrations/002_invite_auth.sql
-- [ ] T007 [P] Drop existing user_id-based RLS policies on credit_cards table in supabase/migrations/002_invite_auth.sql
-- [ ] T008 Remove user_id column from accounts table in supabase/migrations/002_invite_auth.sql
-- [ ] T009 [P] Remove user_id column from projects table in supabase/migrations/002_invite_auth.sql
-- [ ] T010 [P] Remove user_id column from expenses table in supabase/migrations/002_invite_auth.sql
-- [ ] T011 [P] Remove user_id column from credit_cards table in supabase/migrations/002_invite_auth.sql
-- [ ] T012 Create new authenticated-only RLS policies for accounts table in supabase/migrations/002_invite_auth.sql
-- [ ] T013 [P] Create new authenticated-only RLS policies for projects table in supabase/migrations/002_invite_auth.sql
-- [ ] T014 [P] Create new authenticated-only RLS policies for expenses table in supabase/migrations/002_invite_auth.sql
-- [ ] T015 [P] Create new authenticated-only RLS policies for credit_cards table in supabase/migrations/002_invite_auth.sql
-- [ ] T016 Create before-user-created Edge Function in supabase/functions/before-user-created/index.ts
-- [ ] T017 Update TypeScript Row types to remove user_id in src/lib/supabase.ts
-- [ ] T018 Create useAuth hook for auth state management in src/hooks/use-auth.ts
-- [ ] T019 Remove user_id filtering from realtime subscriptions in src/hooks/use-finance-data.ts
+- [X] T004 Drop existing user_id-based RLS policies on accounts table in supabase/migrations/002_invite_auth.sql
+- [X] T005 [P] Drop existing user_id-based RLS policies on projects table in supabase/migrations/002_invite_auth.sql
+- [X] T006 [P] Drop existing user_id-based RLS policies on expenses table in supabase/migrations/002_invite_auth.sql
+- [X] T007 [P] Drop existing user_id-based RLS policies on credit_cards table in supabase/migrations/002_invite_auth.sql
+- [X] T008 Remove user_id column from accounts table in supabase/migrations/002_invite_auth.sql
+- [X] T009 [P] Remove user_id column from projects table in supabase/migrations/002_invite_auth.sql
+- [X] T010 [P] Remove user_id column from expenses table in supabase/migrations/002_invite_auth.sql
+- [X] T011 [P] Remove user_id column from credit_cards table in supabase/migrations/002_invite_auth.sql
+- [X] T012 Create new authenticated-only RLS policies for accounts table in supabase/migrations/002_invite_auth.sql
+- [X] T013 [P] Create new authenticated-only RLS policies for projects table in supabase/migrations/002_invite_auth.sql
+- [X] T014 [P] Create new authenticated-only RLS policies for expenses table in supabase/migrations/002_invite_auth.sql
+- [X] T015 [P] Create new authenticated-only RLS policies for credit_cards table in supabase/migrations/002_invite_auth.sql
+- [X] T016 Create before-user-created Edge Function in supabase/functions/before-user-created/index.ts
+- [X] T017 Update TypeScript Row types to remove user_id in src/lib/supabase.ts
+- [X] T018 Create useAuth hook for auth state management in src/hooks/use-auth.ts
+- [X] T019 Remove user_id filtering from realtime subscriptions in src/hooks/use-finance-data.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -66,15 +66,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T020 [P] [US1] Create LoginForm component in src/components/auth/login-form.tsx
-- [ ] T021 [P] [US1] Create Login page in src/pages/login.tsx
-- [ ] T022 [US1] Add signInWithOtp wrapper method in src/lib/supabase.ts
-- [ ] T023 [US1] Create AuthCallback page for Magic Link handling in src/pages/auth-callback.tsx
-- [ ] T024 [US1] Add /login and /auth/confirm routes in src/App.tsx
-- [ ] T025 [US1] Add auth guard to protect dashboard route in src/App.tsx
-- [ ] T026 [US1] Add auth guard to protect manage route in src/App.tsx
-- [ ] T027 [US1] Update auth initialization in src/main.tsx
-- [ ] T028 [US1] Add redirect to dashboard for authenticated users on /login route in src/App.tsx
+- [X] T020 [P] [US1] Create LoginForm component in src/components/auth/login-form.tsx
+- [X] T021 [P] [US1] Create Login page in src/pages/login.tsx
+- [X] T022 [US1] Add signInWithOtp wrapper method in src/lib/supabase.ts
+- [X] T023 [US1] Create AuthCallback page for Magic Link handling in src/pages/auth-callback.tsx
+- [X] T024 [US1] Add /login and /auth/confirm routes in src/App.tsx
+- [X] T025 [US1] Add auth guard to protect dashboard route in src/App.tsx
+- [X] T026 [US1] Add auth guard to protect manage route in src/App.tsx
+- [X] T027 [US1] Update auth initialization in src/main.tsx
+- [X] T028 [US1] Add redirect to dashboard for authenticated users on /login route in src/App.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can request Magic Link, click it, and access dashboard
 
@@ -90,10 +90,10 @@
 
 > **Note**: T016 (Foundational phase) implements the Edge Function. These tasks are verification checkpoints to confirm the implementation meets US2 requirements.
 
-- [ ] T029 [US2] **VERIFY** before-user-created hook validates email against allowed_emails table (implemented in T016)
-- [ ] T030 [US2] **VERIFY** hook returns 400 error for non-approved emails (implemented in T016)
-- [ ] T031 [US2] **VERIFY** hook fails closed on system errors with 500 response (implemented in T016)
-- [ ] T032 [US2] Ensure LoginForm always shows success message regardless of email approval status in src/components/auth/login-form.tsx
+- [X] T029 [US2] **VERIFY** before-user-created hook validates email against allowed_emails table (implemented in T016)
+- [X] T030 [US2] **VERIFY** hook returns 400 error for non-approved emails (implemented in T016)
+- [X] T031 [US2] **VERIFY** hook fails closed on system errors with 500 response (implemented in T016)
+- [X] T032 [US2] Ensure LoginForm always shows success message regardless of email approval status in src/components/auth/login-form.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - approved users can login, non-approved users are silently blocked
 
@@ -109,11 +109,11 @@
 
 > **Note**: T019 (Foundational phase) removes user_id filtering from realtime subscriptions. These tasks complete the CRUD operation changes in the same file.
 
-- [ ] T033 [US3] Remove user_id from insert operations in src/hooks/use-finance-data.ts
-- [ ] T034 [US3] Remove user_id from select queries in src/hooks/use-finance-data.ts
-- [ ] T035 [US3] Remove user_id from update operations in src/hooks/use-finance-data.ts
-- [ ] T036 [US3] Remove user_id from delete operations in src/hooks/use-finance-data.ts
-- [ ] T037 [US3] **VERIFY** realtime subscriptions work without user_id filter (implemented in T019)
+- [X] T033 [US3] Remove user_id from insert operations in src/stores/finance-store.ts
+- [X] T034 [US3] Remove user_id from select queries in src/hooks/use-finance-data.ts
+- [X] T035 [US3] Remove user_id from update operations in src/stores/finance-store.ts
+- [X] T036 [US3] Remove user_id from delete operations in src/stores/finance-store.ts
+- [X] T037 [US3] **VERIFY** realtime subscriptions work without user_id filter (implemented in T019)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should work - all authenticated users share the same data
 
@@ -127,9 +127,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T038 [P] [US4] Add signOut wrapper method in src/lib/supabase.ts
-- [ ] T039 [US4] Add sign-out button to header component in src/components/layout/header.tsx
-- [ ] T040 [US4] Implement sign-out handler with redirect to /login in src/components/layout/header.tsx
+- [X] T038 [P] [US4] Add signOut wrapper method in src/lib/supabase.ts
+- [X] T039 [US4] Add sign-out button to header component in src/components/layout/header.tsx
+- [X] T040 [US4] Implement sign-out handler with redirect to /login in src/components/layout/header.tsx
 
 **Checkpoint**: At this point, User Stories 1-4 should work - complete auth flow including sign-out
 
@@ -143,12 +143,12 @@
 
 ### Implementation for User Story 5
 
-- [ ] T041 [P] [US5] Create auth error message mapping constants in src/lib/auth-errors.ts
-- [ ] T042 [US5] Add error handling for expired Magic Links in src/pages/auth-callback.tsx
-- [ ] T043 [US5] Add error handling for rate limiting in src/components/auth/login-form.tsx
-- [ ] T044 [US5] Add error handling for network errors in src/components/auth/login-form.tsx
-- [ ] T045 [US5] Display user-friendly error messages with toast notifications in src/pages/auth-callback.tsx
-- [ ] T046 [US5] Add "Request new link" button on expired link error in src/pages/auth-callback.tsx
+- [X] T041 [P] [US5] Create auth error message mapping constants in src/lib/auth-errors.ts
+- [X] T042 [US5] Add error handling for expired Magic Links in src/pages/auth-callback.tsx
+- [X] T043 [US5] Add error handling for rate limiting in src/components/auth/login-form.tsx
+- [X] T044 [US5] Add error handling for network errors in src/components/auth/login-form.tsx
+- [X] T045 [US5] Display user-friendly error messages with toast notifications in src/pages/auth-callback.tsx
+- [X] T046 [US5] Add "Request new link" button on expired link error in src/pages/auth-callback.tsx
 
 **Checkpoint**: All user stories should now be independently functional with proper error handling
 
@@ -159,7 +159,7 @@
 **Purpose**: Cleanup and final verification
 
 - [ ] T047 Disable anonymous authentication in Supabase dashboard (manual step)
-- [ ] T048 Remove anonymous auth initialization code from src/main.tsx
+- [X] T048 Remove anonymous auth initialization code from src/main.tsx
 - [ ] T049 Add allowed_emails seed data for testing via Supabase SQL Editor (manual step)
 - [ ] T050 Configure Supabase redirect URLs for /auth/confirm (manual step) — **Verify**: Attempt Magic Link login and confirm redirect works
 - [ ] T051 Deploy before-user-created Edge Function to Supabase (manual step) — **Verify**: Run `npx supabase functions logs before-user-created` and confirm deployment; test with non-approved email
@@ -291,4 +291,5 @@ Execute phases sequentially in priority order:
 | **Polish Tasks** | 7 (includes T053 constitution update) |
 | **Parallel Opportunities** | 20 tasks marked [P] |
 | **Suggested MVP Scope** | User Stories 1-3 (P1 priority) |
-
+| **Completed Tasks** | 47 |
+| **Remaining Tasks** | 7 (all manual Supabase dashboard steps) |

@@ -1,10 +1,10 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import type { Result } from '@/stores/finance-store'
 
 // Database row types for type-safe responses
+// Note: user_id removed - all authenticated users share data
 export interface AccountRow {
   id: string
-  user_id: string
   name: string
   type: 'checking' | 'savings' | 'investment'
   balance: number
@@ -15,7 +15,6 @@ export interface AccountRow {
 
 export interface ProjectRow {
   id: string
-  user_id: string
   name: string
   amount: number
   frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
@@ -38,7 +37,6 @@ export interface ProjectRow {
 
 export interface ExpenseRow {
   id: string
-  user_id: string
   name: string
   amount: number
   due_day: number
@@ -49,7 +47,6 @@ export interface ExpenseRow {
 
 export interface CreditCardRow {
   id: string
-  user_id: string
   name: string
   statement_balance: number
   due_day: number
@@ -124,7 +121,7 @@ export function getSupabase(): SupabaseClient {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false, // SPA doesn't use URL-based auth
+      detectSessionInUrl: true, // Enable for Magic Link callback handling
     },
   })
 
@@ -132,9 +129,9 @@ export function getSupabase(): SupabaseClient {
 }
 
 /**
- * Initialize anonymous authentication.
- * Creates a new anonymous session if none exists.
- * Session persists in browser storage automatically.
+ * Initialize authentication state.
+ * For Magic Link auth, we just check if there's an existing session.
+ * No automatic sign-in - users must authenticate via Magic Link.
  */
 export async function initializeAuth(): Promise<void> {
   if (!isSupabaseConfigured()) {
@@ -142,19 +139,13 @@ export async function initializeAuth(): Promise<void> {
     return
   }
 
+  // Just initialize the client and check for existing session
+  // The auth state will be managed by onAuthStateChange
   const client = getSupabase()
-  const { data: { session }, error: sessionError } = await client.auth.getSession()
+  const { error: sessionError } = await client.auth.getSession()
   
   if (sessionError) {
     console.error('Failed to get session:', sessionError.message)
-    return
-  }
-
-  if (!session) {
-    const { error: signInError } = await client.auth.signInAnonymously()
-    if (signInError) {
-      console.error('Failed to sign in anonymously:', signInError.message)
-    }
   }
 }
 
@@ -170,6 +161,56 @@ export async function getCurrentUserId(): Promise<string | null> {
   const client = getSupabase()
   const { data: { user } } = await client.auth.getUser()
   return user?.id ?? null
+}
+
+/**
+ * Get the current authenticated user.
+ * Returns null if not authenticated.
+ */
+export async function getCurrentUser(): Promise<User | null> {
+  if (!isSupabaseConfigured()) {
+    return null
+  }
+
+  const client = getSupabase()
+  const { data: { user } } = await client.auth.getUser()
+  return user
+}
+
+/**
+ * Request a Magic Link for email authentication.
+ * Always shows success message to prevent email enumeration.
+ * The before-user-created hook handles invite validation.
+ */
+export async function signInWithMagicLink(email: string): Promise<{ error: Error | null }> {
+  if (!isSupabaseConfigured()) {
+    return { error: new Error('Supabase is not configured') }
+  }
+
+  const client = getSupabase()
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      shouldCreateUser: true, // Let the hook handle validation
+    },
+  })
+
+  return { error }
+}
+
+/**
+ * Sign out the current user.
+ * Clears session from browser storage.
+ */
+export async function signOut(): Promise<{ error: Error | null }> {
+  if (!isSupabaseConfigured()) {
+    return { error: new Error('Supabase is not configured') }
+  }
+
+  const client = getSupabase()
+  const { error } = await client.auth.signOut()
+  return { error }
 }
 
 /**

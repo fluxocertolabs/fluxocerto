@@ -3,7 +3,7 @@
  * Supports auto-save on blur and error display
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -29,17 +29,22 @@ export function BalanceListItem({
   const name = getNameFromItem(item)
 
   // Convert cents to dollars for display/editing
-  const [editValue, setEditValue] = useState((currentBalance / 100).toFixed(2))
+  const [editValue, setEditValue] = useState(() => (currentBalance / 100).toFixed(2))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  
+  // Track the last synced balance to detect external changes
+  const [lastSyncedBalance, setLastSyncedBalance] = useState(currentBalance)
 
-  // Update edit value when external balance changes (e.g., after successful save)
+  // Update edit value when external balance changes (e.g., after successful save or realtime update)
+  // This effect only runs when currentBalance changes AND we're not saving
   useEffect(() => {
-    if (!isSaving) {
+    if (!isSaving && currentBalance !== lastSyncedBalance) {
+      setLastSyncedBalance(currentBalance)
       setEditValue((currentBalance / 100).toFixed(2))
     }
-  }, [currentBalance, isSaving])
+  }, [currentBalance, isSaving, lastSyncedBalance])
 
   const handleBlur = useCallback(async () => {
     const numValue = parseFloat(editValue)
@@ -195,4 +200,3 @@ function CreditCardIcon({ className }: { className?: string }) {
     </svg>
   )
 }
-

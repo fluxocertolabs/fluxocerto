@@ -3,7 +3,7 @@
  * Full-screen modal for rapid balance updates
  */
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useFinanceData } from '@/hooks/use-finance-data'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,27 @@ interface QuickUpdateViewProps {
   onCancel: () => void
 }
 
+/**
+ * Creates a map of initial balances from accounts and credit cards.
+ * This is extracted as a pure function to be used in state initialization.
+ */
+function createInitialBalances(
+  accounts: Array<{ id: string; balance: number }>,
+  creditCards: Array<{ id: string; statementBalance: number }>
+): Map<string, number> {
+  const balances = new Map<string, number>()
+
+  for (const account of accounts) {
+    balances.set(account.id, account.balance)
+  }
+
+  for (const card of creditCards) {
+    balances.set(card.id, card.statementBalance)
+  }
+
+  return balances
+}
+
 export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
   // Fetch data to check if empty and capture initial balances
   const { accounts, creditCards, isLoading } = useFinanceData()
@@ -24,28 +45,25 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
   const isEmpty =
     !isLoading && accounts.length === 0 && creditCards.length === 0
 
-  // Use ref to capture initial balances exactly once when data becomes available
-  const initialBalancesRef = useRef<Map<string, number> | null>(null)
+  // Track whether we've captured initial balances - use lazy initialization
+  const [capturedBalances, setCapturedBalances] = useState<{
+    captured: boolean
+    balances: Map<string, number>
+  }>(() => ({ captured: false, balances: new Map() }))
 
   // Capture initial balances once when data is first available
+  // Compute new state based on current state to avoid calling setState directly
+  const shouldCapture = !capturedBalances.captured && !isLoading && (accounts.length > 0 || creditCards.length > 0)
+  
+  // Use state update in effect only when necessary
   useEffect(() => {
-    if (initialBalancesRef.current === null && !isLoading && (accounts.length > 0 || creditCards.length > 0)) {
-      const balances = new Map<string, number>()
-
-      for (const account of accounts) {
-        balances.set(account.id, account.balance)
-      }
-
-      for (const card of creditCards) {
-        balances.set(card.id, card.statementBalance)
-      }
-
-      initialBalancesRef.current = balances
+    if (shouldCapture) {
+      setCapturedBalances({
+        captured: true,
+        balances: createInitialBalances(accounts, creditCards)
+      })
     }
-  }, [accounts, creditCards, isLoading])
-
-  // Provide a stable empty map until data is loaded
-  const initialBalances = initialBalancesRef.current ?? new Map<string, number>()
+  }, [shouldCapture, accounts, creditCards])
 
   // Handle Escape key
   const handleKeyDown = useCallback(
@@ -119,7 +137,7 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
                 Enter your current balances. Changes are saved automatically when
                 you move to the next field.
               </p>
-              <BalanceList initialBalances={initialBalances} />
+              <BalanceList initialBalances={capturedBalances.balances} />
             </>
           )}
         </div>

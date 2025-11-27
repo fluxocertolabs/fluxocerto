@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   getSupabase,
-  getCurrentUserId,
   isSupabaseConfigured,
   type AccountRow,
   type ProjectRow,
   type ExpenseRow,
   type CreditCardRow,
 } from '@/lib/supabase'
+import { useAuth } from '@/hooks/use-auth'
 import type {
   BankAccount,
   Project,
@@ -84,6 +84,8 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  const { isAuthenticated } = useAuth()
 
   // Fetch all data from Supabase
   const fetchAllData = useCallback(async () => {
@@ -97,7 +99,7 @@ export function useFinanceData(): UseFinanceDataReturn {
       setError(null)
 
       const client = getSupabase()
-      // Fetch all tables in parallel
+      // Fetch all tables in parallel - no user_id filter needed (shared family data)
       const [accountsResult, projectsResult, expensesResult, creditCardsResult] = await Promise.all([
         client.from('accounts').select('*'),
         client.from('projects').select('*'),
@@ -249,22 +251,20 @@ export function useFinanceData(): UseFinanceDataReturn {
       return
     }
 
+    // Only fetch data when authenticated
+    if (!isAuthenticated) {
+      setIsLoading(false)
+      setError('Not authenticated')
+      return
+    }
+
     let channel: RealtimeChannel | null = null
 
     async function setup() {
-      // Get user ID for filtering
-      const userId = await getCurrentUserId()
-      
-      if (!userId) {
-        setIsLoading(false)
-        setError('Not authenticated')
-        return
-      }
-
       // Fetch initial data
       await fetchAllData()
 
-      // Subscribe to realtime changes filtered by user_id
+      // Subscribe to realtime changes (no user_id filter - shared family data)
       const client = getSupabase()
       channel = client
         .channel('finance-data-changes')
@@ -274,7 +274,6 @@ export function useFinanceData(): UseFinanceDataReturn {
             event: '*',
             schema: 'public',
             table: 'accounts',
-            filter: `user_id=eq.${userId}`,
           },
           handleAccountChange
         )
@@ -284,7 +283,6 @@ export function useFinanceData(): UseFinanceDataReturn {
             event: '*',
             schema: 'public',
             table: 'projects',
-            filter: `user_id=eq.${userId}`,
           },
           handleProjectChange
         )
@@ -294,7 +292,6 @@ export function useFinanceData(): UseFinanceDataReturn {
             event: '*',
             schema: 'public',
             table: 'expenses',
-            filter: `user_id=eq.${userId}`,
           },
           handleExpenseChange
         )
@@ -304,7 +301,6 @@ export function useFinanceData(): UseFinanceDataReturn {
             event: '*',
             schema: 'public',
             table: 'credit_cards',
-            filter: `user_id=eq.${userId}`,
           },
           handleCreditCardChange
         )
@@ -327,7 +323,7 @@ export function useFinanceData(): UseFinanceDataReturn {
         channel.unsubscribe()
       }
     }
-  }, [fetchAllData, handleAccountChange, handleProjectChange, handleExpenseChange, handleCreditCardChange])
+  }, [isAuthenticated, fetchAllData, handleAccountChange, handleProjectChange, handleExpenseChange, handleCreditCardChange])
 
   return {
     accounts,

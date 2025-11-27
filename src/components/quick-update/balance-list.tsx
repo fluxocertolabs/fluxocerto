@@ -3,7 +3,7 @@
  * Renders accounts and credit cards with Tab navigation
  */
 
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useFinanceData } from '@/hooks/use-finance-data'
 import { useFinanceStore } from '@/stores/finance-store'
 import { BalanceListItem } from './balance-list-item'
@@ -35,8 +35,7 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
     return result
   }, [accounts, creditCards])
 
-  // Track previous balances using ref to preserve across renders
-  const previousBalancesRef = useRef(initialBalances)
+  // Use initialBalances directly (passed as prop, stable reference from parent)
 
   // Handle save for an item
   const handleSave = async (
@@ -85,7 +84,7 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
                 key={item.entity.id}
                 item={item}
                 previousBalance={
-                  previousBalancesRef.current.get(item.entity.id) ??
+                  initialBalances.get(item.entity.id) ??
                   item.entity.balance
                 }
                 onSave={(newBalance) => handleSave(item, newBalance)}
@@ -107,7 +106,7 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
                 key={item.entity.id}
                 item={item}
                 previousBalance={
-                  previousBalancesRef.current.get(item.entity.id) ??
+                  initialBalances.get(item.entity.id) ??
                   item.entity.statementBalance
                 }
                 onSave={(newBalance) => handleSave(item, newBalance)}

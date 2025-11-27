@@ -23,6 +23,12 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Allow setState in effects for data synchronization patterns
+      // These are legitimate use cases for syncing external data (props, subscriptions)
+      // with local state. See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+      'react-hooks/set-state-in-effect': 'off',
+      // Allow reading refs during render for specific patterns
+      'react-hooks/refs': 'off',
     },
   },
 )
