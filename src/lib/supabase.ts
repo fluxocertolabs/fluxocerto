@@ -80,10 +80,10 @@ const SUPABASE_ANON_KEY_VAR = 'VITE_SUPABASE_ANON_KEY'
  */
 export function getMissingEnvVars(): string[] {
   const missing: string[] = []
-  if (!import.meta.env[SUPABASE_URL_VAR]) {
+  if (!import.meta.env.VITE_SUPABASE_URL) {
     missing.push(SUPABASE_URL_VAR)
   }
-  if (!import.meta.env[SUPABASE_ANON_KEY_VAR]) {
+  if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
     missing.push(SUPABASE_ANON_KEY_VAR)
   }
   return missing
@@ -111,8 +111,8 @@ export function getSupabase(): SupabaseClient {
     return supabaseInstance
   }
 
-  const url = import.meta.env[SUPABASE_URL_VAR]
-  const anonKey = import.meta.env[SUPABASE_ANON_KEY_VAR]
+  const url = import.meta.env.VITE_SUPABASE_URL
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
   if (!url || !anonKey) {
     throw new Error(
