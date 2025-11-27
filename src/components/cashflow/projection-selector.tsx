@@ -22,11 +22,11 @@ interface ProjectionSelectorProps {
 }
 
 const options: { value: ProjectionDays; label: string }[] = [
-  { value: 7, label: '7 days' },
-  { value: 14, label: '14 days' },
-  { value: 30, label: '30 days' },
-  { value: 60, label: '60 days' },
-  { value: 90, label: '90 days' },
+  { value: 7, label: '7 dias' },
+  { value: 14, label: '14 dias' },
+  { value: 30, label: '30 dias' },
+  { value: 60, label: '60 dias' },
+  { value: 90, label: '90 dias' },
 ]
 
 export function ProjectionSelector({
@@ -40,7 +40,7 @@ export function ProjectionSelector({
         htmlFor="projection-selector"
         className="text-sm text-muted-foreground whitespace-nowrap"
       >
-        Projection:
+        Projeção:
       </label>
       <Select
         value={value.toString()}

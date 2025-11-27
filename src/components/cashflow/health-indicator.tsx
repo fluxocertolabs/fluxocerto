@@ -21,21 +21,21 @@ interface HealthIndicatorProps {
 
 const statusConfig = {
   good: {
-    label: 'Good',
+    label: 'Bom',
     bgColor: 'bg-green-500/10',
     borderColor: 'border-green-500/30',
     textColor: 'text-green-600',
     icon: CheckCircleIcon,
   },
   warning: {
-    label: 'Warning',
+    label: 'Atenção',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/30',
     textColor: 'text-amber-600',
     icon: AlertTriangleIcon,
   },
   danger: {
-    label: 'Danger',
+    label: 'Perigo',
     bgColor: 'bg-red-500/10',
     borderColor: 'border-red-500/30',
     textColor: 'text-red-600',
@@ -85,7 +85,7 @@ export function HealthIndicator({
         >
           <ClockIcon className="h-4 w-4" />
           <span>
-            {staleCount} stale item{staleCount !== 1 ? 's' : ''} - Update now
+            {staleCount} {staleCount !== 1 ? 'itens desatualizados' : 'item desatualizado'} - Atualizar agora
           </span>
         </button>
       )}

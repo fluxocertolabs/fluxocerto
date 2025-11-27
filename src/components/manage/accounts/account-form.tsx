@@ -58,11 +58,11 @@ export function AccountForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-2">
-        <Label htmlFor="name">Account Name</Label>
+        <Label htmlFor="name">Nome da Conta</Label>
         <Input
           id="name"
           type="text"
-          placeholder="e.g., Main Checking"
+          placeholder="ex: Conta Corrente Principal"
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={isSubmitting}
@@ -77,19 +77,19 @@ export function AccountForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="type">Account Type</Label>
+        <Label htmlFor="type">Tipo de Conta</Label>
         <Select
           value={type}
           onValueChange={(value) => setType(value as AccountType)}
           disabled={isSubmitting}
         >
           <SelectTrigger id="type" aria-invalid={!!errors.type}>
-            <SelectValue placeholder="Select account type" />
+            <SelectValue placeholder="Selecione o tipo de conta" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="checking">Checking</SelectItem>
-            <SelectItem value="savings">Savings</SelectItem>
-            <SelectItem value="investment">Investment</SelectItem>
+            <SelectItem value="checking">Conta Corrente</SelectItem>
+            <SelectItem value="savings">Poupança</SelectItem>
+            <SelectItem value="investment">Investimento</SelectItem>
           </SelectContent>
         </Select>
         {errors.type && (
@@ -98,11 +98,11 @@ export function AccountForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="balance">Current Balance</Label>
+        <Label htmlFor="balance">Saldo Atual</Label>
         <Input
           id="balance"
           type="number"
-          placeholder="0.00"
+          placeholder="0,00"
           value={balance}
           onChange={(e) => setBalance(e.target.value)}
           min="0"
@@ -120,10 +120,10 @@ export function AccountForm({
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : account ? 'Update' : 'Add Account'}
+          {isSubmitting ? 'Salvando...' : account ? 'Atualizar' : 'Adicionar Conta'}
         </Button>
       </div>
     </form>

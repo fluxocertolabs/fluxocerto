@@ -39,12 +39,12 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
 
       {/* Title */}
       <h2 className="text-xl font-semibold text-foreground mb-2">
-        Unable to Load Projection
+        Não Foi Possível Carregar a Projeção
       </h2>
 
       {/* Error message */}
       <p className="text-muted-foreground max-w-md mb-6">
-        {error.message || 'An unexpected error occurred while calculating your cashflow projection.'}
+        {error.message || 'Ocorreu um erro inesperado ao calcular sua projeção de fluxo de caixa.'}
       </p>
 
       {/* Retry button */}
@@ -71,7 +71,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
             d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
           />
         </svg>
-        Try Again
+        Tentar Novamente
       </button>
     </div>
   )

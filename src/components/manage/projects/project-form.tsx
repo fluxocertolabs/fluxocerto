@@ -29,13 +29,13 @@ type Certainty = 'guaranteed' | 'probable' | 'uncertain'
 
 // ISO 8601 weekdays: 1 = Monday, 7 = Sunday
 const WEEKDAYS = [
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-  { value: 7, label: 'Sunday' },
+  { value: 1, label: 'Segunda-feira' },
+  { value: 2, label: 'Terça-feira' },
+  { value: 3, label: 'Quarta-feira' },
+  { value: 4, label: 'Quinta-feira' },
+  { value: 5, label: 'Sexta-feira' },
+  { value: 6, label: 'Sábado' },
+  { value: 7, label: 'Domingo' },
 ] as const
 
 /**
@@ -106,14 +106,14 @@ function DayOfWeekSelect({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor="dayOfWeek">Payment Day</Label>
+      <Label htmlFor="dayOfWeek">Dia do Pagamento</Label>
       <Select
         value={value.toString()}
         onValueChange={(v) => onChange(parseInt(v, 10))}
         disabled={disabled}
       >
         <SelectTrigger id="dayOfWeek" aria-invalid={!!error}>
-          <SelectValue placeholder="Select day" />
+          <SelectValue placeholder="Selecione o dia" />
         </SelectTrigger>
         <SelectContent>
           {WEEKDAYS.map(({ value, label }) => (
@@ -144,7 +144,7 @@ function DayOfMonthInput({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor="dayOfMonth">Payment Day</Label>
+      <Label htmlFor="dayOfMonth">Dia do Pagamento</Label>
       <Input
         id="dayOfMonth"
         type="number"
@@ -189,7 +189,7 @@ function TwiceMonthlyInput({
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="grid gap-2">
-        <Label htmlFor="firstDay">First Payment Day</Label>
+        <Label htmlFor="firstDay">Primeiro Dia de Pagamento</Label>
         <Input
           id="firstDay"
           type="number"
@@ -209,7 +209,7 @@ function TwiceMonthlyInput({
         )}
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="secondDay">Second Payment Day</Label>
+        <Label htmlFor="secondDay">Segundo Dia de Pagamento</Label>
         <Input
           id="secondDay"
           type="number"
@@ -336,11 +336,11 @@ export function ProjectForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-2">
-        <Label htmlFor="name">Project Name</Label>
+        <Label htmlFor="name">Nome do Projeto</Label>
         <Input
           id="name"
           type="text"
-          placeholder="e.g., Client Retainer"
+          placeholder="ex: Salário Mensal"
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={isSubmitting}
@@ -356,11 +356,11 @@ export function ProjectForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="amount">Payment Amount</Label>
+          <Label htmlFor="amount">Valor do Pagamento</Label>
           <Input
             id="amount"
             type="number"
-            placeholder="0.00"
+            placeholder="0,00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             min="0.01"
@@ -377,20 +377,20 @@ export function ProjectForm({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="frequency">Frequency</Label>
+          <Label htmlFor="frequency">Frequência</Label>
           <Select
             value={frequency}
             onValueChange={(value) => handleFrequencyChange(value as Frequency)}
             disabled={isSubmitting}
           >
             <SelectTrigger id="frequency" aria-invalid={!!errors.frequency}>
-              <SelectValue placeholder="Select frequency" />
+              <SelectValue placeholder="Selecione a frequência" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="biweekly">Biweekly</SelectItem>
-              <SelectItem value="twice-monthly">Twice a month</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="weekly">Semanal</SelectItem>
+              <SelectItem value="biweekly">Quinzenal</SelectItem>
+              <SelectItem value="twice-monthly">Duas vezes por mês</SelectItem>
+              <SelectItem value="monthly">Mensal</SelectItem>
             </SelectContent>
           </Select>
           {errors.frequency && (
@@ -431,19 +431,19 @@ export function ProjectForm({
       )}
 
       <div className="grid gap-2">
-        <Label htmlFor="certainty">Certainty</Label>
+        <Label htmlFor="certainty">Certeza</Label>
         <Select
           value={certainty}
           onValueChange={(value) => setCertainty(value as Certainty)}
           disabled={isSubmitting}
         >
           <SelectTrigger id="certainty" aria-invalid={!!errors.certainty}>
-            <SelectValue placeholder="Select certainty" />
+            <SelectValue placeholder="Selecione a certeza" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="guaranteed">Guaranteed</SelectItem>
-            <SelectItem value="probable">Probable</SelectItem>
-            <SelectItem value="uncertain">Uncertain</SelectItem>
+            <SelectItem value="guaranteed">Garantido</SelectItem>
+            <SelectItem value="probable">Provável</SelectItem>
+            <SelectItem value="uncertain">Incerto</SelectItem>
           </SelectContent>
         </Select>
         {errors.certainty && (
@@ -453,10 +453,10 @@ export function ProjectForm({
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : project ? 'Update' : 'Add Project'}
+          {isSubmitting ? 'Salvando...' : project ? 'Atualizar' : 'Adicionar Projeto'}
         </Button>
       </div>
     </form>

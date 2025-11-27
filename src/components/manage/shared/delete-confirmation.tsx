@@ -35,20 +35,20 @@ export function DeleteConfirmation({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {entityType}?</AlertDialogTitle>
+          <AlertDialogTitle>Excluir {entityType}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete &quot;{entityName}&quot;? This action cannot
-            be undone.
+            Tem certeza que deseja excluir &quot;{entityName}&quot;? Esta ação não pode
+            ser desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? 'Excluindo...' : 'Excluir'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

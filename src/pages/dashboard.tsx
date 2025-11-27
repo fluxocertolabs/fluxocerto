@@ -39,7 +39,7 @@ export function Dashboard() {
     return (
       <div className={cn('container mx-auto p-4 md:p-6 max-w-6xl')}>
         <h1 className="text-2xl font-bold text-foreground mb-6">
-          Cashflow Dashboard
+          Painel de Fluxo de Caixa
         </h1>
         <LoadingSkeleton />
       </div>
@@ -51,7 +51,7 @@ export function Dashboard() {
     return (
       <div className={cn('container mx-auto p-4 md:p-6 max-w-6xl')}>
         <h1 className="text-2xl font-bold text-foreground mb-6">
-          Cashflow Dashboard
+          Painel de Fluxo de Caixa
         </h1>
         <ErrorState error={error} onRetry={retry} />
       </div>
@@ -63,7 +63,7 @@ export function Dashboard() {
     return (
       <div className={cn('container mx-auto p-4 md:p-6 max-w-6xl')}>
         <h1 className="text-2xl font-bold text-foreground mb-6">
-          Cashflow Dashboard
+          Painel de Fluxo de Caixa
         </h1>
         <EmptyState />
       </div>
@@ -75,7 +75,7 @@ export function Dashboard() {
     <div className={cn('container mx-auto p-4 md:p-6 max-w-6xl')}>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <h1 className="text-2xl font-bold text-foreground">
-          Cashflow Dashboard
+          Painel de Fluxo de Caixa
         </h1>
         <div className="flex items-center gap-4">
           <ProjectionSelector
@@ -83,7 +83,7 @@ export function Dashboard() {
             onChange={setProjectionDays}
           />
           <Button onClick={() => setShowQuickUpdate(true)}>
-            Update Balances
+            Atualizar Saldos
           </Button>
         </div>
       </div>

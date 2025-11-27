@@ -6,17 +6,17 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Family Finance</h1>
+          <h1 className="text-3xl font-bold text-foreground">Finanças da Família</h1>
           <p className="text-muted-foreground mt-2">
-            Track your family's finances together
+            Gerencie as finanças da sua família juntos
           </p>
         </div>
         
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Sign in</CardTitle>
+            <CardTitle>Entrar</CardTitle>
             <CardDescription>
-              Enter your email to receive a magic link
+              Digite seu e-mail para receber um link de acesso
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -25,7 +25,7 @@ export function LoginPage() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Only pre-approved family members can access this app.
+          Apenas membros da família pré-aprovados podem acessar este app.
         </p>
       </div>
     </div>

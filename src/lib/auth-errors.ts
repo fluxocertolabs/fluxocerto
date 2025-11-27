@@ -9,29 +9,29 @@ export interface AuthErrorMapping {
 
 export const AUTH_ERROR_MESSAGES: AuthErrorMapping = {
   // Magic Link errors
-  'otp_expired': 'This link has expired. Please request a new one.',
-  'otp_disabled': 'Login links are not enabled.',
-  'invalid_token': 'Invalid login link. Please request a new one.',
+  'otp_expired': 'Este link expirou. Por favor, solicite um novo.',
+  'otp_disabled': 'Links de acesso não estão habilitados.',
+  'invalid_token': 'Link de acesso inválido. Por favor, solicite um novo.',
   
   // Rate limiting
-  'over_request_rate_limit': 'Too many requests. Please wait a few minutes and try again.',
-  'over_email_send_rate_limit': 'Too many requests. Please wait a few minutes and try again.',
+  'over_request_rate_limit': 'Muitas tentativas. Por favor, aguarde alguns minutos e tente novamente.',
+  'over_email_send_rate_limit': 'Muitas tentativas. Por favor, aguarde alguns minutos e tente novamente.',
   
   // Validation errors
-  'validation_failed': 'Please enter a valid email address.',
-  'invalid_email': 'Please enter a valid email address.',
+  'validation_failed': 'Por favor, insira um endereço de e-mail válido.',
+  'invalid_email': 'Por favor, insira um endereço de e-mail válido.',
   
   // Security (same message to prevent enumeration)
-  'user_not_found': 'Check your email for the login link.',
-  'invalid_credentials': 'Check your email for the login link.',
-  'email_not_confirmed': 'Check your email for the login link.',
+  'user_not_found': 'Verifique seu e-mail para o link de acesso.',
+  'invalid_credentials': 'Verifique seu e-mail para o link de acesso.',
+  'email_not_confirmed': 'Verifique seu e-mail para o link de acesso.',
   
   // Network errors
-  'network_error': 'Unable to connect. Please check your internet connection.',
-  'fetch_error': 'Unable to connect. Please check your internet connection.',
+  'network_error': 'Não foi possível conectar. Verifique sua conexão com a internet.',
+  'fetch_error': 'Não foi possível conectar. Verifique sua conexão com a internet.',
   
   // Generic
-  'default': 'Something went wrong. Please try again.',
+  'default': 'Algo deu errado. Por favor, tente novamente.',
 }
 
 /**

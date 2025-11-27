@@ -23,7 +23,7 @@ export function Header() {
           to="/"
           className="font-semibold text-lg text-foreground hover:text-foreground/80 transition-colors"
         >
-          Family Finance
+          Finanças da Família
         </Link>
         <div className="flex items-center gap-4">
           <NavLink
@@ -36,7 +36,7 @@ export function Header() {
               )
             }
           >
-            Dashboard
+            Painel
           </NavLink>
           <NavLink
             to="/manage"
@@ -47,7 +47,7 @@ export function Header() {
               )
             }
           >
-            Manage
+            Gerenciar
           </NavLink>
           {isAuthenticated && (
             <div className="flex items-center gap-3 ml-4 pl-4 border-l">
@@ -62,7 +62,7 @@ export function Header() {
                 onClick={handleSignOut}
                 className="text-muted-foreground hover:text-foreground"
               >
-                Sign Out
+                Sair
               </Button>
             </div>
           )}

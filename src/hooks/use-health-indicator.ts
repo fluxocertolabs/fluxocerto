@@ -55,11 +55,11 @@ function getHealthMessage(
 ): string {
   switch (status) {
     case 'danger':
-      return `${optimisticDangerDays} danger day${optimisticDangerDays !== 1 ? 's' : ''} even in best-case scenario`
+      return `${optimisticDangerDays} ${optimisticDangerDays !== 1 ? 'dias de perigo' : 'dia de perigo'} mesmo no melhor cenário`
     case 'warning':
-      return `${pessimisticDangerDays} danger day${pessimisticDangerDays !== 1 ? 's' : ''} in worst-case scenario`
+      return `${pessimisticDangerDays} ${pessimisticDangerDays !== 1 ? 'dias de perigo' : 'dia de perigo'} no pior cenário`
     case 'good':
-      return 'No issues detected'
+      return 'Nenhum problema detectado'
   }
 }
 
@@ -106,7 +106,7 @@ export function useHealthIndicator(
     if (!summaryStats) {
       return {
         status: 'good',
-        message: 'No data available',
+        message: 'Nenhum dado disponível',
         isStale: staleEntities.length > 0,
         staleEntities,
         dangerDays: { optimistic: 0, pessimistic: 0 },

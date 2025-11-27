@@ -70,17 +70,17 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {/* Starting Balance */}
       <StatCard
-        label="Starting Balance"
+        label="Saldo Inicial"
         value={formatCurrency(startingBalance * 100)}
       />
 
       {/* Total Income (showing both scenarios) */}
       <StatCard
-        label="Expected Income"
+        label="Renda Esperada"
         value={formatCurrency(optimistic.totalIncome * 100)}
         sublabel={
           optimistic.totalIncome !== pessimistic.totalIncome
-            ? `Guaranteed: ${formatCurrency(pessimistic.totalIncome * 100)}`
+            ? `Garantido: ${formatCurrency(pessimistic.totalIncome * 100)}`
             : undefined
         }
         variant="success"
@@ -88,17 +88,17 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
 
       {/* Total Expenses */}
       <StatCard
-        label="Total Expenses"
+        label="Total de Despesas"
         value={formatCurrency(optimistic.totalExpenses * 100)}
       />
 
       {/* Ending Balance (optimistic) */}
       <StatCard
-        label="Ending Balance"
+        label="Saldo Final"
         value={formatCurrency(optimistic.endBalance * 100)}
         sublabel={
           optimistic.endBalance !== pessimistic.endBalance
-            ? `Pessimistic: ${formatCurrency(pessimistic.endBalance * 100)}`
+            ? `Pessimista: ${formatCurrency(pessimistic.endBalance * 100)}`
             : undefined
         }
         variant={getBalanceVariant(optimistic.endBalance)}
@@ -138,18 +138,18 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
             </div>
             <div>
               <p className="font-medium text-red-600">
-                {maxDangerDays} Danger Day{maxDangerDays !== 1 ? 's' : ''} Detected
+                {maxDangerDays} {maxDangerDays !== 1 ? 'Dias de Perigo Detectados' : 'Dia de Perigo Detectado'}
               </p>
               <p className="text-sm text-muted-foreground">
                 {optimistic.dangerDayCount > 0 && pessimistic.dangerDayCount > 0 ? (
                   <>
-                    {optimistic.dangerDayCount} in optimistic scenario,{' '}
-                    {pessimistic.dangerDayCount} in pessimistic scenario
+                    {optimistic.dangerDayCount} no cenário otimista,{' '}
+                    {pessimistic.dangerDayCount} no cenário pessimista
                   </>
                 ) : optimistic.dangerDayCount > 0 ? (
-                  'Even in the optimistic scenario'
+                  'Mesmo no cenário otimista'
                 ) : (
-                  'Only in the pessimistic scenario'
+                  'Apenas no cenário pessimista'
                 )}
               </p>
             </div>

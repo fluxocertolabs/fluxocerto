@@ -37,18 +37,18 @@ export function EmptyState() {
 
       {/* Title */}
       <h2 className="text-xl font-semibold text-foreground mb-2">
-        No Financial Data Yet
+        Nenhum Dado Financeiro Ainda
       </h2>
 
       {/* Description */}
       <p className="text-muted-foreground max-w-md mb-6">
-        Start by adding your bank accounts, income sources, and expenses to see
-        your 30-day cashflow projection.
+        Comece adicionando suas contas bancárias, fontes de renda e despesas para ver
+        sua projeção de fluxo de caixa de 30 dias.
       </p>
 
       {/* CTA Button */}
       <Button asChild size="lg" className="mb-6">
-        <Link to="/manage">Get Started</Link>
+        <Link to="/manage">Começar</Link>
       </Button>
 
       {/* Action hints */}
@@ -57,19 +57,19 @@ export function EmptyState() {
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
             1
           </span>
-          <span>Add accounts</span>
+          <span>Adicionar contas</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
             2
           </span>
-          <span>Set up income</span>
+          <span>Configurar renda</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
             3
           </span>
-          <span>Add expenses</span>
+          <span>Adicionar despesas</span>
         </div>
       </div>
     </div>

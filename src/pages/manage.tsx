@@ -361,7 +361,7 @@ export function ManagePage() {
     return (
       <div className={cn('container mx-auto p-4 md:p-6 max-w-4xl')}>
         <h1 className="text-2xl font-bold text-foreground mb-6">
-          Manage Financial Data
+          Gerenciar Dados Financeiros
         </h1>
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-muted rounded w-full max-w-md" />
@@ -374,7 +374,7 @@ export function ManagePage() {
   return (
     <div className={cn('container mx-auto p-4 md:p-6 max-w-4xl')}>
       <h1 className="text-2xl font-bold text-foreground mb-6">
-        Manage Financial Data
+        Gerenciar Dados Financeiros
       </h1>
 
       {error && (
@@ -386,30 +386,30 @@ export function ManagePage() {
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <TabsList className="grid w-full sm:w-auto grid-cols-4">
-            <TabsTrigger value="accounts">Accounts</TabsTrigger>
-            <TabsTrigger value="projects">Projects</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="cards">Cards</TabsTrigger>
+            <TabsTrigger value="accounts">Contas</TabsTrigger>
+            <TabsTrigger value="projects">Projetos</TabsTrigger>
+            <TabsTrigger value="expenses">Despesas</TabsTrigger>
+            <TabsTrigger value="cards">Cartões</TabsTrigger>
           </TabsList>
 
           {activeTab === 'accounts' && (
             <Button onClick={() => setDialogState({ type: 'add-account' })}>
-              Add Account
+              Adicionar Conta
             </Button>
           )}
           {activeTab === 'projects' && (
             <Button onClick={() => setDialogState({ type: 'add-project' })}>
-              Add Project
+              Adicionar Projeto
             </Button>
           )}
           {activeTab === 'expenses' && (
             <Button onClick={() => setDialogState({ type: 'add-expense' })}>
-              Add Expense
+              Adicionar Despesa
             </Button>
           )}
           {activeTab === 'cards' && (
             <Button onClick={() => setDialogState({ type: 'add-card' })}>
-              Add Credit Card
+              Adicionar Cartão de Crédito
             </Button>
           )}
         </div>
@@ -483,7 +483,7 @@ export function ManagePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialogState.type === 'edit-account' ? 'Edit Account' : 'Add Account'}
+              {dialogState.type === 'edit-account' ? 'Editar Conta' : 'Adicionar Conta'}
             </DialogTitle>
           </DialogHeader>
           <AccountForm
@@ -509,7 +509,7 @@ export function ManagePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialogState.type === 'edit-project' ? 'Edit Project' : 'Add Project'}
+              {dialogState.type === 'edit-project' ? 'Editar Projeto' : 'Adicionar Projeto'}
             </DialogTitle>
           </DialogHeader>
           <ProjectForm
@@ -535,7 +535,7 @@ export function ManagePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialogState.type === 'edit-expense' ? 'Edit Expense' : 'Add Expense'}
+              {dialogState.type === 'edit-expense' ? 'Editar Despesa' : 'Adicionar Despesa'}
             </DialogTitle>
           </DialogHeader>
           <ExpenseForm
@@ -561,7 +561,7 @@ export function ManagePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialogState.type === 'edit-card' ? 'Edit Credit Card' : 'Add Credit Card'}
+              {dialogState.type === 'edit-card' ? 'Editar Cartão de Crédito' : 'Adicionar Cartão de Crédito'}
             </DialogTitle>
           </DialogHeader>
           <CreditCardForm
@@ -586,13 +586,13 @@ export function ManagePage() {
         entityName={deleteState.type !== 'none' ? deleteState.name : ''}
         entityType={
           deleteState.type === 'account'
-            ? 'Account'
+            ? 'Conta'
             : deleteState.type === 'project'
-              ? 'Project'
+              ? 'Projeto'
               : deleteState.type === 'expense'
-                ? 'Expense'
+                ? 'Despesa'
                 : deleteState.type === 'card'
-                  ? 'Credit Card'
+                  ? 'Cartão de Crédito'
                   : ''
         }
         onConfirm={handleDeleteConfirm}

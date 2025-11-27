@@ -73,7 +73,7 @@ export function BalanceListItem({
     setIsSaving(false)
 
     if (!result.success) {
-      setError(result.error ?? 'Failed to save')
+      setError(result.error ?? 'Falha ao salvar')
     }
   }, [editValue, currentBalance, onSave])
 
@@ -112,7 +112,7 @@ export function BalanceListItem({
       <div className="flex-1 min-w-0">
         <p className="font-medium text-foreground truncate">{name}</p>
         <p className="text-sm text-muted-foreground">
-          Previous: {formatCurrency(previousBalance)}
+          Anterior: {formatCurrency(previousBalance)}
         </p>
       </div>
 
@@ -150,14 +150,14 @@ export function BalanceListItem({
               onClick={handleRetry}
               className="h-6 px-2 text-xs"
             >
-              Retry
+              Tentar novamente
             </Button>
           </div>
         )}
 
         {/* Saving indicator */}
         {isSaving && (
-          <span className="text-xs text-muted-foreground">Saving...</span>
+          <span className="text-xs text-muted-foreground">Salvando...</span>
         )}
       </div>
     </div>

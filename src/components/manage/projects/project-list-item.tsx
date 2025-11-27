@@ -11,16 +11,16 @@ interface ProjectListItemProps {
 }
 
 const FREQUENCY_LABELS: Record<Project['frequency'], string> = {
-  weekly: 'Weekly',
-  biweekly: 'Biweekly',
-  'twice-monthly': 'Twice a month',
-  monthly: 'Monthly',
+  weekly: 'Semanal',
+  biweekly: 'Quinzenal',
+  'twice-monthly': 'Duas vezes por mês',
+  monthly: 'Mensal',
 }
 
 const CERTAINTY_LABELS: Record<Project['certainty'], string> = {
-  guaranteed: 'Guaranteed',
-  probable: 'Probable',
-  uncertain: 'Uncertain',
+  guaranteed: 'Garantido',
+  probable: 'Provável',
+  uncertain: 'Incerto',
 }
 
 const CERTAINTY_COLORS: Record<Project['certainty'], string> = {
@@ -38,31 +38,31 @@ function formatCurrency(value: number): string {
 }
 
 const WEEKDAY_LABELS: Record<number, string> = {
-  1: 'Monday',
-  2: 'Tuesday',
-  3: 'Wednesday',
-  4: 'Thursday',
-  5: 'Friday',
-  6: 'Saturday',
-  7: 'Sunday',
+  1: 'Segunda-feira',
+  2: 'Terça-feira',
+  3: 'Quarta-feira',
+  4: 'Quinta-feira',
+  5: 'Sexta-feira',
+  6: 'Sábado',
+  7: 'Domingo',
 }
 
 function formatPaymentSchedule(schedule: PaymentSchedule | undefined, legacyPaymentDay?: number): string {
   if (schedule) {
     switch (schedule.type) {
       case 'dayOfWeek':
-        return WEEKDAY_LABELS[schedule.dayOfWeek] || `Day ${schedule.dayOfWeek}`
+        return WEEKDAY_LABELS[schedule.dayOfWeek] || `Dia ${schedule.dayOfWeek}`
       case 'dayOfMonth':
-        return `Day ${schedule.dayOfMonth}`
+        return `Dia ${schedule.dayOfMonth}`
       case 'twiceMonthly':
-        return `Days ${schedule.firstDay} & ${schedule.secondDay}`
+        return `Dias ${schedule.firstDay} e ${schedule.secondDay}`
     }
   }
   // Legacy fallback
   if (legacyPaymentDay !== undefined) {
-    return `Day ${legacyPaymentDay}`
+    return `Dia ${legacyPaymentDay}`
   }
-  return 'Not set'
+  return 'Não definido'
 }
 
 export function ProjectListItem({
@@ -91,7 +91,7 @@ export function ProjectListItem({
             {CERTAINTY_LABELS[project.certainty]}
           </span>
           {!project.isActive && (
-            <span className="text-xs bg-muted px-2 py-0.5 rounded">Inactive</span>
+            <span className="text-xs bg-muted px-2 py-0.5 rounded">Inativo</span>
           )}
         </div>
         <div className="text-sm text-muted-foreground mt-1">
@@ -108,7 +108,7 @@ export function ProjectListItem({
           <Switch
             checked={project.isActive}
             onCheckedChange={onToggleActive}
-            aria-label={project.isActive ? 'Deactivate project' : 'Activate project'}
+            aria-label={project.isActive ? 'Desativar projeto' : 'Ativar projeto'}
           />
           <Button
             variant="ghost"
@@ -116,7 +116,7 @@ export function ProjectListItem({
             onClick={onEdit}
             className="h-8 px-2 text-muted-foreground hover:text-foreground"
           >
-            Edit
+            Editar
           </Button>
           <Button
             variant="ghost"
@@ -124,7 +124,7 @@ export function ProjectListItem({
             onClick={onDelete}
             className="h-8 px-2 text-muted-foreground hover:text-destructive"
           >
-            Delete
+            Excluir
           </Button>
         </div>
       </div>

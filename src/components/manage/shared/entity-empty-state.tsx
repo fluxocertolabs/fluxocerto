@@ -10,24 +10,24 @@ interface EntityEmptyStateProps {
 
 const CONTENT: Record<EntityType, { title: string; description: string; buttonText: string }> = {
   account: {
-    title: 'No accounts yet',
-    description: 'Add your bank accounts to track balances',
-    buttonText: 'Add Account',
+    title: 'Nenhuma conta ainda',
+    description: 'Adicione suas contas bancárias para acompanhar os saldos',
+    buttonText: 'Adicionar Conta',
   },
   project: {
-    title: 'No income sources yet',
-    description: 'Add your income sources to project cashflow',
-    buttonText: 'Add Project',
+    title: 'Nenhuma fonte de renda ainda',
+    description: 'Adicione suas fontes de renda para projetar o fluxo de caixa',
+    buttonText: 'Adicionar Projeto',
   },
   expense: {
-    title: 'No expenses yet',
-    description: 'Add your fixed expenses to track outflows',
-    buttonText: 'Add Expense',
+    title: 'Nenhuma despesa ainda',
+    description: 'Adicione suas despesas fixas para acompanhar as saídas',
+    buttonText: 'Adicionar Despesa',
   },
   'credit-card': {
-    title: 'No credit cards yet',
-    description: 'Add your credit cards to track payments',
-    buttonText: 'Add Credit Card',
+    title: 'Nenhum cartão de crédito ainda',
+    description: 'Adicione seus cartões de crédito para acompanhar os pagamentos',
+    buttonText: 'Adicionar Cartão',
   },
 }
 

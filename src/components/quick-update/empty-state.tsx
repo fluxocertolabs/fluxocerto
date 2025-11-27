@@ -36,13 +36,13 @@ export function QuickUpdateEmptyState({ onClose }: QuickUpdateEmptyStateProps) {
         </svg>
       </div>
       <h3 className="text-lg font-semibold text-foreground mb-2">
-        No Accounts or Credit Cards
+        Nenhuma Conta ou Cartão de Crédito
       </h3>
       <p className="text-muted-foreground mb-6 max-w-sm">
-        Add bank accounts or credit cards to start tracking your balances.
+        Adicione contas bancárias ou cartões de crédito para começar a acompanhar seus saldos.
       </p>
       <Button onClick={handleNavigateToManage}>
-        Go to Manage
+        Ir para Gerenciar
       </Button>
     </div>
   )

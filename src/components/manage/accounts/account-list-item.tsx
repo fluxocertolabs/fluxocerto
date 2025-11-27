@@ -11,9 +11,9 @@ interface AccountListItemProps {
 }
 
 const TYPE_LABELS: Record<BankAccount['type'], string> = {
-  checking: 'Checking',
-  savings: 'Savings',
-  investment: 'Investment',
+  checking: 'Conta Corrente',
+  savings: 'Poupança',
+  investment: 'Investimento',
 }
 
 function formatCurrency(value: number): string {
@@ -64,7 +64,7 @@ export function AccountListItem({
             onClick={onEdit}
             className="h-8 px-2 text-muted-foreground hover:text-foreground"
           >
-            Edit
+            Editar
           </Button>
           <Button
             variant="ghost"
@@ -72,7 +72,7 @@ export function AccountListItem({
             onClick={onDelete}
             className="h-8 px-2 text-muted-foreground hover:text-destructive"
           >
-            Delete
+            Excluir
           </Button>
         </div>
       </div>

@@ -50,11 +50,11 @@ export function ExpenseForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-2">
-        <Label htmlFor="name">Expense Name</Label>
+        <Label htmlFor="name">Nome da Despesa</Label>
         <Input
           id="name"
           type="text"
-          placeholder="e.g., Mortgage"
+          placeholder="ex: Aluguel"
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={isSubmitting}
@@ -70,11 +70,11 @@ export function ExpenseForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="amount">Amount</Label>
+          <Label htmlFor="amount">Valor</Label>
           <Input
             id="amount"
             type="number"
-            placeholder="0.00"
+            placeholder="0,00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             min="0.01"
@@ -91,7 +91,7 @@ export function ExpenseForm({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="dueDay">Due Day</Label>
+          <Label htmlFor="dueDay">Dia de Vencimento</Label>
           <Input
             id="dueDay"
             type="number"
@@ -114,10 +114,10 @@ export function ExpenseForm({
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : expense ? 'Update' : 'Add Expense'}
+          {isSubmitting ? 'Salvando...' : expense ? 'Atualizar' : 'Adicionar Despesa'}
         </Button>
       </div>
     </form>

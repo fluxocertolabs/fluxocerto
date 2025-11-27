@@ -106,13 +106,13 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
             id="quick-update-title"
             className="text-xl font-semibold text-foreground"
           >
-            Update Balances
+            Atualizar Saldos
           </h1>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onCancel}>
-              Cancel
+              Cancelar
             </Button>
-            <Button onClick={onDone}>Done</Button>
+            <Button onClick={onDone}>Concluir</Button>
           </div>
         </div>
       </header>
@@ -134,8 +134,8 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
           ) : (
             <>
               <p className="text-sm text-muted-foreground mb-6">
-                Enter your current balances. Changes are saved automatically when
-                you move to the next field.
+                Digite seus saldos atuais. As alterações são salvas automaticamente quando
+                você passa para o próximo campo.
               </p>
               <BalanceList initialBalances={capturedBalances.balances} />
             </>

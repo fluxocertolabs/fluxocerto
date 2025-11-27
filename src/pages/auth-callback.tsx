@@ -15,7 +15,7 @@ export function AuthCallbackPage() {
     const handleCallback = async () => {
       // Guard against unconfigured Supabase
       if (!isSupabaseConfigured()) {
-        setError('Application is not properly configured. Please contact support.')
+        setError('Aplicação não está configurada corretamente. Entre em contato com o suporte.')
         return
       }
 
@@ -46,7 +46,7 @@ export function AuthCallbackPage() {
         navigate('/', { replace: true })
       } else {
         // No session and no error - might be a stale callback
-        setError('Unable to complete sign in. Please request a new login link.')
+        setError('Não foi possível completar o login. Por favor, solicite um novo link de acesso.')
       }
     }
 
@@ -75,7 +75,7 @@ export function AuthCallbackPage() {
               </svg>
             </div>
             <CardTitle>
-              {isExpired ? 'Link Expired' : 'Sign In Error'}
+              {isExpired ? 'Link Expirado' : 'Erro ao Entrar'}
             </CardTitle>
             <CardDescription className="text-destructive">
               {error}
@@ -83,7 +83,7 @@ export function AuthCallbackPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <Button onClick={() => navigate('/login', { replace: true })}>
-              {isExpired ? 'Request New Link' : 'Back to Sign In'}
+              {isExpired ? 'Solicitar Novo Link' : 'Voltar para Login'}
             </Button>
           </CardContent>
         </Card>
@@ -118,9 +118,9 @@ export function AuthCallbackPage() {
               />
             </svg>
           </div>
-          <CardTitle>Completing sign in...</CardTitle>
+          <CardTitle>Completando login...</CardTitle>
           <CardDescription>
-            Please wait while we verify your login link.
+            Por favor, aguarde enquanto verificamos seu link de acesso.
           </CardDescription>
         </CardHeader>
       </Card>

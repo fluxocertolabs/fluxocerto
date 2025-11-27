@@ -56,12 +56,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold">Check your email</h3>
+        <h3 className="text-lg font-semibold">Verifique seu e-mail</h3>
         <p className="text-muted-foreground text-sm">
-          We sent a login link to <span className="font-medium text-foreground">{email}</span>
+          Enviamos um link de acesso para <span className="font-medium text-foreground">{email}</span>
         </p>
         <p className="text-muted-foreground text-xs">
-          Click the link in the email to sign in. The link expires in 1 hour.
+          Clique no link do e-mail para entrar. O link expira em 1 hora.
         </p>
         <Button
           variant="ghost"
@@ -71,7 +71,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             setEmail('')
           }}
         >
-          Use a different email
+          Usar outro e-mail
         </Button>
       </div>
     )
@@ -80,11 +80,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email address</Label>
+        <Label htmlFor="email">Endereço de e-mail</Label>
         <Input
           id="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder="voce@exemplo.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -121,10 +121,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            Sending...
+            Enviando...
           </>
         ) : (
-          'Send Magic Link'
+          'Enviar Link de Acesso'
         )}
       </Button>
     </form>

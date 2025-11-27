@@ -38,11 +38,11 @@ export function ExpenseListItem({
             {expense.name}
           </span>
           {!expense.isActive && (
-            <span className="text-xs bg-muted px-2 py-0.5 rounded">Inactive</span>
+            <span className="text-xs bg-muted px-2 py-0.5 rounded">Inativo</span>
           )}
         </div>
         <div className="text-sm text-muted-foreground mt-1">
-          Due day {expense.dueDay}
+          Vencimento dia {expense.dueDay}
         </div>
       </div>
 
@@ -55,7 +55,7 @@ export function ExpenseListItem({
           <Switch
             checked={expense.isActive}
             onCheckedChange={onToggleActive}
-            aria-label={expense.isActive ? 'Deactivate expense' : 'Activate expense'}
+            aria-label={expense.isActive ? 'Desativar despesa' : 'Ativar despesa'}
           />
           <Button
             variant="ghost"
@@ -63,7 +63,7 @@ export function ExpenseListItem({
             onClick={onEdit}
             className="h-8 px-2 text-muted-foreground hover:text-foreground"
           >
-            Edit
+            Editar
           </Button>
           <Button
             variant="ghost"
@@ -71,7 +71,7 @@ export function ExpenseListItem({
             onClick={onDelete}
             className="h-8 px-2 text-muted-foreground hover:text-destructive"
           >
-            Delete
+            Excluir
           </Button>
         </div>
       </div>

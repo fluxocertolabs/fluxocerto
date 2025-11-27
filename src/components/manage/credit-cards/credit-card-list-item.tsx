@@ -38,7 +38,7 @@ export function CreditCardListItem({
           </span>
         </div>
         <div className="text-sm text-muted-foreground mt-1">
-          Due day {card.dueDay}
+          Vencimento dia {card.dueDay}
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export function CreditCardListItem({
             onClick={onEdit}
             className="h-8 px-2 text-muted-foreground hover:text-foreground"
           >
-            Edit
+            Editar
           </Button>
           <Button
             variant="ghost"
@@ -66,7 +66,7 @@ export function CreditCardListItem({
             onClick={onDelete}
             className="h-8 px-2 text-muted-foreground hover:text-destructive"
           >
-            Delete
+            Excluir
           </Button>
         </div>
       </div>

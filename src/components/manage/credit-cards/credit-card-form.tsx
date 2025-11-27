@@ -51,11 +51,11 @@ export function CreditCardForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-2">
-        <Label htmlFor="name">Card Name</Label>
+        <Label htmlFor="name">Nome do Cartão</Label>
         <Input
           id="name"
           type="text"
-          placeholder="e.g., Amex Gold"
+          placeholder="ex: Nubank Platinum"
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={isSubmitting}
@@ -71,11 +71,11 @@ export function CreditCardForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor="statementBalance">Statement Balance</Label>
+          <Label htmlFor="statementBalance">Saldo da Fatura</Label>
           <Input
             id="statementBalance"
             type="number"
-            placeholder="0.00"
+            placeholder="0,00"
             value={statementBalance}
             onChange={(e) => setStatementBalance(e.target.value)}
             min="0"
@@ -92,7 +92,7 @@ export function CreditCardForm({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="dueDay">Due Day</Label>
+          <Label htmlFor="dueDay">Dia de Vencimento</Label>
           <Input
             id="dueDay"
             type="number"
@@ -115,10 +115,10 @@ export function CreditCardForm({
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : card ? 'Update' : 'Add Credit Card'}
+          {isSubmitting ? 'Salvando...' : card ? 'Atualizar' : 'Adicionar Cartão'}
         </Button>
       </div>
     </form>

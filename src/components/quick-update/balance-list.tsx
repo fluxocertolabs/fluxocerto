@@ -75,7 +75,7 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
       {accounts.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground px-1">
-            Bank Accounts
+            Contas Bancárias
           </h3>
           {items
             .filter((item): item is BalanceItem & { type: 'account' } => item.type === 'account')
@@ -97,7 +97,7 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
       {creditCards.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground px-1">
-            Credit Cards
+            Cartões de Crédito
           </h3>
           {items
             .filter((item): item is BalanceItem & { type: 'card' } => item.type === 'card')
