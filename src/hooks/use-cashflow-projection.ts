@@ -15,13 +15,19 @@ import type { ProjectionDays } from '@/types'
 /**
  * Transform DailySnapshot array to chart-compatible format.
  * Converts cents to dollars and formats dates for display.
+ * @param days - Array of daily snapshots from cashflow engine
+ * @param investmentTotal - Total investment balance in cents (added to pessimistic balance)
  */
-export function transformToChartData(days: DailySnapshot[]): ChartDataPoint[] {
+export function transformToChartData(
+  days: DailySnapshot[],
+  investmentTotal: number
+): ChartDataPoint[] {
   return days.map((day) => ({
     date: formatChartDate(day.date),
     timestamp: day.date.getTime(),
     optimisticBalance: day.optimisticBalance / 100,
     pessimisticBalance: day.pessimisticBalance / 100,
+    investmentInclusiveBalance: (day.pessimisticBalance + investmentTotal) / 100,
     isOptimisticDanger: day.isOptimisticDanger,
     isPessimisticDanger: day.isPessimisticDanger,
     snapshot: day,
@@ -173,6 +179,13 @@ export function useCashflowProjection(
   // This is a no-op but ensures the hook re-evaluates
   const _retryTrigger = retryCount
 
+  // Calculate investment total (sum of all investment account balances in cents)
+  const investmentTotal = useMemo(() => {
+    return accounts
+      .filter((a) => a.type === 'investment')
+      .reduce((sum, a) => sum + a.balance, 0)
+  }, [accounts])
+
   // Determine if any data exists
   const hasData = !isLoading && (
     accounts.length > 0 ||
@@ -215,8 +228,8 @@ export function useCashflowProjection(
   // Transform to chart data (memoized)
   const chartData = useMemo(() => {
     if (!projection) return []
-    return transformToChartData(projection.days)
-  }, [projection])
+    return transformToChartData(projection.days, investmentTotal)
+  }, [projection, investmentTotal])
 
   // Get danger ranges (memoized)
   const dangerRanges = useMemo(() => {

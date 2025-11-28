@@ -18,12 +18,52 @@ export interface ChartDataPoint {
   optimisticBalance: number
   /** Pessimistic balance in dollars (for chart scale) */
   pessimisticBalance: number
+  /** Investment-inclusive balance in dollars (pessimistic + investment total) */
+  investmentInclusiveBalance: number
   /** Whether optimistic scenario is in danger */
   isOptimisticDanger: boolean
   /** Whether pessimistic scenario is in danger */
   isPessimisticDanger: boolean
   /** Reference to full snapshot for tooltip */
   snapshot: DailySnapshot
+}
+
+/**
+ * Visibility state for chart elements.
+ * Used for interactive legend toggle functionality.
+ * Session-only state (not persisted).
+ */
+export interface LineVisibility {
+  /** Optimistic scenario line + area */
+  optimistic: boolean
+  /** Pessimistic scenario line + area */
+  pessimistic: boolean
+  /** Investment-inclusive balance line */
+  investmentInclusive: boolean
+  /** Danger zone reference areas + zero line */
+  dangerZone: boolean
+}
+
+/**
+ * Default visibility state - all elements visible.
+ */
+export const DEFAULT_LINE_VISIBILITY: LineVisibility = {
+  optimistic: true,
+  pessimistic: true,
+  investmentInclusive: true,
+  dangerZone: true,
+}
+
+/**
+ * Legend item configuration for rendering.
+ */
+export interface LegendItem {
+  /** Unique key matching LineVisibility property */
+  key: keyof LineVisibility
+  /** Display label in Portuguese */
+  label: string
+  /** Color for legend indicator */
+  color: string
 }
 
 /**

@@ -5,12 +5,13 @@
 
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatTooltipDate } from '@/lib/format'
-import type { ChartDataPoint } from './types'
+import type { ChartDataPoint, LineVisibility } from './types'
 
 // Color constants
 const COLORS = {
   optimistic: '#22c55e',
   pessimistic: '#f59e0b',
+  investmentInclusive: '#06b6d4',
   danger: '#ef4444',
   income: '#22c55e',
   expense: '#ef4444',
@@ -26,9 +27,10 @@ const CERTAINTY_LABELS: Record<string, string> = {
 interface ChartTooltipProps {
   active?: boolean
   payload?: Array<{ payload: ChartDataPoint }>
+  visibility?: LineVisibility
 }
 
-export function ChartTooltip({ active, payload }: ChartTooltipProps) {
+export function ChartTooltip({ active, payload, visibility }: ChartTooltipProps) {
   if (!active || !payload || payload.length === 0) {
     return null
   }
@@ -39,6 +41,14 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
 
   const { snapshot } = dataPoint
   const isDanger = snapshot.isOptimisticDanger || snapshot.isPessimisticDanger
+
+  // Default to all visible if visibility not provided (backward compatibility)
+  const vis = visibility ?? {
+    optimistic: true,
+    pessimistic: true,
+    investmentInclusive: true,
+    dangerZone: true,
+  }
 
   return (
     <div
@@ -53,32 +63,47 @@ export function ChartTooltip({ active, payload }: ChartTooltipProps) {
         {formatTooltipDate(snapshot.date)}
       </p>
 
-      {/* Balance section */}
+      {/* Balance section - conditional based on visibility */}
       <div className="space-y-1 mb-3">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Otimista:</span>
-          <span
-            className={cn(
-              'text-sm font-medium',
-              snapshot.isOptimisticDanger ? 'text-destructive' : ''
-            )}
-            style={{ color: snapshot.isOptimisticDanger ? COLORS.danger : COLORS.optimistic }}
-          >
-            {formatCurrency(snapshot.optimisticBalance)}
-          </span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Pessimista:</span>
-          <span
-            className={cn(
-              'text-sm font-medium',
-              snapshot.isPessimisticDanger ? 'text-destructive' : ''
-            )}
-            style={{ color: snapshot.isPessimisticDanger ? COLORS.danger : COLORS.pessimistic }}
-          >
-            {formatCurrency(snapshot.pessimisticBalance)}
-          </span>
-        </div>
+        {vis.optimistic && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Otimista:</span>
+            <span
+              className={cn(
+                'text-sm font-medium',
+                snapshot.isOptimisticDanger ? 'text-destructive' : ''
+              )}
+              style={{ color: snapshot.isOptimisticDanger ? COLORS.danger : COLORS.optimistic }}
+            >
+              {formatCurrency(snapshot.optimisticBalance)}
+            </span>
+          </div>
+        )}
+        {vis.pessimistic && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Pessimista:</span>
+            <span
+              className={cn(
+                'text-sm font-medium',
+                snapshot.isPessimisticDanger ? 'text-destructive' : ''
+              )}
+              style={{ color: snapshot.isPessimisticDanger ? COLORS.danger : COLORS.pessimistic }}
+            >
+              {formatCurrency(snapshot.pessimisticBalance)}
+            </span>
+          </div>
+        )}
+        {vis.investmentInclusive && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Com Investimentos:</span>
+            <span
+              className="text-sm font-medium"
+              style={{ color: COLORS.investmentInclusive }}
+            >
+              {formatCurrency(dataPoint.investmentInclusiveBalance * 100)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Income events */}

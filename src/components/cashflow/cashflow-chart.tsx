@@ -3,9 +3,11 @@
  * Displays optimistic and pessimistic scenarios with area fills.
  */
 
+import { useState, useCallback } from 'react'
 import {
   AreaChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -15,14 +17,17 @@ import {
 } from 'recharts'
 import { cn } from '@/lib/utils'
 import { formatChartCurrency } from '@/lib/format'
-import type { ChartDataPoint, DangerRange } from './types'
+import type { ChartDataPoint, DangerRange, LineVisibility } from './types'
+import { DEFAULT_LINE_VISIBILITY } from './types'
 import { ChartTooltip } from './chart-tooltip'
+import { ChartLegend } from './chart-legend'
 import { useThemeStore } from '@/stores/theme-store'
 
 // Color constants from spec
 const COLORS = {
   optimistic: '#22c55e', // green-500
   pessimistic: '#f59e0b', // amber-500
+  investmentInclusive: '#06b6d4', // cyan-500
   danger: '#ef4444', // red-500
 } as const
 
@@ -41,9 +46,21 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const axisColor = AXIS_COLORS[resolvedTheme]
 
+  // Visibility state for interactive legend toggle
+  const [visibility, setVisibility] = useState<LineVisibility>(DEFAULT_LINE_VISIBILITY)
+
+  const handleToggle = useCallback((key: keyof LineVisibility) => {
+    setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))
+  }, [])
+
   // Calculate appropriate Y-axis domain with padding
   // Handle empty data case with sensible defaults
-  const balances = chartData.flatMap((d) => [d.optimisticBalance, d.pessimisticBalance])
+  // Include investmentInclusiveBalance for fixed scale (FR-010)
+  const balances = chartData.flatMap((d) => [
+    d.optimisticBalance,
+    d.pessimisticBalance,
+    d.investmentInclusiveBalance,
+  ])
   const minBalance = balances.length > 0 ? Math.min(...balances, 0) : 0
   const maxBalance = balances.length > 0 ? Math.max(...balances) : 1000
   const padding = (maxBalance - minBalance) * 0.1 || 100
@@ -95,93 +112,98 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
               domain={[yMin, yMax]}
             />
 
-            {/* Custom tooltip */}
+            {/* Custom tooltip with visibility filtering */}
             <Tooltip
-              content={<ChartTooltip />}
+              content={<ChartTooltip visibility={visibility} />}
               cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
             />
 
-            {/* Zero balance reference line */}
+            {/* Zero balance reference line - conditional visibility with fade */}
             <ReferenceLine
               y={0}
               stroke={COLORS.danger}
               strokeDasharray="4 4"
               strokeWidth={1.5}
+              strokeOpacity={visibility.dangerZone ? 1 : 0}
+              style={{ transition: 'opacity 150ms' }}
             />
 
-            {/* Danger day ranges */}
+            {/* Danger day ranges - conditional visibility with fade */}
             {dangerRanges.map((range, index) => (
               <ReferenceArea
                 key={`danger-${index}`}
                 x1={range.start}
                 x2={range.end}
                 fill={COLORS.danger}
-                fillOpacity={range.scenario === 'both' ? 0.15 : 0.1}
+                fillOpacity={visibility.dangerZone ? (range.scenario === 'both' ? 0.15 : 0.1) : 0}
                 strokeOpacity={0}
+                style={{ transition: 'opacity 150ms' }}
               />
             ))}
 
-            {/* Pessimistic area (rendered first, behind optimistic) */}
+            {/* Pessimistic area (rendered first, behind optimistic) - conditional visibility with fade */}
             <Area
               type="monotone"
               dataKey="pessimisticBalance"
               stroke={COLORS.pessimistic}
               strokeWidth={2}
               fill="url(#gradientPessimistic)"
+              fillOpacity={visibility.pessimistic ? 0.3 : 0}
+              strokeOpacity={visibility.pessimistic ? 1 : 0}
               dot={false}
-              activeDot={{
+              activeDot={visibility.pessimistic ? {
                 r: 6,
                 stroke: COLORS.pessimistic,
                 strokeWidth: 2,
                 fill: 'hsl(var(--card))',
-              }}
+              } : false}
               name="Pessimista"
+              style={{ transition: 'opacity 150ms' }}
             />
 
-            {/* Optimistic area (rendered on top) */}
+            {/* Optimistic area (rendered on top) - conditional visibility with fade */}
             <Area
               type="monotone"
               dataKey="optimisticBalance"
               stroke={COLORS.optimistic}
               strokeWidth={2}
               fill="url(#gradientOptimistic)"
+              fillOpacity={visibility.optimistic ? 0.4 : 0}
+              strokeOpacity={visibility.optimistic ? 1 : 0}
               dot={false}
-              activeDot={{
+              activeDot={visibility.optimistic ? {
                 r: 6,
                 stroke: COLORS.optimistic,
                 strokeWidth: 2,
                 fill: 'hsl(var(--card))',
-              }}
+              } : false}
               name="Otimista"
+              style={{ transition: 'opacity 150ms' }}
+            />
+
+            {/* Investment-inclusive line (stroke-only, no fill) - conditional visibility with fade */}
+            <Line
+              type="monotone"
+              dataKey="investmentInclusiveBalance"
+              stroke={COLORS.investmentInclusive}
+              strokeWidth={2}
+              strokeOpacity={visibility.investmentInclusive ? 1 : 0}
+              dot={false}
+              activeDot={visibility.investmentInclusive ? {
+                r: 6,
+                stroke: COLORS.investmentInclusive,
+                strokeWidth: 2,
+                fill: 'hsl(var(--card))',
+              } : false}
+              name="Saldo com Investimentos"
+              style={{ transition: 'opacity 150ms' }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
-      <div className="flex justify-center gap-6 mt-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div
-            className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: COLORS.optimistic }}
-          />
-          <span className="text-muted-foreground">Otimista</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: COLORS.pessimistic }}
-          />
-          <span className="text-muted-foreground">Pessimista</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: COLORS.danger }}
-          />
-          <span className="text-muted-foreground">Zona de Perigo</span>
-        </div>
-      </div>
+      {/* Interactive legend */}
+      <ChartLegend visibility={visibility} onToggle={handleToggle} />
     </div>
   )
 }
