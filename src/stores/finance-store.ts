@@ -73,6 +73,9 @@ interface FinanceStore {
     id: string,
     statementBalance: number
   ) => Promise<Result<void>>
+  
+  // Mark all balances as updated (for Quick Update "Concluir" action)
+  markAllBalancesUpdated: () => Promise<Result<void>>
 }
 
 // Helper to handle common errors (Zod validation + Supabase errors)
@@ -660,6 +663,40 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
       if (count === 0) {
         return { success: false, error: 'Credit card not found' }
+      }
+
+      return { success: true, data: undefined }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  markAllBalancesUpdated: async () => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
+    try {
+      const now = new Date().toISOString()
+      const supabase = getSupabase()
+
+      // Update all accounts' balance_updated_at
+      const { error: accountsError } = await supabase
+        .from('accounts')
+        .update({ balance_updated_at: now })
+        .not('id', 'is', null) // Match all rows
+
+      if (accountsError) {
+        return handleSupabaseError(accountsError)
+      }
+
+      // Update all credit cards' balance_updated_at
+      const { error: cardsError } = await supabase
+        .from('credit_cards')
+        .update({ balance_updated_at: now })
+        .not('id', 'is', null) // Match all rows
+
+      if (cardsError) {
+        return handleSupabaseError(cardsError)
       }
 
       return { success: true, data: undefined }

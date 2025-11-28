@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback, useState } from 'react'
 import { useFinanceData } from '@/hooks/use-finance-data'
+import { useFinanceStore } from '@/stores/finance-store'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -45,6 +46,8 @@ function createInitialBalances(
 export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
   // Fetch data to check if empty and capture initial balances
   const { accounts, creditCards, isLoading, error, retry } = useFinanceData()
+  const { markAllBalancesUpdated } = useFinanceStore()
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false)
 
   // Coordinated loading state for smooth transitions
   const loadingState = useCoordinatedLoading(
@@ -73,6 +76,23 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
       })
     }
   }, [shouldCapture, accounts, creditCards])
+
+  // Handle "Concluir" click - marks all balances as updated before closing
+  const handleDone = useCallback(async () => {
+    // Only mark as updated if there are items (not empty state)
+    if (accounts.length > 0 || creditCards.length > 0) {
+      setIsMarkingComplete(true)
+      try {
+        await markAllBalancesUpdated()
+      } catch (err) {
+        console.error('Failed to mark balances as updated:', err)
+        // Continue with onDone even if marking fails - user still wants to close
+      } finally {
+        setIsMarkingComplete(false)
+      }
+    }
+    onDone()
+  }, [accounts.length, creditCards.length, markAllBalancesUpdated, onDone])
 
   // Handle Escape key
   const handleKeyDown = useCallback(
@@ -118,10 +138,12 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
             Atualizar Saldos
           </h1>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={onCancel}>
+            <Button variant="ghost" onClick={onCancel} disabled={isMarkingComplete}>
               Cancelar
             </Button>
-            <Button onClick={onDone}>Concluir</Button>
+            <Button onClick={handleDone} disabled={isMarkingComplete}>
+              {isMarkingComplete ? 'Salvando...' : 'Concluir'}
+            </Button>
           </div>
         </div>
       </header>
