@@ -27,6 +27,7 @@ export function ExpenseForm({
     setErrors({})
 
     const formData = {
+      type: 'fixed' as const,
       name: name.trim(),
       amount: parseFloat(amount) || 0,
       dueDay: parseInt(dueDay, 10) || 0,
