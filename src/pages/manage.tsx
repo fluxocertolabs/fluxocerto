@@ -12,8 +12,9 @@ import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { useFinanceStore } from '@/stores/finance-store'
 import { AccountList } from '@/components/manage/accounts/account-list'
 import { AccountForm } from '@/components/manage/accounts/account-form'
-import { ProjectList } from '@/components/manage/projects/project-list'
+import { ProjectSection } from '@/components/manage/projects/project-section'
 import { ProjectForm } from '@/components/manage/projects/project-form'
+import { SingleShotIncomeForm } from '@/components/manage/projects/single-shot-income-form'
 import { ExpenseForm } from '@/components/manage/expenses/expense-form'
 import { ExpenseSection } from '@/components/manage/expenses/expense-section'
 import { SingleShotExpenseForm } from '@/components/manage/expenses/single-shot-expense-form'
@@ -30,6 +31,7 @@ import type {
   FixedExpense,
   FixedExpenseInput,
   SingleShotExpense,
+  SingleShotIncome,
   CreditCard,
   CreditCardInput,
 } from '@/types'
@@ -42,6 +44,8 @@ type DialogState =
   | { type: 'edit-account'; account: BankAccount }
   | { type: 'add-project' }
   | { type: 'edit-project'; project: Project }
+  | { type: 'add-single-shot-income' }
+  | { type: 'edit-single-shot-income'; income: SingleShotIncome }
   | { type: 'add-expense' }
   | { type: 'edit-expense'; expense: FixedExpense }
   | { type: 'add-single-shot-expense' }
@@ -53,6 +57,7 @@ type DeleteState =
   | { type: 'none' }
   | { type: 'account'; id: string; name: string }
   | { type: 'project'; id: string; name: string }
+  | { type: 'single-shot-income'; id: string; name: string }
   | { type: 'expense'; id: string; name: string }
   | { type: 'single-shot-expense'; id: string; name: string }
   | { type: 'card'; id: string; name: string }
@@ -72,7 +77,7 @@ export function ManagePage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { accounts, projects, fixedExpenses, singleShotExpenses, creditCards, profiles, isLoading, error: fetchError, retry } = useFinanceData()
+  const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, profiles, isLoading, error: fetchError, retry } = useFinanceData()
   const store = useFinanceStore()
 
   // Coordinated loading state for smooth transitions
@@ -220,6 +225,65 @@ export function ManagePage() {
     const result = await store.toggleProjectActive(id)
     if (!result.success) {
       console.error('Failed to toggle project active:', result.error)
+    }
+  }
+
+  // Single-shot income handlers
+  const handleAddSingleShotIncome = async (data: { name: string; amount: number; date: Date; certainty: 'guaranteed' | 'probable' | 'uncertain' }) => {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const result = await store.addSingleShotIncome({
+        type: 'single_shot',
+        ...data,
+      })
+      if (result.success) {
+        closeDialog()
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado')
+      console.error('Failed to add single-shot income:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleUpdateSingleShotIncome = async (id: string, data: { name: string; amount: number; date: Date; certainty: 'guaranteed' | 'probable' | 'uncertain' }) => {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const result = await store.updateSingleShotIncome(id, data)
+      if (result.success) {
+        closeDialog()
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado')
+      console.error('Failed to update single-shot income:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteSingleShotIncome = async () => {
+    if (deleteState.type !== 'single-shot-income') return
+    setIsDeleting(true)
+    setError(null)
+    try {
+      const result = await store.deleteSingleShotIncome(deleteState.id)
+      if (result.success) {
+        closeDeleteDialog()
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado')
+      console.error('Failed to delete single-shot income:', err)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -415,6 +479,8 @@ export function ManagePage() {
         return handleDeleteAccount()
       case 'project':
         return handleDeleteProject()
+      case 'single-shot-income':
+        return handleDeleteSingleShotIncome()
       case 'expense':
         return handleDeleteExpense()
       case 'single-shot-expense':
@@ -462,11 +528,7 @@ export function ManagePage() {
                 Adicionar Conta
               </Button>
             )}
-            {activeTab === 'projects' && (
-              <Button onClick={() => setDialogState({ type: 'add-project' })}>
-                Adicionar Projeto
-              </Button>
-            )}
+            {/* Projects add button removed - handled inside ProjectSection tabs */}
             {/* Expenses add button removed - handled inside ExpenseSection tabs */}
             {activeTab === 'cards' && (
               <Button onClick={() => setDialogState({ type: 'add-card' })}>
@@ -492,17 +554,26 @@ export function ManagePage() {
           </TabsContent>
 
           <TabsContent value="projects">
-            <ProjectList
-              projects={projects}
-              onAdd={() => setDialogState({ type: 'add-project' })}
-              onEdit={(project) => setDialogState({ type: 'edit-project', project })}
-              onDelete={(id) => {
+            <ProjectSection
+              recurringProjects={projects}
+              singleShotIncome={singleShotIncome}
+              onAddRecurring={() => setDialogState({ type: 'add-project' })}
+              onAddSingleShot={() => setDialogState({ type: 'add-single-shot-income' })}
+              onEditRecurring={(project) => setDialogState({ type: 'edit-project', project })}
+              onEditSingleShot={(income) => setDialogState({ type: 'edit-single-shot-income', income })}
+              onDeleteRecurring={(id) => {
                 const project = projects.find((p) => p.id === id)
                 if (project) {
                   setDeleteState({ type: 'project', id, name: project.name })
                 }
               }}
-              onToggleActive={handleToggleProjectActive}
+              onDeleteSingleShot={(id) => {
+                const income = singleShotIncome.find((i) => i.id === id)
+                if (income) {
+                  setDeleteState({ type: 'single-shot-income', id, name: income.name })
+                }
+              }}
+              onToggleRecurringActive={handleToggleProjectActive}
             />
           </TabsContent>
 
@@ -601,6 +672,32 @@ export function ManagePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Single-Shot Income Dialog */}
+      <Dialog
+        open={dialogState.type === 'add-single-shot-income' || dialogState.type === 'edit-single-shot-income'}
+        onOpenChange={(open) => !open && closeDialog()}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dialogState.type === 'edit-single-shot-income' ? 'Editar Receita Pontual' : 'Adicionar Receita Pontual'}
+            </DialogTitle>
+          </DialogHeader>
+          <SingleShotIncomeForm
+            income={dialogState.type === 'edit-single-shot-income' ? dialogState.income : undefined}
+            onSubmit={async (data) => {
+              if (dialogState.type === 'edit-single-shot-income') {
+                await handleUpdateSingleShotIncome(dialogState.income.id, data)
+              } else {
+                await handleAddSingleShotIncome(data)
+              }
+            }}
+            onCancel={closeDialog}
+            isSubmitting={isSubmitting}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Expense Dialog */}
       <Dialog
         open={dialogState.type === 'add-expense' || dialogState.type === 'edit-expense'}
@@ -690,13 +787,15 @@ export function ManagePage() {
             ? 'Conta'
             : deleteState.type === 'project'
               ? 'Projeto'
-              : deleteState.type === 'expense'
-                ? 'Despesa Fixa'
-                : deleteState.type === 'single-shot-expense'
-                  ? 'Despesa Pontual'
-                  : deleteState.type === 'card'
-                    ? 'Cartão de Crédito'
-                    : ''
+              : deleteState.type === 'single-shot-income'
+                ? 'Receita Pontual'
+                : deleteState.type === 'expense'
+                  ? 'Despesa Fixa'
+                  : deleteState.type === 'single-shot-expense'
+                    ? 'Despesa Pontual'
+                    : deleteState.type === 'card'
+                      ? 'Cartão de Crédito'
+                      : ''
         }
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}

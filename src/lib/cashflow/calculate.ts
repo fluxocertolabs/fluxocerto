@@ -6,7 +6,7 @@
  */
 
 import { addDays, startOfDay } from 'date-fns'
-import type { BankAccount, CreditCard, FixedExpense, SingleShotExpense, Project } from '../../types'
+import type { BankAccount, CreditCard, FixedExpense, SingleShotExpense, SingleShotIncome, Project } from '../../types'
 import { isSameDay } from 'date-fns'
 import {
   isMonthlyPaymentDue,
@@ -226,6 +226,27 @@ function createCreditCardEvents(date: Date, creditCards: CreditCard[]): ExpenseE
   return events
 }
 
+/**
+ * Create income events for a specific day from single-shot income.
+ * Single-shot income occurs on their exact date.
+ */
+function createSingleShotIncomeEvents(date: Date, income: SingleShotIncome[]): IncomeEvent[] {
+  const events: IncomeEvent[] = []
+
+  for (const item of income) {
+    if (isSameDay(item.date, date)) {
+      events.push({
+        projectId: item.id,
+        projectName: item.name,
+        amount: item.amount,
+        certainty: item.certainty,
+      })
+    }
+  }
+
+  return events
+}
+
 // =============================================================================
 // DAILY SNAPSHOT GENERATION
 // =============================================================================
@@ -354,7 +375,7 @@ export function calculateCashflow(input: CashflowEngineInput): CashflowProjectio
     const date = addDays(startDate, dayOffset)
 
     // Create income events for optimistic scenario (all active projects)
-    const allIncomeEvents = createIncomeEvents(
+    const recurringIncomeEvents = createIncomeEvents(
       date,
       dayOffset,
       validated.activeProjects,
@@ -370,6 +391,12 @@ export function calculateCashflow(input: CashflowEngineInput): CashflowProjectio
       validated.guaranteedProjects,
       pessimisticFirstOccurrences
     )
+
+    // Create single-shot income events
+    const singleShotIncomeEvents = createSingleShotIncomeEvents(date, validated.singleShotIncome)
+
+    // Combine all income events
+    const allIncomeEvents = [...recurringIncomeEvents, ...singleShotIncomeEvents]
 
     // Create expense events (same for both scenarios)
     const fixedExpenseEvents = createFixedExpenseEvents(date, validated.activeExpenses)

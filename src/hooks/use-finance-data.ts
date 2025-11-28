@@ -14,6 +14,7 @@ import type {
   Project,
   FixedExpense,
   SingleShotExpense,
+  SingleShotIncome,
   Expense,
   CreditCard,
   Profile,
@@ -25,6 +26,7 @@ import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/
 export interface UseFinanceDataReturn {
   accounts: BankAccount[]
   projects: Project[]
+  singleShotIncome: SingleShotIncome[]
   expenses: Expense[]
   fixedExpenses: FixedExpense[]
   singleShotExpenses: SingleShotExpense[]
@@ -70,12 +72,26 @@ function mapAccountFromDb(row: AccountRow): BankAccount {
 function mapProjectFromDb(row: ProjectRow): Project {
   return {
     id: row.id,
+    type: 'recurring',
     name: row.name,
     amount: row.amount,
-    frequency: row.frequency,
+    frequency: row.frequency!,
     paymentSchedule: row.payment_schedule as PaymentSchedule,
     certainty: row.certainty,
-    isActive: row.is_active,
+    isActive: row.is_active!,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }
+}
+
+function mapSingleShotIncomeFromDb(row: ProjectRow): SingleShotIncome {
+  return {
+    id: row.id,
+    type: 'single_shot',
+    name: row.name,
+    amount: row.amount,
+    date: new Date(row.date!),
+    certainty: row.certainty,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   }
@@ -123,6 +139,7 @@ function mapCreditCardFromDb(row: CreditCardRow): CreditCard {
 export function useFinanceData(): UseFinanceDataReturn {
   const [accounts, setAccounts] = useState<BankAccount[]>([])
   const [projects, setProjects] = useState<Project[]>([])
+  const [singleShotIncome, setSingleShotIncome] = useState<SingleShotIncome[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -180,7 +197,14 @@ export function useFinanceData(): UseFinanceDataReturn {
       // Map database rows to TypeScript types
       // Type assertions needed because Supabase infers complex types from select strings
       setAccounts((accountsResult.data ?? []).map((row) => mapAccountFromDb(row as unknown as AccountRow)))
-      setProjects((projectsResult.data ?? []).map(mapProjectFromDb))
+      
+      // Separate projects by type: recurring vs single-shot income
+      const allProjects = projectsResult.data ?? []
+      const recurringProjects = allProjects.filter((p) => p.type === 'recurring' || !p.type)
+      const singleShotIncomeRows = allProjects.filter((p) => p.type === 'single_shot')
+      setProjects(recurringProjects.map(mapProjectFromDb))
+      setSingleShotIncome(singleShotIncomeRows.map(mapSingleShotIncomeFromDb))
+      
       setExpenses((expensesResult.data ?? []).map(mapExpenseFromDb))
       setCreditCards((creditCardsResult.data ?? []).map((row) => mapCreditCardFromDb(row as unknown as CreditCardRow)))
       setProfiles((profilesResult.data ?? []).map((row) => mapProfileFromDb(row as ProfileRow)))
@@ -222,30 +246,47 @@ export function useFinanceData(): UseFinanceDataReturn {
     }
   }, [])
 
-  // Handle realtime changes for projects
+  // Handle realtime changes for projects (both recurring and single-shot income)
   const handleProjectChange = useCallback((payload: RealtimePostgresChangesPayload<ProjectRow>) => {
     const { eventType, new: newRecord, old: oldRecord } = payload
 
     switch (eventType) {
       case 'INSERT':
         if (newRecord) {
-          setProjects(prev => [...prev, mapProjectFromDb(newRecord as ProjectRow)])
+          const row = newRecord as ProjectRow
+          if (row.type === 'single_shot') {
+            setSingleShotIncome(prev => [...prev, mapSingleShotIncomeFromDb(row)])
+          } else {
+            setProjects(prev => [...prev, mapProjectFromDb(row)])
+          }
         }
         break
       case 'UPDATE':
         if (newRecord) {
-          setProjects(prev =>
-            prev.map(project =>
-              project.id === (newRecord as ProjectRow).id
-                ? mapProjectFromDb(newRecord as ProjectRow)
-                : project
+          const row = newRecord as ProjectRow
+          if (row.type === 'single_shot') {
+            setSingleShotIncome(prev =>
+              prev.map(income =>
+                income.id === row.id ? mapSingleShotIncomeFromDb(row) : income
+              )
             )
-          )
+          } else {
+            setProjects(prev =>
+              prev.map(project =>
+                project.id === row.id ? mapProjectFromDb(row) : project
+              )
+            )
+          }
         }
         break
       case 'DELETE':
         if (oldRecord) {
-          setProjects(prev => prev.filter(project => project.id !== (oldRecord as ProjectRow).id))
+          const row = oldRecord as ProjectRow
+          if (row.type === 'single_shot') {
+            setSingleShotIncome(prev => prev.filter(income => income.id !== row.id))
+          } else {
+            setProjects(prev => prev.filter(project => project.id !== row.id))
+          }
         }
         break
     }
@@ -397,6 +438,7 @@ export function useFinanceData(): UseFinanceDataReturn {
   return {
     accounts,
     projects,
+    singleShotIncome,
     expenses,
     fixedExpenses,
     singleShotExpenses,

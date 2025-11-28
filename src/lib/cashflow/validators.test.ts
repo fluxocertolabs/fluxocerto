@@ -57,6 +57,7 @@ function createValidProject(overrides: Partial<{
 
   return {
     id: overrides.id ?? crypto.randomUUID(),
+    type: 'recurring' as const,
     name: overrides.name ?? 'Test Project',
     amount: overrides.amount ?? 50000,
     paymentDay: overrides.paymentDay ?? 15,

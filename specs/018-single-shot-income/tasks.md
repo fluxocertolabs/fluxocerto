@@ -19,9 +19,9 @@
 
 **Purpose**: Database migration and core TypeScript types
 
-- [ ] T001 Create database migration in supabase/migrations/008_single_shot_income.sql
-- [ ] T002 [P] Add ProjectType enum and SingleShotIncome types in src/types/index.ts
-- [ ] T003 [P] Update ProjectRow interface in src/lib/supabase.ts with type and date fields
+- [X] T001 Create database migration in supabase/migrations/008_single_shot_income.sql
+- [X] T002 [P] Add ProjectType enum and SingleShotIncome types in src/types/index.ts
+- [X] T003 [P] Update ProjectRow interface in src/lib/supabase.ts with type and date fields
 
 ---
 
@@ -31,11 +31,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Add singleShotIncome state and CRUD actions to src/stores/finance-store.ts
-- [ ] T005 Update src/hooks/use-finance-data.ts to map single-shot income from projects table
-- [ ] T006 [P] Add SingleShotIncome to CashflowEngineInput in src/lib/cashflow/validators.ts
-- [ ] T007 Add createSingleShotIncomeEvents function in src/lib/cashflow/calculate.ts
-- [ ] T008 Integrate single-shot income events into daily cashflow loop in src/lib/cashflow/calculate.ts
+- [X] T004 Add singleShotIncome state and CRUD actions to src/stores/finance-store.ts
+- [X] T005 Update src/hooks/use-finance-data.ts to map single-shot income from projects table
+- [X] T006 [P] Add SingleShotIncome to CashflowEngineInput in src/lib/cashflow/validators.ts
+- [X] T007 Add createSingleShotIncomeEvents function in src/lib/cashflow/calculate.ts
+- [X] T008 Integrate single-shot income events into daily cashflow loop in src/lib/cashflow/calculate.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -49,11 +49,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Create single-shot-income-form.tsx in src/components/manage/projects/
-- [ ] T010 [P] [US1] Create single-shot-income-list-item.tsx in src/components/manage/projects/
-- [ ] T011 [US1] Create single-shot-income-list.tsx in src/components/manage/projects/ (depends on T010)
-- [ ] T012 [US1] Create project-section.tsx with tabs in src/components/manage/projects/ (depends on T011)
-- [ ] T013 [US1] Update src/pages/Manage.tsx to use ProjectSection component
+- [X] T009 [P] [US1] Create single-shot-income-form.tsx in src/components/manage/projects/
+- [X] T010 [P] [US1] Create single-shot-income-list-item.tsx in src/components/manage/projects/
+- [X] T011 [US1] Create single-shot-income-list.tsx in src/components/manage/projects/ (depends on T010)
+- [X] T012 [US1] Create project-section.tsx with tabs in src/components/manage/projects/ (depends on T011)
+- [X] T013 [US1] Update src/pages/Manage.tsx to use ProjectSection component
 
 **Checkpoint**: User Story 1 complete - users can create and view single-shot income entries
 
@@ -67,8 +67,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Update src/hooks/use-cashflow-projection.ts to pass singleShotIncome to calculateCashflow
-- [ ] T015 [US2] Verify certainty filtering and tooltip display: (1) Create guaranteed income for tomorrow → verify appears in both optimistic AND pessimistic scenarios, (2) Create probable income for tomorrow → verify appears ONLY in optimistic scenario, (3) Create uncertain income for tomorrow → verify appears ONLY in optimistic scenario, (4) Hover over cashflow chart date with single-shot income → verify income name and amount appear in tooltip alongside other income events
+- [X] T014 [US2] Update src/hooks/use-cashflow-projection.ts to pass singleShotIncome to calculateCashflow
+- [X] T015 [US2] Verify certainty filtering and tooltip display: (1) Create guaranteed income for tomorrow → verify appears in both optimistic AND pessimistic scenarios, (2) Create probable income for tomorrow → verify appears ONLY in optimistic scenario, (3) Create uncertain income for tomorrow → verify appears ONLY in optimistic scenario, (4) Hover over cashflow chart date with single-shot income → verify income name and amount appear in tooltip alongside other income events
 
 **Checkpoint**: User Story 2 complete - single-shot income appears correctly in cashflow projections
 
@@ -82,9 +82,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Add edit mode support to single-shot-income-form.tsx in src/components/manage/projects/
-- [ ] T017 [US3] Add edit button and handler to single-shot-income-list-item.tsx
-- [ ] T018 [US3] Wire up edit flow in src/pages/Manage.tsx
+- [X] T016 [US3] Add edit mode support to single-shot-income-form.tsx in src/components/manage/projects/
+- [X] T017 [US3] Add edit button and handler to single-shot-income-list-item.tsx
+- [X] T018 [US3] Wire up edit flow in src/pages/Manage.tsx
 
 **Checkpoint**: User Story 3 complete - users can edit single-shot income entries
 
@@ -98,8 +98,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Add delete button with confirmation dialog to single-shot-income-list-item.tsx
-- [ ] T020 [US4] Wire up delete handler in src/pages/Manage.tsx
+- [X] T019 [US4] Add delete button with confirmation dialog to single-shot-income-list-item.tsx
+- [X] T020 [US4] Wire up delete handler in src/pages/Manage.tsx
 
 **Checkpoint**: User Story 4 complete - users can delete single-shot income entries
 
@@ -113,9 +113,9 @@
 
 ### Implementation for User Story 5
 
-- [ ] T021 [US5] Add chronological sorting to single-shot-income-list.tsx
-- [ ] T022 [US5] Add past detection and "Recebido" badge with muted styling to single-shot-income-list-item.tsx
-- [ ] T023 [US5] Add "Hoje" indicator badge for entries with today's date in single-shot-income-list-item.tsx (per spec US5-AC3: "shows a 'Hoje' indicator")
+- [X] T021 [US5] Add chronological sorting to single-shot-income-list.tsx
+- [X] T022 [US5] Add past detection and "Recebido" badge with muted styling to single-shot-income-list-item.tsx
+- [X] T023 [US5] Add "Hoje" indicator badge for entries with today's date in single-shot-income-list-item.tsx (per spec US5-AC3: "shows a 'Hoje' indicator")
 
 **Checkpoint**: User Story 5 complete - list shows chronological order with visual distinction for past entries
 
@@ -125,9 +125,9 @@
 
 **Purpose**: Empty state, final integration, and validation
 
-- [ ] T024 [P] Add empty state to single-shot-income-list.tsx with spec-defined messaging
+- [X] T024 [P] Add empty state to single-shot-income-list.tsx with spec-defined messaging
 - [ ] T025 Run quickstart.md "Testing Checklist" section (Manual Tests subsection) to validate all user-facing functionality
-- [ ] T026 Final code review and cleanup: (1) Remove any console.log/debug statements, (2) Run `pnpm lint` and fix errors, (3) Run `pnpm typecheck` and fix errors, (4) Verify no TODO comments left in new code, (5) Ensure all new files follow kebab-case naming convention
+- [X] T026 Final code review and cleanup: (1) Remove any console.log/debug statements, (2) Run `pnpm lint` and fix errors, (3) Run `pnpm typecheck` and fix errors, (4) Verify no TODO comments left in new code, (5) Ensure all new files follow kebab-case naming convention
 
 ---
 

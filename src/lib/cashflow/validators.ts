@@ -11,6 +11,7 @@ import type {
   CreditCard,
   FixedExpense,
   SingleShotExpense,
+  SingleShotIncome,
   Project,
 } from '../../types'
 import { CashflowCalculationError, CashflowErrorCode } from './types'
@@ -109,6 +110,7 @@ export interface CashflowEngineInput {
   projects: Project[]
   expenses: FixedExpense[]
   singleShotExpenses?: SingleShotExpense[]
+  singleShotIncome?: SingleShotIncome[]
   creditCards: CreditCard[]
   /** Shorthand for options.projectionDays (takes precedence) */
   projectionDays?: number
@@ -125,6 +127,7 @@ export interface ValidatedInput {
   guaranteedProjects: Project[]
   activeExpenses: FixedExpense[]
   singleShotExpenses: SingleShotExpense[]
+  singleShotIncome: SingleShotIncome[]
   creditCards: CreditCard[]
   options: ValidatedOptions
 }
@@ -226,6 +229,7 @@ export function validateAndFilterInput(input: CashflowEngineInput): ValidatedInp
     guaranteedProjects,
     activeExpenses,
     singleShotExpenses: input.singleShotExpenses ?? [],
+    singleShotIncome: input.singleShotIncome ?? [],
     creditCards: input.creditCards,
     options: optionsResult.data,
   }

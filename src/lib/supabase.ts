@@ -32,7 +32,9 @@ export interface ProjectRow {
   id: string
   name: string
   amount: number
-  frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
+  type: 'recurring' | 'single_shot'
+  // Recurring project fields (required when type = 'recurring', null for single_shot)
+  frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly' | null
   payment_schedule: {
     type: 'dayOfWeek'
     dayOfWeek: number
@@ -43,9 +45,12 @@ export interface ProjectRow {
     type: 'twiceMonthly'
     firstDay: number
     secondDay: number
-  }
+  } | null
+  is_active: boolean | null
+  // Single-shot income field (required when type = 'single_shot', null for recurring)
+  date: string | null  // ISO date string
+  // Common fields
   certainty: 'guaranteed' | 'probable' | 'uncertain'
-  is_active: boolean
   created_at: string
   updated_at: string
 }

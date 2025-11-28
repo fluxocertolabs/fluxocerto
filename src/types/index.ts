@@ -123,10 +123,17 @@ export function validateFrequencyScheduleMatch(
   }
 }
 
-// === Project (Income Source) ===
+// === Project Types ===
+
+// Project type discriminator
+export const ProjectTypeSchema = z.enum(['recurring', 'single_shot'])
+export type ProjectType = z.infer<typeof ProjectTypeSchema>
+
+// === Recurring Project (Income Source) ===
 
 // Base schema without refinement (for extension)
-const ProjectInputBaseSchema = z.object({
+const RecurringProjectInputBaseSchema = z.object({
+  type: z.literal('recurring').default('recurring'),
   name: z.string().min(1, 'Project name is required').max(100),
   amount: z.number().positive('Amount must be positive'),
   frequency: FrequencySchema,
@@ -136,7 +143,7 @@ const ProjectInputBaseSchema = z.object({
 })
 
 // Input schema with frequency-schedule validation
-export const ProjectInputSchema = ProjectInputBaseSchema.refine(
+export const RecurringProjectInputSchema = RecurringProjectInputBaseSchema.refine(
   (data) => validateFrequencyScheduleMatch(data.frequency, data.paymentSchedule),
   {
     message: 'Payment schedule type must match frequency',
@@ -145,7 +152,7 @@ export const ProjectInputSchema = ProjectInputBaseSchema.refine(
 )
 
 // Full schema with system fields
-export const ProjectSchema = ProjectInputBaseSchema.extend({
+export const RecurringProjectSchema = RecurringProjectInputBaseSchema.extend({
   id: z.string().uuid(),
   // Legacy field - kept for backward compatibility during migration
   paymentDay: z.number().int().min(1).max(31).optional(),
@@ -159,8 +166,45 @@ export const ProjectSchema = ProjectInputBaseSchema.extend({
   }
 )
 
-export type ProjectInput = z.infer<typeof ProjectInputSchema>
-export type Project = z.infer<typeof ProjectSchema>
+export type RecurringProjectInput = z.infer<typeof RecurringProjectInputSchema>
+export type RecurringProject = z.infer<typeof RecurringProjectSchema>
+
+// Backward compatibility aliases - Project refers to RecurringProject
+export const ProjectInputSchema = RecurringProjectInputSchema
+export const ProjectSchema = RecurringProjectSchema
+export type ProjectInput = RecurringProjectInput
+export type Project = RecurringProject
+
+// === Single-Shot Income ===
+
+export const SingleShotIncomeInputSchema = z.object({
+  type: z.literal('single_shot'),
+  name: z.string().min(1, 'Nome da receita é obrigatório').max(100),
+  amount: z.number().positive('Valor deve ser positivo'),
+  date: z.coerce.date(),
+  certainty: z.enum(['guaranteed', 'probable', 'uncertain']),
+})
+
+export const SingleShotIncomeSchema = SingleShotIncomeInputSchema.extend({
+  id: z.string().uuid(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type SingleShotIncomeInput = z.infer<typeof SingleShotIncomeInputSchema>
+export type SingleShotIncome = z.infer<typeof SingleShotIncomeSchema>
+
+// Type guard for single-shot income
+export function isSingleShotIncome(project: unknown): project is SingleShotIncome {
+  return typeof project === 'object' && project !== null && 
+    'type' in project && project.type === 'single_shot'
+}
+
+// Type guard for recurring project
+export function isRecurringProject(project: unknown): project is RecurringProject {
+  return typeof project === 'object' && project !== null && 
+    'type' in project && project.type === 'recurring'
+}
 
 // === Expense Types ===
 
