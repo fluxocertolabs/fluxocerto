@@ -18,8 +18,8 @@ This document defines the Zustand store API contract for single-shot income oper
 interface FinanceState {
   // Existing state...
   accounts: BankAccount[]
-  projects: RecurringProject[]  // Renamed from projects for clarity
-  singleShotIncome: SingleShotIncome[]  // NEW
+  projects: Project[]  // Existing - contains recurring projects (type='recurring')
+  singleShotIncome: SingleShotIncome[]  // NEW - contains single-shot income (type='single_shot')
   expenses: FixedExpense[]
   singleShotExpenses: SingleShotExpense[]
   creditCards: CreditCard[]
@@ -29,6 +29,8 @@ interface FinanceState {
   error: string | null
 }
 ```
+
+**Note**: The existing `projects` state array remains unchanged and continues to hold recurring projects. The new `singleShotIncome` array is added separately. Both types are stored in the same `projects` database table but are separated in the store for cleaner UI state management (following the same pattern as `expenses` vs `singleShotExpenses`).
 
 ### Actions
 

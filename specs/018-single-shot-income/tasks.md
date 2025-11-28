@@ -68,7 +68,7 @@
 ### Implementation for User Story 2
 
 - [ ] T014 [US2] Update src/hooks/use-cashflow-projection.ts to pass singleShotIncome to calculateCashflow
-- [ ] T015 [US2] Verify certainty filtering works in cashflow scenarios (guaranteed in both, probable/uncertain only in optimistic)
+- [ ] T015 [US2] Verify certainty filtering and tooltip display: (1) Create guaranteed income for tomorrow → verify appears in both optimistic AND pessimistic scenarios, (2) Create probable income for tomorrow → verify appears ONLY in optimistic scenario, (3) Create uncertain income for tomorrow → verify appears ONLY in optimistic scenario, (4) Hover over cashflow chart date with single-shot income → verify income name and amount appear in tooltip alongside other income events
 
 **Checkpoint**: User Story 2 complete - single-shot income appears correctly in cashflow projections
 
@@ -114,8 +114,8 @@
 ### Implementation for User Story 5
 
 - [ ] T021 [US5] Add chronological sorting to single-shot-income-list.tsx
-- [ ] T022 [US5] Add past detection and "Recebido" badge styling to single-shot-income-list-item.tsx
-- [ ] T023 [US5] Add "Hoje" indicator for entries with today's date in single-shot-income-list-item.tsx
+- [ ] T022 [US5] Add past detection and "Recebido" badge with muted styling to single-shot-income-list-item.tsx
+- [ ] T023 [US5] Add "Hoje" indicator badge for entries with today's date in single-shot-income-list-item.tsx (per spec US5-AC3: "shows a 'Hoje' indicator")
 
 **Checkpoint**: User Story 5 complete - list shows chronological order with visual distinction for past entries
 
@@ -126,8 +126,8 @@
 **Purpose**: Empty state, final integration, and validation
 
 - [ ] T024 [P] Add empty state to single-shot-income-list.tsx with spec-defined messaging
-- [ ] T025 Run quickstart.md validation checklist
-- [ ] T026 Final code review and cleanup
+- [ ] T025 Run quickstart.md "Testing Checklist" section (Manual Tests subsection) to validate all user-facing functionality
+- [ ] T026 Final code review and cleanup: (1) Remove any console.log/debug statements, (2) Run `pnpm lint` and fix errors, (3) Run `pnpm typecheck` and fix errors, (4) Verify no TODO comments left in new code, (5) Ensure all new files follow kebab-case naming convention
 
 ---
 

@@ -198,7 +198,7 @@ When no single-shot income entries exist, the UI displays:
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can create a single-shot income entry in under 30 seconds (validated via manual testing: open form + enter name + enter amount + select date + select certainty + save)
+- **SC-001**: Users can create a single-shot income entry in under 30 seconds (validated via manual testing with stopwatch: start timer when clicking "Adicionar Receita Pontual" → stop timer when entry appears in list after save; test with pre-determined values: name="Test Income", amount=1000, date=tomorrow, certainty=guaranteed)
 - **SC-002**: Single-shot income appears correctly in the cashflow projection on their exact date 100% of the time
 - **SC-003**: Certainty levels correctly affect scenario visibility (guaranteed in both, probable/uncertain in optimistic only)
 - **SC-004**: Users can distinguish single-shot income from recurring projects at a glance in the Manage page

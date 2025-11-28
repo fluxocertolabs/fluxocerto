@@ -24,35 +24,7 @@ This guide provides a step-by-step implementation path for adding single-shot in
 
 **File**: `supabase/migrations/008_single_shot_income.sql`
 
-```sql
--- Migration: 008_single_shot_income
--- Feature: 018-single-shot-income
--- Date: 2025-11-28
--- Description: Add support for single-shot (one-time) income
-
--- Step 1: Add type column
-ALTER TABLE projects 
-  ADD COLUMN type TEXT NOT NULL DEFAULT 'recurring' 
-  CHECK (type IN ('recurring', 'single_shot'));
-
--- Step 2: Add date column
-ALTER TABLE projects ADD COLUMN date DATE;
-
--- Step 3: Make recurring fields nullable
-ALTER TABLE projects ALTER COLUMN frequency DROP NOT NULL;
-ALTER TABLE projects ALTER COLUMN payment_schedule DROP NOT NULL;
-ALTER TABLE projects ALTER COLUMN is_active DROP NOT NULL;
-
--- Step 4: Add type constraint
-ALTER TABLE projects ADD CONSTRAINT project_type_fields CHECK (
-  (type = 'recurring' AND frequency IS NOT NULL AND payment_schedule IS NOT NULL AND is_active IS NOT NULL) OR
-  (type = 'single_shot' AND date IS NOT NULL)
-);
-
--- Step 5: Add indexes
-CREATE INDEX IF NOT EXISTS projects_date_idx ON projects(date) WHERE type = 'single_shot';
-CREATE INDEX IF NOT EXISTS projects_type_idx ON projects(type);
-```
+See `data-model.md` section "Migration: 008_single_shot_income.sql" for complete migration SQL.
 
 **Apply migration**: Run via Supabase Dashboard SQL Editor or CLI.
 

@@ -134,7 +134,10 @@ family-finance/
 │       ├── 001_initial_schema.sql  # Database schema + RLS policies
 │       ├── 002_invite_auth.sql     # Invite-only authentication
 │       ├── 003_single_shot_expenses.sql  # One-time expenses
-│       └── 004_user_preferences.sql      # User preferences
+│       ├── 004_user_preferences.sql      # User preferences
+│       ├── 005_account_owner.sql         # Account ownership tracking
+│       ├── 006_populate_profile_names.sql # Profile name population
+│       └── 007_cleanup_profiles.sql      # Profile cleanup
 ├── public/                # Static assets
 ├── docs/                  # Documentation
 │   ├── CONSTITUTION.md    # This file
