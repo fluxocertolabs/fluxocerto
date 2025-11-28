@@ -26,6 +26,8 @@ Auto-generated from all feature plans. Last updated: 2025-11-25
 - Supabase PostgreSQL (existing `expenses` table extended with `type` column) (014-single-shot-expenses)
 - TypeScript 5.9.3 + React 19.2.0, Tailwind CSS 4.1.17, @supabase/supabase-js 2.86.0, Zustand 5.0.8, lucide-react (for icons) (015-dark-mode)
 - Supabase PostgreSQL (new `user_preferences` table), localStorage (fallback/cache) (015-dark-mode)
+- TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Supabase (@supabase/supabase-js 2.86.0), Zustand 5.0.8, Zod 4.1.13 (018-single-shot-income)
+- Supabase PostgreSQL (extends existing `projects` table) (018-single-shot-income)
 
 - TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Tailwind CSS 4.1.17, shadcn/ui, Dexie.js 4.2.1, Zustand 5.0.8 (001-monorepo-base-structure)
 
@@ -45,9 +47,9 @@ npm test && npm run lint
 TypeScript 5.9.3: Follow standard conventions
 
 ## Recent Changes
+- 018-single-shot-income: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Supabase (@supabase/supabase-js 2.86.0), Zustand 5.0.8, Zod 4.1.13
 - 017-account-owner: Added TypeScript 5.9.3 + React 19.2.0, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0
 - 015-dark-mode: Added TypeScript 5.9.3 + React 19.2.0, Tailwind CSS 4.1.17, @supabase/supabase-js 2.86.0, Zustand 5.0.8, lucide-react (for icons)
-- 014-single-shot-expenses: Added TypeScript 5.9.3 + React 19.2.0, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0
 
 
 <!-- MANUAL ADDITIONS START -->

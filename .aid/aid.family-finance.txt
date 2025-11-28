@@ -180,12 +180,22 @@ export function LoginForm()
 </file>
 
 <file path="src/components/cashflow/cashflow-chart.tsx">
+import 'react'
 import 'recharts'
 import '@/lib/utils'
 import '@/lib/format'
 import './types'
+import './types'
 import './chart-tooltip'
+import './chart-legend'
+import '@/stores/theme-store'
 export function CashflowChart()
+</file>
+
+<file path="src/components/cashflow/chart-legend.tsx">
+import '@/lib/utils'
+import './types'
+export function ChartLegend()
 </file>
 
 <file path="src/components/cashflow/chart-tooltip.tsx">
@@ -246,9 +256,24 @@ export interface ChartDataPoint {
     property timestamp: number
     property optimisticBalance: number
     property pessimisticBalance: number
+    property investmentInclusiveBalance: number
     property isOptimisticDanger: boolean
     property isPessimisticDanger: boolean
     property snapshot: DailySnapshot
+}
+
+export interface LineVisibility {
+    property optimistic: boolean
+    property pessimistic: boolean
+    property investmentInclusive: boolean
+    property dangerZone: boolean
+}
+export const DEFAULT_LINE_VISIBILITY
+
+export interface LegendItem {
+    property key: keyof LineVisibility
+    property label: string
+    property color: string
 }
 
 export interface DangerRange {
@@ -282,6 +307,7 @@ export interface SummaryStats {
 import 'react-router-dom'
 import '@/lib/utils'
 import '@/components/ui/button'
+import '@/components/theme'
 import '@/lib/supabase'
 import '@/hooks/use-auth'
 export function Header()
@@ -329,9 +355,21 @@ export function SkeletonTabs()
 export function SkeletonBalanceItem()
 </file>
 
+<file path="src/components/manage/accounts/account-card.tsx">
+import 'react'
+import 'lucide-react'
+import '@/components/ui/button'
+import '@/components/manage/shared/inline-edit-input'
+import '@/components/manage/shared/format-utils'
+import '@/lib/utils'
+import '@/types'
+export function AccountCard()
+</file>
+
 <file path="src/components/manage/accounts/account-form.tsx">
 import 'react'
 import '@/components/ui/button'
+import '@/components/ui/currency-input'
 import '@/components/ui/input'
 import '@/components/ui/label'
 import '@/components/ui/select'
@@ -342,23 +380,39 @@ export function AccountForm()
 <file path="src/components/manage/accounts/account-list-item.tsx">
 import '@/components/ui/button'
 import '@/components/manage/shared/inline-edit-input'
+import '@/components/ui/owner-badge'
 import '@/lib/utils'
 import '@/types'
 export function AccountListItem()
 </file>
 
 <file path="src/components/manage/accounts/account-list.tsx">
+import 'react'
 import '@/types'
 import '@/components/manage/shared/entity-empty-state'
-import './account-list-item'
+import './account-card'
+import '@/components/ui/select'
 export function AccountList()
+</file>
+
+<file path="src/components/manage/credit-cards/credit-card-card.tsx">
+import 'react'
+import 'lucide-react'
+import '@/components/ui/button'
+import '@/components/manage/shared/inline-edit-input'
+import '@/components/manage/shared/format-utils'
+import '@/lib/utils'
+import '@/types'
+export function CreditCardCard()
 </file>
 
 <file path="src/components/manage/credit-cards/credit-card-form.tsx">
 import 'react'
 import '@/components/ui/button'
+import '@/components/ui/currency-input'
 import '@/components/ui/input'
 import '@/components/ui/label'
+import '@/components/ui/select'
 import '@/types'
 export function CreditCardForm()
 </file>
@@ -366,21 +420,25 @@ export function CreditCardForm()
 <file path="src/components/manage/credit-cards/credit-card-list-item.tsx">
 import '@/components/ui/button'
 import '@/components/manage/shared/inline-edit-input'
+import '@/components/ui/owner-badge'
 import '@/lib/utils'
 import '@/types'
 export function CreditCardListItem()
 </file>
 
 <file path="src/components/manage/credit-cards/credit-card-list.tsx">
+import 'react'
 import '@/types'
 import '@/components/manage/shared/entity-empty-state'
-import './credit-card-list-item'
+import './credit-card-card'
+import '@/components/ui/select'
 export function CreditCardList()
 </file>
 
 <file path="src/components/manage/expenses/expense-form.tsx">
 import 'react'
 import '@/components/ui/button'
+import '@/components/ui/currency-input'
 import '@/components/ui/input'
 import '@/components/ui/label'
 import '@/types'
@@ -397,15 +455,53 @@ export function ExpenseListItem()
 
 <file path="src/components/manage/expenses/expense-list.tsx">
 import '@/types'
+import '@/components/ui/button'
 import '@/components/manage/shared/entity-empty-state'
 import './expense-list-item'
 export function ExpenseList()
+</file>
+
+<file path="src/components/manage/expenses/expense-section.tsx">
+import '@/components/ui/tabs'
+import './expense-list'
+import './single-shot-expense-list'
+import '@/types'
+export function ExpenseSection()
+</file>
+
+<file path="src/components/manage/expenses/single-shot-expense-form.tsx">
+import 'react'
+import 'date-fns'
+import '@/components/ui/button'
+import '@/components/ui/currency-input'
+import '@/components/ui/input'
+import '@/components/ui/label'
+import '@/types'
+export function SingleShotExpenseForm()
+</file>
+
+<file path="src/components/manage/expenses/single-shot-expense-list-item.tsx">
+import 'date-fns'
+import 'date-fns/locale'
+import '@/components/ui/button'
+import '@/lib/utils'
+import '@/types'
+export function SingleShotExpenseListItem()
+</file>
+
+<file path="src/components/manage/expenses/single-shot-expense-list.tsx">
+import '@/types'
+import '@/components/ui/button'
+import '@/lib/utils'
+import './single-shot-expense-list-item'
+export function SingleShotExpenseList()
 </file>
 
 <file path="src/components/manage/projects/project-form.tsx">
 import 'react'
 import 'date-fns'
 import '@/components/ui/button'
+import '@/components/ui/currency-input'
 import '@/components/ui/input'
 import '@/components/ui/label'
 import '@/components/ui/switch'
@@ -438,6 +534,12 @@ export function DeleteConfirmation()
 import '@/components/ui/button'
 import '@/lib/utils'
 export function EntityEmptyState()
+</file>
+
+<file path="src/components/manage/shared/format-utils.ts">
+export function formatCurrency(cents: number)
+export function formatRelativeTime(date: Date | undefined)
+export function isStale(date: Date | undefined)
 </file>
 
 <file path="src/components/manage/shared/inline-edit-input.tsx">
@@ -483,6 +585,7 @@ export function QuickUpdateEmptyState()
 <file path="src/components/quick-update/quick-update-view.tsx">
 import 'react'
 import '@/hooks/use-finance-data'
+import '@/stores/finance-store'
 import '@/hooks/use-coordinated-loading'
 import '@/components/ui/button'
 import '@/lib/utils'
@@ -523,6 +626,14 @@ import '@/lib/supabase'
 export function SetupRequired()
 </file>
 
+<file path="src/components/theme/theme-toggle.tsx">
+import 'lucide-react'
+import '@/components/ui/button'
+import '@/hooks/use-theme'
+import '@/types/theme'
+export function ThemeToggle()
+</file>
+
 <file path="src/components/ui/alert-dialog.tsx">
 import 'react'
 import '@radix-ui/react-alert-dialog'
@@ -546,6 +657,13 @@ import 'react'
 import '@/lib/utils'
 </file>
 
+<file path="src/components/ui/currency-input.tsx">
+import 'react'
+import '@/components/ui/input'
+import '@/lib/utils'
+export const CurrencyInput
+</file>
+
 <file path="src/components/ui/dialog.tsx">
 import 'react'
 import '@radix-ui/react-dialog'
@@ -563,6 +681,11 @@ import 'react'
 import '@radix-ui/react-label'
 import 'class-variance-authority'
 import '@/lib/utils'
+</file>
+
+<file path="src/components/ui/owner-badge.tsx">
+import '@/lib/utils'
+export function OwnerBadge()
 </file>
 
 <file path="src/components/ui/select.tsx">
@@ -592,6 +715,12 @@ import '@/types/auth'
 export function useAuth()
 </file>
 
+<file path="src/hooks/use-cashflow-projection.test.ts">
+import 'vitest'
+import './use-cashflow-projection'
+import '@/lib/cashflow/types'
+</file>
+
 <file path="src/hooks/use-cashflow-projection.ts">
 import 'react'
 import '@/hooks/use-finance-data'
@@ -601,7 +730,7 @@ import '@/stores/preferences-store'
 import '@/lib/cashflow/types'
 import '@/components/cashflow/types'
 import '@/types'
-export function transformToChartData(days: DailySnapshot[])
+export function transformToChartData(days: DailySnapshot[], investmentTotal: number)
 export function getDangerRanges(chartData: ChartDataPoint[])
 
 export interface UseCashflowProjectionOptions {
@@ -634,13 +763,17 @@ import 'react'
 import '@/lib/supabase'
 import '@/hooks/use-auth'
 import '@/types'
+import '@/types'
 import '@supabase/supabase-js'
 
 export interface UseFinanceDataReturn {
     property accounts: BankAccount[]
     property projects: Project[]
-    property expenses: FixedExpense[]
+    property expenses: Expense[]
+    property fixedExpenses: FixedExpense[]
+    property singleShotExpenses: SingleShotExpense[]
     property creditCards: CreditCard[]
+    property profiles: Profile[]
     property isLoading: boolean
     property error: string | null
     property retry: () => void
@@ -675,6 +808,15 @@ export interface UseHealthIndicatorResult {
 export function useHealthIndicator(summaryStats: SummaryStats | null)
 </file>
 
+<file path="src/hooks/use-theme.ts">
+import 'react'
+import '@/stores/theme-store'
+import '@/lib/theme-service'
+import '@/hooks/use-auth'
+import '@/types/theme'
+export function useTheme()
+</file>
+
 <file path="src/lib/auth-errors.ts">
 
 export interface AuthErrorMapping {
@@ -695,6 +837,7 @@ import './validators'
 <file path="src/lib/cashflow/calculate.ts">
 import 'date-fns'
 import '../../types'
+import 'date-fns'
 import './frequencies'
 import 'date-fns'
 import './types'
@@ -801,6 +944,7 @@ export interface CashflowEngineInput {
     property accounts: BankAccount[]
     property projects: Project[]
     property expenses: FixedExpense[]
+    property singleShotExpenses: SingleShotExpense[]
     property creditCards: CreditCard[]
     property projectionDays: number
     property options: z.infer<typeof CashflowEngineOptionsSchema>
@@ -811,6 +955,7 @@ export interface ValidatedInput {
     property activeProjects: Project[]
     property guaranteedProjects: Project[]
     property activeExpenses: FixedExpense[]
+    property singleShotExpenses: SingleShotExpense[]
     property creditCards: CreditCard[]
     property options: ValidatedOptions
 }
@@ -835,14 +980,16 @@ export function getDaysSinceUpdate(updatedAt: Date | undefined)
 import '@supabase/supabase-js'
 import '@/stores/finance-store'
 
-export interface AccountRow {
+export interface ProfileRow {
     property id: string
     property name: string
-    property type: 'checking' | 'savings' | 'investment'
-    property balance: number
-    property balance_updated_at: string | null
+    property email: string | null
     property created_at: string
-    property updated_at: string
+    property created_by: string | null
+}
+
+export interface AccountRow extends AccountRowBase {
+    property owner: { id: string; name: string } | null
 }
 
 export interface ProjectRow {
@@ -871,20 +1018,16 @@ export interface ExpenseRow {
     property id: string
     property name: string
     property amount: number
-    property due_day: number
+    property type: 'fixed' | 'single_shot'
+    property due_day: number | null
+    property date: string | null
     property is_active: boolean
     property created_at: string
     property updated_at: string
 }
 
-export interface CreditCardRow {
-    property id: string
-    property name: string
-    property statement_balance: number
-    property due_day: number
-    property balance_updated_at: string | null
-    property created_at: string
-    property updated_at: string
+export interface CreditCardRow extends CreditCardRowBase {
+    property owner: { id: string; name: string } | null
 }
 type Database = {
   public: {
@@ -893,6 +1036,7 @@ type Database = {
       projects: { Row: ProjectRow }
       expenses: { Row: ExpenseRow }
       credit_cards: { Row: CreditCardRow }
+      profiles: { Row: ProfileRow }
     }
   }
 }
@@ -906,6 +1050,23 @@ export async function signInWithMagicLink(email: string)
 export async function signOut()
 export function isOnline()
 export function handleSupabaseError<T>(error: unknown)
+</file>
+
+<file path="src/lib/theme-service.ts">
+import '@/lib/supabase'
+import '@/types/theme'
+import '@/types/theme'
+export async function getThemePreference()
+export async function saveThemePreference(theme: ThemeValue)
+export async function deleteThemePreference()
+</file>
+
+<file path="src/lib/theme.ts">
+import '@/types/theme'
+export function getSystemTheme()
+export function resolveTheme(theme: ThemeValue)
+export function applyThemeToDocument(resolvedTheme: ResolvedTheme)
+export function getStoredTheme()
 </file>
 
 <file path="src/lib/utils.ts">
@@ -968,8 +1129,9 @@ import '@/components/manage/accounts/account-list'
 import '@/components/manage/accounts/account-form'
 import '@/components/manage/projects/project-list'
 import '@/components/manage/projects/project-form'
-import '@/components/manage/expenses/expense-list'
 import '@/components/manage/expenses/expense-form'
+import '@/components/manage/expenses/expense-section'
+import '@/components/manage/expenses/single-shot-expense-form'
 import '@/components/manage/credit-cards/credit-card-list'
 import '@/components/manage/credit-cards/credit-card-form'
 import '@/components/manage/shared/delete-confirmation'
@@ -994,6 +1156,13 @@ import 'zustand'
 import 'zustand/middleware'
 import '@/types'
 export const usePreferencesStore
+</file>
+
+<file path="src/stores/theme-store.ts">
+import 'zustand'
+import 'zustand/middleware'
+import '@/types/theme'
+export const useThemeStore
 </file>
 
 <file path="src/test/setup.ts">
@@ -1026,6 +1195,8 @@ import './index'
 
 <file path="src/types/index.ts">
 import 'zod'
+export const ProfileSchema
+type Profile = z.infer<typeof ProfileSchema>
 export const BankAccountInputSchema
 export const BankAccountSchema
 type BankAccountInput = z.infer<typeof BankAccountInputSchema>
@@ -1045,10 +1216,22 @@ export const ProjectInputSchema
 export const ProjectSchema
 type ProjectInput = z.infer<typeof ProjectInputSchema>
 type Project = z.infer<typeof ProjectSchema>
+export const ExpenseTypeSchema
+type ExpenseType = z.infer<typeof ExpenseTypeSchema>
 export const FixedExpenseInputSchema
 export const FixedExpenseSchema
 type FixedExpenseInput = z.infer<typeof FixedExpenseInputSchema>
 type FixedExpense = z.infer<typeof FixedExpenseSchema>
+export const SingleShotExpenseInputSchema
+export const SingleShotExpenseSchema
+type SingleShotExpenseInput = z.infer<typeof SingleShotExpenseInputSchema>
+type SingleShotExpense = z.infer<typeof SingleShotExpenseSchema>
+export const ExpenseInputSchema
+export const ExpenseSchema
+type ExpenseInput = z.infer<typeof ExpenseInputSchema>
+type Expense = z.infer<typeof ExpenseSchema>
+export function isFixedExpense(expense: Expense)
+export function isSingleShotExpense(expense: Expense)
 export const CreditCardInputSchema
 export const CreditCardSchema
 type CreditCardInput = z.infer<typeof CreditCardInputSchema>
@@ -1112,6 +1295,41 @@ export interface LoadingErrorState {
     property originalError: Error
 }
 export const ERROR_MESSAGES
+</file>
+
+<file path="src/types/theme.ts">
+import 'zod'
+type ThemeValue = 'light' | 'dark' | 'system'
+type ResolvedTheme = 'light' | 'dark'
+
+export interface ThemeState {
+    property theme: ThemeValue
+    property resolvedTheme: ResolvedTheme
+    property isLoaded: boolean
+    property setTheme: (theme: ThemeValue) => void
+}
+
+export interface UserPreference {
+    property id: string
+    property userId: string
+    property key: string
+    property value: string
+    property createdAt: Date
+    property updatedAt: Date
+}
+
+export interface UserPreferenceRow {
+    property id: string
+    property user_id: string
+    property key: string
+    property value: string
+    property created_at: string
+    property updated_at: string
+}
+export const themeValueSchema
+export const preferenceKeySchema
+export const preferenceValueSchema
+export const upsertPreferenceSchema
 </file>
 
 <file path="supabase/functions/before-user-created/index.ts">
