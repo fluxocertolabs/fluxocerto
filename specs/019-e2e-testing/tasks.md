@@ -46,7 +46,7 @@ Based on plan.md structure:
 
 - [ ] T005 Create e2e/utils/inbucket.ts implementing IInbucketClient contract (listMessages, getMessage, deleteMessage, purgeMailbox, getLatestMessage, extractMagicLink)
 - [ ] T006 [P] Create e2e/utils/supabase-admin.ts with createClient using service role key for direct database access
-- [ ] T007 [P] Create e2e/utils/test-data.ts implementing ITestDataFactory contract (createAccount, createExpense, createSingleShotExpense, createProject, createSingleShotIncome, createCreditCard, createBasicSeedData, createFullSeedData, createLargeSeedData)
+- [ ] T007 [P] Create e2e/utils/test-data.ts implementing ITestDataFactory contract - export factory functions: createAccount(), createExpense(), createSingleShotExpense(), createProject(), createSingleShotIncome(), createCreditCard(), createBasicSeedData(), createFullSeedData(), createLargeSeedData() (see contracts/fixtures.ts for interface)
 - [ ] T008 [P] Create e2e/utils/format.ts implementing IFormatUtils contract (formatBRL, parseBRL, formatDate, parseDate)
 
 ### Fixtures

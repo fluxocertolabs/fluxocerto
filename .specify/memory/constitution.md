@@ -15,7 +15,7 @@ Database:        Supabase PostgreSQL (@supabase/supabase-js 2.86.0)
 State:           Zustand 5.0.8
 UI:              Tailwind CSS 4.1.17 + shadcn/ui
 Charts:          Recharts 3.5.0
-Testing:         Vitest 4.0.14 + React Testing Library 16.3.0
+Testing:         Vitest 4.0.14 + React Testing Library 16.3.0 (unit), Playwright 1.57.0 (E2E)
 Validation:      Zod 4.1.13
 Build Tool:      Vite 7.2.4
 Package Manager: pnpm 10+

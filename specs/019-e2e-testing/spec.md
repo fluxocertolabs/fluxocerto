@@ -108,7 +108,7 @@ A developer needs to verify that the dashboard correctly displays cashflow proje
 1. **Given** no financial data exists, **When** user views the dashboard, **Then** empty state is displayed with guidance to add data
 2. **Given** accounts, expenses, and projects exist, **When** user views the dashboard, **Then** cashflow chart renders with data points
 3. **Given** the dashboard is loaded, **When** user changes projection period from 30 to 90 days, **Then** chart updates to show 90-day projection
-4. **Given** the dashboard is loaded, **When** user views the summary panel, **Then** correct totals for income, expenses, and balance are displayed
+4. **Given** the dashboard is loaded, **When** user views the summary panel, **Then** correct totals for income, expenses, and balance are displayed (values must match calculations from `src/lib/cashflow/calculate.ts` engine)
 5. **Given** accounts with stale balances exist, **When** user views the health indicator, **Then** stale data warning is displayed
 6. **Given** the dashboard is loaded, **When** user clicks "Atualizar Saldos", **Then** Quick Update modal opens
 
@@ -169,10 +169,15 @@ A developer needs to verify that theme switching works and persists correctly.
 The following edge cases MUST be covered by the E2E test suite:
 
 - **EC-001**: Network connection lost during data submission → verify error handling and retry behavior
-- **EC-002**: Concurrent edits from multiple tabs → verify conflict resolution or last-write-wins behavior
+  - **Pass criteria**: Error toast displayed within 3 seconds, retry button available, no data corruption
+- **EC-002**: Concurrent edits from multiple tabs → verify last-write-wins behavior (Supabase default)
+  - **Pass criteria**: Last submitted value persists after page refresh in both tabs, no errors thrown
 - **EC-003**: Session expires during long editing session → verify graceful redirect to login
+  - **Pass criteria**: User redirected to login page within 5 seconds of session expiry detection, no data loss for unsaved work
 - **EC-004**: Large datasets (100+ accounts/expenses) → verify UI performance and pagination/scrolling
+  - **Pass criteria**: Page loads in < 3 seconds with 100+ items, no UI freezing, smooth scrolling
 - **EC-005**: Supabase realtime connection drops and reconnects → verify data sync recovery
+  - **Pass criteria**: Data syncs within 10 seconds of WebSocket reconnection, UI reflects latest state
 
 ## Requirements *(mandatory)*
 
@@ -187,8 +192,8 @@ The following edge cases MUST be covered by the E2E test suite:
 - **FR-007**: Test suite MUST be runnable in GitHub Actions CI pipeline as a blocking check (failures prevent PR merge)
 - **FR-008**: Test suite MUST provide seed data for consistent test scenarios
 - **FR-009**: Test suite MUST use Page Object pattern for maintainable selectors
-- **FR-010**: Test suite MUST verify all UI text is in Brazilian Portuguese (pt-BR)
-- **FR-011**: Test suite MUST handle currency values in BRL format (R$ X.XXX,XX)
+- **FR-010**: Test suite MUST verify all UI text is in Brazilian Portuguese (pt-BR) - verified implicitly through acceptance scenario assertions using Portuguese text patterns (e.g., "Enviar", "Aluguel", "Atualizar Saldos")
+- **FR-011**: Test suite MUST handle currency values in BRL format (R$ X.XXX,XX) - verified through `IFormatUtils` utility and acceptance scenarios using BRL-formatted values
 - **FR-012**: Test suite MUST complete full run in under 5 minutes
 - **FR-013**: Test suite MUST achieve 95%+ pass rate on repeated runs (no flaky tests)
 - **FR-014**: Test suite MUST support parallel test execution where possible
@@ -198,9 +203,9 @@ The following edge cases MUST be covered by the E2E test suite:
 ### Key Entities *(include if feature involves data)*
 
 - **Test User**: Pre-approved email in `allowed_emails` table with known identity for test scenarios
-- **Test Fixtures**: Reusable authentication helpers, page objects, and data factories
-- **Seed Data**: Predefined accounts, expenses, projects, and credit cards for consistent test scenarios
-- **Page Objects**: Abstraction layer for UI interactions (LoginPage, DashboardPage, ManagePage)
+- **Test Fixtures**: Reusable authentication helpers, page objects, and data factories (see `contracts/fixtures.ts` for interface definitions)
+- **Seed Data**: Predefined accounts, expenses, projects, and credit cards for consistent test scenarios (see `ITestDataFactory` in `contracts/fixtures.ts`)
+- **Page Objects**: Abstraction layer for UI interactions (LoginPage, DashboardPage, ManagePage) (see `contracts/page-objects.ts` for interface definitions)
 
 ## Success Criteria *(mandatory)*
 
@@ -213,6 +218,13 @@ The following edge cases MUST be covered by the E2E test suite:
 - **SC-005**: CI pipeline automatically runs E2E tests on every pull request
 - **SC-006**: Test failures provide clear error messages and screenshots for debugging
 - **SC-007**: Test suite can be extended with new tests following established patterns within 15 minutes per test
+
+## Terminology
+
+> **Note**: Throughout this specification:
+> - "**Projects**" refers to **recurring income** sources (salary, retainers, etc.)
+> - "**Single-shot income**" refers to **one-time income** events (bonuses, freelance payments, etc.)
+> - These terms align with the application's domain model in `src/types/index.ts`
 
 ## Assumptions
 
