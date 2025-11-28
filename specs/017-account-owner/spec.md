@@ -75,7 +75,7 @@ As a family member, I want to filter the accounts and credit cards lists by owne
 
 ### Edge Cases
 
-- What happens when an account has an owner and the owner field is displayed alongside an already long account name? The UI should handle graceful truncation or wrapping without breaking the layout.
+- What happens when an account has an owner and the owner field is displayed alongside an already long account name? The owner badge displays inline after the account name; if the combined width exceeds the container, the account name truncates with ellipsis (`text-overflow: ellipsis`) while the owner badge remains fully visible.
 - How does the system handle accounts created before this feature existed? They should appear as "Não atribuído" (unassigned) by default.
 - What happens when filtering results in an empty list? The system should display an appropriate empty state message indicating no accounts match the filter criteria.
 
@@ -105,9 +105,9 @@ As a family member, I want to filter the accounts and credit cards lists by owne
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can assign an owner to a new bank account or credit card in under 5 seconds (single dropdown selection)
-- **SC-002**: Users can identify the owner of any account in the list view within 2 seconds of viewing (owner badge is immediately visible)
-- **SC-003**: Users can filter accounts by owner and see results update immediately (under 1 second)
+- **SC-001**: Owner dropdown is present and functional on bank account and credit card creation/edit forms
+- **SC-002**: Owner badge is visible next to account/card names in list views without additional user action
+- **SC-003**: Filter dropdown updates list results immediately upon selection (no page reload required)
 - **SC-004**: 100% of existing accounts display correctly with "Não atribuído" status after feature deployment
 - **SC-005**: Users can complete the full workflow (create account with owner, view in list, filter by owner) without encountering errors or confusion
 - **SC-006**: All user-facing text appears in Brazilian Portuguese (pt-BR) with no English text visible in the feature

@@ -75,6 +75,8 @@ Single-Page Application (SPA) with cloud-powered data persistence via Supabase
 ### Key Components
 
 - `/src/components` - React UI components (shadcn/ui based)
+  - `/src/components/manage/` - Entity management (accounts, credit-cards, expenses, projects)
+  - `/src/components/ui/` - shadcn/ui primitives
 - `/src/pages` - Page-level components (Dashboard, Settings, etc.)
 - `/src/stores` - State management (Zustand stores with Supabase operations)
 - `/src/lib/supabase.ts` - Supabase client, auth helpers, error handling
@@ -129,7 +131,10 @@ family-finance/
 │   └── index.css          # Global styles (Tailwind)
 ├── supabase/
 │   └── migrations/
-│       └── 001_initial_schema.sql  # Database schema + RLS policies
+│       ├── 001_initial_schema.sql  # Database schema + RLS policies
+│       ├── 002_invite_auth.sql     # Invite-only authentication
+│       ├── 003_single_shot_expenses.sql  # One-time expenses
+│       └── 004_user_preferences.sql      # User preferences
 ├── public/                # Static assets
 ├── docs/                  # Documentation
 │   ├── CONSTITUTION.md    # This file

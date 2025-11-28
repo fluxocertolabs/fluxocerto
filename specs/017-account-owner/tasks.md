@@ -24,11 +24,9 @@
 
 **Purpose**: Database migration and type definitions
 
-- [ ] T001 Create database migration file in supabase/migrations/005_account_owner.sql
+- [ ] T001 Create database migration file in supabase/migrations/005_account_owner.sql (rename `allowed_emails` → `profiles`, add `name` column, add `owner_id` FK to accounts/credit_cards)
 - [ ] T002 Run migration via Supabase dashboard and seed profile names (Daniel, Aryane)
-- [ ] T003 [P] Add Profile type and schema to src/types/index.ts
-- [ ] T004 [P] Extend BankAccount types with owner_id and owner fields in src/types/index.ts
-- [ ] T005 [P] Extend CreditCard types with owner_id and owner fields in src/types/index.ts
+- [ ] T003 Add Profile type, extend BankAccount and CreditCard types with owner_id/owner fields in src/types/index.ts
 
 ---
 
@@ -38,10 +36,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Add profiles state and fetching to src/hooks/use-finance-data.ts
-- [ ] T007 Update accounts query to include owner join in src/hooks/use-finance-data.ts
-- [ ] T008 Update credit_cards query to include owner join in src/hooks/use-finance-data.ts
-- [ ] T009 Create OwnerBadge reusable component in src/components/ui/owner-badge.tsx
+- [ ] T004 Add profiles state and fetching to src/hooks/use-finance-data.ts
+- [ ] T005 Update accounts query to include owner join in src/hooks/use-finance-data.ts
+- [ ] T006 Update credit_cards query to include owner join in src/hooks/use-finance-data.ts
+- [ ] T007 Create OwnerBadge reusable component in src/components/ui/owner-badge.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -55,10 +53,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Update addAccount in src/stores/finance-store.ts to accept and persist ownerId
-- [ ] T011 [US1] Update addCreditCard in src/stores/finance-store.ts to accept and persist ownerId
-- [ ] T012 [US1] Add owner dropdown to bank account form in src/components/manage/accounts/account-form.tsx
-- [ ] T013 [US1] Add owner dropdown to credit card form in src/components/manage/credit-cards/credit-card-form.tsx
+- [ ] T008 [US1] Update addAccount in src/stores/finance-store.ts to accept and persist ownerId
+- [ ] T009 [US1] Update addCreditCard in src/stores/finance-store.ts to accept and persist ownerId
+- [ ] T010 [US1] Add owner dropdown to bank account form in src/components/manage/accounts/account-form.tsx
+- [ ] T011 [US1] Add owner dropdown to credit card form in src/components/manage/credit-cards/credit-card-form.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can assign owners when creating new accounts/cards
 
@@ -72,8 +70,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [P] [US2] Add OwnerBadge to account list item in src/components/manage/accounts/account-list-item.tsx
-- [ ] T015 [P] [US2] Add OwnerBadge to credit card list item in src/components/manage/credit-cards/credit-card-list-item.tsx
+- [ ] T012 [P] [US2] Add OwnerBadge to account list item in src/components/manage/accounts/account-list-item.tsx
+- [ ] T013 [P] [US2] Add OwnerBadge to credit card list item in src/components/manage/credit-cards/credit-card-list-item.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - users can assign owners and see them displayed in lists
 
@@ -87,10 +85,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Update updateAccount in src/stores/finance-store.ts to handle ownerId changes
-- [ ] T017 [US3] Update updateCreditCard in src/stores/finance-store.ts to handle ownerId changes
-- [ ] T018 [US3] Ensure account form loads existing owner value in src/components/manage/accounts/account-form.tsx
-- [ ] T019 [US3] Ensure credit card form loads existing owner value in src/components/manage/credit-cards/credit-card-form.tsx
+- [ ] T014 [US3] Update updateAccount in src/stores/finance-store.ts to handle ownerId changes
+- [ ] T015 [US3] Update updateCreditCard in src/stores/finance-store.ts to handle ownerId changes
+- [ ] T016 [US3] Ensure account form loads existing owner value in src/components/manage/accounts/account-form.tsx
+- [ ] T017 [US3] Ensure credit card form loads existing owner value in src/components/manage/credit-cards/credit-card-form.tsx
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work - users can assign, view, and edit owners
 
@@ -104,8 +102,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T020 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/accounts/account-list.tsx
-- [ ] T021 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/credit-cards/credit-card-list.tsx
+- [ ] T018 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/accounts/account-list.tsx
+- [ ] T019 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/credit-cards/credit-card-list.tsx
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -115,9 +113,9 @@
 
 **Purpose**: Validation and edge case handling
 
-- [ ] T022 Verify all UI text is in Brazilian Portuguese (pt-BR) across all modified components
-- [ ] T023 Verify existing accounts display as "Não atribuído" (unassigned) correctly
-- [ ] T024 Run quickstart.md verification checklist manually
+- [ ] T020 Verify all UI text is in Brazilian Portuguese (pt-BR): check owner dropdown labels ("Não atribuído", "Daniel", "Aryane"), filter options ("Todos"), and any error/empty states - PASS if no English text visible in owner-related UI
+- [ ] T021 Verify existing accounts display as "Não atribuído" (unassigned) correctly: create test account before migration, run migration, confirm account shows no owner badge or "Não atribuído" indicator - PASS if pre-existing accounts display correctly
+- [ ] T022 Run quickstart.md verification checklist manually
 
 ---
 
@@ -147,20 +145,10 @@
 
 ### Parallel Opportunities
 
-- T003, T004, T005 can run in parallel (different type definitions)
-- T014, T015 can run in parallel (different list item components)
-- T020, T021 can run in parallel (different list components)
+- T012, T013 can run in parallel (different list item components)
+- T018, T019 can run in parallel (different list components)
 
 ---
-
-## Parallel Example: Setup Phase
-
-```bash
-# Launch all type definition tasks together:
-Task: "Add Profile type and schema to src/types/index.ts"
-Task: "Extend BankAccount types with owner_id and owner fields in src/types/index.ts"
-Task: "Extend CreditCard types with owner_id and owner fields in src/types/index.ts"
-```
 
 ## Parallel Example: User Story 2
 
