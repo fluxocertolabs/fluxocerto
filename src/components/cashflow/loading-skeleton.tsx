@@ -1,6 +1,11 @@
 /**
  * Loading skeleton component for the dashboard.
  * Displays shimmer placeholders matching chart and summary panel shapes.
+ * 
+ * @deprecated Use `DashboardSkeleton` from `@/components/loading` instead.
+ * This component is kept for backward compatibility but will be removed in a future version.
+ * The new `DashboardSkeleton` provides the same functionality with better integration
+ * with the coordinated loading system (useCoordinatedLoading hook).
  */
 
 import { cn } from '@/lib/utils'

@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useFinanceData } from '@/hooks/use-finance-data'
+import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { useFinanceStore } from '@/stores/finance-store'
 import { AccountList } from '@/components/manage/accounts/account-list'
 import { AccountForm } from '@/components/manage/accounts/account-form'
@@ -18,6 +19,7 @@ import { ExpenseForm } from '@/components/manage/expenses/expense-form'
 import { CreditCardList } from '@/components/manage/credit-cards/credit-card-list'
 import { CreditCardForm } from '@/components/manage/credit-cards/credit-card-form'
 import { DeleteConfirmation } from '@/components/manage/shared/delete-confirmation'
+import { PageLoadingWrapper, ManageSkeleton } from '@/components/loading'
 import { cn } from '@/lib/utils'
 import type {
   BankAccount,
@@ -65,8 +67,15 @@ export function ManagePage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { accounts, projects, expenses, creditCards, isLoading } = useFinanceData()
+  const { accounts, projects, expenses, creditCards, isLoading, error: fetchError, retry } = useFinanceData()
   const store = useFinanceStore()
+
+  // Coordinated loading state for smooth transitions
+  const loadingState = useCoordinatedLoading(
+    isLoading,
+    fetchError,
+    retry
+  )
 
   const handleTabChange = (value: string) => {
     const tabValue = value as TabValue
@@ -357,20 +366,6 @@ export function ManagePage() {
     }
   }, [error])
 
-  if (isLoading) {
-    return (
-      <div className={cn('container mx-auto p-4 md:p-6 max-w-4xl')}>
-        <h1 className="text-2xl font-bold text-foreground mb-6">
-          Gerenciar Dados Financeiros
-        </h1>
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-muted rounded w-full max-w-md" />
-          <div className="h-64 bg-muted rounded" />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className={cn('container mx-auto p-4 md:p-6 max-w-4xl')}>
       <h1 className="text-2xl font-bold text-foreground mb-6">
@@ -383,97 +378,102 @@ export function ManagePage() {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <TabsList className="grid w-full sm:w-auto grid-cols-4">
-            <TabsTrigger value="accounts">Contas</TabsTrigger>
-            <TabsTrigger value="projects">Projetos</TabsTrigger>
-            <TabsTrigger value="expenses">Despesas</TabsTrigger>
-            <TabsTrigger value="cards">Cartões</TabsTrigger>
-          </TabsList>
+      <PageLoadingWrapper
+        loadingState={loadingState}
+        skeleton={<ManageSkeleton />}
+      >
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <TabsList className="grid w-full sm:w-auto grid-cols-4">
+              <TabsTrigger value="accounts">Contas</TabsTrigger>
+              <TabsTrigger value="projects">Projetos</TabsTrigger>
+              <TabsTrigger value="expenses">Despesas</TabsTrigger>
+              <TabsTrigger value="cards">Cartões</TabsTrigger>
+            </TabsList>
 
-          {activeTab === 'accounts' && (
-            <Button onClick={() => setDialogState({ type: 'add-account' })}>
-              Adicionar Conta
-            </Button>
-          )}
-          {activeTab === 'projects' && (
-            <Button onClick={() => setDialogState({ type: 'add-project' })}>
-              Adicionar Projeto
-            </Button>
-          )}
-          {activeTab === 'expenses' && (
-            <Button onClick={() => setDialogState({ type: 'add-expense' })}>
-              Adicionar Despesa
-            </Button>
-          )}
-          {activeTab === 'cards' && (
-            <Button onClick={() => setDialogState({ type: 'add-card' })}>
-              Adicionar Cartão de Crédito
-            </Button>
-          )}
-        </div>
+            {activeTab === 'accounts' && (
+              <Button onClick={() => setDialogState({ type: 'add-account' })}>
+                Adicionar Conta
+              </Button>
+            )}
+            {activeTab === 'projects' && (
+              <Button onClick={() => setDialogState({ type: 'add-project' })}>
+                Adicionar Projeto
+              </Button>
+            )}
+            {activeTab === 'expenses' && (
+              <Button onClick={() => setDialogState({ type: 'add-expense' })}>
+                Adicionar Despesa
+              </Button>
+            )}
+            {activeTab === 'cards' && (
+              <Button onClick={() => setDialogState({ type: 'add-card' })}>
+                Adicionar Cartão de Crédito
+              </Button>
+            )}
+          </div>
 
-        <TabsContent value="accounts">
-          <AccountList
-            accounts={accounts}
-            onAdd={() => setDialogState({ type: 'add-account' })}
-            onEdit={(account) => setDialogState({ type: 'edit-account', account })}
-            onDelete={(id) => {
-              const account = accounts.find((a) => a.id === id)
-              if (account) {
-                setDeleteState({ type: 'account', id, name: account.name })
-              }
-            }}
-            onUpdateBalance={handleUpdateAccountBalance}
-          />
-        </TabsContent>
+          <TabsContent value="accounts">
+            <AccountList
+              accounts={accounts}
+              onAdd={() => setDialogState({ type: 'add-account' })}
+              onEdit={(account) => setDialogState({ type: 'edit-account', account })}
+              onDelete={(id) => {
+                const account = accounts.find((a) => a.id === id)
+                if (account) {
+                  setDeleteState({ type: 'account', id, name: account.name })
+                }
+              }}
+              onUpdateBalance={handleUpdateAccountBalance}
+            />
+          </TabsContent>
 
-        <TabsContent value="projects">
-          <ProjectList
-            projects={projects}
-            onAdd={() => setDialogState({ type: 'add-project' })}
-            onEdit={(project) => setDialogState({ type: 'edit-project', project })}
-            onDelete={(id) => {
-              const project = projects.find((p) => p.id === id)
-              if (project) {
-                setDeleteState({ type: 'project', id, name: project.name })
-              }
-            }}
-            onToggleActive={handleToggleProjectActive}
-          />
-        </TabsContent>
+          <TabsContent value="projects">
+            <ProjectList
+              projects={projects}
+              onAdd={() => setDialogState({ type: 'add-project' })}
+              onEdit={(project) => setDialogState({ type: 'edit-project', project })}
+              onDelete={(id) => {
+                const project = projects.find((p) => p.id === id)
+                if (project) {
+                  setDeleteState({ type: 'project', id, name: project.name })
+                }
+              }}
+              onToggleActive={handleToggleProjectActive}
+            />
+          </TabsContent>
 
-        <TabsContent value="expenses">
-          <ExpenseList
-            expenses={expenses}
-            onAdd={() => setDialogState({ type: 'add-expense' })}
-            onEdit={(expense) => setDialogState({ type: 'edit-expense', expense })}
-            onDelete={(id) => {
-              const expense = expenses.find((e) => e.id === id)
-              if (expense) {
-                setDeleteState({ type: 'expense', id, name: expense.name })
-              }
-            }}
-            onToggleActive={handleToggleExpenseActive}
-          />
-        </TabsContent>
+          <TabsContent value="expenses">
+            <ExpenseList
+              expenses={expenses}
+              onAdd={() => setDialogState({ type: 'add-expense' })}
+              onEdit={(expense) => setDialogState({ type: 'edit-expense', expense })}
+              onDelete={(id) => {
+                const expense = expenses.find((e) => e.id === id)
+                if (expense) {
+                  setDeleteState({ type: 'expense', id, name: expense.name })
+                }
+              }}
+              onToggleActive={handleToggleExpenseActive}
+            />
+          </TabsContent>
 
-        <TabsContent value="cards">
-          <CreditCardList
-            creditCards={creditCards}
-            onAdd={() => setDialogState({ type: 'add-card' })}
-            onEdit={(card) => setDialogState({ type: 'edit-card', card })}
-            onDelete={(id) => {
-              const card = creditCards.find((c) => c.id === id)
-              if (card) {
-                setDeleteState({ type: 'card', id, name: card.name })
-              }
-            }}
-            onUpdateBalance={handleUpdateCreditCardBalance}
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="cards">
+            <CreditCardList
+              creditCards={creditCards}
+              onAdd={() => setDialogState({ type: 'add-card' })}
+              onEdit={(card) => setDialogState({ type: 'edit-card', card })}
+              onDelete={(id) => {
+                const card = creditCards.find((c) => c.id === id)
+                if (card) {
+                  setDeleteState({ type: 'card', id, name: card.name })
+                }
+              }}
+              onUpdateBalance={handleUpdateCreditCardBalance}
+            />
+          </TabsContent>
+        </Tabs>
+      </PageLoadingWrapper>
 
       {/* Account Dialog */}
       <Dialog

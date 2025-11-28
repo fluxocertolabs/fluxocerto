@@ -1,14 +1,18 @@
 /**
  * Quick Balance Update View
- * Full-screen modal for rapid balance updates
+ * Full-screen modal for rapid balance updates with smooth loading transitions.
  */
 
 import { useEffect, useCallback, useState } from 'react'
 import { useFinanceData } from '@/hooks/use-finance-data'
+import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { BalanceList } from './balance-list'
 import { QuickUpdateEmptyState } from './empty-state'
+import { ModalSkeleton } from '@/components/loading/modal-skeleton'
+import { ErrorState } from '@/components/cashflow/error-state'
+import { ERROR_MESSAGES } from '@/types/loading'
 
 interface QuickUpdateViewProps {
   /** Callback when user clicks "Done" button */
@@ -40,10 +44,17 @@ function createInitialBalances(
 
 export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
   // Fetch data to check if empty and capture initial balances
-  const { accounts, creditCards, isLoading } = useFinanceData()
+  const { accounts, creditCards, isLoading, error, retry } = useFinanceData()
+
+  // Coordinated loading state for smooth transitions
+  const loadingState = useCoordinatedLoading(
+    isLoading,
+    error,
+    retry
+  )
 
   const isEmpty =
-    !isLoading && accounts.length === 0 && creditCards.length === 0
+    !loadingState.showSkeleton && !loadingState.showError && accounts.length === 0 && creditCards.length === 0
 
   // Track whether we've captured initial balances - use lazy initialization
   const [capturedBalances, setCapturedBalances] = useState<{
@@ -52,10 +63,8 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
   }>(() => ({ captured: false, balances: new Map() }))
 
   // Capture initial balances once when data is first available
-  // Compute new state based on current state to avoid calling setState directly
-  const shouldCapture = !capturedBalances.captured && !isLoading && (accounts.length > 0 || creditCards.length > 0)
-  
-  // Use state update in effect only when necessary
+  const shouldCapture = !capturedBalances.captured && !loadingState.showSkeleton && !loadingState.showError && (accounts.length > 0 || creditCards.length > 0)
+
   useEffect(() => {
     if (shouldCapture) {
       setCapturedBalances({
@@ -120,25 +129,54 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
       {/* Content */}
       <main className="flex-1 overflow-y-auto px-4 py-6 md:px-6">
         <div className="container mx-auto max-w-2xl">
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-20 rounded-lg border border-border bg-card animate-pulse"
-                />
-              ))}
-            </div>
-          ) : isEmpty ? (
-            <QuickUpdateEmptyState onClose={onCancel} />
+          {/* Error state */}
+          {loadingState.showError ? (
+            <ErrorState
+              error={new Error(loadingState.errorMessage ?? ERROR_MESSAGES.unknown)}
+              onRetry={loadingState.retry}
+            />
           ) : (
-            <>
-              <p className="text-sm text-muted-foreground mb-6">
-                Digite seus saldos atuais. As alterações são salvas automaticamente quando
-                você passa para o próximo campo.
-              </p>
-              <BalanceList initialBalances={capturedBalances.balances} />
-            </>
+            <div
+              role="status"
+              aria-live="polite"
+              aria-busy={loadingState.showSkeleton}
+              className="relative"
+            >
+              {/* Skeleton layer */}
+              <div
+                className={cn(
+                  'transition-opacity duration-[250ms] ease-out',
+                  loadingState.showSkeleton
+                    ? 'opacity-100'
+                    : 'opacity-0 pointer-events-none absolute inset-0'
+                )}
+                aria-hidden={!loadingState.showSkeleton}
+              >
+                <ModalSkeleton />
+              </div>
+
+              {/* Content layer */}
+              <div
+                className={cn(
+                  'transition-opacity duration-[250ms] ease-out',
+                  loadingState.showSkeleton ? 'opacity-0' : 'opacity-100'
+                )}
+              >
+                {!loadingState.showSkeleton && (
+                  isEmpty ? (
+                    <QuickUpdateEmptyState onClose={onCancel} />
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-6">
+                        Digite seus saldos atuais. As alterações são salvas automaticamente quando
+                        você passa para o próximo campo.
+                      </p>
+                      <BalanceList initialBalances={capturedBalances.balances} />
+                    </>
+                  )
+                )}
+              </div>
+            </div>
           )}
         </div>
       </main>

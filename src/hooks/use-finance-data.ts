@@ -24,6 +24,8 @@ export interface UseFinanceDataReturn {
   creditCards: CreditCard[]
   isLoading: boolean
   error: string | null
+  /** Retry function for error recovery */
+  retry: () => void
 }
 
 // Helper to convert snake_case database rows to camelCase TypeScript types
@@ -84,8 +86,14 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   
   const { isAuthenticated } = useAuth()
+
+  // Retry function for error recovery
+  const retry = useCallback(() => {
+    setRetryCount((c) => c + 1)
+  }, [])
 
   // Fetch all data from Supabase
   const fetchAllData = useCallback(async () => {
@@ -261,6 +269,9 @@ export function useFinanceData(): UseFinanceDataReturn {
     let channel: RealtimeChannel | null = null
 
     async function setup() {
+      // Reset loading state on retry
+      setIsLoading(true)
+      
       // Fetch initial data
       await fetchAllData()
 
@@ -323,7 +334,7 @@ export function useFinanceData(): UseFinanceDataReturn {
         channel.unsubscribe()
       }
     }
-  }, [isAuthenticated, fetchAllData, handleAccountChange, handleProjectChange, handleExpenseChange, handleCreditCardChange])
+  }, [isAuthenticated, fetchAllData, handleAccountChange, handleProjectChange, handleExpenseChange, handleCreditCardChange, retryCount])
 
   return {
     accounts,
@@ -332,5 +343,6 @@ export function useFinanceData(): UseFinanceDataReturn {
     creditCards,
     isLoading,
     error,
+    retry,
   }
 }
