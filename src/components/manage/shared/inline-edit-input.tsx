@@ -10,8 +10,34 @@ interface InlineEditInputProps {
   /** Format function receives value in cents */
   formatDisplay: (value: number) => string
   min?: number
-  step?: number
   className?: string
+}
+
+/**
+ * Format a number string to Brazilian currency format (1.234,56)
+ */
+function formatToBRL(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  
+  const paddedDigits = digits.padStart(3, '0')
+  const cents = paddedDigits.slice(-2)
+  const reais = paddedDigits.slice(0, -2).replace(/^0+/, '') || '0'
+  const formattedReais = reais.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  
+  return `${formattedReais},${cents}`
+}
+
+/**
+ * Parse a BRL formatted string back to cents
+ */
+function parseBRLToCents(formatted: string): number {
+  const cleaned = formatted.replace(/R\$\s?/g, '').trim()
+  if (!cleaned) return 0
+  
+  const normalized = cleaned.replace(/\./g, '').replace(',', '.')
+  const num = parseFloat(normalized)
+  return isNaN(num) ? 0 : Math.round(num * 100)
 }
 
 export function InlineEditInput({
@@ -19,12 +45,14 @@ export function InlineEditInput({
   onSave,
   formatDisplay,
   min = 0,
-  step = 0.01,
   className,
 }: InlineEditInputProps) {
   const [isEditing, setIsEditing] = useState(false)
-  // Convert cents to reais for editing
-  const [editValue, setEditValue] = useState((value / 100).toFixed(2))
+  // Display value with BRL formatting
+  const [displayValue, setDisplayValue] = useState(() => {
+    const centsString = value.toString()
+    return formatToBRL(centsString)
+  })
   const [isSaving, setIsSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -35,43 +63,59 @@ export function InlineEditInput({
     }
   }, [isEditing])
 
-  // Update editValue when external value changes
+  // Update displayValue when external value changes
   useEffect(() => {
     if (!isEditing) {
-      setEditValue((value / 100).toFixed(2))
+      const centsString = value.toString()
+      setDisplayValue(formatToBRL(centsString))
     }
   }, [value, isEditing])
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value
+    const cleanedInput = rawValue.replace(/R\$\s?/g, '')
+    const digits = cleanedInput.replace(/\D/g, '')
+    
+    if (!digits) {
+      setDisplayValue('')
+      return
+    }
+    
+    setDisplayValue(formatToBRL(digits))
+  }
+
   const handleSave = async () => {
-    const numValueInReais = parseFloat(editValue)
-    if (isNaN(numValueInReais) || numValueInReais < min) {
+    const valueInCents = parseBRLToCents(displayValue)
+    
+    if (valueInCents < min * 100) {
       // Revert to original value on invalid input
-      setEditValue((value / 100).toFixed(2))
+      const centsString = value.toString()
+      setDisplayValue(formatToBRL(centsString))
       setIsEditing(false)
       return
     }
 
-    // Convert reais to cents for comparison and saving
-    const numValueInCents = Math.round(numValueInReais * 100)
-    if (numValueInCents === value) {
+    if (valueInCents === value) {
       setIsEditing(false)
       return
     }
 
     setIsSaving(true)
     try {
-      await onSave(numValueInCents)
+      await onSave(valueInCents)
       setIsEditing(false)
     } catch {
       // Revert on error
-      setEditValue((value / 100).toFixed(2))
+      const centsString = value.toString()
+      setDisplayValue(formatToBRL(centsString))
     } finally {
       setIsSaving(false)
     }
   }
 
   const handleCancel = () => {
-    setEditValue((value / 100).toFixed(2))
+    const centsString = value.toString()
+    setDisplayValue(formatToBRL(centsString))
     setIsEditing(false)
   }
 
@@ -107,19 +151,22 @@ export function InlineEditInput({
   }
 
   return (
-    <Input
-      ref={inputRef}
-      type="number"
-      value={editValue}
-      onChange={(e) => setEditValue(e.target.value)}
-      onBlur={handleSave}
-      onKeyDown={handleKeyDown}
-      min={min}
-      step={step}
-      disabled={isSaving}
-      className={cn('w-28 h-8 text-right', className)}
-      aria-label="Enter new value"
-    />
+    <div className="relative">
+      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
+        R$
+      </span>
+      <Input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={displayValue}
+        onChange={handleChange}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        disabled={isSaving}
+        className={cn('w-32 h-8 pl-8 text-right', className)}
+        aria-label="Enter new value"
+      />
+    </div>
   )
 }
-

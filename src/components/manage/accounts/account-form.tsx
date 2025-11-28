@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -103,14 +104,10 @@ export function AccountForm({
 
       <div className="grid gap-2">
         <Label htmlFor="balance">Saldo Atual</Label>
-        <Input
+        <CurrencyInput
           id="balance"
-          type="number"
-          placeholder="0,00"
           value={balance}
-          onChange={(e) => setBalance(e.target.value)}
-          min="0"
-          step="0.01"
+          onChange={setBalance}
           disabled={isSubmitting}
           aria-invalid={!!errors.balance}
           aria-describedby={errors.balance ? 'balance-error' : undefined}

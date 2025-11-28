@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CreditCardInputSchema, type CreditCard, type CreditCardInput } from '@/types'
@@ -74,14 +75,10 @@ export function CreditCardForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="statementBalance">Saldo da Fatura</Label>
-          <Input
+          <CurrencyInput
             id="statementBalance"
-            type="number"
-            placeholder="0,00"
             value={statementBalance}
-            onChange={(e) => setStatementBalance(e.target.value)}
-            min="0"
-            step="0.01"
+            onChange={setStatementBalance}
             disabled={isSubmitting}
             aria-invalid={!!errors.statementBalance}
             aria-describedby={errors.statementBalance ? 'statementBalance-error' : undefined}

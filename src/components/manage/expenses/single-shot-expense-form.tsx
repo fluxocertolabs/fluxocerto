@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SingleShotExpenseInputSchema, type SingleShotExpense } from '@/types'
@@ -82,14 +83,10 @@ export function SingleShotExpenseForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="amount">Valor</Label>
-          <Input
+          <CurrencyInput
             id="amount"
-            type="number"
-            placeholder="0,00"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            min="0.01"
-            step="0.01"
+            onChange={setAmount}
             disabled={isSubmitting}
             aria-invalid={!!errors.amount}
             aria-describedby={errors.amount ? 'amount-error' : undefined}

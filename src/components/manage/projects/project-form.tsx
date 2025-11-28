@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getISODay } from 'date-fns'
 import { Button } from '@/components/ui/button'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -439,14 +440,11 @@ export function ProjectForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="amount">Valor do Pagamento</Label>
-          <Input
+          <CurrencyInput
             id="amount"
-            type="number"
-            placeholder={frequency === 'twice-monthly' && variableAmountsEnabled ? 'Usando valores variáveis' : '0,00'}
+            placeholder={frequency === 'twice-monthly' && variableAmountsEnabled ? 'Usando valores variáveis' : undefined}
             value={frequency === 'twice-monthly' && variableAmountsEnabled ? '' : amount}
-            onChange={(e) => setAmount(e.target.value)}
-            min="0.01"
-            step="0.01"
+            onChange={setAmount}
             disabled={isSubmitting || (frequency === 'twice-monthly' && variableAmountsEnabled)}
             aria-invalid={!!errors.amount}
             aria-describedby={errors.amount ? 'amount-error' : undefined}
@@ -530,14 +528,10 @@ export function ProjectForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="firstAmount">Valor do 1º pagamento</Label>
-                <Input
+                <CurrencyInput
                   id="firstAmount"
-                  type="number"
-                  placeholder="0,00"
                   value={firstAmount}
-                  onChange={(e) => setFirstAmount(e.target.value)}
-                  min="0.01"
-                  step="0.01"
+                  onChange={setFirstAmount}
                   disabled={isSubmitting}
                   aria-invalid={!!errors.firstAmount}
                   aria-describedby={errors.firstAmount ? 'firstAmount-error' : undefined}
@@ -550,14 +544,10 @@ export function ProjectForm({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="secondAmount">Valor do 2º pagamento</Label>
-                <Input
+                <CurrencyInput
                   id="secondAmount"
-                  type="number"
-                  placeholder="0,00"
                   value={secondAmount}
-                  onChange={(e) => setSecondAmount(e.target.value)}
-                  min="0.01"
-                  step="0.01"
+                  onChange={setSecondAmount}
                   disabled={isSubmitting}
                   aria-invalid={!!errors.secondAmount}
                   aria-describedby={errors.secondAmount ? 'secondAmount-error' : undefined}
