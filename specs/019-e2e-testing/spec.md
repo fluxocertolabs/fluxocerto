@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Build a comprehensive end-to-end (E2E) testing suite for the Family Finance application that covers all critical user flows. The tests must run against an isolated test database (not production) and provide confidence that the application works correctly from a user's perspective."
 
+## Clarifications
+
+### Session 2025-11-28
+
+- Q: Which E2E testing framework should be used? → A: Playwright
+- Q: How should transient test failures be handled? → A: Playwright built-in retry with 2 retries per test
+- Q: Should edge cases be included in E2E test scope? → A: Yes, include all edge cases in main test suite
+- Q: When should database be reset for test isolation? → A: Before each test file/spec (via beforeAll hook)
+- Q: Should E2E test failures block PR merges in CI? → A: Yes, blocking (strict quality gate)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Authentication Flow Testing (Priority: P1)
@@ -154,25 +164,27 @@ A developer needs to verify that theme switching works and persists correctly.
 
 ---
 
-### Edge Cases
+### Edge Cases (In Scope)
 
-- What happens when network connection is lost during data submission?
-- How does the app handle concurrent edits from multiple tabs?
-- What happens when session expires during a long editing session?
-- How does the app behave with very large datasets (100+ accounts/expenses)?
-- What happens when Supabase realtime connection drops and reconnects?
+The following edge cases MUST be covered by the E2E test suite:
+
+- **EC-001**: Network connection lost during data submission → verify error handling and retry behavior
+- **EC-002**: Concurrent edits from multiple tabs → verify conflict resolution or last-write-wins behavior
+- **EC-003**: Session expires during long editing session → verify graceful redirect to login
+- **EC-004**: Large datasets (100+ accounts/expenses) → verify UI performance and pagination/scrolling
+- **EC-005**: Supabase realtime connection drops and reconnects → verify data sync recovery
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: Test suite MUST run against local Supabase instance (not production)
-- **FR-002**: Test suite MUST reset database state before each test run to ensure isolation
+- **FR-002**: Test suite MUST reset database state before each test file/spec (via `beforeAll` hook) to ensure isolation while maintaining reasonable execution speed
 - **FR-003**: Test suite MUST handle Magic Link authentication by capturing emails from Inbucket
 - **FR-004**: Test suite MUST provide authenticated session injection for non-auth tests to improve speed
 - **FR-005**: Test suite MUST support running in both headed (debug) and headless (CI) modes
 - **FR-006**: Test suite MUST be executable via `pnpm test:e2e` command
-- **FR-007**: Test suite MUST be runnable in GitHub Actions CI pipeline
+- **FR-007**: Test suite MUST be runnable in GitHub Actions CI pipeline as a blocking check (failures prevent PR merge)
 - **FR-008**: Test suite MUST provide seed data for consistent test scenarios
 - **FR-009**: Test suite MUST use Page Object pattern for maintainable selectors
 - **FR-010**: Test suite MUST verify all UI text is in Brazilian Portuguese (pt-BR)
@@ -180,6 +192,8 @@ A developer needs to verify that theme switching works and persists correctly.
 - **FR-012**: Test suite MUST complete full run in under 5 minutes
 - **FR-013**: Test suite MUST achieve 95%+ pass rate on repeated runs (no flaky tests)
 - **FR-014**: Test suite MUST support parallel test execution where possible
+- **FR-015**: Test suite MUST use Playwright as the E2E testing framework
+- **FR-016**: Test suite MUST configure Playwright with 2 automatic retries per test to handle transient failures
 
 ### Key Entities *(include if feature involves data)*
 
