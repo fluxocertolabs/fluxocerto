@@ -71,14 +71,28 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 4. Click **Create**
 5. **Copy the API key immediately** (it's only shown once!)
 
-## Step 4: Configure Supabase SMTP (5 minutes)
+## Step 4: Configure Supabase Settings (5 minutes)
+
+### 4.1 Configure Site URL (⚠️ Critical!)
+
+The Site URL determines the base URL used in Magic Link emails. **If this is wrong, email links will point to localhost!**
 
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
 2. Select your Family Finance project
 3. Navigate to **Project Settings** → **Authentication**
-4. Scroll down to **SMTP Settings**
-5. Toggle **Enable Custom SMTP** to ON
-6. Enter the following:
+4. Under **URL Configuration**:
+   - **Site URL**: Set to `https://financas.fflo.me`
+   - **Redirect URLs**: Add:
+     - `https://financas.fflo.me/auth/confirm`
+     - `http://localhost:5173/auth/confirm` (for local dev)
+5. Click **Save**
+
+### 4.2 Configure SMTP Settings
+
+1. Still in **Project Settings** → **Authentication**
+2. Scroll down to **SMTP Settings**
+3. Toggle **Enable Custom SMTP** to ON
+4. Enter the following:
 
 | Setting | Value |
 |---------|-------|
@@ -89,7 +103,7 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 | Sender email | `noreply@financas.fflo.me` |
 | Sender name | `Family Finance` |
 
-7. Click **Save**
+5. Click **Save**
 
 ## Step 5: Test Email Delivery (5 minutes)
 
@@ -105,6 +119,7 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 
 - **From**: Should show `noreply@financas.fflo.me`
 - **Subject**: Should be Supabase's default Magic Link subject
+- **Link**: Should point to `https://financas.fflo.me/auth/confirm?...` (NOT localhost!)
 - **Link**: Should work and complete authentication
 
 ### 5.3 Verify Local Development Unchanged
@@ -119,13 +134,28 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 - [ ] Resend account created
 - [ ] Domain `financas.fflo.me` verified in Resend
 - [ ] API key created with "Sending access" permission
+- [ ] **Site URL** set to `https://financas.fflo.me` in Supabase Dashboard
+- [ ] **Redirect URLs** include `https://financas.fflo.me/auth/confirm`
 - [ ] Supabase SMTP configured with Resend credentials
 - [ ] Production Magic Link emails delivered successfully
+- [ ] Magic Link URL in email points to `https://financas.fflo.me` (NOT localhost!)
 - [ ] Sender shows `noreply@financas.fflo.me`
 - [ ] Repository contains no secrets
 - [ ] Local development still uses Inbucket
 
 ## Troubleshooting
+
+### Magic Link Points to Localhost
+
+**Symptom**: Email arrives but the link contains `localhost` or `127.0.0.1` instead of your production domain.
+
+**Cause**: The **Site URL** in Supabase Dashboard is not configured correctly.
+
+**Fix**:
+1. Go to Supabase Dashboard → **Project Settings** → **Authentication**
+2. Under **URL Configuration**, set **Site URL** to `https://financas.fflo.me`
+3. Click **Save**
+4. Request a new Magic Link - the email should now contain the correct URL
 
 ### Email Not Arriving
 

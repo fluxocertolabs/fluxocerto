@@ -54,12 +54,16 @@ In Supabase Dashboard:
 2. **Configure Email Settings**:
    - Go to Authentication → Email Templates
    - Ensure Magic Link template is enabled
-   - Verify SITE_URL is set correctly
 
-3. **Add Redirect URL**:
-   - Go to Authentication → URL Configuration
-   - Add `http://localhost:5173/auth/confirm` to Redirect URLs
-   - Add your production URL when deploying
+3. **Configure URL Settings** (⚠️ Critical for Magic Link emails):
+   - Go to **Project Settings** → **Authentication** (or Authentication → URL Configuration)
+   - **Site URL**: Set to your production URL (e.g., `https://financas.fflo.me`)
+     - This URL is used to construct Magic Link URLs in emails
+     - If set to localhost, email links will point to localhost!
+   - **Redirect URLs**: Add all allowed callback URLs:
+     - `http://localhost:5173/auth/confirm` (local development)
+     - `https://financas.fflo.me/auth/confirm` (production)
+     - `https://your-app.vercel.app/auth/confirm` (Vercel preview deployments)
 
 ### 4. Add Allowed Emails
 
@@ -202,16 +206,25 @@ npx supabase functions logs before-user-created
 
 ## Production Deployment
 
+### ⚠️ Critical: Configure Supabase URL Settings for Production
+
+The Magic Link URLs in emails are constructed by Supabase using the **Site URL** setting. You MUST configure this correctly or email links will point to localhost.
+
+**In Supabase Dashboard → Project Settings → Authentication:**
+
+1. **Site URL** (most important!):
+   - Set to: `https://financas.fflo.me` (or your production domain)
+   - This determines the base URL in Magic Link emails
+   - If this is set to `localhost`, users will receive emails with localhost links!
+
+2. **Redirect URLs** (allow-list for auth callbacks):
+   - Add: `https://financas.fflo.me/auth/confirm`
+   - Add: `http://localhost:5173/auth/confirm` (for local dev)
+   - Add any Vercel preview URLs if needed
+
 ### Vercel Configuration
 
-Add redirect URL to Supabase:
-```
-https://your-app.vercel.app/auth/confirm
-```
-
-### Environment Variables in Vercel
-
-Same as development:
+Environment Variables in Vercel (same as development):
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
