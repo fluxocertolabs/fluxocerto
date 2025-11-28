@@ -3,7 +3,7 @@
 **Input**: Design documents from `/specs/016-investment-balance-line/`
 **Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, data-model.md ✅, quickstart.md ✅
 
-**Tests**: Not explicitly requested in specification - test tasks omitted.
+**Tests**: Unit tests added for investment calculation logic per constitution requirements (T008a, T008b).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -22,7 +22,7 @@
 - [ ] T001 [P] Add `investmentInclusiveBalance` field to `ChartDataPoint` interface in `src/components/cashflow/types.ts`
 - [ ] T002 [P] Add `LineVisibility` interface and `DEFAULT_LINE_VISIBILITY` constant in `src/components/cashflow/types.ts`
 - [ ] T003 [P] Add `LegendItem` interface for legend rendering configuration in `src/components/cashflow/types.ts`
-- [ ] T004 [P] Add `investmentInclusive` color (#06b6d4) to COLORS constant in `src/components/cashflow/cashflow-chart.tsx`
+- [ ] T004 [P] Add `investmentInclusive` color (exact hex: #06b6d4 - Tailwind cyan-500) to COLORS constant in `src/components/cashflow/cashflow-chart.tsx`
 
 ---
 
@@ -36,8 +36,10 @@
 - [ ] T006 Update `transformToChartData()` function to accept `investmentTotal` parameter in `src/hooks/use-cashflow-projection.ts`
 - [ ] T007 Add `investmentInclusiveBalance` calculation (pessimisticBalance + investmentTotal) to chart data transformation in `src/hooks/use-cashflow-projection.ts`
 - [ ] T008 Update `useCashflowProjection` hook to pass `investmentTotal` to `transformToChartData()` in `src/hooks/use-cashflow-projection.ts`
+- [ ] T008a [P] Add unit test for investment total calculation (filter type='investment', sum balances) in `src/hooks/use-cashflow-projection.test.ts`
+- [ ] T008b [P] Add unit test for `investmentInclusiveBalance` transformation (pessimisticBalance + investmentTotal) in `src/hooks/use-cashflow-projection.test.ts`
 
-**Checkpoint**: Investment balance calculation ready - chart rendering can now proceed
+**Checkpoint**: Investment balance calculation ready with test coverage - chart rendering can now proceed
 
 ---
 
@@ -105,9 +107,11 @@
 
 **Purpose**: Final cleanup and validation
 
-- [ ] T030 Verify mobile tap-to-toggle functionality works correctly
-- [ ] T031 Verify Y-axis scale remains fixed when toggling visibility (FR-010)
+- [ ] T030 Verify mobile tap-to-toggle functionality at 375px viewport width (Chrome DevTools mobile simulation), confirm tap triggers handleToggle callback and visibility state updates correctly
+- [ ] T031 Verify Y-axis scale remains fixed when toggling visibility: toggle all lines off one by one, confirm Y-axis domain min/max values remain unchanged throughout (FR-010)
 - [ ] T032 Run quickstart.md manual testing checklist validation
+- [ ] T032a Verify investment account balance updates propagate to chart via existing Supabase subscriptions (modify investment account balance in Settings, confirm chart updates without page refresh)
+- [ ] T032b Verify toggle state resets on page refresh (FR-008): hide some lines, refresh page, confirm all lines visible again
 - [ ] T033 Code cleanup - remove any console.logs or debug code
 
 ---
@@ -191,12 +195,12 @@ T026 (cashflow-chart.tsx - after T017 and T024)
 | Phase | Tasks | Estimated Time |
 |-------|-------|----------------|
 | Setup | 4 | 15 min |
-| Foundational | 4 | 30 min |
+| Foundational | 6 | 45 min |
 | User Story 1 | 5 | 45 min |
 | User Story 2 | 13 | 90 min |
 | User Story 3 | 3 | 15 min |
-| Polish | 4 | 30 min |
-| **Total** | **33** | **~4 hours** |
+| Polish | 7 | 45 min |
+| **Total** | **38** | **~4.5 hours** |
 
 ---
 
