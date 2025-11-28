@@ -12,15 +12,20 @@ import type {
   BankAccount,
   Project,
   FixedExpense,
+  SingleShotExpense,
+  Expense,
   CreditCard,
   PaymentSchedule,
 } from '@/types'
+import { isFixedExpense, isSingleShotExpense } from '@/types'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 export interface UseFinanceDataReturn {
   accounts: BankAccount[]
   projects: Project[]
-  expenses: FixedExpense[]
+  expenses: Expense[]
+  fixedExpenses: FixedExpense[]
+  singleShotExpenses: SingleShotExpense[]
   creditCards: CreditCard[]
   isLoading: boolean
   error: string | null
@@ -55,15 +60,28 @@ function mapProjectFromDb(row: ProjectRow): Project {
   }
 }
 
-function mapExpenseFromDb(row: ExpenseRow): FixedExpense {
-  return {
+function mapExpenseFromDb(row: ExpenseRow): Expense {
+  const base = {
     id: row.id,
     name: row.name,
     amount: row.amount,
-    dueDay: row.due_day,
-    isActive: row.is_active,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+  }
+
+  if (row.type === 'fixed') {
+    return {
+      ...base,
+      type: 'fixed' as const,
+      dueDay: row.due_day!,
+      isActive: row.is_active,
+    }
+  }
+
+  return {
+    ...base,
+    type: 'single_shot' as const,
+    date: new Date(row.date!),
   }
 }
 
@@ -82,13 +100,17 @@ function mapCreditCardFromDb(row: CreditCardRow): CreditCard {
 export function useFinanceData(): UseFinanceDataReturn {
   const [accounts, setAccounts] = useState<BankAccount[]>([])
   const [projects, setProjects] = useState<Project[]>([])
-  const [expenses, setExpenses] = useState<FixedExpense[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   
   const { isAuthenticated } = useAuth()
+
+  // Derive filtered expense lists
+  const fixedExpenses = expenses.filter(isFixedExpense)
+  const singleShotExpenses = expenses.filter(isSingleShotExpense)
 
   // Retry function for error recovery
   const retry = useCallback(() => {
@@ -340,6 +362,8 @@ export function useFinanceData(): UseFinanceDataReturn {
     accounts,
     projects,
     expenses,
+    fixedExpenses,
+    singleShotExpenses,
     creditCards,
     isLoading,
     error,

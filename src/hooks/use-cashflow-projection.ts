@@ -162,7 +162,8 @@ export function useCashflowProjection(
   const {
     accounts,
     projects,
-    expenses,
+    fixedExpenses,
+    singleShotExpenses,
     creditCards,
     isLoading,
     error: fetchError,
@@ -176,7 +177,8 @@ export function useCashflowProjection(
   const hasData = !isLoading && (
     accounts.length > 0 ||
     projects.length > 0 ||
-    expenses.length > 0 ||
+    fixedExpenses.length > 0 ||
+    singleShotExpenses.length > 0 ||
     creditCards.length > 0
   )
 
@@ -191,7 +193,8 @@ export function useCashflowProjection(
       const projection = calculateCashflow({
         accounts,
         projects,
-        expenses,
+        expenses: fixedExpenses,
+        singleShotExpenses,
         creditCards,
         projectionDays,
       })
@@ -202,7 +205,7 @@ export function useCashflowProjection(
         error: err instanceof Error ? err : new Error('Falha ao calcular projeção'),
       }
     }
-  }, [isLoading, accounts, projects, expenses, creditCards, projectionDays, _retryTrigger])
+  }, [isLoading, accounts, projects, fixedExpenses, singleShotExpenses, creditCards, projectionDays, _retryTrigger])
 
   // Extract projection and error from result
   const projection = calculationResult?.success ? calculationResult.projection : null

@@ -19,12 +19,12 @@
 
 **Purpose**: Database migration and type system foundation
 
-- [ ] T001 Create database migration file `supabase/migrations/003_single_shot_expenses.sql` with type discriminator column, date column, nullable due_day, constraints, and indexes
+- [X] T001 Create database migration file `supabase/migrations/003_single_shot_expenses.sql` with type discriminator column, date column, nullable due_day, constraints, and indexes
 - [ ] T002 Apply migration to local Supabase instance, verify schema changes, and confirm existing RLS policies apply to single-shot expenses (user isolation)
-- [ ] T003 [P] Add expense type discriminator enum and schemas to `src/types/index.ts` (ExpenseTypeSchema, FixedExpenseInputSchema, FixedExpenseSchema)
-- [ ] T004 [P] Add single-shot expense Zod schemas to `src/types/index.ts` (SingleShotExpenseInputSchema, SingleShotExpenseSchema)
-- [ ] T005 Add discriminated union expense schemas to `src/types/index.ts` (ExpenseInputSchema, ExpenseSchema, type guards)
-- [ ] T006 Update ExpenseRow interface in `src/lib/supabase.ts` to include type, date, and nullable due_day fields
+- [X] T003 [P] Add expense type discriminator enum and schemas to `src/types/index.ts` (ExpenseTypeSchema, FixedExpenseInputSchema, FixedExpenseSchema)
+- [X] T004 [P] Add single-shot expense Zod schemas to `src/types/index.ts` (SingleShotExpenseInputSchema, SingleShotExpenseSchema)
+- [X] T005 Add discriminated union expense schemas to `src/types/index.ts` (ExpenseInputSchema, ExpenseSchema, type guards)
+- [X] T006 Update ExpenseRow interface in `src/lib/supabase.ts` to include type, date, and nullable due_day fields
 
 ---
 
@@ -34,13 +34,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Update `mapExpenseFromDb` function in `src/hooks/use-finance-data.ts` to handle both fixed and single-shot expense types via discriminator
-- [ ] T008 Add filtered properties `fixedExpenses` and `singleShotExpenses` to `UseFinanceDataReturn` interface in `src/hooks/use-finance-data.ts`
-- [ ] T009 Implement filtering logic in `use-finance-data.ts` hook to derive `fixedExpenses` and `singleShotExpenses` from unified expenses array
-- [ ] T010 Update existing `addExpense` action in `src/stores/finance-store.ts` to explicitly set `type: 'fixed'` and `date: null` in database insert
-- [ ] T011 Add `addSingleShotExpense` action to `src/stores/finance-store.ts` per store-api.md contract
-- [ ] T012 [P] Add `updateSingleShotExpense` action to `src/stores/finance-store.ts` per store-api.md contract
-- [ ] T013 [P] Add `deleteSingleShotExpense` action to `src/stores/finance-store.ts` per store-api.md contract
+- [X] T007 Update `mapExpenseFromDb` function in `src/hooks/use-finance-data.ts` to handle both fixed and single-shot expense types via discriminator
+- [X] T008 Add filtered properties `fixedExpenses` and `singleShotExpenses` to `UseFinanceDataReturn` interface in `src/hooks/use-finance-data.ts`
+- [X] T009 Implement filtering logic in `use-finance-data.ts` hook to derive `fixedExpenses` and `singleShotExpenses` from unified expenses array
+- [X] T010 Update existing `addExpense` action in `src/stores/finance-store.ts` to explicitly set `type: 'fixed'` and `date: null` in database insert
+- [X] T011 Add `addSingleShotExpense` action to `src/stores/finance-store.ts` per store-api.md contract
+- [X] T012 [P] Add `updateSingleShotExpense` action to `src/stores/finance-store.ts` per store-api.md contract
+- [X] T013 [P] Add `deleteSingleShotExpense` action to `src/stores/finance-store.ts` per store-api.md contract
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -54,13 +54,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Create `src/components/manage/expenses/single-shot-expense-form.tsx` with name, amount (currency input), and date (date picker) fields per quickstart.md
-- [ ] T015 [US1] Add form validation for name (1-100 chars required), amount (positive integer required), and date (required) with pt-BR error messages
-- [ ] T016 [US1] Create `src/components/manage/expenses/single-shot-expense-list.tsx` component with empty state illustration, message "Nenhuma despesa pontual cadastrada", and "Adicionar Despesa Pontual" CTA
-- [ ] T017 [US1] Create `src/components/manage/expenses/expense-section.tsx` with sub-tabs "Fixas" and "Pontuais" using existing Tabs component
-- [ ] T018 [US1] Update manage page to replace direct ExpenseList usage with new ExpenseSection component
-- [ ] T019 [US1] Wire up addSingleShotExpense store action to single-shot expense form submission
-- [ ] T020 [US1] Add dialog state management for single-shot expense add form in manage page
+- [X] T014 [US1] Create `src/components/manage/expenses/single-shot-expense-form.tsx` with name, amount (currency input), and date (date picker) fields per quickstart.md
+- [X] T015 [US1] Add form validation for name (1-100 chars required), amount (positive integer required), and date (required) with pt-BR error messages
+- [X] T016 [US1] Create `src/components/manage/expenses/single-shot-expense-list.tsx` component with empty state illustration, message "Nenhuma despesa pontual cadastrada", and "Adicionar Despesa Pontual" CTA
+- [X] T017 [US1] Create `src/components/manage/expenses/expense-section.tsx` with sub-tabs "Fixas" and "Pontuais" using existing Tabs component
+- [X] T018 [US1] Update manage page to replace direct ExpenseList usage with new ExpenseSection component
+- [X] T019 [US1] Wire up addSingleShotExpense store action to single-shot expense form submission
+- [X] T020 [US1] Add dialog state management for single-shot expense add form in manage page
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -74,12 +74,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Update `ValidatedInput` interface in `src/lib/cashflow/validators.ts` to include `singleShotExpenses: SingleShotExpense[]` property
-- [ ] T022 [US2] Update `validateAndFilterInput` function in `src/lib/cashflow/validators.ts` to separate expenses by type and include all single-shot expenses (always active)
-- [ ] T023 [US2] Update `createExpenseEvents` function signature in `src/lib/cashflow/calculate.ts` to accept `singleShotExpenses` parameter
-- [ ] T024 [US2] Implement single-shot expense event generation in `createExpenseEvents` using `isSameDay` from date-fns for exact date matching
-- [ ] T025 [US2] Update all callsites of `createExpenseEvents` in `src/lib/cashflow/calculate.ts` to pass single-shot expenses
-- [ ] T026 [US2] Verify single-shot expenses appear in both optimistic and pessimistic scenarios (certain expenses per spec)
+- [X] T021 [US2] Update `ValidatedInput` interface in `src/lib/cashflow/validators.ts` to include `singleShotExpenses: SingleShotExpense[]` property
+- [X] T022 [US2] Update `validateAndFilterInput` function in `src/lib/cashflow/validators.ts` to separate expenses by type and include all single-shot expenses (always active)
+- [X] T023 [US2] Update `createExpenseEvents` function signature in `src/lib/cashflow/calculate.ts` to accept `singleShotExpenses` parameter
+- [X] T024 [US2] Implement single-shot expense event generation in `createExpenseEvents` using `isSameDay` from date-fns for exact date matching
+- [X] T025 [US2] Update all callsites of `createExpenseEvents` in `src/lib/cashflow/calculate.ts` to pass single-shot expenses
+- [X] T026 [US2] Verify single-shot expenses appear in both optimistic and pessimistic scenarios (certain expenses per spec)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -93,10 +93,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Add edit mode support to `single-shot-expense-form.tsx` with pre-populated values from existing expense
-- [ ] T028 [US3] Create `src/components/manage/expenses/single-shot-expense-list-item.tsx` with edit button, expense details display, and date formatting per quickstart.md
-- [ ] T029 [US3] Wire up updateSingleShotExpense store action to form submission in edit mode
-- [ ] T030 [US3] Add dialog state management for single-shot expense edit form in manage page
+- [X] T027 [US3] Add edit mode support to `single-shot-expense-form.tsx` with pre-populated values from existing expense
+- [X] T028 [US3] Create `src/components/manage/expenses/single-shot-expense-list-item.tsx` with edit button, expense details display, and date formatting per quickstart.md
+- [X] T029 [US3] Wire up updateSingleShotExpense store action to form submission in edit mode
+- [X] T030 [US3] Add dialog state management for single-shot expense edit form in manage page
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently
 
@@ -110,9 +110,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T031 [US4] Add delete button to `single-shot-expense-list-item.tsx` component
-- [ ] T032 [US4] Add confirmation dialog for single-shot expense deletion (consistent with existing delete patterns)
-- [ ] T033 [US4] Wire up deleteSingleShotExpense store action to delete confirmation
+- [X] T031 [US4] Add delete button to `single-shot-expense-list-item.tsx` component
+- [X] T032 [US4] Add confirmation dialog for single-shot expense deletion (consistent with existing delete patterns)
+- [X] T033 [US4] Wire up deleteSingleShotExpense store action to delete confirmation
 
 **Checkpoint**: At this point, User Stories 1-4 should all work independently
 
@@ -126,11 +126,11 @@
 
 ### Implementation for User Story 5
 
-- [ ] T034 [US5] Add `getExpenseStatus` helper function in `single-shot-expense-list-item.tsx` returning 'past' | 'today' | 'future' based on date comparison
-- [ ] T035 [US5] Implement chronological sorting in `single-shot-expense-list.tsx` (sort by date ascending)
-- [ ] T036 [US5] Add visual styling for past expenses (muted opacity, "Vencido" badge) in `single-shot-expense-list-item.tsx`
-- [ ] T037 [US5] Add "Hoje" badge with accent styling for today's expenses in `single-shot-expense-list-item.tsx`
-- [ ] T038 [US5] Add formatted date display using date-fns `format` with pt-BR locale ("d 'de' MMMM 'de' yyyy")
+- [X] T034 [US5] Add `getExpenseStatus` helper function in `single-shot-expense-list-item.tsx` returning 'past' | 'today' | 'future' based on date comparison
+- [X] T035 [US5] Implement chronological sorting in `single-shot-expense-list.tsx` (sort by date ascending)
+- [X] T036 [US5] Add visual styling for past expenses (muted opacity, "Vencido" badge) in `single-shot-expense-list-item.tsx`
+- [X] T037 [US5] Add "Hoje" badge with accent styling for today's expenses in `single-shot-expense-list-item.tsx`
+- [X] T038 [US5] Add formatted date display using date-fns `format` with pt-BR locale ("d 'de' MMMM 'de' yyyy")
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -140,9 +140,9 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T039 [P] Run quickstart.md verification steps (database, typecheck, lint)
+- [X] T039 [P] Run quickstart.md verification steps (database, typecheck, lint)
 - [ ] T040 [P] Verify realtime updates work for single-shot expenses (insert, update, delete) - covers edge case "deleted while viewing cashflow"
-- [ ] T041 Verify existing fixed expenses still work correctly after migration (backward compatibility)
+- [X] T041 Verify existing fixed expenses still work correctly after migration (backward compatibility)
 - [ ] T042 [P] Verify single-shot expenses appear in cashflow chart tooltip with correct name and amount formatting (FR-013)
 - [ ] T043 Manual end-to-end testing of all user stories per spec acceptance scenarios
 

@@ -146,11 +146,18 @@ export const ProjectSchema = ProjectInputBaseSchema.extend({
 export type ProjectInput = z.infer<typeof ProjectInputSchema>
 export type Project = z.infer<typeof ProjectSchema>
 
+// === Expense Types ===
+
+// Expense type discriminator
+export const ExpenseTypeSchema = z.enum(['fixed', 'single_shot'])
+export type ExpenseType = z.infer<typeof ExpenseTypeSchema>
+
 // === Fixed Expense ===
 export const FixedExpenseInputSchema = z.object({
-  name: z.string().min(1, 'Expense name is required').max(100),
-  amount: z.number().positive('Amount must be positive'),
-  dueDay: z.number().int().min(1).max(31, 'Due day must be 1-31'),
+  type: z.literal('fixed'),
+  name: z.string().min(1, 'Nome da despesa é obrigatório').max(100),
+  amount: z.number().positive('Valor deve ser positivo'),
+  dueDay: z.number().int().min(1).max(31, 'Dia deve ser entre 1 e 31'),
   isActive: z.boolean().default(true),
 })
 
@@ -162,6 +169,46 @@ export const FixedExpenseSchema = FixedExpenseInputSchema.extend({
 
 export type FixedExpenseInput = z.infer<typeof FixedExpenseInputSchema>
 export type FixedExpense = z.infer<typeof FixedExpenseSchema>
+
+// === Single-Shot Expense ===
+export const SingleShotExpenseInputSchema = z.object({
+  type: z.literal('single_shot'),
+  name: z.string().min(1, 'Nome da despesa é obrigatório').max(100),
+  amount: z.number().positive('Valor deve ser positivo'),
+  date: z.coerce.date(),
+})
+
+export const SingleShotExpenseSchema = SingleShotExpenseInputSchema.extend({
+  id: z.string().uuid(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type SingleShotExpenseInput = z.infer<typeof SingleShotExpenseInputSchema>
+export type SingleShotExpense = z.infer<typeof SingleShotExpenseSchema>
+
+// === Unified Expense Types ===
+export const ExpenseInputSchema = z.discriminatedUnion('type', [
+  FixedExpenseInputSchema,
+  SingleShotExpenseInputSchema,
+])
+
+export const ExpenseSchema = z.discriminatedUnion('type', [
+  FixedExpenseSchema,
+  SingleShotExpenseSchema,
+])
+
+export type ExpenseInput = z.infer<typeof ExpenseInputSchema>
+export type Expense = z.infer<typeof ExpenseSchema>
+
+// Type guards for filtering
+export function isFixedExpense(expense: Expense): expense is FixedExpense {
+  return expense.type === 'fixed'
+}
+
+export function isSingleShotExpense(expense: Expense): expense is SingleShotExpense {
+  return expense.type === 'single_shot'
+}
 
 // === Credit Card ===
 export const CreditCardInputSchema = z.object({

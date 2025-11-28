@@ -80,6 +80,7 @@ function createTestExpense(overrides: Partial<{
 }> = {}) {
   return {
     id: overrides.id ?? crypto.randomUUID(),
+    type: 'fixed' as const,
     name: overrides.name ?? 'Test Expense',
     amount: overrides.amount ?? 30000, // $300
     dueDay: overrides.dueDay ?? 1,

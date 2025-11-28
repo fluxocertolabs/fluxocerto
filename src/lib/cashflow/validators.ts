@@ -10,6 +10,7 @@ import type {
   BankAccount,
   CreditCard,
   FixedExpense,
+  SingleShotExpense,
   Project,
 } from '../../types'
 import { CashflowCalculationError, CashflowErrorCode } from './types'
@@ -78,6 +79,7 @@ export const ProjectEngineSchema = z.object({
  */
 export const FixedExpenseEngineSchema = z.object({
   id: z.string(),
+  type: z.literal('fixed'),
   name: z.string(),
   amount: z.number().positive('Amount must be positive'),
   dueDay: z.number().int().min(1).max(31, 'Due day must be 1-31'),
@@ -106,6 +108,7 @@ export interface CashflowEngineInput {
   accounts: BankAccount[]
   projects: Project[]
   expenses: FixedExpense[]
+  singleShotExpenses?: SingleShotExpense[]
   creditCards: CreditCard[]
   /** Shorthand for options.projectionDays (takes precedence) */
   projectionDays?: number
@@ -121,6 +124,7 @@ export interface ValidatedInput {
   activeProjects: Project[]
   guaranteedProjects: Project[]
   activeExpenses: FixedExpense[]
+  singleShotExpenses: SingleShotExpense[]
   creditCards: CreditCard[]
   options: ValidatedOptions
 }
@@ -221,6 +225,7 @@ export function validateAndFilterInput(input: CashflowEngineInput): ValidatedInp
     activeProjects,
     guaranteedProjects,
     activeExpenses,
+    singleShotExpenses: input.singleShotExpenses ?? [],
     creditCards: input.creditCards,
     options: optionsResult.data,
   }

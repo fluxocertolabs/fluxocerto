@@ -39,7 +39,9 @@ export interface ExpenseRow {
   id: string
   name: string
   amount: number
-  due_day: number
+  type: 'fixed' | 'single_shot'
+  due_day: number | null      // Present for fixed, null for single_shot
+  date: string | null         // ISO date string, present for single_shot, null for fixed
   is_active: boolean
   created_at: string
   updated_at: string

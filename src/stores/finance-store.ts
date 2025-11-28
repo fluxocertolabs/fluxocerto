@@ -10,10 +10,12 @@ import {
   ProjectInputSchema,
   FixedExpenseInputSchema,
   CreditCardInputSchema,
+  SingleShotExpenseInputSchema,
   type BankAccountInput,
   type ProjectInput,
   type FixedExpenseInput,
   type CreditCardInput,
+  type SingleShotExpenseInput,
 } from '../types'
 
 // Result type for explicit error handling
@@ -48,6 +50,14 @@ interface FinanceStore {
   ) => Promise<Result<void>>
   deleteExpense: (id: string) => Promise<Result<void>>
   toggleExpenseActive: (id: string) => Promise<Result<void>>
+
+  // Single-Shot Expense Actions
+  addSingleShotExpense: (input: SingleShotExpenseInput) => Promise<Result<string>>
+  updateSingleShotExpense: (
+    id: string,
+    input: Partial<Omit<SingleShotExpenseInput, 'type'>>
+  ) => Promise<Result<void>>
+  deleteSingleShotExpense: (id: string) => Promise<Result<void>>
 
   // Credit Card Actions
   addCreditCard: (input: CreditCardInput) => Promise<Result<string>>
@@ -309,7 +319,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         .insert({
           name: validated.name,
           amount: validated.amount,
+          type: 'fixed',
           due_day: validated.dueDay,
+          date: null,
           is_active: validated.isActive,
         })
         .select('id')
@@ -409,6 +421,92 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
       if (updateError) {
         return handleSupabaseError(updateError)
+      }
+
+      return { success: true, data: undefined }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  // === Single-Shot Expense Actions ===
+  addSingleShotExpense: async (input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
+    try {
+      const validated = SingleShotExpenseInputSchema.parse(input)
+
+      const { data, error } = await getSupabase()
+        .from('expenses')
+        .insert({
+          name: validated.name,
+          amount: validated.amount,
+          type: 'single_shot',
+          date: validated.date.toISOString().split('T')[0],
+          due_day: null,
+          is_active: true,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      return { success: true, data: data.id }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  updateSingleShotExpense: async (id, input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
+    try {
+      const updateData: Record<string, unknown> = {}
+      if (input.name !== undefined) updateData.name = input.name
+      if (input.amount !== undefined) updateData.amount = input.amount
+      if (input.date !== undefined) updateData.date = input.date.toISOString().split('T')[0]
+
+      const { error, count } = await getSupabase()
+        .from('expenses')
+        .update(updateData)
+        .eq('id', id)
+        .eq('type', 'single_shot')
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
+        return { success: false, error: 'Despesa não encontrada' }
+      }
+
+      return { success: true, data: undefined }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  deleteSingleShotExpense: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
+    try {
+      const { error, count } = await getSupabase()
+        .from('expenses')
+        .delete()
+        .eq('id', id)
+        .eq('type', 'single_shot')
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
+        return { success: false, error: 'Despesa não encontrada' }
       }
 
       return { success: true, data: undefined }

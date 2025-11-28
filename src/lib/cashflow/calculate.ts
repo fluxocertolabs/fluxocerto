@@ -6,7 +6,8 @@
  */
 
 import { addDays, startOfDay } from 'date-fns'
-import type { BankAccount, CreditCard, FixedExpense, Project } from '../../types'
+import type { BankAccount, CreditCard, FixedExpense, SingleShotExpense, Project } from '../../types'
+import { isSameDay } from 'date-fns'
 import {
   isMonthlyPaymentDue,
   isBiweeklyPaymentDue,
@@ -172,6 +173,27 @@ function createFixedExpenseEvents(date: Date, expenses: FixedExpense[]): Expense
 
   for (const expense of expenses) {
     if (isMonthlyPaymentDue(date, expense.dueDay)) {
+      events.push({
+        sourceId: expense.id,
+        sourceName: expense.name,
+        sourceType: 'expense',
+        amount: expense.amount,
+      })
+    }
+  }
+
+  return events
+}
+
+/**
+ * Create expense events for a specific day from single-shot expenses.
+ * Single-shot expenses occur on their exact date.
+ */
+function createSingleShotExpenseEvents(date: Date, expenses: SingleShotExpense[]): ExpenseEvent[] {
+  const events: ExpenseEvent[] = []
+
+  for (const expense of expenses) {
+    if (isSameDay(expense.date, date)) {
       events.push({
         sourceId: expense.id,
         sourceName: expense.name,
@@ -351,8 +373,9 @@ export function calculateCashflow(input: CashflowEngineInput): CashflowProjectio
 
     // Create expense events (same for both scenarios)
     const fixedExpenseEvents = createFixedExpenseEvents(date, validated.activeExpenses)
+    const singleShotExpenseEvents = createSingleShotExpenseEvents(date, validated.singleShotExpenses)
     const creditCardEvents = createCreditCardEvents(date, validated.creditCards)
-    const expenseEvents = [...fixedExpenseEvents, ...creditCardEvents]
+    const expenseEvents = [...fixedExpenseEvents, ...singleShotExpenseEvents, ...creditCardEvents]
 
     // Calculate daily totals
     const optimisticIncome = calculateOptimisticIncome(allIncomeEvents)

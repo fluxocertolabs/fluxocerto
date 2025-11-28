@@ -14,8 +14,9 @@ import { AccountList } from '@/components/manage/accounts/account-list'
 import { AccountForm } from '@/components/manage/accounts/account-form'
 import { ProjectList } from '@/components/manage/projects/project-list'
 import { ProjectForm } from '@/components/manage/projects/project-form'
-import { ExpenseList } from '@/components/manage/expenses/expense-list'
 import { ExpenseForm } from '@/components/manage/expenses/expense-form'
+import { ExpenseSection } from '@/components/manage/expenses/expense-section'
+import { SingleShotExpenseForm } from '@/components/manage/expenses/single-shot-expense-form'
 import { CreditCardList } from '@/components/manage/credit-cards/credit-card-list'
 import { CreditCardForm } from '@/components/manage/credit-cards/credit-card-form'
 import { DeleteConfirmation } from '@/components/manage/shared/delete-confirmation'
@@ -28,6 +29,7 @@ import type {
   ProjectInput,
   FixedExpense,
   FixedExpenseInput,
+  SingleShotExpense,
   CreditCard,
   CreditCardInput,
 } from '@/types'
@@ -42,6 +44,8 @@ type DialogState =
   | { type: 'edit-project'; project: Project }
   | { type: 'add-expense' }
   | { type: 'edit-expense'; expense: FixedExpense }
+  | { type: 'add-single-shot-expense' }
+  | { type: 'edit-single-shot-expense'; expense: SingleShotExpense }
   | { type: 'add-card' }
   | { type: 'edit-card'; card: CreditCard }
 
@@ -50,6 +54,7 @@ type DeleteState =
   | { type: 'account'; id: string; name: string }
   | { type: 'project'; id: string; name: string }
   | { type: 'expense'; id: string; name: string }
+  | { type: 'single-shot-expense'; id: string; name: string }
   | { type: 'card'; id: string; name: string }
 
 export function ManagePage() {
@@ -67,7 +72,7 @@ export function ManagePage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { accounts, projects, expenses, creditCards, isLoading, error: fetchError, retry } = useFinanceData()
+  const { accounts, projects, fixedExpenses, singleShotExpenses, creditCards, isLoading, error: fetchError, retry } = useFinanceData()
   const store = useFinanceStore()
 
   // Coordinated loading state for smooth transitions
@@ -281,6 +286,65 @@ export function ManagePage() {
     }
   }
 
+  // Single-shot expense handlers
+  const handleAddSingleShotExpense = async (data: { name: string; amount: number; date: Date }) => {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const result = await store.addSingleShotExpense({
+        type: 'single_shot',
+        ...data,
+      })
+      if (result.success) {
+        closeDialog()
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado')
+      console.error('Failed to add single-shot expense:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleUpdateSingleShotExpense = async (id: string, data: { name: string; amount: number; date: Date }) => {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const result = await store.updateSingleShotExpense(id, data)
+      if (result.success) {
+        closeDialog()
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado')
+      console.error('Failed to update single-shot expense:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteSingleShotExpense = async () => {
+    if (deleteState.type !== 'single-shot-expense') return
+    setIsDeleting(true)
+    setError(null)
+    try {
+      const result = await store.deleteSingleShotExpense(deleteState.id)
+      if (result.success) {
+        closeDeleteDialog()
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado')
+      console.error('Failed to delete single-shot expense:', err)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   // Credit card handlers
   const handleAddCreditCard = async (data: CreditCardInput) => {
     setIsSubmitting(true)
@@ -353,6 +417,8 @@ export function ManagePage() {
         return handleDeleteProject()
       case 'expense':
         return handleDeleteExpense()
+      case 'single-shot-expense':
+        return handleDeleteSingleShotExpense()
       case 'card':
         return handleDeleteCreditCard()
     }
@@ -401,11 +467,7 @@ export function ManagePage() {
                 Adicionar Projeto
               </Button>
             )}
-            {activeTab === 'expenses' && (
-              <Button onClick={() => setDialogState({ type: 'add-expense' })}>
-                Adicionar Despesa
-              </Button>
-            )}
+            {/* Expenses add button removed - handled inside ExpenseSection tabs */}
             {activeTab === 'cards' && (
               <Button onClick={() => setDialogState({ type: 'add-card' })}>
                 Adicionar Cartão de Crédito
@@ -444,17 +506,26 @@ export function ManagePage() {
           </TabsContent>
 
           <TabsContent value="expenses">
-            <ExpenseList
-              expenses={expenses}
-              onAdd={() => setDialogState({ type: 'add-expense' })}
-              onEdit={(expense) => setDialogState({ type: 'edit-expense', expense })}
-              onDelete={(id) => {
-                const expense = expenses.find((e) => e.id === id)
+            <ExpenseSection
+              fixedExpenses={fixedExpenses}
+              singleShotExpenses={singleShotExpenses}
+              onAddFixed={() => setDialogState({ type: 'add-expense' })}
+              onAddSingleShot={() => setDialogState({ type: 'add-single-shot-expense' })}
+              onEditFixed={(expense) => setDialogState({ type: 'edit-expense', expense })}
+              onEditSingleShot={(expense) => setDialogState({ type: 'edit-single-shot-expense', expense })}
+              onDeleteFixed={(id) => {
+                const expense = fixedExpenses.find((e) => e.id === id)
                 if (expense) {
                   setDeleteState({ type: 'expense', id, name: expense.name })
                 }
               }}
-              onToggleActive={handleToggleExpenseActive}
+              onDeleteSingleShot={(id) => {
+                const expense = singleShotExpenses.find((e) => e.id === id)
+                if (expense) {
+                  setDeleteState({ type: 'single-shot-expense', id, name: expense.name })
+                }
+              }}
+              onToggleFixedActive={handleToggleExpenseActive}
             />
           </TabsContent>
 
@@ -553,6 +624,32 @@ export function ManagePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Single-Shot Expense Dialog */}
+      <Dialog
+        open={dialogState.type === 'add-single-shot-expense' || dialogState.type === 'edit-single-shot-expense'}
+        onOpenChange={(open) => !open && closeDialog()}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dialogState.type === 'edit-single-shot-expense' ? 'Editar Despesa Pontual' : 'Adicionar Despesa Pontual'}
+            </DialogTitle>
+          </DialogHeader>
+          <SingleShotExpenseForm
+            expense={dialogState.type === 'edit-single-shot-expense' ? dialogState.expense : undefined}
+            onSubmit={async (data) => {
+              if (dialogState.type === 'edit-single-shot-expense') {
+                await handleUpdateSingleShotExpense(dialogState.expense.id, data)
+              } else {
+                await handleAddSingleShotExpense(data)
+              }
+            }}
+            onCancel={closeDialog}
+            isSubmitting={isSubmitting}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Credit Card Dialog */}
       <Dialog
         open={dialogState.type === 'add-card' || dialogState.type === 'edit-card'}
@@ -590,10 +687,12 @@ export function ManagePage() {
             : deleteState.type === 'project'
               ? 'Projeto'
               : deleteState.type === 'expense'
-                ? 'Despesa'
-                : deleteState.type === 'card'
-                  ? 'Cartão de Crédito'
-                  : ''
+                ? 'Despesa Fixa'
+                : deleteState.type === 'single-shot-expense'
+                  ? 'Despesa Pontual'
+                  : deleteState.type === 'card'
+                    ? 'Cartão de Crédito'
+                    : ''
         }
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
