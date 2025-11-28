@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { formatChartCurrency } from '@/lib/format'
 import type { ChartDataPoint, DangerRange } from './types'
 import { ChartTooltip } from './chart-tooltip'
+import { useThemeStore } from '@/stores/theme-store'
 
 // Color constants from spec
 const COLORS = {
@@ -25,12 +26,21 @@ const COLORS = {
   danger: '#ef4444', // red-500
 } as const
 
+// Axis tick colors per theme (muted-foreground equivalent)
+const AXIS_COLORS = {
+  light: 'hsl(0 0% 45.1%)', // --muted-foreground light
+  dark: 'hsl(240 5% 64.9%)', // --muted-foreground dark
+} as const
+
 interface CashflowChartProps {
   chartData: ChartDataPoint[]
   dangerRanges: DangerRange[]
 }
 
 export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
+  const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
+  const axisColor = AXIS_COLORS[resolvedTheme]
+
   // Calculate appropriate Y-axis domain with padding
   // Handle empty data case with sensible defaults
   const balances = chartData.flatMap((d) => [d.optimisticBalance, d.pessimisticBalance])
@@ -72,7 +82,7 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
               dataKey="date"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tick={{ fill: axisColor, fontSize: 12 }}
               interval={xAxisInterval}
               dy={10}
             />
@@ -80,7 +90,7 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
               tickFormatter={formatChartCurrency}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tick={{ fill: axisColor, fontSize: 12 }}
               width={60}
               domain={[yMin, yMax]}
             />
