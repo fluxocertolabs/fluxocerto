@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import type { BankAccount, Profile } from '@/types'
 import { EntityEmptyState } from '@/components/manage/shared/entity-empty-state'
-import { AccountListItem } from './account-list-item'
+import { AccountCard } from './account-card'
 import {
   Select,
   SelectContent,
@@ -61,23 +61,23 @@ export function AccountList({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        {filteredAccounts.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            Nenhuma conta encontrada para este filtro.
-          </p>
-        ) : (
-          filteredAccounts.map((account) => (
-            <AccountListItem
+      {filteredAccounts.length === 0 ? (
+        <p className="text-center text-muted-foreground py-8">
+          Nenhuma conta encontrada para este filtro.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredAccounts.map((account) => (
+            <AccountCard
               key={account.id}
               account={account}
               onEdit={() => onEdit(account)}
               onDelete={() => onDelete(account.id)}
               onUpdateBalance={async (balance) => onUpdateBalance(account.id, balance)}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import type { CreditCard, Profile } from '@/types'
 import { EntityEmptyState } from '@/components/manage/shared/entity-empty-state'
-import { CreditCardListItem } from './credit-card-list-item'
+import { CreditCardCard } from './credit-card-card'
 import {
   Select,
   SelectContent,
@@ -61,23 +61,23 @@ export function CreditCardList({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        {filteredCards.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            Nenhum cartão encontrado para este filtro.
-          </p>
-        ) : (
-          filteredCards.map((card) => (
-            <CreditCardListItem
+      {filteredCards.length === 0 ? (
+        <p className="text-center text-muted-foreground py-8">
+          Nenhum cartão encontrado para este filtro.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredCards.map((card) => (
+            <CreditCardCard
               key={card.id}
               card={card}
               onEdit={() => onEdit(card)}
               onDelete={() => onDelete(card.id)}
               onUpdateBalance={async (balance) => onUpdateBalance(card.id, balance)}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
