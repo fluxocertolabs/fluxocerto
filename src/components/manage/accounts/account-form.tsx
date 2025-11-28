@@ -109,15 +109,15 @@ export function AccountForm({
       <div className="grid gap-2">
         <Label htmlFor="owner">Proprietário</Label>
         <Select
-          value={ownerId ?? ''}
-          onValueChange={(value) => setOwnerId(value === '' ? null : value)}
+          value={ownerId ?? 'unassigned'}
+          onValueChange={(value) => setOwnerId(value === 'unassigned' ? null : value)}
           disabled={isSubmitting}
         >
           <SelectTrigger id="owner">
             <SelectValue placeholder="Selecione o proprietário" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Não atribuído</SelectItem>
+            <SelectItem value="unassigned">Não atribuído</SelectItem>
             {profiles.map((profile) => (
               <SelectItem key={profile.id} value={profile.id}>
                 {profile.name}
