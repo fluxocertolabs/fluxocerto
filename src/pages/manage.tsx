@@ -518,7 +518,7 @@ export function ManagePage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <TabsList className="grid w-full sm:w-auto grid-cols-4">
               <TabsTrigger value="accounts">Contas</TabsTrigger>
-              <TabsTrigger value="projects">Projetos</TabsTrigger>
+              <TabsTrigger value="projects">Receitas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
               <TabsTrigger value="cards">Cartões</TabsTrigger>
             </TabsList>
