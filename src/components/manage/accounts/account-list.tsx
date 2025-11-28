@@ -47,7 +47,7 @@ export function AccountList({
           onValueChange={(value) => setOwnerFilter(value === 'all' ? null : value)}
         >
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filtrar por proprietário" />
+            <SelectValue placeholder="Filtrar" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>

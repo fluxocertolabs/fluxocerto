@@ -107,14 +107,14 @@ export function AccountForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="owner">Proprietário</Label>
+        <Label htmlFor="owner">Dono</Label>
         <Select
           value={ownerId ?? 'unassigned'}
           onValueChange={(value) => setOwnerId(value === 'unassigned' ? null : value)}
           disabled={isSubmitting}
         >
           <SelectTrigger id="owner">
-            <SelectValue placeholder="Selecione o proprietário" />
+            <SelectValue placeholder="Selecione" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="unassigned">Não atribuído</SelectItem>
