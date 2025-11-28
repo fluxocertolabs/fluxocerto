@@ -79,7 +79,7 @@ export function HealthIndicator({
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-full',
             'bg-amber-500/20 text-amber-700 hover:bg-amber-500/30',
-            'text-sm font-medium transition-colors',
+            'text-sm font-medium transition-colors cursor-pointer',
             'focus:outline-none focus:ring-2 focus:ring-amber-500/50'
           )}
         >

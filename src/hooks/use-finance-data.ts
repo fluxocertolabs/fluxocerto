@@ -260,9 +260,9 @@ export function useFinanceData(): UseFinanceDataReturn {
     }
 
     // Only fetch data when authenticated
+    // Don't set error for unauthenticated state - just keep loading
+    // The auth flow will redirect to login if truly unauthenticated
     if (!isAuthenticated) {
-      setIsLoading(false)
-      setError('Not authenticated')
       return
     }
 

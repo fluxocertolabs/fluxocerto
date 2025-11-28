@@ -21,7 +21,7 @@ export function Header() {
       <nav className="container mx-auto flex items-center justify-between h-14 px-4">
         <Link
           to="/"
-          className="font-semibold text-lg text-foreground hover:text-foreground/80 transition-colors"
+          className="font-semibold text-lg text-foreground hover:text-foreground/80 transition-colors cursor-pointer"
         >
           Finanças da Família
         </Link>
@@ -31,7 +31,7 @@ export function Header() {
             end
             className={({ isActive }) =>
               cn(
-                'text-sm font-medium transition-colors hover:text-foreground',
+                'text-sm font-medium transition-colors hover:text-foreground cursor-pointer',
                 isActive ? 'text-foreground' : 'text-muted-foreground'
               )
             }
@@ -42,7 +42,7 @@ export function Header() {
             to="/manage"
             className={({ isActive }) =>
               cn(
-                'text-sm font-medium transition-colors hover:text-foreground',
+                'text-sm font-medium transition-colors hover:text-foreground cursor-pointer',
                 isActive ? 'text-foreground' : 'text-muted-foreground'
               )
             }
