@@ -42,15 +42,20 @@ export function SingleShotExpenseList({
   )
 
   return (
-    <div className="space-y-2">
-      {sortedExpenses.map((expense) => (
-        <SingleShotExpenseListItem
-          key={expense.id}
-          expense={expense}
-          onEdit={() => onEdit(expense)}
-          onDelete={() => onDelete(expense.id)}
-        />
-      ))}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        {sortedExpenses.map((expense) => (
+          <SingleShotExpenseListItem
+            key={expense.id}
+            expense={expense}
+            onEdit={() => onEdit(expense)}
+            onDelete={() => onDelete(expense.id)}
+          />
+        ))}
+      </div>
+      <Button onClick={onAdd} variant="outline" className="w-full">
+        Adicionar Despesa Pontual
+      </Button>
     </div>
   )
 }

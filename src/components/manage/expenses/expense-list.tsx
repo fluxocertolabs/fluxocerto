@@ -1,4 +1,5 @@
 import type { FixedExpense } from '@/types'
+import { Button } from '@/components/ui/button'
 import { EntityEmptyState } from '@/components/manage/shared/entity-empty-state'
 import { ExpenseListItem } from './expense-list-item'
 
@@ -22,16 +23,21 @@ export function ExpenseList({
   }
 
   return (
-    <div className="space-y-2">
-      {expenses.map((expense) => (
-        <ExpenseListItem
-          key={expense.id}
-          expense={expense}
-          onEdit={() => onEdit(expense)}
-          onDelete={() => onDelete(expense.id)}
-          onToggleActive={() => onToggleActive(expense.id)}
-        />
-      ))}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        {expenses.map((expense) => (
+          <ExpenseListItem
+            key={expense.id}
+            expense={expense}
+            onEdit={() => onEdit(expense)}
+            onDelete={() => onDelete(expense.id)}
+            onToggleActive={() => onToggleActive(expense.id)}
+          />
+        ))}
+      </div>
+      <Button onClick={onAdd} variant="outline" className="w-full">
+        Adicionar Despesa Fixa
+      </Button>
     </div>
   )
 }
