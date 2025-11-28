@@ -18,8 +18,9 @@ export function CreditCardForm({
   isSubmitting,
 }: CreditCardFormProps) {
   const [name, setName] = useState(card?.name ?? '')
+  // Convert cents to reais for display/editing
   const [statementBalance, setStatementBalance] = useState(
-    card?.statementBalance?.toString() ?? ''
+    card?.statementBalance ? (card.statementBalance / 100).toFixed(2) : ''
   )
   const [dueDay, setDueDay] = useState(card?.dueDay?.toString() ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -30,7 +31,8 @@ export function CreditCardForm({
 
     const formData = {
       name: name.trim(),
-      statementBalance: parseFloat(statementBalance) || 0,
+      // Convert reais to cents for storage
+      statementBalance: Math.round((parseFloat(statementBalance) || 0) * 100),
       dueDay: parseInt(dueDay, 10) || 0,
     }
 

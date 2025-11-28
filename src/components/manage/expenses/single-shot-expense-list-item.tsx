@@ -10,13 +10,14 @@ interface SingleShotExpenseListItemProps {
   onDelete: () => void
 }
 
-function formatCurrency(value: number): string {
-  const lang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'pt-BR'
-  return new Intl.NumberFormat(lang, {
+function formatCurrency(cents: number): string {
+  // Convert cents to reais for display
+  const reais = cents / 100
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
-  }).format(value)
+  }).format(reais)
 }
 
 export function getExpenseStatus(date: Date): 'past' | 'today' | 'future' {

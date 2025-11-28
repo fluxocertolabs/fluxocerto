@@ -1,10 +1,10 @@
 /**
  * Currency and date formatting utilities for the dashboard.
- * Uses browser locale for currency formatting per spec requirements.
+ * Uses Portuguese locale for consistent display.
  */
 
 /**
- * Format cents as currency using browser locale.
+ * Format cents as currency.
  * Handles edge cases: large numbers with abbreviations, decimal precision.
  *
  * @param cents - Amount in cents (integer)
@@ -16,7 +16,7 @@ export function formatCurrency(cents: number): string {
   // For very large numbers, use abbreviations
   if (Math.abs(reais) >= 1_000_000) {
     const millions = reais / 1_000_000
-    return new Intl.NumberFormat(navigator.language, {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
       minimumFractionDigits: 1,
@@ -28,7 +28,7 @@ export function formatCurrency(cents: number): string {
 
   if (Math.abs(reais) >= 10_000) {
     const thousands = reais / 1_000
-    return new Intl.NumberFormat(navigator.language, {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
       minimumFractionDigits: 1,
@@ -39,7 +39,7 @@ export function formatCurrency(cents: number): string {
   }
 
   // Standard formatting without cents for whole amounts
-  return new Intl.NumberFormat(navigator.language, {
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 0,
@@ -75,7 +75,7 @@ export function formatChartCurrency(reais: number): string {
 export function formatCurrencyWithCents(cents: number): string {
   const reais = cents / 100
 
-  return new Intl.NumberFormat(navigator.language, {
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
@@ -85,12 +85,13 @@ export function formatCurrencyWithCents(cents: number): string {
 
 /**
  * Format date for chart X-axis labels.
+ * Uses Portuguese locale for consistent display.
  *
  * @param date - Date object
- * @returns Short date string (e.g., "Nov 26")
+ * @returns Short date string in Portuguese (e.g., "26 nov.")
  */
 export function formatChartDate(date: Date): string {
-  return new Intl.DateTimeFormat(navigator.language, {
+  return new Intl.DateTimeFormat('pt-BR', {
     month: 'short',
     day: 'numeric',
   }).format(date)
@@ -98,12 +99,13 @@ export function formatChartDate(date: Date): string {
 
 /**
  * Format date for tooltip header.
+ * Uses Portuguese locale for consistent display.
  *
  * @param date - Date object
- * @returns Full date string (e.g., "Wednesday, November 26")
+ * @returns Full date string in Portuguese (e.g., "quarta-feira, 26 de novembro")
  */
 export function formatTooltipDate(date: Date): string {
-  return new Intl.DateTimeFormat(navigator.language, {
+  return new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',

@@ -3,8 +3,11 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
 interface InlineEditInputProps {
+  /** Value in cents */
   value: number
+  /** Called with value in cents */
   onSave: (value: number) => Promise<void>
+  /** Format function receives value in cents */
   formatDisplay: (value: number) => string
   min?: number
   step?: number
@@ -20,7 +23,8 @@ export function InlineEditInput({
   className,
 }: InlineEditInputProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(value.toString())
+  // Convert cents to reais for editing
+  const [editValue, setEditValue] = useState((value / 100).toFixed(2))
   const [isSaving, setIsSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -34,38 +38,40 @@ export function InlineEditInput({
   // Update editValue when external value changes
   useEffect(() => {
     if (!isEditing) {
-      setEditValue(value.toString())
+      setEditValue((value / 100).toFixed(2))
     }
   }, [value, isEditing])
 
   const handleSave = async () => {
-    const numValue = parseFloat(editValue)
-    if (isNaN(numValue) || numValue < min) {
+    const numValueInReais = parseFloat(editValue)
+    if (isNaN(numValueInReais) || numValueInReais < min) {
       // Revert to original value on invalid input
-      setEditValue(value.toString())
+      setEditValue((value / 100).toFixed(2))
       setIsEditing(false)
       return
     }
 
-    if (numValue === value) {
+    // Convert reais to cents for comparison and saving
+    const numValueInCents = Math.round(numValueInReais * 100)
+    if (numValueInCents === value) {
       setIsEditing(false)
       return
     }
 
     setIsSaving(true)
     try {
-      await onSave(numValue)
+      await onSave(numValueInCents)
       setIsEditing(false)
     } catch {
       // Revert on error
-      setEditValue(value.toString())
+      setEditValue((value / 100).toFixed(2))
     } finally {
       setIsSaving(false)
     }
   }
 
   const handleCancel = () => {
-    setEditValue(value.toString())
+    setEditValue((value / 100).toFixed(2))
     setIsEditing(false)
   }
 

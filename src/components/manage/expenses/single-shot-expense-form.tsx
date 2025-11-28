@@ -19,7 +19,10 @@ export function SingleShotExpenseForm({
   isSubmitting,
 }: SingleShotExpenseFormProps) {
   const [name, setName] = useState(expense?.name ?? '')
-  const [amount, setAmount] = useState(expense?.amount?.toString() ?? '')
+  // Convert cents to reais for display/editing
+  const [amount, setAmount] = useState(
+    expense?.amount ? (expense.amount / 100).toFixed(2) : ''
+  )
   const [date, setDate] = useState(
     expense ? format(expense.date, 'yyyy-MM-dd') : ''
   )
@@ -32,7 +35,8 @@ export function SingleShotExpenseForm({
     const formData = {
       type: 'single_shot' as const,
       name: name.trim(),
-      amount: parseFloat(amount) || 0,
+      // Convert reais to cents for storage
+      amount: Math.round((parseFloat(amount) || 0) * 100),
       date: date ? new Date(`${date}T00:00:00`) : new Date(),
     }
 

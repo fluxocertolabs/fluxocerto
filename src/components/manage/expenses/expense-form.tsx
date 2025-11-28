@@ -18,7 +18,10 @@ export function ExpenseForm({
   isSubmitting,
 }: ExpenseFormProps) {
   const [name, setName] = useState(expense?.name ?? '')
-  const [amount, setAmount] = useState(expense?.amount?.toString() ?? '')
+  // Convert cents to reais for display/editing
+  const [amount, setAmount] = useState(
+    expense?.amount ? (expense.amount / 100).toFixed(2) : ''
+  )
   const [dueDay, setDueDay] = useState(expense?.dueDay?.toString() ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -29,7 +32,8 @@ export function ExpenseForm({
     const formData = {
       type: 'fixed' as const,
       name: name.trim(),
-      amount: parseFloat(amount) || 0,
+      // Convert reais to cents for storage
+      amount: Math.round((parseFloat(amount) || 0) * 100),
       dueDay: parseInt(dueDay, 10) || 0,
       isActive: expense?.isActive ?? true,
     }

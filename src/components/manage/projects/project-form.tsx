@@ -87,8 +87,9 @@ function getInitialScheduleState(project?: Project): {
           ...defaultState,
           firstDay: schedule.firstDay,
           secondDay: schedule.secondDay,
-          firstAmount: hasVariableAmounts ? schedule.firstAmount!.toString() : '',
-          secondAmount: hasVariableAmounts ? schedule.secondAmount!.toString() : '',
+          // Convert cents to reais for display
+          firstAmount: hasVariableAmounts ? (schedule.firstAmount! / 100).toFixed(2) : '',
+          secondAmount: hasVariableAmounts ? (schedule.secondAmount! / 100).toFixed(2) : '',
           variableAmountsEnabled: hasVariableAmounts,
         }
       }
@@ -257,7 +258,10 @@ export function ProjectForm({
   const initialSchedule = getInitialScheduleState(project)
 
   const [name, setName] = useState(project?.name ?? '')
-  const [amount, setAmount] = useState(project?.amount?.toString() ?? '')
+  // Convert cents to reais for display/editing
+  const [amount, setAmount] = useState(
+    project?.amount ? (project.amount / 100).toFixed(2) : ''
+  )
   const [frequency, setFrequency] = useState<Frequency>(project?.frequency ?? 'monthly')
   const [certainty, setCertainty] = useState<Certainty>(project?.certainty ?? 'guaranteed')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -321,6 +325,7 @@ export function ProjectForm({
   }
 
   // Build PaymentSchedule based on current frequency
+  // Variable amounts are converted from reais to cents
   const buildPaymentSchedule = (): PaymentSchedule => {
     switch (frequency) {
       case 'weekly':
@@ -334,8 +339,9 @@ export function ProjectForm({
           if (parsedFirst > 0 && parsedSecond > 0) {
             return {
               ...schedule,
-              firstAmount: parsedFirst,
-              secondAmount: parsedSecond,
+              // Convert reais to cents
+              firstAmount: Math.round(parsedFirst * 100),
+              secondAmount: Math.round(parsedSecond * 100),
             }
           }
         }
@@ -350,20 +356,21 @@ export function ProjectForm({
     e.preventDefault()
     setErrors({})
 
-    // Calculate amount: for twice-monthly with variable amounts, use the sum of both amounts
+    // Calculate amount in cents: for twice-monthly with variable amounts, use the sum of both amounts
     // Otherwise use the regular amount field
-    let calculatedAmount: number
+    // All amounts are converted from reais to cents (multiply by 100)
+    let calculatedAmountInCents: number
     if (frequency === 'twice-monthly' && variableAmountsEnabled) {
       const parsedFirst = parseFloat(firstAmount) || 0
       const parsedSecond = parseFloat(secondAmount) || 0
-      calculatedAmount = parsedFirst + parsedSecond
+      calculatedAmountInCents = Math.round((parsedFirst + parsedSecond) * 100)
     } else {
-      calculatedAmount = parseFloat(amount) || 0
+      calculatedAmountInCents = Math.round((parseFloat(amount) || 0) * 100)
     }
 
     const formData = {
       name: name.trim(),
-      amount: calculatedAmount,
+      amount: calculatedAmountInCents,
       frequency,
       paymentSchedule: buildPaymentSchedule(),
       certainty,

@@ -29,12 +29,14 @@ const CERTAINTY_COLORS: Record<Project['certainty'], string> = {
   uncertain: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat(navigator.language, {
+function formatCurrency(cents: number): string {
+  // Convert cents to reais for display
+  const reais = cents / 100
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
-  }).format(value)
+  }).format(reais)
 }
 
 /**

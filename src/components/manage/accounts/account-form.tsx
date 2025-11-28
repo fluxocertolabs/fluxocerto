@@ -28,7 +28,10 @@ export function AccountForm({
 }: AccountFormProps) {
   const [name, setName] = useState(account?.name ?? '')
   const [type, setType] = useState<AccountType>(account?.type ?? 'checking')
-  const [balance, setBalance] = useState(account?.balance?.toString() ?? '')
+  // Convert cents to reais for display/editing
+  const [balance, setBalance] = useState(
+    account?.balance ? (account.balance / 100).toFixed(2) : ''
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +41,8 @@ export function AccountForm({
     const formData = {
       name: name.trim(),
       type,
-      balance: parseFloat(balance) || 0,
+      // Convert reais to cents for storage
+      balance: Math.round((parseFloat(balance) || 0) * 100),
     }
 
     const result = BankAccountInputSchema.safeParse(formData)
