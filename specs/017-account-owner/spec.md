@@ -96,9 +96,10 @@ As a family member, I want to filter the accounts and credit cards lists by owne
 
 ### Key Entities
 
-- **Owner**: A family member who can be assigned to financial accounts. For this version, owners are a fixed set of values: "Daniel" and "Aryane". The owner is an optional attribute that can be null/unassigned.
-- **Bank Account**: Extended with an optional owner field that references one of the predefined family members.
-- **Credit Card**: Extended with an optional owner field that references one of the predefined family members.
+- **Profile**: Renamed from `allowed_emails`, this table represents family members who can own financial accounts and (optionally) log in. Schema: `id` (UUID, PK), `name` (TEXT, required), `email` (CITEXT, UNIQUE, nullable for auth gating), `created_at`, `created_by`. Pre-seeded with "Daniel" and "Aryane" profiles. Seed-only for this version (no UI management).
+- **Owner**: A foreign key reference from accounts/credit_cards to the `profiles` table. The owner is an optional attribute that can be null/unassigned. If a profile is deleted, the FK uses `ON DELETE SET NULL` to automatically clear ownership on affected accounts.
+- **Bank Account**: Extended with an optional `owner_id` field (UUID FK, nullable) referencing `profiles.id`.
+- **Credit Card**: Extended with an optional `owner_id` field (UUID FK, nullable) referencing `profiles.id`.
 
 ## Success Criteria *(mandatory)*
 
@@ -113,8 +114,16 @@ As a family member, I want to filter the accounts and credit cards lists by owne
 
 ## Assumptions
 
-- The family members list is fixed to "Daniel" and "Aryane" and does not require dynamic management in this version
+- The profiles list is fixed to "Daniel" and "Aryane" (seeded via migration) and does not require dynamic UI management in this version
 - All authenticated family members have equal access to view and edit all accounts regardless of owner assignment
 - Owner assignment is purely organizational and does not affect any calculations, permissions, or data access
 - The existing form layouts for bank accounts and credit cards have space to accommodate an additional dropdown field
 - Migration of existing accounts with embedded owner names (e.g., "Nubank - Daniel") will be handled manually by the user rather than automated
+
+## Clarifications
+
+### Session 2025-11-28
+
+- Q: How should the owner field be stored in the database? → A: Rename existing `allowed_emails` table to `profiles`, add `name` column, and use FK reference to accounts/credit_cards
+- Q: What happens if a family member with assigned accounts is deleted? → A: Allow deletion and CASCADE to null (set owner to "Não atribuído" automatically)
+- Q: Should the profiles table be manageable via UI? → A: Seed-only for this version (no UI management); table pre-populated via migration
