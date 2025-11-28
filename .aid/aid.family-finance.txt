@@ -287,6 +287,48 @@ import '@/hooks/use-auth'
 export function Header()
 </file>
 
+<file path="src/components/loading/dashboard-skeleton.tsx">
+import '@/lib/utils'
+import './skeleton-primitives'
+import '@/types/loading'
+export function DashboardSkeleton()
+</file>
+
+<file path="src/components/loading/manage-skeleton.tsx">
+import '@/lib/utils'
+import './skeleton-primitives'
+import '@/types/loading'
+export function ManageSkeleton()
+</file>
+
+<file path="src/components/loading/modal-skeleton.tsx">
+import '@/lib/utils'
+import './skeleton-primitives'
+import '@/types/loading'
+export function ModalSkeleton()
+</file>
+
+<file path="src/components/loading/page-loading-wrapper.tsx">
+import '@/lib/utils'
+import '@/components/cashflow/error-state'
+import '@/types/loading'
+import '@/types/loading'
+export function PageLoadingWrapper()
+</file>
+
+<file path="src/components/loading/skeleton-primitives.tsx">
+import '@/lib/utils'
+import '@/types/loading'
+export function SkeletonBase()
+export function SkeletonCard()
+export function SkeletonLine()
+export function SkeletonSummaryCard()
+export function SkeletonChart()
+export function SkeletonListItem()
+export function SkeletonTabs()
+export function SkeletonBalanceItem()
+</file>
+
 <file path="src/components/manage/accounts/account-form.tsx">
 import 'react'
 import '@/components/ui/button'
@@ -441,10 +483,14 @@ export function QuickUpdateEmptyState()
 <file path="src/components/quick-update/quick-update-view.tsx">
 import 'react'
 import '@/hooks/use-finance-data'
+import '@/hooks/use-coordinated-loading'
 import '@/components/ui/button'
 import '@/lib/utils'
 import './balance-list'
 import './empty-state'
+import '@/components/loading/modal-skeleton'
+import '@/components/cashflow/error-state'
+import '@/types/loading'
 export function QuickUpdateView()
 </file>
 
@@ -576,6 +622,13 @@ export interface UseCashflowProjectionResult {
 export function useCashflowProjection(options: UseCashflowProjectionOptions)
 </file>
 
+<file path="src/hooks/use-coordinated-loading.ts">
+import 'react'
+import '@/types/loading'
+import '@/types/loading'
+export function useCoordinatedLoading(isLoading: boolean, error: string | null, onRetry: () => void, config: LoadingConfig)
+</file>
+
 <file path="src/hooks/use-finance-data.ts">
 import 'react'
 import '@/lib/supabase'
@@ -590,6 +643,7 @@ export interface UseFinanceDataReturn {
     property creditCards: CreditCard[]
     property isLoading: boolean
     property error: string | null
+    property retry: () => void
 }
 export function useFinanceData()
 </file>
@@ -881,15 +935,15 @@ export function AuthCallbackPage()
 <file path="src/pages/dashboard.tsx">
 import 'react'
 import '@/hooks/use-cashflow-projection'
+import '@/hooks/use-coordinated-loading'
 import '@/hooks/use-health-indicator'
 import '@/stores/preferences-store'
 import '@/components/cashflow/cashflow-chart'
 import '@/components/cashflow/summary-panel'
 import '@/components/cashflow/health-indicator'
 import '@/components/cashflow/projection-selector'
-import '@/components/cashflow/loading-skeleton'
 import '@/components/cashflow/empty-state'
-import '@/components/cashflow/error-state'
+import '@/components/loading'
 import '@/components/quick-update'
 import '@/components/ui/button'
 import '@/lib/utils'
@@ -908,6 +962,7 @@ import '@/components/ui/tabs'
 import '@/components/ui/button'
 import '@/components/ui/dialog'
 import '@/hooks/use-finance-data'
+import '@/hooks/use-coordinated-loading'
 import '@/stores/finance-store'
 import '@/components/manage/accounts/account-list'
 import '@/components/manage/accounts/account-form'
@@ -918,6 +973,7 @@ import '@/components/manage/expenses/expense-form'
 import '@/components/manage/credit-cards/credit-card-list'
 import '@/components/manage/credit-cards/credit-card-form'
 import '@/components/manage/shared/delete-confirmation'
+import '@/components/loading'
 import '@/lib/utils'
 import '@/types'
 export function ManagePage()
@@ -1003,6 +1059,59 @@ type ProjectionDays = z.infer<typeof ProjectionDaysSchema>
 export interface UserPreferences {
     property projectionDays: ProjectionDays
 }
+</file>
+
+<file path="src/types/loading.ts">
+type LoadingPhase = 'idle' | 'loading' | 'success' | 'error' | 'timeout'
+
+export interface LoadingConfig {
+    property minDisplayTime: number
+    property timeoutThreshold: number
+    property enableDevLogging: boolean
+}
+
+export interface CoordinatedLoadingState {
+    property phase: LoadingPhase
+    property showSkeleton: boolean
+    property showError: boolean
+    property errorMessage: string | null
+    property loadingStartTime: number | null
+    property retry: () => void
+}
+
+export interface SkeletonWrapperProps {
+    property isLoading: boolean
+    property error: Error | null
+    property onRetry: () => void
+    property skeleton: React.ReactNode
+    property children: React.ReactNode
+    property config: LoadingConfig
+}
+
+export interface PageSkeletonProps {
+    property className: string
+}
+
+export interface SkeletonCardProps {
+    property width: string
+    property height: string
+    property shimmer: boolean
+    property className: string
+}
+
+export interface SkeletonLineProps {
+    property width: string
+    property height: string
+    property className: string
+}
+
+export interface LoadingErrorState {
+    property type: 'network' | 'timeout' | 'api' | 'unknown'
+    property message: string
+    property canRetry: boolean
+    property originalError: Error
+}
+export const ERROR_MESSAGES
 </file>
 
 <file path="supabase/functions/before-user-created/index.ts">
