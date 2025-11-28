@@ -45,9 +45,9 @@ npm test && npm run lint
 TypeScript 5.9.3: Follow standard conventions
 
 ## Recent Changes
+- 017-account-owner: Added TypeScript 5.9.3 + React 19.2.0, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0
 - 015-dark-mode: Added TypeScript 5.9.3 + React 19.2.0, Tailwind CSS 4.1.17, @supabase/supabase-js 2.86.0, Zustand 5.0.8, lucide-react (for icons)
 - 014-single-shot-expenses: Added TypeScript 5.9.3 + React 19.2.0, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0
-- 013-page-loading-experience: Added TypeScript 5.9.3 + React 19.2.0, React Router 7.9.6, Zustand 5.0.8, Tailwind CSS 4.1.17
 
 
 <!-- MANUAL ADDITIONS START -->
