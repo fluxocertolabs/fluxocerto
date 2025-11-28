@@ -5,6 +5,30 @@
 **Status**: Draft  
 **Input**: User description: "Add support for single-shot expenses (one-time expenses) - expenses that occur on a specific calendar date, not recurring"
 
+## Clarifications
+
+### Session 2025-11-28
+
+- Q: What features are explicitly out of scope for single-shot expenses? → A: Exclude categories, recurring conversion, reminders, attachments/receipts, notes/descriptions, tags, bulk import/export, templates, and duplication
+- Q: What should the empty state show when no single-shot expenses exist? → A: Illustrated empty state with message + prominent "Adicionar" CTA button
+- Q: Should single-shot expenses be a new table or extend existing expenses? → A: Extend existing expenses table with `type` column, properly organized to support both fixed and single-shot types
+- Q: How is a single-shot expense marked as paid? → A: No manual paid status; expense is considered past/paid automatically when its date has passed (consistent with cashflow behavior)
+- Q: Where should single-shot expenses be placed in the Manage page? → A: Sub-tab under existing "Despesas" section with tabs: "Fixas" / "Pontuais"
+
+## Out of Scope
+
+The following features are explicitly **NOT** part of this specification:
+
+- Expense categories or tagging
+- Converting single-shot expenses to/from recurring expenses
+- Payment reminders or notifications
+- File attachments or receipt uploads
+- Notes or description fields (beyond the name)
+- Expense tags
+- Bulk import/export functionality
+- Expense templates
+- Expense duplication (copy feature)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Add a Single-Shot Expense (Priority: P1)
@@ -105,23 +129,14 @@ A user wants to see a chronological list of their upcoming single-shot expenses 
 
 ---
 
-### User Story 6 - Mark Single-Shot Expense as Paid (Priority: P3)
 
-A user has paid a single-shot expense and wants to mark it as paid to keep track of what's been completed. Paid expenses remain visible but are clearly marked.
+### Empty State
 
-**Why this priority**: Nice-to-have feature for tracking completion status, but core functionality works without it.
-
-**Independent Test**: Can be tested by marking an expense as paid and verifying it displays with a "Pago" indicator and optionally filters out of unpaid views.
-
-**Acceptance Scenarios**:
-
-1. **Given** a single-shot expense exists, **When** the user marks it as paid, **Then** the expense shows a "Pago" badge/indicator
-
-2. **Given** a single-shot expense is marked as paid, **When** viewing the cashflow, **Then** the expense still appears on its date (historical accuracy)
-
-3. **Given** a paid single-shot expense exists, **When** the user clicks to unmark it, **Then** the paid status is removed
-
----
+When no single-shot expenses exist, the UI displays:
+- An illustrative graphic (consistent with app design language)
+- Message: "Nenhuma despesa pontual cadastrada"
+- Subtext: "Adicione despesas que ocorrem uma única vez, como IPVA, seguros ou compras específicas"
+- Prominent "Adicionar Despesa Pontual" CTA button
 
 ### Edge Cases
 
@@ -130,7 +145,7 @@ A user has paid a single-shot expense and wants to mark it as paid to keep track
 - How does the system handle leap years (e.g., February 29)? → Date picker allows any valid calendar date
 - What happens when the projection period doesn't include the expense date? → Expense simply doesn't appear in that projection; no error
 - What happens when a single-shot expense is deleted while viewing the cashflow? → Cashflow updates to remove the expense event
-- How are single-shot expenses distinguished from fixed expenses in the UI? → Separate section/tab with clear labeling ("Despesas Pontuais" vs "Despesas Fixas")
+- How are single-shot expenses distinguished from fixed expenses in the UI? → Sub-tabs under "Despesas" section: "Fixas" tab and "Pontuais" tab
 
 ## Requirements *(mandatory)*
 
@@ -146,14 +161,36 @@ A user has paid a single-shot expense and wants to mark it as paid to keep track
 - **FR-008**: System MUST allow users to delete single-shot expenses with confirmation
 - **FR-009**: System MUST display single-shot expenses in chronological order by date
 - **FR-010**: System MUST visually distinguish past expenses from upcoming expenses
-- **FR-011**: System MUST allow users to mark single-shot expenses as paid/unpaid
+- **FR-011**: System MUST automatically consider single-shot expenses as "past" when their date has passed (no manual paid status)
 - **FR-012**: System MUST persist single-shot expenses to Supabase with appropriate RLS policies
 - **FR-013**: System MUST display single-shot expenses in the cashflow chart tooltip alongside other expense events
 - **FR-014**: System MUST provide a dedicated section/tab for managing single-shot expenses, separate from fixed expenses
 
 ### Key Entities *(include if feature involves data)*
 
-- **SingleShotExpense**: Represents a one-time expense occurring on a specific calendar date. Key attributes: id (UUID), name (string, 1-100 chars), amount (integer, cents), date (calendar date), isPaid (boolean, default false), userId (reference to auth user), createdAt, updatedAt.
+- **Expense** (unified table): Supports both fixed and single-shot expense types via a `type` discriminator column.
+  
+  **Common attributes** (all expense types):
+  - `id` (UUID, primary key)
+  - `user_id` (UUID, reference to auth.users)
+  - `name` (string, 1-100 chars)
+  - `amount` (integer, cents)
+  - `type` (enum: 'fixed' | 'single_shot')
+  - `created_at`, `updated_at` (timestamps)
+
+  **Fixed expense attributes** (when `type = 'fixed'`):
+  - `day_of_month` (integer, 1-31) - required
+  - `date` - NULL
+
+  **Single-shot expense attributes** (when `type = 'single_shot'`):
+  - `date` (date) - required, specific calendar date
+  - `day_of_month` - NULL
+  - Note: No `is_paid` column; past status is derived from comparing `date` to current date
+
+  **Database constraints**:
+  - CHECK constraint: when `type = 'fixed'`, `day_of_month` must be NOT NULL and `date` must be NULL
+  - CHECK constraint: when `type = 'single_shot'`, `date` must be NOT NULL and `day_of_month` must be NULL
+  - Existing fixed expenses will be migrated to include `type = 'fixed'`
 
 ## Success Criteria *(mandatory)*
 
@@ -169,8 +206,8 @@ A user has paid a single-shot expense and wants to mark it as paid to keep track
 
 - Single-shot expenses are always considered "certain" - they appear in both optimistic and pessimistic cashflow scenarios
 - The UI will be in Brazilian Portuguese (pt-BR) consistent with the existing application
-- Single-shot expenses will have their own dedicated section in the Manage page, likely as a sub-tab under "Despesas" or a new tab
+- Single-shot expenses will be accessible via a sub-tab under the existing "Despesas" section, with tabs labeled "Fixas" and "Pontuais"
 - The date picker will use a standard calendar date picker component (not a day-of-month selector like fixed expenses)
 - Single-shot expenses are independent of credit card payments - they represent direct cash outflows
-- The "isPaid" status is for user tracking purposes only; paid expenses still appear in historical cashflow views
+- Single-shot expenses have no manual "paid" status; they are automatically considered past when their date has passed (consistent with cashflow behavior)
 - Amount is stored in cents (integer) consistent with all other monetary values in the application
