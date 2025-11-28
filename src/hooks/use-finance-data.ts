@@ -6,6 +6,7 @@ import {
   type ProjectRow,
   type ExpenseRow,
   type CreditCardRow,
+  type ProfileRow,
 } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import type {
@@ -15,6 +16,7 @@ import type {
   SingleShotExpense,
   Expense,
   CreditCard,
+  Profile,
   PaymentSchedule,
 } from '@/types'
 import { isFixedExpense, isSingleShotExpense } from '@/types'
@@ -27,6 +29,7 @@ export interface UseFinanceDataReturn {
   fixedExpenses: FixedExpense[]
   singleShotExpenses: SingleShotExpense[]
   creditCards: CreditCard[]
+  profiles: Profile[]
   isLoading: boolean
   error: string | null
   /** Retry function for error recovery */
@@ -34,12 +37,30 @@ export interface UseFinanceDataReturn {
 }
 
 // Helper to convert snake_case database rows to camelCase TypeScript types
+function mapProfileFromDb(row: ProfileRow): Profile {
+  return {
+    id: row.id,
+    name: row.name,
+  }
+}
+
+// Supabase returns owner as array for FK joins, we need to extract first element or null
+function normalizeOwner(owner: unknown): { id: string; name: string } | null {
+  if (!owner) return null
+  if (Array.isArray(owner)) {
+    return owner.length > 0 ? owner[0] : null
+  }
+  return owner as { id: string; name: string }
+}
+
 function mapAccountFromDb(row: AccountRow): BankAccount {
   return {
     id: row.id,
     name: row.name,
     type: row.type,
     balance: row.balance,
+    ownerId: row.owner_id,
+    owner: normalizeOwner(row.owner),
     balanceUpdatedAt: row.balance_updated_at ? new Date(row.balance_updated_at) : undefined,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -91,6 +112,8 @@ function mapCreditCardFromDb(row: CreditCardRow): CreditCard {
     name: row.name,
     statementBalance: row.statement_balance,
     dueDay: row.due_day,
+    ownerId: row.owner_id,
+    owner: normalizeOwner(row.owner),
     balanceUpdatedAt: row.balance_updated_at ? new Date(row.balance_updated_at) : undefined,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -102,6 +125,7 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [projects, setProjects] = useState<Project[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
+  const [profiles, setProfiles] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -130,11 +154,20 @@ export function useFinanceData(): UseFinanceDataReturn {
 
       const client = getSupabase()
       // Fetch all tables in parallel - no user_id filter needed (shared family data)
-      const [accountsResult, projectsResult, expensesResult, creditCardsResult] = await Promise.all([
-        client.from('accounts').select('*'),
+      const [accountsResult, projectsResult, expensesResult, creditCardsResult, profilesResult] = await Promise.all([
+        client.from('accounts').select(`
+          id, name, type, balance, balance_updated_at, owner_id,
+          owner:profiles!owner_id(id, name),
+          created_at, updated_at
+        `),
         client.from('projects').select('*'),
         client.from('expenses').select('*'),
-        client.from('credit_cards').select('*'),
+        client.from('credit_cards').select(`
+          id, name, statement_balance, due_day, balance_updated_at, owner_id,
+          owner:profiles!owner_id(id, name),
+          created_at, updated_at
+        `),
+        client.from('profiles').select('id, name').order('name'),
       ])
 
       // Check for errors
@@ -142,12 +175,15 @@ export function useFinanceData(): UseFinanceDataReturn {
       if (projectsResult.error) throw projectsResult.error
       if (expensesResult.error) throw expensesResult.error
       if (creditCardsResult.error) throw creditCardsResult.error
+      if (profilesResult.error) throw profilesResult.error
 
       // Map database rows to TypeScript types
-      setAccounts((accountsResult.data ?? []).map(mapAccountFromDb))
+      // Type assertions needed because Supabase infers complex types from select strings
+      setAccounts((accountsResult.data ?? []).map((row) => mapAccountFromDb(row as unknown as AccountRow)))
       setProjects((projectsResult.data ?? []).map(mapProjectFromDb))
       setExpenses((expensesResult.data ?? []).map(mapExpenseFromDb))
-      setCreditCards((creditCardsResult.data ?? []).map(mapCreditCardFromDb))
+      setCreditCards((creditCardsResult.data ?? []).map((row) => mapCreditCardFromDb(row as unknown as CreditCardRow)))
+      setProfiles((profilesResult.data ?? []).map((row) => mapProfileFromDb(row as ProfileRow)))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao carregar dados'
       setError(message)
@@ -365,6 +401,7 @@ export function useFinanceData(): UseFinanceDataReturn {
     fixedExpenses,
     singleShotExpenses,
     creditCards,
+    profiles,
     isLoading,
     error,
     retry,

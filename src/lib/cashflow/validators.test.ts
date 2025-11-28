@@ -17,12 +17,14 @@ function createValidAccount(overrides: Partial<{
   name: string
   type: 'checking' | 'savings' | 'investment'
   balance: number
+  owner: { id: string; name: string } | null
 }> = {}) {
   return {
     id: overrides.id ?? crypto.randomUUID(),
     name: overrides.name ?? 'Test Account',
     type: overrides.type ?? 'checking',
     balance: overrides.balance ?? 100000,
+    owner: overrides.owner ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -91,12 +93,14 @@ function createValidCreditCard(overrides: Partial<{
   name: string
   statementBalance: number
   dueDay: number
+  owner: { id: string; name: string } | null
 }> = {}) {
   return {
     id: overrides.id ?? crypto.randomUUID(),
     name: overrides.name ?? 'Test Card',
     statementBalance: overrides.statementBalance ?? 20000,
     dueDay: overrides.dueDay ?? 20,
+    owner: overrides.owner ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
   }

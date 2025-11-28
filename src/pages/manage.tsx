@@ -72,7 +72,7 @@ export function ManagePage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { accounts, projects, fixedExpenses, singleShotExpenses, creditCards, isLoading, error: fetchError, retry } = useFinanceData()
+  const { accounts, projects, fixedExpenses, singleShotExpenses, creditCards, profiles, isLoading, error: fetchError, retry } = useFinanceData()
   const store = useFinanceStore()
 
   // Coordinated loading state for smooth transitions
@@ -478,6 +478,7 @@ export function ManagePage() {
           <TabsContent value="accounts">
             <AccountList
               accounts={accounts}
+              profiles={profiles}
               onAdd={() => setDialogState({ type: 'add-account' })}
               onEdit={(account) => setDialogState({ type: 'edit-account', account })}
               onDelete={(id) => {
@@ -532,6 +533,7 @@ export function ManagePage() {
           <TabsContent value="cards">
             <CreditCardList
               creditCards={creditCards}
+              profiles={profiles}
               onAdd={() => setDialogState({ type: 'add-card' })}
               onEdit={(card) => setDialogState({ type: 'edit-card', card })}
               onDelete={(id) => {
@@ -559,6 +561,7 @@ export function ManagePage() {
           </DialogHeader>
           <AccountForm
             account={dialogState.type === 'edit-account' ? dialogState.account : undefined}
+            profiles={profiles}
             onSubmit={async (data) => {
               if (dialogState.type === 'edit-account') {
                 await handleUpdateAccount(dialogState.account.id, data)
@@ -663,6 +666,7 @@ export function ManagePage() {
           </DialogHeader>
           <CreditCardForm
             card={dialogState.type === 'edit-card' ? dialogState.card : undefined}
+            profiles={profiles}
             onSubmit={async (data) => {
               if (dialogState.type === 'edit-card') {
                 await handleUpdateCreditCard(dialogState.card.id, data)

@@ -1,14 +1,30 @@
 import { z } from 'zod'
 
+// === Profile (Owner) ===
+export const ProfileSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+})
+
+export type Profile = z.infer<typeof ProfileSchema>
+
+// Owner object schema for joined data
+const OwnerSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+}).nullable()
+
 // === Bank Account ===
 export const BankAccountInputSchema = z.object({
   name: z.string().min(1, 'Account name is required').max(100),
   type: z.enum(['checking', 'savings', 'investment']),
   balance: z.number().min(0, 'Balance cannot be negative'),
+  ownerId: z.string().uuid().nullable().optional(),
 })
 
 export const BankAccountSchema = BankAccountInputSchema.extend({
   id: z.string().uuid(),
+  owner: OwnerSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
   balanceUpdatedAt: z.date().optional(),
@@ -215,10 +231,12 @@ export const CreditCardInputSchema = z.object({
   name: z.string().min(1, 'Card name is required').max(100),
   statementBalance: z.number().min(0, 'Balance cannot be negative'),
   dueDay: z.number().int().min(1).max(31, 'Due day must be 1-31'),
+  ownerId: z.string().uuid().nullable().optional(),
 })
 
 export const CreditCardSchema = CreditCardInputSchema.extend({
   id: z.string().uuid(),
+  owner: OwnerSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
   balanceUpdatedAt: z.date().optional(),

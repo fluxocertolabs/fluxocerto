@@ -10,10 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { BankAccountInputSchema, type BankAccount, type BankAccountInput } from '@/types'
+import { BankAccountInputSchema, type BankAccount, type BankAccountInput, type Profile } from '@/types'
 
 interface AccountFormProps {
   account?: BankAccount
+  profiles: Profile[]
   onSubmit: (data: BankAccountInput) => Promise<void>
   onCancel: () => void
   isSubmitting: boolean
@@ -23,6 +24,7 @@ type AccountType = 'checking' | 'savings' | 'investment'
 
 export function AccountForm({
   account,
+  profiles,
   onSubmit,
   onCancel,
   isSubmitting,
@@ -33,6 +35,7 @@ export function AccountForm({
   const [balance, setBalance] = useState(
     account?.balance ? (account.balance / 100).toFixed(2) : ''
   )
+  const [ownerId, setOwnerId] = useState<string | null>(account?.owner?.id ?? null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +47,7 @@ export function AccountForm({
       type,
       // Convert reais to cents for storage
       balance: Math.round((parseFloat(balance) || 0) * 100),
+      ownerId,
     }
 
     const result = BankAccountInputSchema.safeParse(formData)
@@ -100,6 +104,27 @@ export function AccountForm({
         {errors.type && (
           <p className="text-sm text-destructive">{errors.type}</p>
         )}
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="owner">Proprietário</Label>
+        <Select
+          value={ownerId ?? ''}
+          onValueChange={(value) => setOwnerId(value === '' ? null : value)}
+          disabled={isSubmitting}
+        >
+          <SelectTrigger id="owner">
+            <SelectValue placeholder="Selecione o proprietário" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Não atribuído</SelectItem>
+            {profiles.map((profile) => (
+              <SelectItem key={profile.id} value={profile.id}>
+                {profile.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid gap-2">

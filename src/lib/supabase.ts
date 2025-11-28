@@ -3,14 +3,29 @@ import type { Result } from '@/stores/finance-store'
 
 // Database row types for type-safe responses
 // Note: user_id removed - all authenticated users share data
-export interface AccountRow {
+export interface ProfileRow {
+  id: string
+  name: string
+  email: string | null
+  created_at: string
+  created_by: string | null
+}
+
+// Base account row without joined data
+interface AccountRowBase {
   id: string
   name: string
   type: 'checking' | 'savings' | 'investment'
   balance: number
   balance_updated_at: string | null
+  owner_id: string | null
   created_at: string
   updated_at: string
+}
+
+// Account row with joined owner (Supabase returns single object or null for FK joins)
+export interface AccountRow extends AccountRowBase {
+  owner: { id: string; name: string } | null
 }
 
 export interface ProjectRow {
@@ -47,14 +62,21 @@ export interface ExpenseRow {
   updated_at: string
 }
 
-export interface CreditCardRow {
+// Base credit card row without joined data
+interface CreditCardRowBase {
   id: string
   name: string
   statement_balance: number
   due_day: number
   balance_updated_at: string | null
+  owner_id: string | null
   created_at: string
   updated_at: string
+}
+
+// Credit card row with joined owner
+export interface CreditCardRow extends CreditCardRowBase {
+  owner: { id: string; name: string } | null
 }
 
 // Re-export types for use in hooks
@@ -65,6 +87,7 @@ export type Database = {
       projects: { Row: ProjectRow }
       expenses: { Row: ExpenseRow }
       credit_cards: { Row: CreditCardRow }
+      profiles: { Row: ProfileRow }
     }
   }
 }

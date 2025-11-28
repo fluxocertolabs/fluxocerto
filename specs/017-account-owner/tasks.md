@@ -24,9 +24,9 @@
 
 **Purpose**: Database migration and type definitions
 
-- [ ] T001 Create database migration file in supabase/migrations/005_account_owner.sql (rename `allowed_emails` → `profiles`, add `name` column, add `owner_id` FK to accounts/credit_cards)
+- [X] T001 Create database migration file in supabase/migrations/005_account_owner.sql (rename `allowed_emails` → `profiles`, add `name` column, add `owner_id` FK to accounts/credit_cards)
 - [ ] T002 Run migration via Supabase dashboard and seed profile names (Daniel, Aryane)
-- [ ] T003 Add Profile type, extend BankAccount and CreditCard types with owner_id/owner fields in src/types/index.ts
+- [X] T003 Add Profile type, extend BankAccount and CreditCard types with owner_id/owner fields in src/types/index.ts
 
 ---
 
@@ -36,10 +36,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Add profiles state and fetching to src/hooks/use-finance-data.ts
-- [ ] T005 Update accounts query to include owner join in src/hooks/use-finance-data.ts
-- [ ] T006 Update credit_cards query to include owner join in src/hooks/use-finance-data.ts
-- [ ] T007 Create OwnerBadge reusable component in src/components/ui/owner-badge.tsx
+- [X] T004 Add profiles state and fetching to src/hooks/use-finance-data.ts
+- [X] T005 Update accounts query to include owner join in src/hooks/use-finance-data.ts
+- [X] T006 Update credit_cards query to include owner join in src/hooks/use-finance-data.ts
+- [X] T007 Create OwnerBadge reusable component in src/components/ui/owner-badge.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -53,10 +53,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Update addAccount in src/stores/finance-store.ts to accept and persist ownerId
-- [ ] T009 [US1] Update addCreditCard in src/stores/finance-store.ts to accept and persist ownerId
-- [ ] T010 [US1] Add owner dropdown to bank account form in src/components/manage/accounts/account-form.tsx
-- [ ] T011 [US1] Add owner dropdown to credit card form in src/components/manage/credit-cards/credit-card-form.tsx
+- [X] T008 [US1] Update addAccount in src/stores/finance-store.ts to accept and persist ownerId
+- [X] T009 [US1] Update addCreditCard in src/stores/finance-store.ts to accept and persist ownerId
+- [X] T010 [US1] Add owner dropdown to bank account form in src/components/manage/accounts/account-form.tsx
+- [X] T011 [US1] Add owner dropdown to credit card form in src/components/manage/credit-cards/credit-card-form.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can assign owners when creating new accounts/cards
 
@@ -70,8 +70,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [P] [US2] Add OwnerBadge to account list item in src/components/manage/accounts/account-list-item.tsx
-- [ ] T013 [P] [US2] Add OwnerBadge to credit card list item in src/components/manage/credit-cards/credit-card-list-item.tsx
+- [X] T012 [P] [US2] Add OwnerBadge to account list item in src/components/manage/accounts/account-list-item.tsx
+- [X] T013 [P] [US2] Add OwnerBadge to credit card list item in src/components/manage/credit-cards/credit-card-list-item.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - users can assign owners and see them displayed in lists
 
@@ -85,10 +85,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Update updateAccount in src/stores/finance-store.ts to handle ownerId changes
-- [ ] T015 [US3] Update updateCreditCard in src/stores/finance-store.ts to handle ownerId changes
-- [ ] T016 [US3] Ensure account form loads existing owner value in src/components/manage/accounts/account-form.tsx
-- [ ] T017 [US3] Ensure credit card form loads existing owner value in src/components/manage/credit-cards/credit-card-form.tsx
+- [X] T014 [US3] Update updateAccount in src/stores/finance-store.ts to handle ownerId changes
+- [X] T015 [US3] Update updateCreditCard in src/stores/finance-store.ts to handle ownerId changes
+- [X] T016 [US3] Ensure account form loads existing owner value in src/components/manage/accounts/account-form.tsx
+- [X] T017 [US3] Ensure credit card form loads existing owner value in src/components/manage/credit-cards/credit-card-form.tsx
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work - users can assign, view, and edit owners
 
@@ -102,8 +102,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T018 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/accounts/account-list.tsx
-- [ ] T019 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/credit-cards/credit-card-list.tsx
+- [X] T018 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/accounts/account-list.tsx
+- [X] T019 [P] [US4] Add owner filter dropdown and filtering logic to src/components/manage/credit-cards/credit-card-list.tsx
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -113,9 +113,9 @@
 
 **Purpose**: Validation and edge case handling
 
-- [ ] T020 Verify all UI text is in Brazilian Portuguese (pt-BR): check owner dropdown labels ("Não atribuído", "Daniel", "Aryane"), filter options ("Todos"), and any error/empty states - PASS if no English text visible in owner-related UI
-- [ ] T021 Verify existing accounts display as "Não atribuído" (unassigned) correctly: create test account before migration, run migration, confirm account shows no owner badge or "Não atribuído" indicator - PASS if pre-existing accounts display correctly
-- [ ] T022 Run quickstart.md verification checklist manually
+- [X] T020 Verify all UI text is in Brazilian Portuguese (pt-BR): check owner dropdown labels ("Não atribuído", "Daniel", "Aryane"), filter options ("Todos"), and any error/empty states - PASS if no English text visible in owner-related UI
+- [X] T021 Verify existing accounts display as "Não atribuído" (unassigned) correctly: create test account before migration, run migration, confirm account shows no owner badge or "Não atribuído" indicator - PASS if pre-existing accounts display correctly
+- [X] T022 Run quickstart.md verification checklist manually
 
 ---
 

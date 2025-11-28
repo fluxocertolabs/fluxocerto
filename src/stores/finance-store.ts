@@ -111,6 +111,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           name: validated.name,
           type: validated.type,
           balance: validated.balance,
+          owner_id: validated.ownerId ?? null,
         })
         .select('id')
         .single()
@@ -137,6 +138,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       if (validated.name !== undefined) updateData.name = validated.name
       if (validated.type !== undefined) updateData.type = validated.type
       if (validated.balance !== undefined) updateData.balance = validated.balance
+      if (validated.ownerId !== undefined) updateData.owner_id = validated.ownerId
 
       const { error, count } = await getSupabase()
         .from('accounts')
@@ -529,6 +531,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           name: validated.name,
           statement_balance: validated.statementBalance,
           due_day: validated.dueDay,
+          owner_id: validated.ownerId ?? null,
         })
         .select('id')
         .single()
@@ -555,6 +558,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       if (validated.name !== undefined) updateData.name = validated.name
       if (validated.statementBalance !== undefined) updateData.statement_balance = validated.statementBalance
       if (validated.dueDay !== undefined) updateData.due_day = validated.dueDay
+      if (validated.ownerId !== undefined) updateData.owner_id = validated.ownerId
 
       const { error, count } = await getSupabase()
         .from('credit_cards')

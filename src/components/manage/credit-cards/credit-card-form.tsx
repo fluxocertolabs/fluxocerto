@@ -3,10 +3,18 @@ import { Button } from '@/components/ui/button'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { CreditCardInputSchema, type CreditCard, type CreditCardInput } from '@/types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { CreditCardInputSchema, type CreditCard, type CreditCardInput, type Profile } from '@/types'
 
 interface CreditCardFormProps {
   card?: CreditCard
+  profiles: Profile[]
   onSubmit: (data: CreditCardInput) => Promise<void>
   onCancel: () => void
   isSubmitting: boolean
@@ -14,6 +22,7 @@ interface CreditCardFormProps {
 
 export function CreditCardForm({
   card,
+  profiles,
   onSubmit,
   onCancel,
   isSubmitting,
@@ -24,6 +33,7 @@ export function CreditCardForm({
     card?.statementBalance ? (card.statementBalance / 100).toFixed(2) : ''
   )
   const [dueDay, setDueDay] = useState(card?.dueDay?.toString() ?? '')
+  const [ownerId, setOwnerId] = useState<string | null>(card?.owner?.id ?? null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,6 +45,7 @@ export function CreditCardForm({
       // Convert reais to cents for storage
       statementBalance: Math.round((parseFloat(statementBalance) || 0) * 100),
       dueDay: parseInt(dueDay, 10) || 0,
+      ownerId,
     }
 
     const result = CreditCardInputSchema.safeParse(formData)
@@ -70,6 +81,27 @@ export function CreditCardForm({
             {errors.name}
           </p>
         )}
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="owner">Proprietário</Label>
+        <Select
+          value={ownerId ?? ''}
+          onValueChange={(value) => setOwnerId(value === '' ? null : value)}
+          disabled={isSubmitting}
+        >
+          <SelectTrigger id="owner">
+            <SelectValue placeholder="Selecione o proprietário" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Não atribuído</SelectItem>
+            {profiles.map((profile) => (
+              <SelectItem key={profile.id} value={profile.id}>
+                {profile.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

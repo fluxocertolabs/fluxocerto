@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { InlineEditInput } from '@/components/manage/shared/inline-edit-input'
+import { OwnerBadge } from '@/components/ui/owner-badge'
 import { cn } from '@/lib/utils'
 import type { BankAccount } from '@/types'
 
@@ -47,6 +48,7 @@ export function AccountListItem({
           <span className="text-xs bg-muted px-2 py-0.5 rounded">
             {TYPE_LABELS[account.type]}
           </span>
+          <OwnerBadge owner={account.owner} />
         </div>
       </div>
 

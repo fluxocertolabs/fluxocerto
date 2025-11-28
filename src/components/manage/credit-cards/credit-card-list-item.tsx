@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { InlineEditInput } from '@/components/manage/shared/inline-edit-input'
+import { OwnerBadge } from '@/components/ui/owner-badge'
 import { cn } from '@/lib/utils'
 import type { CreditCard } from '@/types'
 
@@ -34,10 +35,11 @@ export function CreditCardListItem({
       )}
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium truncate" title={card.name}>
             {card.name}
           </span>
+          <OwnerBadge owner={card.owner} />
         </div>
         <div className="text-sm text-muted-foreground mt-1">
           Vencimento dia {card.dueDay}
