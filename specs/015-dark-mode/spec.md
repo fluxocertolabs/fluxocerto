@@ -76,7 +76,7 @@ Ana, another family member, finds abrupt visual changes jarring. When switching 
 ### Edge Cases
 
 - What happens when the user's browser doesn't support `prefers-color-scheme`? The app defaults to light mode.
-- What happens when Supabase is temporarily unreachable while saving preference? The preference is saved locally and synced when connection is restored, or the app shows a brief non-blocking error toast.
+- What happens when Supabase is temporarily unreachable while saving preference? The preference is saved locally and synced when connection is restored using "last write wins" conflict resolution (most recent timestamp takes precedence). A brief non-blocking error toast may be shown.
 - What happens when a user clears their browser data? System preference is used until they set a new preference.
 - What happens during the brief moment between page load and preference fetch? The app uses system preference (or light mode as ultimate fallback) to prevent flash of incorrect theme.
 
@@ -96,10 +96,11 @@ Ana, another family member, finds abrupt visual changes jarring. When switching 
 - **FR-010**: System MUST preserve the selected theme across page navigation within a session
 - **FR-011**: System MUST apply the saved theme preference immediately upon user authentication
 - **FR-012**: System MUST gracefully handle the loading state before preference is fetched (no flash of wrong theme)
+- **FR-013**: System SHOULD log theme changes at INFO level for debugging purposes (no dedicated product analytics required)
 
 ### Key Entities
 
-- **User Preference**: Represents a user's personal settings, including theme choice. Key attributes: user identifier, theme value (light/dark), last updated timestamp. Related to the authenticated user.
+- **User Preference**: Represents a user's personal settings, including theme choice. Stored in a new `user_preferences` table with a flexible key-value design (columns: `id`, `user_id`, `key`, `value`, `created_at`, `updated_at`). For theme, `key` = "theme" and `value` = "light" or "dark". This design allows future extension for additional user preferences without schema changes.
 - **Theme**: The visual appearance mode of the application. Values: "light" or "dark". Affects all color variables used throughout the UI.
 
 ## Success Criteria *(mandatory)*
@@ -113,3 +114,11 @@ Ana, another family member, finds abrupt visual changes jarring. When switching 
 - **SC-005**: Theme preference syncs correctly across devices for the same user account in 100% of cases
 - **SC-006**: New users without saved preferences see the app in their system's preferred theme on first load
 - **SC-007**: Theme transitions complete smoothly without visual glitches or layout shifts
+
+## Clarifications
+
+### Session 2025-11-28
+
+- Q: Where should the user's theme preference be stored? → A: New `user_preferences` table with key-value design (user_id, key, value)
+- Q: When local and server preferences conflict, which wins? → A: Last write wins (most recent timestamp)
+- Q: Should theme toggle events be tracked for analytics? → A: No dedicated analytics; log at INFO level for debugging only
