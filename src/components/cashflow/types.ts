@@ -18,7 +18,7 @@ export interface ChartDataPoint {
   optimisticBalance: number
   /** Pessimistic balance in dollars (for chart scale) */
   pessimisticBalance: number
-  /** Investment-inclusive balance in dollars (pessimistic + investment total) */
+  /** Investment-inclusive balance in dollars (optimistic + investment total) */
   investmentInclusiveBalance: number
   /** Whether optimistic scenario is in danger */
   isOptimisticDanger: boolean

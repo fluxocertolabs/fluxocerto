@@ -26,68 +26,68 @@ function createMockSnapshot(overrides: Partial<DailySnapshot> = {}): DailySnapsh
 
 describe('transformToChartData', () => {
   describe('investment total calculation', () => {
-    it('should add investment total to pessimistic balance for investment-inclusive balance', () => {
+    it('should add investment total to optimistic balance for investment-inclusive balance', () => {
       const days: DailySnapshot[] = [
         createMockSnapshot({
-          pessimisticBalance: 80000, // R$800.00 in cents
+          optimisticBalance: 100000, // R$1,000.00 in cents
         }),
       ]
       const investmentTotal = 50000 // R$500.00 in cents
 
       const result = transformToChartData(days, investmentTotal)
 
-      // investmentInclusiveBalance = (pessimisticBalance + investmentTotal) / 100
-      // = (80000 + 50000) / 100 = 1300 dollars
-      expect(result[0].investmentInclusiveBalance).toBe(1300)
+      // investmentInclusiveBalance = (optimisticBalance + investmentTotal) / 100
+      // = (100000 + 50000) / 100 = 1500 dollars
+      expect(result[0].investmentInclusiveBalance).toBe(1500)
     })
 
-    it('should return pessimistic balance when investment total is zero', () => {
+    it('should return optimistic balance when investment total is zero', () => {
       const days: DailySnapshot[] = [
         createMockSnapshot({
-          pessimisticBalance: 80000, // R$800.00 in cents
+          optimisticBalance: 100000, // R$1,000.00 in cents
         }),
       ]
       const investmentTotal = 0
 
       const result = transformToChartData(days, investmentTotal)
 
-      // investmentInclusiveBalance = pessimisticBalance / 100 when no investments
-      expect(result[0].investmentInclusiveBalance).toBe(800)
-      expect(result[0].pessimisticBalance).toBe(800)
+      // investmentInclusiveBalance = optimisticBalance / 100 when no investments
+      expect(result[0].investmentInclusiveBalance).toBe(1000)
+      expect(result[0].optimisticBalance).toBe(1000)
     })
 
     it('should handle multiple days with consistent investment total', () => {
       const days: DailySnapshot[] = [
         createMockSnapshot({
           dayOffset: 0,
-          pessimisticBalance: 80000,
+          optimisticBalance: 100000,
         }),
         createMockSnapshot({
           dayOffset: 1,
           date: new Date('2025-01-16'),
-          pessimisticBalance: 75000, // Decreased after expense
+          optimisticBalance: 95000, // Decreased after expense
         }),
         createMockSnapshot({
           dayOffset: 2,
           date: new Date('2025-01-17'),
-          pessimisticBalance: 85000, // Increased after income
+          optimisticBalance: 105000, // Increased after income
         }),
       ]
       const investmentTotal = 100000 // R$1,000.00 in cents
 
       const result = transformToChartData(days, investmentTotal)
 
-      // Each day should have investmentTotal added to pessimistic
-      expect(result[0].investmentInclusiveBalance).toBe(1800) // (80000 + 100000) / 100
-      expect(result[1].investmentInclusiveBalance).toBe(1750) // (75000 + 100000) / 100
-      expect(result[2].investmentInclusiveBalance).toBe(1850) // (85000 + 100000) / 100
+      // Each day should have investmentTotal added to optimistic
+      expect(result[0].investmentInclusiveBalance).toBe(2000) // (100000 + 100000) / 100
+      expect(result[1].investmentInclusiveBalance).toBe(1950) // (95000 + 100000) / 100
+      expect(result[2].investmentInclusiveBalance).toBe(2050) // (105000 + 100000) / 100
     })
 
-    it('should handle negative pessimistic balance with investment buffer', () => {
+    it('should handle negative optimistic balance with investment buffer', () => {
       const days: DailySnapshot[] = [
         createMockSnapshot({
-          pessimisticBalance: -20000, // R$-200.00 in cents (danger zone)
-          isPessimisticDanger: true,
+          optimisticBalance: -20000, // R$-200.00 in cents (danger zone)
+          isOptimisticDanger: true,
         }),
       ]
       const investmentTotal = 50000 // R$500.00 in cents
@@ -97,7 +97,7 @@ describe('transformToChartData', () => {
       // investmentInclusiveBalance = (-20000 + 50000) / 100 = 300 dollars
       // Investment buffer brings balance positive
       expect(result[0].investmentInclusiveBalance).toBe(300)
-      expect(result[0].pessimisticBalance).toBe(-200)
+      expect(result[0].optimisticBalance).toBe(-200)
     })
 
     it('should preserve other chart data point fields', () => {
@@ -120,7 +120,7 @@ describe('transformToChartData', () => {
         timestamp: testDate.getTime(),
         optimisticBalance: 1500, // 150000 / 100
         pessimisticBalance: 800, // 80000 / 100
-        investmentInclusiveBalance: 1050, // (80000 + 25000) / 100
+        investmentInclusiveBalance: 1750, // (150000 + 25000) / 100
         isOptimisticDanger: false,
         isPessimisticDanger: true,
       })
@@ -142,7 +142,7 @@ describe('transformToChartData', () => {
 
       expect(result[0].optimisticBalance).toBe(1234.56)
       expect(result[0].pessimisticBalance).toBe(789.01)
-      expect(result[0].investmentInclusiveBalance).toBe(900.12) // (78901 + 11111) / 100
+      expect(result[0].investmentInclusiveBalance).toBe(1345.67) // (123456 + 11111) / 100
     })
   })
 })

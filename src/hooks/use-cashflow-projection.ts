@@ -27,7 +27,7 @@ export function transformToChartData(
     timestamp: day.date.getTime(),
     optimisticBalance: day.optimisticBalance / 100,
     pessimisticBalance: day.pessimisticBalance / 100,
-    investmentInclusiveBalance: (day.pessimisticBalance + investmentTotal) / 100,
+    investmentInclusiveBalance: (day.optimisticBalance + investmentTotal) / 100,
     isOptimisticDanger: day.isOptimisticDanger,
     isPessimisticDanger: day.isPessimisticDanger,
     snapshot: day,
