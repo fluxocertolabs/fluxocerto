@@ -77,7 +77,7 @@ export type ExpenseType = z.infer<typeof ExpenseTypeSchema>
 
 // Fixed Expense (existing, updated with explicit type)
 export const FixedExpenseInputSchema = z.object({
-  type: z.literal('fixed').default('fixed'),
+  type: z.literal('fixed'),
   name: z.string().min(1, 'Nome da despesa é obrigatório').max(100),
   amount: z.number().positive('Valor deve ser positivo'),
   dueDay: z.number().int().min(1).max(31, 'Dia deve ser entre 1 e 31'),

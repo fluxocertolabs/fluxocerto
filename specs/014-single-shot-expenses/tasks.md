@@ -20,7 +20,7 @@
 **Purpose**: Database migration and type system foundation
 
 - [ ] T001 Create database migration file `supabase/migrations/003_single_shot_expenses.sql` with type discriminator column, date column, nullable due_day, constraints, and indexes
-- [ ] T002 Apply migration to local Supabase instance and verify schema changes
+- [ ] T002 Apply migration to local Supabase instance, verify schema changes, and confirm existing RLS policies apply to single-shot expenses (user isolation)
 - [ ] T003 [P] Add expense type discriminator enum and schemas to `src/types/index.ts` (ExpenseTypeSchema, FixedExpenseInputSchema, FixedExpenseSchema)
 - [ ] T004 [P] Add single-shot expense Zod schemas to `src/types/index.ts` (SingleShotExpenseInputSchema, SingleShotExpenseSchema)
 - [ ] T005 Add discriminated union expense schemas to `src/types/index.ts` (ExpenseInputSchema, ExpenseSchema, type guards)
@@ -141,9 +141,10 @@
 **Purpose**: Improvements that affect multiple user stories
 
 - [ ] T039 [P] Run quickstart.md verification steps (database, typecheck, lint)
-- [ ] T040 [P] Verify realtime updates work for single-shot expenses (insert, update, delete)
+- [ ] T040 [P] Verify realtime updates work for single-shot expenses (insert, update, delete) - covers edge case "deleted while viewing cashflow"
 - [ ] T041 Verify existing fixed expenses still work correctly after migration (backward compatibility)
-- [ ] T042 Manual end-to-end testing of all user stories per spec acceptance scenarios
+- [ ] T042 [P] Verify single-shot expenses appear in cashflow chart tooltip with correct name and amount formatting (FR-013)
+- [ ] T043 Manual end-to-end testing of all user stories per spec acceptance scenarios
 
 ---
 
@@ -255,7 +256,7 @@ With multiple developers:
 
 | Metric | Count |
 |--------|-------|
-| **Total Tasks** | 42 |
+| **Total Tasks** | 43 |
 | **Setup Phase** | 6 tasks |
 | **Foundational Phase** | 7 tasks |
 | **User Story 1** | 7 tasks |
@@ -263,7 +264,7 @@ With multiple developers:
 | **User Story 3** | 4 tasks |
 | **User Story 4** | 3 tasks |
 | **User Story 5** | 5 tasks |
-| **Polish Phase** | 4 tasks |
+| **Polish Phase** | 5 tasks |
 | **Parallel Opportunities** | 8 task groups marked [P] |
 | **Suggested MVP Scope** | User Stories 1 + 2 (both P1 priority) |
 

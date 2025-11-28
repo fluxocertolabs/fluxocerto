@@ -56,11 +56,13 @@ src/
 ├── components/
 │   └── manage/
 │       └── expenses/
-│           ├── expense-form.tsx           # Extended for type selection
-│           ├── expense-list.tsx           # Extended with sub-tabs
-│           ├── expense-list-item.tsx      # Extended for date display
-│           ├── single-shot-expense-form.tsx  # New: single-shot specific form
-│           └── single-shot-expense-list-item.tsx  # New: single-shot specific item
+│           ├── expense-form.tsx           # Existing: fixed expense form (unchanged)
+│           ├── expense-list.tsx           # Existing: fixed expense list (unchanged)
+│           ├── expense-list-item.tsx      # Existing: fixed expense item (unchanged)
+│           ├── expense-section.tsx        # New: container with "Fixas"/"Pontuais" tabs
+│           ├── single-shot-expense-form.tsx      # New: single-shot specific form
+│           ├── single-shot-expense-list.tsx      # New: single-shot list with empty state
+│           └── single-shot-expense-list-item.tsx # New: single-shot item with date/status
 ├── lib/
 │   └── cashflow/
 │       ├── calculate.ts                   # Extended for single-shot expenses
