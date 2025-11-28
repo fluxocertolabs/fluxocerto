@@ -19,7 +19,7 @@ function formatCurrency(value: number): string {
   }).format(value)
 }
 
-export function getExpenseStatus(date: Date): 'past' | 'today' | 'future' {
+function getExpenseStatus(date: Date): 'past' | 'today' | 'future' {
   const today = startOfDay(new Date())
   const expenseDate = startOfDay(date)
 
