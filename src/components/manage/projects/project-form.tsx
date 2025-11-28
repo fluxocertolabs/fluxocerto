@@ -350,9 +350,20 @@ export function ProjectForm({
     e.preventDefault()
     setErrors({})
 
+    // Calculate amount: for twice-monthly with variable amounts, use the sum of both amounts
+    // Otherwise use the regular amount field
+    let calculatedAmount: number
+    if (frequency === 'twice-monthly' && variableAmountsEnabled) {
+      const parsedFirst = parseFloat(firstAmount) || 0
+      const parsedSecond = parseFloat(secondAmount) || 0
+      calculatedAmount = parsedFirst + parsedSecond
+    } else {
+      calculatedAmount = parseFloat(amount) || 0
+    }
+
     const formData = {
       name: name.trim(),
-      amount: parseFloat(amount) || 0,
+      amount: calculatedAmount,
       frequency,
       paymentSchedule: buildPaymentSchedule(),
       certainty,
