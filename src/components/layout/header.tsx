@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme'
 import { signOut } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -49,6 +50,7 @@ export function Header() {
           >
             Gerenciar
           </NavLink>
+          <ThemeToggle />
           {isAuthenticated && (
             <div className="flex items-center gap-3 ml-4 pl-4 border-l">
               {user?.email && (

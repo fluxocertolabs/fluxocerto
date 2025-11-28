@@ -1,14 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Family Finance</title>
+    <!-- FOUC Prevention: Apply theme before any content renders -->
+    <script>
+      (function() {
+        var theme = localStorage.getItem('family-finance-theme');
+        var parsed = null;
+        try {
+          parsed = theme ? JSON.parse(theme) : null;
+        } catch (e) {}
+        var storedTheme = parsed && parsed.state && parsed.state.theme;
+        var isDark = storedTheme === 'dark' || 
+          (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
+        document.documentElement.classList.add('no-transitions');
+        window.addEventListener('DOMContentLoaded', function() {
+          requestAnimationFrame(function() {
+            document.documentElement.classList.remove('no-transitions');
+          });
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

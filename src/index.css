@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-background: hsl(0 0% 100%);
@@ -21,6 +22,54 @@
   --color-input: hsl(0 0% 89.8%);
   --color-ring: hsl(0 0% 3.9%);
   --radius: 0.5rem;
+  /* Chart colors for light mode */
+  --color-chart-1: hsl(220 70% 50%);
+  --color-chart-2: hsl(160 60% 45%);
+  --color-chart-3: hsl(30 80% 55%);
+  --color-chart-4: hsl(280 65% 60%);
+  --color-chart-5: hsl(340 75% 55%);
+}
+
+/* Dark mode overrides - shadcn/ui Zinc theme */
+.dark {
+  --color-background: hsl(240 10% 3.9%);
+  --color-foreground: hsl(0 0% 98%);
+  --color-card: hsl(240 10% 3.9%);
+  --color-card-foreground: hsl(0 0% 98%);
+  --color-popover: hsl(240 10% 3.9%);
+  --color-popover-foreground: hsl(0 0% 98%);
+  --color-primary: hsl(0 0% 98%);
+  --color-primary-foreground: hsl(240 5.9% 10%);
+  --color-secondary: hsl(240 3.7% 15.9%);
+  --color-secondary-foreground: hsl(0 0% 98%);
+  --color-muted: hsl(240 3.7% 15.9%);
+  --color-muted-foreground: hsl(240 5% 64.9%);
+  --color-accent: hsl(240 3.7% 15.9%);
+  --color-accent-foreground: hsl(0 0% 98%);
+  --color-destructive: hsl(0 62.8% 30.6%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-border: hsl(240 3.7% 15.9%);
+  --color-input: hsl(240 3.7% 15.9%);
+  --color-ring: hsl(240 4.9% 83.9%);
+  /* Chart colors for dark mode - more vibrant for visibility */
+  --color-chart-1: hsl(220 70% 60%);
+  --color-chart-2: hsl(160 60% 55%);
+  --color-chart-3: hsl(30 80% 60%);
+  --color-chart-4: hsl(280 65% 65%);
+  --color-chart-5: hsl(340 75% 60%);
+}
+
+/* Smooth transitions for theme changes (200ms per spec) */
+* {
+  transition: background-color 200ms ease-in-out,
+              border-color 200ms ease-in-out,
+              color 200ms ease-in-out;
+}
+
+/* Disable transitions during initial load to prevent FOUC animation */
+.no-transitions,
+.no-transitions * {
+  transition: none !important;
 }
 
 * {

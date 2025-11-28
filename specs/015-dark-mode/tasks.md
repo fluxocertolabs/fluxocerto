@@ -25,8 +25,8 @@
 
 **Purpose**: Install dependencies and prepare project for dark mode implementation
 
-- [ ] T001 Install lucide-react@0.468.0 exactly with `pnpm add lucide-react@0.468.0`
-- [ ] T002 Copy migration file from specs/015-dark-mode/contracts/004_user_preferences.sql to supabase/migrations/004_user_preferences.sql
+- [x] T001 Install lucide-react@0.468.0 exactly with `pnpm add lucide-react@0.468.0`
+- [x] T002 Copy migration file from specs/015-dark-mode/contracts/004_user_preferences.sql to supabase/migrations/004_user_preferences.sql
 - [ ] T003 Run database migration via Supabase CLI or dashboard to create user_preferences table
 
 ---
@@ -37,11 +37,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Create theme type definitions in src/types/theme.ts (ThemeValue, ResolvedTheme, ThemeState, Zod schemas)
-- [ ] T005 [P] Add dark mode CSS variables to src/index.css with @custom-variant and .dark class overrides
-- [ ] T006 Add smooth transition CSS rules (200ms) for background-color, border-color, and color in src/index.css (depends on T005 - same file)
-- [ ] T007 Add FOUC prevention inline script to index.html inside `<head>` tag
-- [ ] T008 Create theme store with Zustand persist middleware in src/stores/theme-store.ts
+- [x] T004 [P] Create theme type definitions in src/types/theme.ts (ThemeValue, ResolvedTheme, ThemeState, Zod schemas)
+- [x] T005 [P] Add dark mode CSS variables to src/index.css with @custom-variant and .dark class overrides
+- [x] T006 Add smooth transition CSS rules (200ms) for background-color, border-color, and color in src/index.css (depends on T005 - same file)
+- [x] T007 Add FOUC prevention inline script to index.html inside `<head>` tag
+- [x] T008 Create theme store with Zustand persist middleware in src/stores/theme-store.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -55,11 +55,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Create barrel export file in src/components/theme/index.ts
-- [ ] T010 [US1] Create ThemeToggle component with Sun/Moon icons in src/components/theme/theme-toggle.tsx
-- [ ] T011 [US1] Add ThemeToggle to header component in src/components/layout/header.tsx
-- [ ] T012 [US1] Verify theme toggle switches between light ↔ dark correctly (2-way toggle per FR-002)
-- [ ] T013 [US1] Verify all UI components (cards, forms, buttons, dialogs) adapt colors correctly in both themes
+- [x] T009 [P] [US1] Create barrel export file in src/components/theme/index.ts
+- [x] T010 [US1] Create ThemeToggle component with Sun/Moon icons in src/components/theme/theme-toggle.tsx
+- [x] T011 [US1] Add ThemeToggle to header component in src/components/layout/header.tsx
+- [x] T012 [US1] Verify theme toggle switches between light ↔ dark correctly (2-way toggle per FR-002)
+- [x] T013 [US1] Verify all UI components (cards, forms, buttons, dialogs) adapt colors correctly in both themes
 
 **Checkpoint**: User Story 1 complete - users can toggle themes and see immediate visual changes
 
@@ -73,11 +73,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Create theme service with Supabase operations in src/lib/theme-service.ts (getThemePreference, saveThemePreference, deleteThemePreference)
-- [ ] T015 [US2] Add useTheme hook with Supabase sync in src/hooks/use-theme.ts
-- [ ] T016 [US2] Integrate theme sync with auth state changes (fetch preference on login, sync on toggle)
-- [ ] T017 [US2] Implement optimistic localStorage update with background Supabase sync
-- [ ] T018 [US2] Add error handling with retry strategy for failed Supabase syncs
+- [x] T014 [US2] Create theme service with Supabase operations in src/lib/theme-service.ts (getThemePreference, saveThemePreference, deleteThemePreference)
+- [x] T015 [US2] Add useTheme hook with Supabase sync in src/hooks/use-theme.ts
+- [x] T016 [US2] Integrate theme sync with auth state changes (fetch preference on login, sync on toggle)
+- [x] T017 [US2] Implement optimistic localStorage update with background Supabase sync
+- [x] T018 [US2] Add error handling with retry strategy for failed Supabase syncs
 
 **Checkpoint**: User Story 2 complete - theme preferences persist across devices via Supabase
 
@@ -91,10 +91,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Add system theme detection utility function in src/lib/theme.ts (getSystemTheme)
-- [ ] T020 [US3] Update theme store to use system preference as initial value when no localStorage exists in src/stores/theme-store.ts
-- [ ] T021 [US3] Ensure saved preference takes precedence over system preference in initial load logic
-- [ ] T022 [US3] Verify FOUC prevention script correctly detects system preference
+- [x] T019 [US3] Add system theme detection utility function in src/lib/theme.ts (getSystemTheme)
+- [x] T020 [US3] Update theme store to use system preference as initial value when no localStorage exists in src/stores/theme-store.ts
+- [x] T021 [US3] Ensure saved preference takes precedence over system preference in initial load logic
+- [x] T022 [US3] Verify FOUC prevention script correctly detects system preference
 
 **Checkpoint**: User Story 3 complete - new users see system-appropriate theme on first load
 
@@ -108,10 +108,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Verify CSS transitions are applied to all relevant properties (background-color, border-color, color)
-- [ ] T024 [US4] Add .no-transitions class handling to prevent animation on initial page load
-- [ ] T025 [US4] Ensure rapid theme toggling doesn't cause visual glitches
-- [ ] T026 [US4] Verify animated elements (loading spinners, charts) continue smoothly during theme transition
+- [x] T023 [US4] Verify CSS transitions are applied to all relevant properties (background-color, border-color, color)
+- [x] T024 [US4] Add .no-transitions class handling to prevent animation on initial page load
+- [x] T025 [US4] Ensure rapid theme toggling doesn't cause visual glitches
+- [x] T026 [US4] Verify animated elements (loading spinners, charts) continue smoothly during theme transition
 
 **Checkpoint**: User Story 4 complete - theme transitions feel polished and professional
 
@@ -121,11 +121,11 @@
 
 **Purpose**: Final verification and cleanup
 
-- [ ] T027 Verify WCAG AA contrast ratios (4.5:1 normal text, 3:1 large text) in both themes
-- [ ] T028 Verify focus states are clearly visible in both themes
-- [ ] T029 Ensure theme toggle has proper aria-label in Brazilian Portuguese
-- [ ] T030 Add INFO level logging for theme changes (per FR-013)
-- [ ] T031 Run quickstart.md verification checklist
+- [x] T027 Verify WCAG AA contrast ratios (4.5:1 normal text, 3:1 large text) in both themes
+- [x] T028 Verify focus states are clearly visible in both themes
+- [x] T029 Ensure theme toggle has proper aria-label in Brazilian Portuguese
+- [x] T030 Add INFO level logging for theme changes (per FR-013)
+- [x] T031 Run quickstart.md verification checklist
 
 ---
 
