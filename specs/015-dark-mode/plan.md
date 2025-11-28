@@ -61,7 +61,8 @@ src/
 ├── hooks/
 │   └── use-theme.ts            # New: Theme hook with Supabase sync
 ├── lib/
-│   └── theme.ts                # New: Theme utilities
+│   ├── theme.ts                # New: Theme utilities
+│   └── theme-service.ts        # New: Supabase theme operations
 ├── stores/
 │   └── theme-store.ts          # New: Zustand store for theme state
 ├── types/

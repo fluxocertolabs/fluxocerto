@@ -39,7 +39,7 @@
 
 - [ ] T004 [P] Create theme type definitions in src/types/theme.ts (ThemeValue, ResolvedTheme, ThemeState, Zod schemas)
 - [ ] T005 [P] Add dark mode CSS variables to src/index.css with @custom-variant and .dark class overrides
-- [ ] T006 [P] Add smooth transition CSS rules (200ms) for background-color, border-color, and color in src/index.css
+- [ ] T006 Add smooth transition CSS rules (200ms) for background-color, border-color, and color in src/index.css (depends on T005 - same file)
 - [ ] T007 Add FOUC prevention inline script to index.html inside `<head>` tag
 - [ ] T008 Create theme store with Zustand persist middleware in src/stores/theme-store.ts
 
@@ -58,7 +58,7 @@
 - [ ] T009 [P] [US1] Create barrel export file in src/components/theme/index.ts
 - [ ] T010 [US1] Create ThemeToggle component with Sun/Moon icons in src/components/theme/theme-toggle.tsx
 - [ ] T011 [US1] Add ThemeToggle to header component in src/components/layout/header.tsx
-- [ ] T012 [US1] Verify theme toggle cycles through light → dark → system correctly
+- [ ] T012 [US1] Verify theme toggle switches between light ↔ dark correctly (2-way toggle per FR-002)
 - [ ] T013 [US1] Verify all UI components (cards, forms, buttons, dialogs) adapt colors correctly in both themes
 
 **Checkpoint**: User Story 1 complete - users can toggle themes and see immediate visual changes
@@ -154,7 +154,7 @@
 
 ### Parallel Opportunities
 
-- **Phase 2**: T004, T005, T006 can run in parallel (different files)
+- **Phase 2**: T004 and T005 can run in parallel (different files); T006 depends on T005 (same file)
 - **Phase 3**: T009 can run in parallel with other prep work
 - **Different user stories**: Can be worked on in parallel by different team members after Phase 2
 
@@ -163,12 +163,12 @@
 ## Parallel Example: Foundational Phase
 
 ```bash
-# Launch all foundational tasks in parallel:
+# Launch parallel tasks:
 Task T004: "Create theme type definitions in src/types/theme.ts"
 Task T005: "Add dark mode CSS variables to src/index.css"
-Task T006: "Add smooth transition CSS rules in src/index.css"
 
 # Then sequentially:
+Task T006: "Add smooth transition CSS rules in src/index.css" (depends on T005 - same file)
 Task T007: "Add FOUC prevention script to index.html" (depends on CSS being ready)
 Task T008: "Create theme store in src/stores/theme-store.ts" (depends on types T004)
 ```

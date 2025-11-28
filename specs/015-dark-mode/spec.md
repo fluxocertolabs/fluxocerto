@@ -67,7 +67,7 @@ Ana, another family member, finds abrupt visual changes jarring. When switching 
 
 **Acceptance Scenarios**:
 
-1. **Given** Ana is on any page, **When** she toggles the theme, **Then** colors transition smoothly over approximately 200-300 milliseconds
+1. **Given** Ana is on any page, **When** she toggles the theme, **Then** colors transition smoothly over 200 milliseconds
 2. **Given** Ana toggles the theme rapidly multiple times, **When** the transitions occur, **Then** the interface remains stable without visual glitches
 3. **Given** Ana is viewing animated elements (loading spinners, charts), **When** she toggles the theme, **Then** animations continue smoothly during the transition
 
@@ -76,7 +76,7 @@ Ana, another family member, finds abrupt visual changes jarring. When switching 
 ### Edge Cases
 
 - What happens when the user's browser doesn't support `prefers-color-scheme`? The app defaults to light mode.
-- What happens when Supabase is temporarily unreachable while saving preference? The preference is saved locally and synced when connection is restored using "last write wins" conflict resolution (most recent timestamp takes precedence). A brief non-blocking error toast may be shown.
+- What happens when Supabase is temporarily unreachable while saving preference? The preference is saved locally and synced when connection is restored using "last write wins" conflict resolution (most recent timestamp takes precedence). No error toast is shown for background sync failures (silent retry).
 - What happens when a user clears their browser data? System preference is used until they set a new preference.
 - What happens during the brief moment between page load and preference fetch? The app uses system preference (or light mode as ultimate fallback) to prevent flash of incorrect theme.
 
@@ -89,7 +89,7 @@ Ana, another family member, finds abrupt visual changes jarring. When switching 
 - **FR-003**: System MUST apply the selected theme to all UI components including cards, forms, buttons, charts, dialogs, and loading states
 - **FR-004**: System MUST persist the user's theme preference in a database table linked to their user account
 - **FR-005**: System MUST detect the user's operating system theme preference on initial load when no saved preference exists
-- **FR-006**: System MUST display the toggle control with labels in Brazilian Portuguese ("Tema Claro" / "Tema Escuro" or appropriate icon with accessible label)
+- **FR-006**: System MUST display the toggle control as an icon button (Sun/Moon icons) with aria-label in Brazilian Portuguese ("Alternar para tema claro" / "Alternar para tema escuro")
 - **FR-007**: System MUST animate theme transitions smoothly to avoid jarring visual changes
 - **FR-008**: System MUST maintain WCAG AA color contrast ratios in both light and dark themes
 - **FR-009**: System MUST ensure focus states are clearly visible in both themes
