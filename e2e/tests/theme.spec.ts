@@ -4,8 +4,12 @@
  */
 
 import { test, expect } from '../fixtures/test-base';
+import { createAccount, createProject } from '../utils/test-data';
 
 test.describe('Theme Switching', () => {
+  // Run tests serially to avoid theme state conflicts
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeAll(async ({ db }) => {
     await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
   });
@@ -15,9 +19,10 @@ test.describe('Theme Switching', () => {
     dashboardPage,
   }) => {
     await dashboardPage.goto();
+    await page.waitForLoadState('networkidle');
 
-    // Find theme toggle button
-    const themeToggle = page.getByRole('button', { name: /tema|theme|dark|light/i });
+    // Find theme toggle button - matches aria-label patterns like "Tema atual: Claro. Clique para mudar para Escuro"
+    const themeToggle = page.getByRole('button', { name: /tema atual/i });
 
     // Get initial theme state
     const html = page.locator('html');
@@ -27,8 +32,16 @@ test.describe('Theme Switching', () => {
     // Click toggle
     await themeToggle.click();
 
-    // Wait for theme change
-    await page.waitForTimeout(300);
+    // Wait for theme change - need to wait for the DOM class to update
+    await page.waitForFunction(
+      (wasDark) => {
+        const currentClass = document.documentElement.className;
+        const isDark = currentClass.includes('dark');
+        return isDark !== wasDark;
+      },
+      initiallyDark,
+      { timeout: 5000 }
+    );
 
     // Verify theme changed
     const newClass = await html.getAttribute('class');
@@ -41,15 +54,24 @@ test.describe('Theme Switching', () => {
     dashboardPage,
   }) => {
     await dashboardPage.goto();
+    await page.waitForLoadState('networkidle');
 
-    const themeToggle = page.getByRole('button', { name: /tema|theme|dark|light/i });
+    const themeToggle = page.getByRole('button', { name: /tema atual/i });
     const html = page.locator('html');
 
-    // Ensure we're in dark mode
+    // Ensure we're in dark mode - may need to click once or twice depending on current state
     let currentClass = await html.getAttribute('class');
-    if (!currentClass?.includes('dark')) {
+    while (!currentClass?.includes('dark')) {
       await themeToggle.click();
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
+      currentClass = await html.getAttribute('class');
+      // Safety check - if we've cycled back to light, break to avoid infinite loop
+      if (currentClass?.includes('light') && !currentClass?.includes('dark')) {
+        await themeToggle.click();
+        await page.waitForTimeout(500);
+        currentClass = await html.getAttribute('class');
+        break;
+      }
     }
 
     // Verify we're in dark mode
@@ -59,6 +81,9 @@ test.describe('Theme Switching', () => {
     // Refresh the page
     await page.reload();
     await page.waitForLoadState('networkidle');
+
+    // Wait for theme to be applied after reload
+    await page.waitForTimeout(500);
 
     // Verify dark mode persisted
     const afterRefreshClass = await html.getAttribute('class');
@@ -72,26 +97,34 @@ test.describe('Theme Switching', () => {
   }) => {
     // Seed some data so dashboard has content
     await db.resetDatabase();
-    await db.seedAccounts([{ name: 'Test Account', type: 'checking', balance: 100000 }]);
-    await db.seedProjects([{
+    await db.seedAccounts([createAccount({ name: 'Test Account', type: 'checking', balance: 100000 })]);
+    await db.seedProjects([createProject({
       name: 'Test Project',
       amount: 500000,
-      payment_day: 5,
       frequency: 'monthly',
       certainty: 'guaranteed',
       is_active: true,
-    }]);
+    })]);
 
     await dashboardPage.goto();
+    await page.waitForLoadState('networkidle');
 
-    const themeToggle = page.getByRole('button', { name: /tema|theme|dark|light/i });
+    const themeToggle = page.getByRole('button', { name: /tema atual/i });
     const html = page.locator('html');
 
-    // Ensure dark mode
+    // Ensure dark mode - may need to click once or twice depending on current state
     let currentClass = await html.getAttribute('class');
-    if (!currentClass?.includes('dark')) {
+    while (!currentClass?.includes('dark')) {
       await themeToggle.click();
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
+      currentClass = await html.getAttribute('class');
+      // Safety check - if we've cycled back to light, break to avoid infinite loop
+      if (currentClass?.includes('light') && !currentClass?.includes('dark')) {
+        await themeToggle.click();
+        await page.waitForTimeout(500);
+        currentClass = await html.getAttribute('class');
+        break;
+      }
     }
 
     // Verify dark mode is active

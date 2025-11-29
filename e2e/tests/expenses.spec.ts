@@ -8,6 +8,9 @@ import { createExpense, createSingleShotExpense } from '../utils/test-data';
 import { formatBRL } from '../utils/format';
 
 test.describe('Expense Management', () => {
+  // Run tests serially to avoid database race conditions
+  test.describe.configure({ mode: 'serial' });
+
   test.describe('Fixed Expenses', () => {
     test('T036: create fixed expense "Aluguel" R$ 2.000,00 due day 10 → appears in fixed expenses list', async ({
       managePage,

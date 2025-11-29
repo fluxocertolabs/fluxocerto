@@ -8,6 +8,9 @@ import { createAccount } from '../utils/test-data';
 import { formatBRL } from '../utils/format';
 
 test.describe('Account Management', () => {
+  // Run tests serially to avoid database race conditions
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeAll(async ({ db }) => {
     await db.resetDatabase();
     await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
@@ -69,6 +72,7 @@ test.describe('Account Management', () => {
   });
 
   test('T032: delete account with confirmation → removed from list', async ({
+    page,
     managePage,
     db,
   }) => {
@@ -78,8 +82,12 @@ test.describe('Account Management', () => {
 
     await managePage.goto();
     await managePage.selectAccountsTab();
+    
+    // Wait for content to load
+    await page.waitForLoadState('networkidle');
 
     const accounts = managePage.accounts();
+    await accounts.waitForLoad();
     await accounts.expectAccountVisible('Conta para Excluir');
 
     await accounts.deleteAccount('Conta para Excluir');
@@ -131,13 +139,19 @@ test.describe('Account Management', () => {
 
     await managePage.goto();
     await managePage.selectAccountsTab();
+    
+    // Wait for content to load
+    await page.waitForLoadState('networkidle');
 
     const accounts = managePage.accounts();
+    await accounts.waitForLoad();
     await accounts.expectAccountVisible('Conta com Dono');
 
     // If owner is set, badge should be visible
     // This test validates the UI handles owner display
-    const accountCard = page.locator('.group').filter({ hasText: 'Conta com Dono' }).first();
+    const accountCard = page.locator('div.group.relative').filter({ 
+      has: page.getByRole('heading', { name: 'Conta com Dono', level: 3 }) 
+    }).first();
     await expect(accountCard).toBeVisible();
   });
 });

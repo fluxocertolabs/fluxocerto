@@ -98,12 +98,16 @@ test.describe('Authentication Flow', () => {
     page,
   }) => {
     const loginPage = new LoginPage(page);
+    const mailbox = TEST_EMAIL.split('@')[0];
+
+    // Purge mailbox to ensure we get a fresh magic link
+    await inbucket.purgeMailbox(mailbox);
 
     // Authenticate first
     await loginPage.goto();
     await loginPage.requestMagicLink(TEST_EMAIL);
+    await loginPage.expectMagicLinkSent();
     
-    const mailbox = TEST_EMAIL.split('@')[0];
     let magicLink: string | null = null;
     for (let i = 0; i < 10; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
@@ -114,8 +118,9 @@ test.describe('Authentication Flow', () => {
       await page.waitForTimeout(500);
     }
 
+    expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/);
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 10000 });
 
     // Refresh the page
     await page.reload();
@@ -129,12 +134,16 @@ test.describe('Authentication Flow', () => {
     page,
   }) => {
     const loginPage = new LoginPage(page);
+    const mailbox = TEST_EMAIL.split('@')[0];
+
+    // Purge mailbox to ensure we get a fresh magic link
+    await inbucket.purgeMailbox(mailbox);
 
     // Authenticate first
     await loginPage.goto();
     await loginPage.requestMagicLink(TEST_EMAIL);
+    await loginPage.expectMagicLinkSent();
     
-    const mailbox = TEST_EMAIL.split('@')[0];
     let magicLink: string | null = null;
     for (let i = 0; i < 10; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
@@ -145,8 +154,9 @@ test.describe('Authentication Flow', () => {
       await page.waitForTimeout(500);
     }
 
+    expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/);
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 10000 });
 
     // Click sign out
     const signOutButton = page.getByRole('button', { name: /sair|sign out|logout/i });

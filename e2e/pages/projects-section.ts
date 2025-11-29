@@ -183,6 +183,10 @@ export class ProjectsSection {
    * The ProjectListItem has an "Editar" button directly visible
    */
   private async editProject(name: string): Promise<void> {
+    // Wait for any pending updates to settle
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(300);
+    
     // First ensure the name is visible
     await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
     
@@ -193,6 +197,9 @@ export class ProjectsSection {
     // Navigate to the parent container that has the edit button
     // The structure is: container > (name info) + (actions with edit button)
     const editButton = projectName.locator('xpath=ancestor::*[.//button[contains(text(), "Editar") or @aria-label[contains(., "Editar")]]]//button[contains(text(), "Editar") or @aria-label[contains(., "Editar")]]').first();
+    
+    // Wait for button to be stable
+    await editButton.waitFor({ state: 'visible', timeout: 5000 });
     await editButton.click();
     
     // Wait for dialog
@@ -292,11 +299,19 @@ export class ProjectsSection {
     const deleteButton = projectName.locator('xpath=ancestor::*[.//button[contains(text(), "Excluir")]]//button[contains(text(), "Excluir")]').first();
     await deleteButton.click();
     
-    // Wait for confirmation dialog and confirm
-    const confirmDialog = this.page.getByRole('alertdialog').or(this.page.getByRole('dialog'));
-    await expect(confirmDialog).toBeVisible();
-    await confirmDialog.getByRole('button', { name: /confirmar|sim|yes|excluir/i }).click();
-    await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+    // Wait for confirmation dialog (AlertDialog)
+    const confirmDialog = this.page.getByRole('alertdialog');
+    await expect(confirmDialog).toBeVisible({ timeout: 5000 });
+    
+    // Click the "Excluir" button in the confirmation dialog (it's the destructive action button)
+    // The button text is "Excluir" or "Excluindo..." when loading
+    await confirmDialog.getByRole('button', { name: /^excluir$/i }).click();
+    
+    // Wait for dialog to close
+    await expect(confirmDialog).not.toBeVisible({ timeout: 10000 });
+    
+    // Wait for the UI to update after deletion
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -341,16 +356,27 @@ export class ProjectsSection {
     // First ensure the name is visible
     await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
     
-    // The badge labels are: Garantido, Provável, Incerto (for projects/income)
+    // The badge labels are: Garantida, Provável, Incerta (feminine for income)
     const certaintyLabels: Record<string, RegExp> = {
       guaranteed: /garantid/i,
       probable: /provável/i,
       uncertain: /incert/i,
     };
     
-    // Find the badge in the same container as the project name
+    // Find the badge near the project name
+    // For recurring projects, the container has a switch
+    // For single-shot income, there's no switch, so use a more general ancestor
     const projectName = this.page.getByText(name, { exact: true }).first();
-    const container = projectName.locator('xpath=ancestor::*[.//button[@role="switch"]]').first();
+    
+    // Try to find container with switch first (recurring), then fall back to parent container
+    let container = projectName.locator('xpath=ancestor::*[.//button[@role="switch"]]').first();
+    const hasSwitch = await container.count() > 0;
+    
+    if (!hasSwitch) {
+      // Single-shot income - use the row container (parent with Editar/Excluir buttons)
+      container = projectName.locator('xpath=ancestor::*[.//button[contains(text(), "Editar")]]').first();
+    }
+    
     const badge = container.getByText(certaintyLabels[certainty]);
     await expect(badge).toBeVisible({ timeout: 5000 });
   }

@@ -139,10 +139,27 @@ export class CreditCardsSection {
   }
 
   /**
+   * Wait for credit cards to load
+   */
+  async waitForLoad(): Promise<void> {
+    await Promise.race([
+      // Wait for card items
+      this.page.locator('div.group.relative').filter({
+        has: this.page.getByRole('heading', { level: 3 })
+      }).first().waitFor({ state: 'visible', timeout: 10000 }),
+      // Or empty state
+      this.page.getByText(/nenhum cartão/i).waitFor({ state: 'visible', timeout: 10000 }),
+    ]).catch(() => {
+      // Content might already be visible
+    });
+  }
+
+  /**
    * Verify credit card is visible in list
    */
   async expectCardVisible(name: string): Promise<void> {
-    const card = this.page.getByText(name).first();
+    await this.waitForLoad();
+    const card = this.page.getByText(name, { exact: true }).first();
     await expect(card).toBeVisible({ timeout: 10000 });
   }
 
@@ -150,8 +167,10 @@ export class CreditCardsSection {
    * Verify credit card is not visible in list
    */
   async expectCardNotVisible(name: string): Promise<void> {
-    const card = this.page.locator('.group').filter({ hasText: name });
-    await expect(card).not.toBeVisible();
+    const card = this.page.locator('div.group.relative').filter({ 
+      has: this.page.getByRole('heading', { name, level: 3, exact: true }) 
+    });
+    await expect(card).not.toBeVisible({ timeout: 5000 });
   }
 }
 

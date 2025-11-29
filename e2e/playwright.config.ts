@@ -53,10 +53,10 @@ process.env.TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.c
  */
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: false, // Disable parallel execution to avoid database race conditions
   forbidOnly: !!process.env.CI,
   retries: 2, // FR-016: 2 automatic retries per test
-  workers: process.env.CI ? '50%' : undefined, // 50% workers on CI
+  workers: 1, // Run tests sequentially to avoid database conflicts
   reporter: process.env.CI ? 'github' : 'html',
   timeout: 30000, // 30s per test
   expect: {

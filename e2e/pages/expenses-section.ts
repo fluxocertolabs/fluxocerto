@@ -197,12 +197,21 @@ export class ExpensesSection {
    * Delete expense - directly click the "Excluir" button on the row
    */
   async deleteExpense(name: string): Promise<void> {
+    // Wait for any pending updates to settle
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(300);
+    
     // First ensure the name is visible
     await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
     
     // Find the delete button in the same row as the expense name
-    const expenseName = this.page.getByText(name, { exact: true }).first();
-    const deleteButton = expenseName.locator('xpath=ancestor::*[.//button[contains(text(), "Excluir")]]//button[contains(text(), "Excluir")]').first();
+    // Use a fresh locator each time to avoid stale element references
+    const deleteButton = this.page.getByText(name, { exact: true }).first()
+      .locator('xpath=ancestor::*[.//button[contains(text(), "Excluir")]]//button[contains(text(), "Excluir")]').first();
+    
+    // Wait for button to be stable before clicking
+    await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
+    await this.page.waitForTimeout(200);
     await deleteButton.click();
     
     // Wait for confirmation dialog and confirm
@@ -210,6 +219,9 @@ export class ExpensesSection {
     await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     await confirmDialog.getByRole('button', { name: /confirmar|sim|yes|excluir/i }).click();
     await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+    
+    // Wait for UI to update after deletion
+    await this.page.waitForTimeout(500);
   }
 
   /**

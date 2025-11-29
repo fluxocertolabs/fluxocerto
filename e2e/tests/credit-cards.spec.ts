@@ -8,6 +8,8 @@ import { createCreditCard } from '../utils/test-data';
 import { formatBRL } from '../utils/format';
 
 test.describe('Credit Card Management', () => {
+  // Run tests serially to avoid database race conditions
+  test.describe.configure({ mode: 'serial' });
   test('T064: create credit card "Nubank Platinum" R$ 3.000,00 due day 15 → appears in list', async ({
     managePage,
     db,

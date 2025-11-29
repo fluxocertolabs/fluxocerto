@@ -130,7 +130,7 @@ export class AccountsSection {
   async deleteAccount(name: string): Promise<void> {
     // Find the card containing the account name - look for the heading with account name
     const accountCard = this.page.locator('div.group.relative').filter({ 
-      has: this.page.getByRole('heading', { name, level: 3 }) 
+      has: this.page.getByRole('heading', { name, level: 3, exact: true }) 
     }).first();
     
     // Wait for the card to be visible
@@ -155,6 +155,9 @@ export class AccountsSection {
     
     // Wait for dialog to close
     await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+    
+    // Wait for UI to update after deletion
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -187,9 +190,9 @@ export class AccountsSection {
    * Verify account does not appear in the list
    */
   async expectAccountNotVisible(name: string): Promise<void> {
-    // Use the same locator pattern as editAccount
+    // Use the same locator pattern as editAccount with exact matching
     const account = this.page.locator('div.group.relative').filter({ 
-      has: this.page.getByRole('heading', { name, level: 3 }) 
+      has: this.page.getByRole('heading', { name, level: 3, exact: true }) 
     });
     await expect(account).not.toBeVisible({ timeout: 5000 });
   }
