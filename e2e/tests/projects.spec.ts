@@ -116,7 +116,6 @@ test.describe('Project (Income) Management', () => {
     });
 
     test('T049: edit single-shot income certainty to "uncertain" → certainty badge updates', async ({
-      page,
       managePage,
       db,
     }) => {
@@ -132,17 +131,11 @@ test.describe('Project (Income) Management', () => {
       const projects = managePage.projects();
       await projects.selectSingleShot();
 
-      // Edit the income certainty
-      const projectCard = page.locator('[data-testid="project-card"]:has-text("Receita Avulsa"), .project-card:has-text("Receita Avulsa")').first();
-      await projectCard.getByRole('button', { name: /editar|edit/i }).click();
-
-      const certaintySelect = page.getByRole('combobox', { name: /certeza|certainty/i });
-      await certaintySelect.click();
-      await page.getByRole('option', { name: /incerto|uncertain/i }).click();
-      await page.getByRole('button', { name: /salvar|save/i }).click();
+      // Use the page object method to update certainty
+      await projects.updateSingleShotCertainty('Receita Avulsa', 'uncertain');
 
       // Verify certainty badge updated
-      await expect(page.getByText(/incerto|uncertain/i)).toBeVisible();
+      await projects.expectCertaintyBadge('Receita Avulsa', 'uncertain');
     });
 
     test('T050: delete income items with confirmation → removed from respective lists', async ({

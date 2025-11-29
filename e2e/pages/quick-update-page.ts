@@ -29,13 +29,22 @@ export class QuickUpdatePage {
   }
 
   /**
-   * Wait for Quick Update view to be visible
+   * Wait for Quick Update view to be visible and loaded
    */
   async waitForModal(): Promise<void> {
     // Wait for the "Concluir" button which indicates the view is loaded
     await expect(this.completeButton).toBeVisible({ timeout: 10000 });
     // Also wait for the content to load (either balance items or empty state)
     await this.page.waitForLoadState('networkidle');
+    
+    // Wait for loading state to complete (aria-busy becomes false)
+    await this.page.waitForFunction(() => {
+      const statusElement = document.querySelector('[role="status"]');
+      return !statusElement || statusElement.getAttribute('aria-busy') === 'false';
+    }, { timeout: 15000 });
+    
+    // Small delay to ensure animations complete
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -45,7 +54,8 @@ export class QuickUpdatePage {
   async updateAccountBalance(name: string, newBalance: string): Promise<void> {
     // Find the input with exact aria-label match to avoid matching similar names
     // e.g., "Nubank" should not match "Nubank Platinum"
-    const balanceInput = this.page.getByLabel(`Saldo de ${name}`, { exact: true });
+    // Use .last() to get the actual input (not skeleton) if there are duplicates
+    const balanceInput = this.page.getByLabel(`Saldo de ${name}`, { exact: true }).last();
     await balanceInput.clear();
     await balanceInput.fill(newBalance);
     // Trigger blur to save
@@ -59,7 +69,8 @@ export class QuickUpdatePage {
    */
   async updateCreditCardBalance(name: string, newBalance: string): Promise<void> {
     // Same as account - the input has aria-label "Saldo de {name}"
-    const balanceInput = this.page.getByLabel(`Saldo de ${name}`, { exact: true });
+    // Use .last() to get the actual input (not skeleton) if there are duplicates
+    const balanceInput = this.page.getByLabel(`Saldo de ${name}`, { exact: true }).last();
     await balanceInput.clear();
     await balanceInput.fill(newBalance);
     // Trigger blur to save

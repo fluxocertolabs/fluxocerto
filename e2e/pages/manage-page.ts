@@ -35,13 +35,30 @@ export class ManagePage {
   async goto(): Promise<void> {
     await this.page.goto('/manage');
     await this.page.waitForLoadState('networkidle');
-    // Wait for loading state to complete - check if loading indicator exists first
-    const loadingIndicator = await this.page.locator('text=/carregando/i').count();
-    if (loadingIndicator > 0) {
-      await this.page.waitForSelector('text=/carregando/i', { state: 'hidden', timeout: 10000 });
-    }
-    // Wait for tab content to be visible
-    await this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 5000 });
+    
+    // Wait for either:
+    // 1. The skeleton to disappear (aria-busy="false" on the status container)
+    // 2. The tab panel content to be visible
+    // Using a more robust approach that doesn't rely on screen-reader text
+    await Promise.race([
+      // Wait for loading to complete (aria-busy becomes false or no status element)
+      this.page.waitForFunction(() => {
+        const statusElement = document.querySelector('[role="status"]');
+        return !statusElement || statusElement.getAttribute('aria-busy') === 'false';
+      }, { timeout: 20000 }),
+      // Or wait for tab panel to be visible (indicates content loaded)
+      this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 20000 }),
+    ]);
+    
+    // Wait for any content items to appear (accounts, expenses, etc.)
+    await Promise.race([
+      this.page.locator('div.group.relative.overflow-hidden').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      this.page.getByText(/nenhum|adicionar/i).first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+    ]);
+    
+    // Small delay to ensure animations complete
+    await this.page.waitForTimeout(500);
   }
 
   /**

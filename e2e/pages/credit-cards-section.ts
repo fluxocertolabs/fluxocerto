@@ -57,11 +57,19 @@ export class CreditCardsSection {
    * Edit credit card by clicking edit button in dropdown menu
    */
   private async editCreditCard(name: string): Promise<void> {
-    // Find the card containing the name
-    const cardElement = this.page.locator('.group').filter({ hasText: name }).first();
+    // Find the card containing the name - use more specific selector
+    const cardElement = this.page.locator('div.group.relative').filter({ 
+      has: this.page.getByRole('heading', { name, level: 3 }) 
+    }).first();
+    
+    // Wait for the card to be visible
+    await expect(cardElement).toBeVisible({ timeout: 10000 });
     
     // Hover to reveal actions
     await cardElement.hover();
+    
+    // Wait a moment for hover effects
+    await this.page.waitForTimeout(200);
     
     // Click more options button
     await cardElement.getByRole('button', { name: /mais opções|more/i }).click();
@@ -70,7 +78,7 @@ export class CreditCardsSection {
     await this.page.getByRole('button', { name: /editar/i }).click();
     
     // Wait for dialog
-    await expect(this.page.getByRole('dialog')).toBeVisible();
+    await expect(this.page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -103,11 +111,19 @@ export class CreditCardsSection {
    * Delete credit card with confirmation dialog
    */
   async deleteCreditCard(name: string): Promise<void> {
-    // Find the card containing the name
-    const cardElement = this.page.locator('.group').filter({ hasText: name }).first();
+    // Find the card containing the name - use more specific selector
+    const cardElement = this.page.locator('div.group.relative').filter({ 
+      has: this.page.getByRole('heading', { name, level: 3 }) 
+    }).first();
+    
+    // Wait for the card to be visible
+    await expect(cardElement).toBeVisible({ timeout: 10000 });
     
     // Hover to reveal actions
     await cardElement.hover();
+    
+    // Wait a moment for hover effects
+    await this.page.waitForTimeout(200);
     
     // Click more options button
     await cardElement.getByRole('button', { name: /mais opções|more/i }).click();
@@ -117,7 +133,7 @@ export class CreditCardsSection {
     
     // Wait for confirmation and confirm
     const confirmDialog = this.page.getByRole('alertdialog').or(this.page.getByRole('dialog'));
-    await expect(confirmDialog).toBeVisible();
+    await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     await confirmDialog.getByRole('button', { name: /confirmar|sim|yes|excluir/i }).click();
     await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
   }
@@ -127,7 +143,7 @@ export class CreditCardsSection {
    */
   async expectCardVisible(name: string): Promise<void> {
     const card = this.page.getByText(name).first();
-    await expect(card).toBeVisible();
+    await expect(card).toBeVisible({ timeout: 10000 });
   }
 
   /**

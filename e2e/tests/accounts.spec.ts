@@ -33,6 +33,8 @@ test.describe('Account Management', () => {
     managePage,
     db,
   }) => {
+    await db.resetDatabase();
+    await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
     // Seed an account first
     await db.seedAccounts([createAccount({ name: 'Nubank', balance: 100000 })]);
 
@@ -40,6 +42,7 @@ test.describe('Account Management', () => {
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
+    await accounts.expectAccountVisible('Nubank');
     await accounts.updateAccountName('Nubank', 'Nubank Principal');
 
     await accounts.expectAccountVisible('Nubank Principal');

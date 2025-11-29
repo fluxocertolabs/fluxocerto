@@ -3,7 +3,7 @@
  * Implements IDatabaseFixture contract from specs/019-e2e-testing/contracts/fixtures.ts
  */
 
-import { getAdminClient, getUserIdFromEmail, resetAdminClient } from '../utils/supabase-admin';
+import { getAdminClient } from '../utils/supabase-admin';
 import type {
   TestAccount,
   TestExpense,
@@ -90,6 +90,7 @@ export async function seedAccounts(accounts: TestAccount[]): Promise<TestAccount
 
 /**
  * Seed fixed expenses with test data
+ * Note: Fixed expenses are stored in the 'expenses' table with type='fixed'
  */
 export async function seedExpenses(expenses: TestExpense[]): Promise<TestExpense[]> {
   const client = getAdminClient();
@@ -100,6 +101,7 @@ export async function seedExpenses(expenses: TestExpense[]): Promise<TestExpense
       amount: e.amount,
       due_day: e.due_day,
       is_active: e.is_active,
+      type: 'fixed', // Explicitly set type for fixed expenses
     })))
     .select();
 
@@ -112,17 +114,21 @@ export async function seedExpenses(expenses: TestExpense[]): Promise<TestExpense
 
 /**
  * Seed single-shot expenses with test data
+ * Note: Single-shot expenses are stored in the 'expenses' table with type='single_shot'
  */
 export async function seedSingleShotExpenses(
   expenses: TestSingleShotExpense[]
 ): Promise<TestSingleShotExpense[]> {
   const client = getAdminClient();
   const { data, error } = await client
-    .from('single_shot_expenses')
+    .from('expenses')
     .insert(expenses.map((e) => ({
       name: e.name,
       amount: e.amount,
       date: e.date,
+      type: 'single_shot',
+      // Single-shot doesn't need due_day
+      due_day: null,
     })))
     .select();
 
@@ -135,15 +141,15 @@ export async function seedSingleShotExpenses(
 
 /**
  * Seed projects/income with test data
+ * Note: user_id column was removed in migration 002_invite_auth.sql
+ * Projects are now shared among all authenticated family members
  */
 export async function seedProjects(projects: TestProject[]): Promise<TestProject[]> {
   const client = getAdminClient();
-  const userId = await getUserIdFromEmail(TEST_USER_EMAIL);
   
   const { data, error } = await client
     .from('projects')
     .insert(projects.map((p) => ({
-      user_id: userId,
       type: 'recurring', // All test projects are recurring by default
       name: p.name,
       amount: p.amount,
@@ -164,17 +170,16 @@ export async function seedProjects(projects: TestProject[]): Promise<TestProject
 /**
  * Seed single-shot income with test data
  * Single-shot income is stored in the projects table with type='single_shot'
+ * Note: user_id column was removed in migration 002_invite_auth.sql
  */
 export async function seedSingleShotIncome(
   income: TestSingleShotIncome[]
 ): Promise<TestSingleShotIncome[]> {
   const client = getAdminClient();
-  const userId = await getUserIdFromEmail(TEST_USER_EMAIL);
   
   const { data, error } = await client
     .from('projects')
     .insert(income.map((i) => ({
-      user_id: userId,
       type: 'single_shot',
       name: i.name,
       amount: i.amount,

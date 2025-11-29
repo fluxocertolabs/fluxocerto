@@ -21,8 +21,8 @@ export class DashboardPage {
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
     this.healthIndicator = page.locator('[data-testid="health-indicator"]');
     this.quickUpdateButton = page.getByRole('button', { name: /atualizar saldos/i });
-    // Empty state shows guidance text
-    this.emptyState = page.getByText(/adicione suas contas|nenhum dado|começar/i);
+    // Empty state shows "Nenhum Dado Financeiro Ainda" heading
+    this.emptyState = page.getByRole('heading', { name: /nenhum dado financeiro/i });
   }
 
   /**
@@ -39,12 +39,30 @@ export class DashboardPage {
   async goto(): Promise<void> {
     await this.page.goto('/');
     await this.page.waitForLoadState('networkidle');
+    
+    // Wait for loading to complete (aria-busy becomes false) or content to be visible
+    await Promise.race([
+      this.page.waitForFunction(() => {
+        const statusElement = document.querySelector('[role="status"]');
+        return !statusElement || statusElement.getAttribute('aria-busy') === 'false';
+      }, { timeout: 20000 }),
+      // Or wait for chart/empty state to be visible
+      this.cashflowChart.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
+      this.emptyState.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
+      // Or wait for quick update button (indicates dashboard is loaded)
+      this.quickUpdateButton.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
+    ]);
+    
+    // Small delay to ensure animations complete
+    await this.page.waitForTimeout(500);
   }
 
   /**
    * Check if dashboard displays empty state
    */
   async hasEmptyState(): Promise<boolean> {
+    // Wait a bit for the page to settle
+    await this.page.waitForTimeout(500);
     return this.emptyState.isVisible();
   }
 
@@ -61,6 +79,7 @@ export class DashboardPage {
    * Open Quick Update modal
    */
   async openQuickUpdate(): Promise<void> {
+    await expect(this.quickUpdateButton).toBeVisible({ timeout: 10000 });
     await this.quickUpdateButton.click();
   }
 
@@ -76,19 +95,33 @@ export class DashboardPage {
 
   /**
    * Get the displayed income total from summary panel
+   * The SummaryPanel shows "Renda Esperada" as the income label
    */
   async getIncomeTotal(): Promise<string> {
-    const incomeElement = this.page.locator('[data-testid="income-total"], .income-total').first();
-    const text = await incomeElement.textContent();
+    // Wait for the summary panel to be visible (look for "Renda Esperada" text)
+    const incomeLabel = this.page.getByText(/renda esperada/i);
+    await expect(incomeLabel).toBeVisible({ timeout: 15000 });
+    
+    // The value is in a sibling paragraph element - get the parent and find the value
+    const incomeCard = incomeLabel.locator('..'); // Get parent
+    const value = incomeCard.locator('p').filter({ hasText: /R\$/ }).first();
+    const text = await value.textContent();
     return text?.trim() ?? '';
   }
 
   /**
    * Get the displayed expense total from summary panel
+   * The SummaryPanel shows "Total de Despesas" as the expense label
    */
   async getExpenseTotal(): Promise<string> {
-    const expenseElement = this.page.locator('[data-testid="expense-total"], .expense-total').first();
-    const text = await expenseElement.textContent();
+    // Wait for the summary panel to be visible (look for "Total de Despesas" text)
+    const expenseLabel = this.page.getByText(/total de despesas/i);
+    await expect(expenseLabel).toBeVisible({ timeout: 15000 });
+    
+    // The value is in a sibling paragraph element - get the parent and find the value
+    const expenseCard = expenseLabel.locator('..'); // Get parent
+    const value = expenseCard.locator('p').filter({ hasText: /R\$/ }).first();
+    const text = await value.textContent();
     return text?.trim() ?? '';
   }
 

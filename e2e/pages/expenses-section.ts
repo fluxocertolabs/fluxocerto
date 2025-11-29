@@ -20,15 +20,21 @@ export class ExpensesSection {
     this.expenseList = page.locator('[data-testid="expenses-list"], .expenses-list').first();
   }
 
+
   /**
    * Switch to fixed expenses sub-tab
    */
   async selectFixedExpenses(): Promise<void> {
     await this.fixedExpensesTab.click();
-    // Wait for fixed expenses content to be visible (either list or empty state)
+    // Wait for tab panel to be ready
+    await this.page.waitForTimeout(300);
+    // Wait for fixed expenses content to be visible (either list, empty state, or items)
     await Promise.race([
-      this.page.getByRole('button', { name: /adicionar despesa fixa/i }).waitFor({ state: 'visible', timeout: 3000 }),
-      this.page.getByText(/nenhuma despesa fixa/i).waitFor({ state: 'visible', timeout: 3000 })
+      this.page.getByRole('button', { name: /adicionar despesa fixa/i }).waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.getByRole('button', { name: /adicionar despesa$/i }).waitFor({ state: 'visible', timeout: 10000 }), // Empty state button
+      this.page.getByText(/nenhuma despesa ainda/i).waitFor({ state: 'visible', timeout: 10000 }),
+      // Also check for expense items
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 10000 }),
     ]).catch(() => {
       // Content might already be visible
     });
@@ -39,10 +45,15 @@ export class ExpensesSection {
    */
   async selectSingleShot(): Promise<void> {
     await this.singleShotTab.click();
-    // Wait for single-shot content to be visible (either list or empty state)
+    // Wait for tab panel to be ready
+    await this.page.waitForTimeout(300);
+    // Wait for single-shot content to be visible (either list, empty state, or items)
     await Promise.race([
-      this.page.getByRole('button', { name: /adicionar despesa pontual/i }).waitFor({ state: 'visible', timeout: 3000 }),
-      this.page.getByText(/nenhuma despesa pontual/i).waitFor({ state: 'visible', timeout: 3000 })
+      this.page.getByRole('button', { name: /adicionar despesa pontual/i }).waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.getByRole('button', { name: /adicionar despesa$/i }).waitFor({ state: 'visible', timeout: 10000 }), // Empty state button
+      this.page.getByText(/nenhuma despesa/i).waitFor({ state: 'visible', timeout: 10000 }),
+      // Also check for expense items
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 10000 }),
     ]).catch(() => {
       // Content might already be visible
     });
@@ -51,6 +62,7 @@ export class ExpensesSection {
   /**
    * Create a fixed recurring expense
    * The add button is at the bottom of the list: "Adicionar Despesa Fixa"
+   * Or in empty state: "Adicionar Despesa"
    */
   async createFixedExpense(data: {
     name: string;
@@ -59,12 +71,20 @@ export class ExpensesSection {
   }): Promise<void> {
     await this.selectFixedExpenses();
     
-    // Click the add button within the fixed expenses section
-    await this.page.getByRole('button', { name: /adicionar despesa fixa/i }).click();
+    // Click the add button - could be "Adicionar Despesa Fixa" or "Adicionar Despesa" (empty state)
+    const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa fixa/i });
+    const addButtonEmpty = this.page.getByRole('button', { name: /^adicionar despesa$/i });
+    
+    // Try the full button first, then the empty state button
+    if (await addButtonFull.isVisible()) {
+      await addButtonFull.click();
+    } else {
+      await addButtonEmpty.click();
+    }
 
     // Wait for dialog
     const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    await expect(dialog).toBeVisible({ timeout: 5000 });
 
     // Fill form
     await dialog.getByLabel(/nome/i).fill(data.name);
@@ -86,12 +106,20 @@ export class ExpensesSection {
   }): Promise<void> {
     await this.selectSingleShot();
     
-    // Click the add button within the single-shot section
-    await this.page.getByRole('button', { name: /adicionar despesa pontual/i }).click();
+    // Click the add button - could be "Adicionar Despesa Pontual" or "Adicionar Despesa" (empty state)
+    const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa pontual/i });
+    const addButtonEmpty = this.page.getByRole('button', { name: /^adicionar despesa$/i });
+    
+    // Try the full button first, then the empty state button
+    if (await addButtonFull.isVisible()) {
+      await addButtonFull.click();
+    } else {
+      await addButtonEmpty.click();
+    }
 
     // Wait for dialog
     const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    await expect(dialog).toBeVisible({ timeout: 5000 });
 
     // Fill form
     await dialog.getByLabel(/nome/i).fill(data.name);
@@ -111,13 +139,16 @@ export class ExpensesSection {
    * The ExpenseListItem has a Switch component
    */
   async toggleExpense(name: string): Promise<void> {
-    // Find the expense by name, then locate its switch within the same container
-    // Using a more specific selector: the parent div containing both the name and the switch
-    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
-    const toggle = expenseRow.getByRole('switch');
+    // First ensure the name is visible
+    await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
+    
+    // Find the switch in the same container as the expense name
+    const expenseName = this.page.getByText(name, { exact: true }).first();
+    const container = expenseName.locator('xpath=ancestor::*[.//button[@role="switch"]]').first();
+    const toggle = container.getByRole('switch');
     await toggle.click();
     // Wait a bit for the state change to process
-    await this.page.waitForTimeout(200);
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -125,11 +156,16 @@ export class ExpensesSection {
    * The ExpenseListItem has an "Editar" button directly visible
    */
   private async editExpense(name: string): Promise<void> {
-    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
-    await expenseRow.getByRole('button', { name: /editar/i }).click();
+    // First ensure the name is visible
+    await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
+    
+    // Find the edit button in the same row as the expense name
+    const expenseName = this.page.getByText(name, { exact: true }).first();
+    const editButton = expenseName.locator('xpath=ancestor::*[.//button[contains(text(), "Editar")]]//button[contains(text(), "Editar")]').first();
+    await editButton.click();
     
     // Wait for dialog
-    await expect(this.page.getByRole('dialog')).toBeVisible();
+    await expect(this.page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -161,12 +197,17 @@ export class ExpensesSection {
    * Delete expense - directly click the "Excluir" button on the row
    */
   async deleteExpense(name: string): Promise<void> {
-    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
-    await expenseRow.getByRole('button', { name: /excluir/i }).click();
+    // First ensure the name is visible
+    await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
+    
+    // Find the delete button in the same row as the expense name
+    const expenseName = this.page.getByText(name, { exact: true }).first();
+    const deleteButton = expenseName.locator('xpath=ancestor::*[.//button[contains(text(), "Excluir")]]//button[contains(text(), "Excluir")]').first();
+    await deleteButton.click();
     
     // Wait for confirmation dialog and confirm
     const confirmDialog = this.page.getByRole('alertdialog').or(this.page.getByRole('dialog'));
-    await expect(confirmDialog).toBeVisible();
+    await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     await confirmDialog.getByRole('button', { name: /confirmar|sim|yes|excluir/i }).click();
     await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
   }
@@ -175,16 +216,16 @@ export class ExpensesSection {
    * Verify expense is visible in list
    */
   async expectExpenseVisible(name: string): Promise<void> {
-    const expense = this.page.getByText(name).first();
-    await expect(expense).toBeVisible();
+    const expense = this.page.getByText(name, { exact: true }).first();
+    await expect(expense).toBeVisible({ timeout: 10000 });
   }
 
   /**
    * Verify expense is not visible in list
    */
   async expectExpenseNotVisible(name: string): Promise<void> {
-    const expense = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name });
-    await expect(expense).not.toBeVisible();
+    const expense = this.page.getByText(name, { exact: true });
+    await expect(expense).not.toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -192,9 +233,14 @@ export class ExpensesSection {
    * The inactive items have opacity-60 class and show "Inativo" badge
    */
   async expectExpenseInactive(name: string): Promise<void> {
-    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
-    // Check for "Inativo" badge text
-    await expect(expenseRow.getByText(/inativo/i)).toBeVisible();
+    // First ensure the name is visible
+    await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
+    
+    // Check for "Inativo" badge text near the expense name
+    const expenseName = this.page.getByText(name, { exact: true }).first();
+    const container = expenseName.locator('xpath=ancestor::*[.//button[@role="switch"]]').first();
+    const inactiveBadge = container.getByText(/inativo/i);
+    await expect(inactiveBadge).toBeVisible({ timeout: 5000 });
   }
 }
 

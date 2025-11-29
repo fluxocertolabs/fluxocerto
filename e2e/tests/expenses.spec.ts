@@ -44,6 +44,10 @@ test.describe('Expense Management', () => {
 
       const expenses = managePage.expenses();
       await expenses.selectFixedExpenses();
+      
+      // Wait for the expense to be visible before toggling
+      await expenses.expectExpenseVisible('Despesa Ativa');
+      
       await expenses.toggleExpense('Despesa Ativa');
 
       await expenses.expectExpenseInactive('Despesa Ativa');
@@ -126,17 +130,15 @@ test.describe('Expense Management', () => {
 
       const expenses = managePage.expenses();
       await expenses.selectSingleShot();
+      
+      // Wait for the expense to be visible
+      await expenses.expectExpenseVisible('Despesa Avulsa');
 
-      // Edit the expense date
-      const expenseCard = page.locator('[data-testid="expense-card"]:has-text("Despesa Avulsa"), .expense-card:has-text("Despesa Avulsa")').first();
-      await expenseCard.getByRole('button', { name: /editar|edit/i }).click();
+      // Use the page object method to update the date
+      await expenses.updateSingleShotDate('Despesa Avulsa', '2025-12-20');
 
-      const dateInput = page.locator('input[type="date"], [data-testid="date-input"]').first();
-      await dateInput.fill('2025-12-20');
-      await page.getByRole('button', { name: /salvar|save/i }).click();
-
-      // Verify updated date is displayed
-      await expect(page.getByText(/20\/12\/2025|2025-12-20/)).toBeVisible();
+      // Verify updated date is displayed (format: "20 de dezembro de 2025")
+      await expect(page.getByText(/20.*dezembro|dezembro.*20|20\/12\/2025|2025-12-20/i)).toBeVisible();
     });
 
     test('T042: delete single-shot expense → removed from list', async ({

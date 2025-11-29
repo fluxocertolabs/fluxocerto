@@ -73,11 +73,19 @@ export class AccountsSection {
    * The account cards have a "More options" button that opens a dropdown with Edit option
    */
   async editAccount(name: string): Promise<void> {
-    // Find the card containing the account name - use more specific selector
-    const accountCard = this.page.locator('div.group.relative.overflow-hidden').filter({ hasText: name }).first();
+    // Find the card containing the account name - look for the heading with account name
+    const accountCard = this.page.locator('div.group.relative').filter({ 
+      has: this.page.getByRole('heading', { name, level: 3 }) 
+    }).first();
+    
+    // Wait for the card to be visible
+    await expect(accountCard).toBeVisible({ timeout: 10000 });
     
     // Hover to reveal the actions button
     await accountCard.hover();
+    
+    // Wait a moment for hover effects
+    await this.page.waitForTimeout(200);
     
     // Click the "More options" button (three dots)
     await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
@@ -86,7 +94,7 @@ export class AccountsSection {
     await this.page.getByRole('button', { name: /editar/i }).click();
     
     // Wait for dialog to open
-    await expect(this.page.getByRole('dialog')).toBeVisible();
+    await expect(this.page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -120,11 +128,19 @@ export class AccountsSection {
    * Opens edit dialog first, then clicks delete, then confirms
    */
   async deleteAccount(name: string): Promise<void> {
-    // Find the card containing the account name
-    const accountCard = this.page.locator('.group').filter({ hasText: name }).first();
+    // Find the card containing the account name - look for the heading with account name
+    const accountCard = this.page.locator('div.group.relative').filter({ 
+      has: this.page.getByRole('heading', { name, level: 3 }) 
+    }).first();
+    
+    // Wait for the card to be visible
+    await expect(accountCard).toBeVisible({ timeout: 10000 });
     
     // Hover to reveal the actions button
     await accountCard.hover();
+    
+    // Wait a moment for hover effects
+    await this.page.waitForTimeout(200);
     
     // Click the "More options" button (three dots)
     await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
@@ -134,7 +150,7 @@ export class AccountsSection {
     
     // Wait for confirmation dialog and confirm
     const confirmDialog = this.page.getByRole('alertdialog').or(this.page.getByRole('dialog'));
-    await expect(confirmDialog).toBeVisible();
+    await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     await confirmDialog.getByRole('button', { name: /confirmar|confirm|sim|yes|excluir/i }).click();
     
     // Wait for dialog to close
@@ -142,26 +158,49 @@ export class AccountsSection {
   }
 
   /**
+   * Wait for accounts to load (either accounts appear or empty state)
+   */
+  async waitForLoad(): Promise<void> {
+    await Promise.race([
+      // Wait for account cards
+      this.page.locator('div.group.relative').filter({
+        has: this.page.getByRole('heading', { level: 3 })
+      }).first().waitFor({ state: 'visible', timeout: 10000 }),
+      // Or empty state
+      this.page.getByText(/nenhuma conta/i).waitFor({ state: 'visible', timeout: 10000 }),
+    ]).catch(() => {
+      // Content might already be visible
+    });
+  }
+
+  /**
    * Verify account appears in the list
    */
   async expectAccountVisible(name: string): Promise<void> {
+    // First wait for content to load
+    await this.waitForLoad();
     const account = this.page.getByText(name).first();
-    await expect(account).toBeVisible();
+    await expect(account).toBeVisible({ timeout: 10000 });
   }
 
   /**
    * Verify account does not appear in the list
    */
   async expectAccountNotVisible(name: string): Promise<void> {
-    const account = this.page.locator(`[data-testid="account-card"]:has-text("${name}"), .account-card:has-text("${name}")`);
-    await expect(account).not.toBeVisible();
+    // Use the same locator pattern as editAccount
+    const account = this.page.locator('div.group.relative').filter({ 
+      has: this.page.getByRole('heading', { name, level: 3 }) 
+    });
+    await expect(account).not.toBeVisible({ timeout: 5000 });
   }
 
   /**
    * Get count of accounts in list
    */
   async getAccountCount(): Promise<number> {
-    const accounts = this.page.locator('[data-testid="account-card"], .account-card');
+    const accounts = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { level: 3 })
+    });
     return accounts.count();
   }
 }
