@@ -291,27 +291,40 @@ export class ProjectsSection {
    * Delete project - directly click the "Excluir" button on the row
    */
   async deleteProject(name: string): Promise<void> {
+    // Wait for any pending updates to settle
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(300);
+    
     // First ensure the name is visible
     await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
     
     // Find the delete button in the same row as the project name
     const projectName = this.page.getByText(name, { exact: true }).first();
     const deleteButton = projectName.locator('xpath=ancestor::*[.//button[contains(text(), "Excluir")]]//button[contains(text(), "Excluir")]').first();
+    
+    // Wait for button to be visible and clickable
+    await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
     await deleteButton.click();
     
-    // Wait for confirmation dialog (AlertDialog)
-    const confirmDialog = this.page.getByRole('alertdialog');
+    // Wait for confirmation dialog (AlertDialog) - try both alertdialog and dialog roles
+    const confirmDialog = this.page.getByRole('alertdialog').or(this.page.getByRole('dialog'));
     await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     
     // Click the "Excluir" button in the confirmation dialog (it's the destructive action button)
     // The button text is "Excluir" or "Excluindo..." when loading
-    await confirmDialog.getByRole('button', { name: /^excluir$/i }).click();
+    // Use a more flexible selector that matches the button text
+    const confirmButton = confirmDialog.getByRole('button', { name: /^excluir$/i });
+    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
+    await confirmButton.click();
     
     // Wait for dialog to close
     await expect(confirmDialog).not.toBeVisible({ timeout: 10000 });
     
     // Wait for the UI to update after deletion
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(1000);
+    
+    // Also wait for network to settle
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**

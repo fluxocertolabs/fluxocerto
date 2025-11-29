@@ -5,9 +5,18 @@
 
 import { test, expect } from '../fixtures/test-base';
 import { createLargeSeedData, createAccount } from '../utils/test-data';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-// TODO: Edge case tests need more work on locators and timing
-test.describe.skip('Edge Cases', () => {
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Path to the authenticated storage state
+const AUTH_STATE_PATH = resolve(__dirname, '../.auth/user.json');
+
+test.describe('Edge Cases', () => {
   // Run tests serially to avoid database race conditions
   test.describe.configure({ mode: 'serial' });
 
@@ -70,9 +79,9 @@ test.describe.skip('Edge Cases', () => {
     await db.resetDatabase();
     await db.seedAccounts([createAccount({ name: 'Conta Concorrente', balance: 100000 })]);
 
-    // Create two browser contexts (simulating two tabs)
-    const context1 = await browser.newContext();
-    const context2 = await browser.newContext();
+    // Create two browser contexts with authenticated state (simulating two tabs)
+    const context1 = await browser.newContext({ storageState: AUTH_STATE_PATH });
+    const context2 = await browser.newContext({ storageState: AUTH_STATE_PATH });
 
     const page1 = await context1.newPage();
     const page2 = await context2.newPage();
@@ -106,8 +115,9 @@ test.describe.skip('Edge Cases', () => {
     await expect(page2.getByText('Conta Concorrente')).toBeVisible({ timeout: 10000 });
 
     // Page 1 edits the account using the proper UI flow
-    const card1 = page1.locator('div.group.relative.overflow-hidden').filter({ hasText: 'Conta Concorrente' }).first();
+    const card1 = page1.locator('div.group.relative').filter({ hasText: 'Conta Concorrente' }).first();
     await card1.hover();
+    await page1.waitForTimeout(200);
     await card1.getByRole('button', { name: /mais opções|more/i }).click();
     await page1.getByRole('button', { name: /editar/i }).click();
     
@@ -119,8 +129,9 @@ test.describe.skip('Edge Cases', () => {
     await expect(dialog1).not.toBeVisible({ timeout: 5000 });
 
     // Page 2 also tries to edit (simulating concurrent edit)
-    const card2 = page2.locator('div.group.relative.overflow-hidden').filter({ hasText: 'Conta Concorrente' }).first();
+    const card2 = page2.locator('div.group.relative').filter({ hasText: 'Conta Concorrente' }).first();
     await card2.hover();
+    await page2.waitForTimeout(200);
     await card2.getByRole('button', { name: /mais opções|more/i }).click();
     await page2.getByRole('button', { name: /editar/i }).click();
     
@@ -188,8 +199,8 @@ test.describe.skip('Edge Cases', () => {
     // Page should load within reasonable time (< 20 seconds for large datasets)
     expect(loadTime).toBeLessThan(20000);
 
-    // Verify some accounts are visible
-    await expect(page.getByText('Conta 1')).toBeVisible({ timeout: 10000 });
+    // Verify some accounts are visible - use exact match to avoid matching Conta 10, 11, etc.
+    await expect(page.getByRole('heading', { name: 'Conta 1', exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('T077: EC-005: Supabase realtime connection drops and reconnects → data sync recovery verified', async ({

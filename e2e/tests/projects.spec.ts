@@ -141,8 +141,8 @@ test.describe('Project (Income) Management', () => {
       await projects.expectCertaintyBadge('Receita Avulsa', 'uncertain');
     });
 
-    // TODO: Fix single-shot income deletion - the delete confirmation dialog may have issues
-    test.skip('T050: delete income items with confirmation → removed from respective lists', async ({
+    test('T050: delete income items with confirmation → removed from respective lists', async ({
+      page,
       managePage,
       db,
     }) => {
@@ -156,20 +156,26 @@ test.describe('Project (Income) Management', () => {
 
       const projects = managePage.projects();
 
-      // Delete recurring project
+      // Delete recurring project first
       await projects.selectRecurring();
       await projects.expectProjectVisible('Projeto Excluir');
       await projects.deleteProject('Projeto Excluir');
       await projects.expectProjectNotVisible('Projeto Excluir');
 
-      // Reload page to ensure clean state before deleting single-shot
-      await managePage.goto();
-      await managePage.selectProjectsTab();
-
-      // Delete single-shot income
+      // Now delete single-shot income
       await projects.selectSingleShot();
       await projects.expectProjectVisible('Receita Excluir');
+      
+      // Use the deleteProject method from the page object
       await projects.deleteProject('Receita Excluir');
+      
+      // Reload the page to verify the item was actually deleted from the database
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      await managePage.selectProjectsTab();
+      await projects.selectSingleShot();
+      
+      // Now verify the item is gone
       await projects.expectProjectNotVisible('Receita Excluir');
     });
   });
