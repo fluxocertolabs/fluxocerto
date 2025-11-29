@@ -35,10 +35,13 @@ export class ManagePage {
   async goto(): Promise<void> {
     await this.page.goto('/manage');
     await this.page.waitForLoadState('networkidle');
-    // Wait for loading state to complete
-    await this.page.waitForSelector('text=/carregando/i', { state: 'hidden', timeout: 10000 }).catch(() => {
-      // Loading text might already be gone
-    });
+    // Wait for loading state to complete - check if loading indicator exists first
+    const loadingIndicator = await this.page.locator('text=/carregando/i').count();
+    if (loadingIndicator > 0) {
+      await this.page.waitForSelector('text=/carregando/i', { state: 'hidden', timeout: 10000 });
+    }
+    // Wait for tab content to be visible
+    await this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 5000 });
   }
 
   /**

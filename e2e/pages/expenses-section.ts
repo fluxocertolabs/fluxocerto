@@ -25,8 +25,13 @@ export class ExpensesSection {
    */
   async selectFixedExpenses(): Promise<void> {
     await this.fixedExpensesTab.click();
-    // Wait for content to load
-    await this.page.waitForTimeout(300);
+    // Wait for fixed expenses content to be visible (either list or empty state)
+    await Promise.race([
+      this.page.getByRole('button', { name: /adicionar despesa fixa/i }).waitFor({ state: 'visible', timeout: 3000 }),
+      this.page.getByText(/nenhuma despesa fixa/i).waitFor({ state: 'visible', timeout: 3000 })
+    ]).catch(() => {
+      // Content might already be visible
+    });
   }
 
   /**
@@ -34,8 +39,13 @@ export class ExpensesSection {
    */
   async selectSingleShot(): Promise<void> {
     await this.singleShotTab.click();
-    // Wait for content to load
-    await this.page.waitForTimeout(300);
+    // Wait for single-shot content to be visible (either list or empty state)
+    await Promise.race([
+      this.page.getByRole('button', { name: /adicionar despesa pontual/i }).waitFor({ state: 'visible', timeout: 3000 }),
+      this.page.getByText(/nenhuma despesa pontual/i).waitFor({ state: 'visible', timeout: 3000 })
+    ]).catch(() => {
+      // Content might already be visible
+    });
   }
 
   /**
@@ -101,10 +111,13 @@ export class ExpensesSection {
    * The ExpenseListItem has a Switch component
    */
   async toggleExpense(name: string): Promise<void> {
-    // Find the row containing the expense name
-    const expenseRow = this.page.locator('.rounded-lg.border').filter({ hasText: name }).first();
+    // Find the expense by name, then locate its switch within the same container
+    // Using a more specific selector: the parent div containing both the name and the switch
+    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
     const toggle = expenseRow.getByRole('switch');
     await toggle.click();
+    // Wait a bit for the state change to process
+    await this.page.waitForTimeout(200);
   }
 
   /**
@@ -112,7 +125,7 @@ export class ExpensesSection {
    * The ExpenseListItem has an "Editar" button directly visible
    */
   private async editExpense(name: string): Promise<void> {
-    const expenseRow = this.page.locator('.rounded-lg.border').filter({ hasText: name }).first();
+    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
     await expenseRow.getByRole('button', { name: /editar/i }).click();
     
     // Wait for dialog
@@ -148,7 +161,7 @@ export class ExpensesSection {
    * Delete expense - directly click the "Excluir" button on the row
    */
   async deleteExpense(name: string): Promise<void> {
-    const expenseRow = this.page.locator('.rounded-lg.border').filter({ hasText: name }).first();
+    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
     await expenseRow.getByRole('button', { name: /excluir/i }).click();
     
     // Wait for confirmation dialog and confirm
@@ -170,7 +183,7 @@ export class ExpensesSection {
    * Verify expense is not visible in list
    */
   async expectExpenseNotVisible(name: string): Promise<void> {
-    const expense = this.page.locator('.rounded-lg.border').filter({ hasText: name });
+    const expense = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name });
     await expect(expense).not.toBeVisible();
   }
 
@@ -179,7 +192,7 @@ export class ExpensesSection {
    * The inactive items have opacity-60 class and show "Inativo" badge
    */
   async expectExpenseInactive(name: string): Promise<void> {
-    const expenseRow = this.page.locator('.rounded-lg.border').filter({ hasText: name }).first();
+    const expenseRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
     // Check for "Inativo" badge text
     await expect(expenseRow.getByText(/inativo/i)).toBeVisible();
   }

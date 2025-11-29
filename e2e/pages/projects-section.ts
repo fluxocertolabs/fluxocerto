@@ -25,6 +25,13 @@ export class ProjectsSection {
    */
   async selectRecurring(): Promise<void> {
     await this.recurringTab.click();
+    // Wait for recurring content to be visible (either list or empty state)
+    await Promise.race([
+      this.page.getByRole('button', { name: /adicionar receita recorrente|adicionar projeto/i }).waitFor({ state: 'visible', timeout: 3000 }),
+      this.page.getByText(/nenhuma fonte de renda/i).waitFor({ state: 'visible', timeout: 3000 })
+    ]).catch(() => {
+      // Content might already be visible
+    });
   }
 
   /**
@@ -32,6 +39,13 @@ export class ProjectsSection {
    */
   async selectSingleShot(): Promise<void> {
     await this.singleShotTab.click();
+    // Wait for single-shot content to be visible (either list or empty state)  
+    await Promise.race([
+      this.page.getByRole('button', { name: /adicionar receita pontual/i }).waitFor({ state: 'visible', timeout: 3000 }),
+      this.page.getByText(/nenhuma receita avulsa|nenhuma receita pontual/i).waitFor({ state: 'visible', timeout: 3000 })
+    ]).catch(() => {
+      // Content might already be visible
+    });
   }
 
   /**
@@ -133,9 +147,11 @@ export class ProjectsSection {
    * The ProjectListItem has a Switch component
    */
   async toggleProject(name: string): Promise<void> {
-    const projectRow = this.page.locator('.rounded-lg.border').filter({ hasText: name }).first();
+    const projectRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
     const toggle = projectRow.getByRole('switch');
     await toggle.click();
+    // Wait a bit for the state change to process
+    await this.page.waitForTimeout(200);
   }
 
   /**
@@ -143,7 +159,7 @@ export class ProjectsSection {
    * The ProjectListItem has an "Editar" button directly visible
    */
   private async editProject(name: string): Promise<void> {
-    const projectRow = this.page.locator('.rounded-lg.border').filter({ hasText: name }).first();
+    const projectRow = this.page.locator('div.p-4.rounded-lg.border.bg-card').filter({ hasText: name }).first();
     await projectRow.getByRole('button', { name: /editar/i }).click();
     
     // Wait for dialog

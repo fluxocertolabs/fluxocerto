@@ -73,8 +73,8 @@ export class AccountsSection {
    * The account cards have a "More options" button that opens a dropdown with Edit option
    */
   async editAccount(name: string): Promise<void> {
-    // Find the card containing the account name
-    const accountCard = this.page.locator('.group').filter({ hasText: name }).first();
+    // Find the card containing the account name - use more specific selector
+    const accountCard = this.page.locator('div.group.relative.overflow-hidden').filter({ hasText: name }).first();
     
     // Hover to reveal the actions button
     await accountCard.hover();
