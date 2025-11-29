@@ -7,40 +7,27 @@ import { test, expect, Page } from '../fixtures/test-base';
 import { createAccount, createProject } from '../utils/test-data';
 
 /**
- * Helper to set theme to a specific mode by clicking toggle until we reach it.
+ * Helper to click theme toggle until we reach dark mode.
  * The cycle is: light → dark → system → light
- * Max 3 clicks to avoid infinite loops.
+ * Clicks up to 3 times to avoid infinite loops.
  */
-async function setThemeMode(page: Page, targetMode: 'light' | 'dark' | 'system'): Promise<void> {
-  // Wait for the theme toggle button to be visible and stable
-  const themeToggle = page.getByRole('button', { name: /tema atual/i });
-  await expect(themeToggle).toBeVisible({ timeout: 10000 });
-  // Additional wait for React hydration to complete
-  await page.waitForTimeout(500);
-
+async function clickUntilDarkMode(page: Page): Promise<void> {
+  const html = page.locator('html');
+  
   for (let i = 0; i < 3; i++) {
-    // Re-locate the element each iteration to handle any re-renders
-    const currentToggle = page.getByRole('button', { name: /tema atual/i });
-    await expect(currentToggle).toBeVisible({ timeout: 5000 });
-    
-    const label = await currentToggle.getAttribute('aria-label');
-    if (!label) break;
-
-    // Check if we're at the target mode based on aria-label
-    const isLight = label.includes('Claro. Clique');
-    const isDark = label.includes('Escuro. Clique');
-    const isSystem = label.includes('Sistema. Clique');
-
-    if (
-      (targetMode === 'light' && isLight) ||
-      (targetMode === 'dark' && isDark) ||
-      (targetMode === 'system' && isSystem)
-    ) {
-      return; // Already at target mode
+    // Check if already in dark mode
+    const classList = await html.getAttribute('class');
+    if (classList?.includes('dark')) {
+      return; // Already dark
     }
-
-    await currentToggle.click();
-    await page.waitForTimeout(500); // Wait for state update and re-render
+    
+    // Find and click the theme toggle
+    const themeToggle = page.getByRole('button', { name: /tema atual/i });
+    await expect(themeToggle).toBeVisible({ timeout: 10000 });
+    await themeToggle.click();
+    
+    // Wait for theme to apply
+    await page.waitForTimeout(500);
   }
 }
 
@@ -85,8 +72,8 @@ test.describe('Theme Switching', () => {
     // Wait for page to be fully interactive
     await page.waitForTimeout(1000);
 
-    // Set to dark mode using helper
-    await setThemeMode(page, 'dark');
+    // Click until we reach dark mode
+    await clickUntilDarkMode(page);
 
     // Verify we're in dark mode (check HTML class)
     const html = page.locator('html');
@@ -125,8 +112,8 @@ test.describe('Theme Switching', () => {
     // Wait for page to be fully interactive
     await page.waitForTimeout(1000);
 
-    // Set to dark mode using helper
-    await setThemeMode(page, 'dark');
+    // Click until we reach dark mode
+    await clickUntilDarkMode(page);
 
     // Verify dark mode is active
     const html = page.locator('html');
