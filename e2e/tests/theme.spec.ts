@@ -14,7 +14,7 @@ test.describe('Theme Switching', () => {
     await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
   });
 
-  test('T069: click theme toggle → theme switches between light and dark mode', async ({
+  test('T069: click theme toggle → theme cycles through light, dark, and system modes', async ({
     page,
     dashboardPage,
   }) => {
@@ -23,30 +23,20 @@ test.describe('Theme Switching', () => {
 
     // Find theme toggle button - matches aria-label patterns like "Tema atual: Claro. Clique para mudar para Escuro"
     const themeToggle = page.getByRole('button', { name: /tema atual/i });
+    await expect(themeToggle).toBeVisible();
 
-    // Get initial theme state
-    const html = page.locator('html');
-    const initialClass = await html.getAttribute('class');
-    const initiallyDark = initialClass?.includes('dark');
+    // Get initial aria-label to determine current theme
+    const initialLabel = await themeToggle.getAttribute('aria-label');
 
-    // Click toggle
+    // Click toggle and verify the aria-label changes (indicating theme state changed)
     await themeToggle.click();
+    
+    // Wait for the button's aria-label to change (theme state update)
+    await expect(themeToggle).not.toHaveAttribute('aria-label', initialLabel!, { timeout: 5000 });
 
-    // Wait for theme change - need to wait for the DOM class to update
-    await page.waitForFunction(
-      (wasDark) => {
-        const currentClass = document.documentElement.className;
-        const isDark = currentClass.includes('dark');
-        return isDark !== wasDark;
-      },
-      initiallyDark,
-      { timeout: 5000 }
-    );
-
-    // Verify theme changed
-    const newClass = await html.getAttribute('class');
-    const nowDark = newClass?.includes('dark');
-    expect(nowDark).not.toBe(initiallyDark);
+    // Verify the aria-label actually changed
+    const newLabel = await themeToggle.getAttribute('aria-label');
+    expect(newLabel).not.toBe(initialLabel);
   });
 
   test('T070: dark mode selected, refresh page → dark mode persists', async ({

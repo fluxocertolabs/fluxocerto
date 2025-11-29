@@ -1,9 +1,2743 @@
+<file path="e2e/fixtures/auth.setup.ts">
+import '@playwright/test'
+import './auth'
+import './db'
+import 'fs'
+import 'path'
+</file>
+
+<file path="e2e/fixtures/auth.ts">
+import '@playwright/test'
+import 'url'
+import 'path'
+import '../utils/inbucket'
+
+export class AuthFixture {
+    public readonly testEmail: string
+    public readonly inbucketUrl: string
+    public readonly storageStatePath: string
+    public constructor(options: { testEmail?: string; inbucketUrl?: string })
+    public async requestMagicLink(email: string, page: Page): Promise<void>
+    public async getMagicLinkUrl(email: string, previousUrl: string): Promise<string>
+    public async waitForMagicLinkEmail(email: string, previousUrl: string, maxRetries: number, intervalMs: number): Promise<string>
+    public async authenticate(page: Page): Promise<void>
+    public async logout(page: Page): Promise<void>
+    public async loadSession(_page: Page): Promise<void>
+}
+export function createAuthFixture(options: { testEmail?: string; inbucketUrl?: string })
+</file>
+
+<file path="e2e/fixtures/db.ts">
+import '../utils/supabase-admin'
+import '../utils/test-data'
+export async function resetDatabase()
+export async function ensureTestUser(email: string)
+export async function removeTestUser(email: string)
+export async function seedAccounts(accounts: TestAccount[])
+export async function seedExpenses(expenses: TestExpense[])
+export async function seedSingleShotExpenses(expenses: TestSingleShotExpense[])
+export async function seedProjects(projects: TestProject[])
+export async function seedSingleShotIncome(income: TestSingleShotIncome[])
+export async function seedCreditCards(cards: TestCreditCard[])
+export async function seedFullScenario(data: {
+  accounts?: TestAccount[];
+  expenses?: TestExpense[];
+  singleShotExpenses?: TestSingleShotExpense[];
+  projects?: TestProject[];
+  singleShotIncome?: TestSingleShotIncome[];
+  creditCards?: TestCreditCard[];
+})
+export const dbFixture
+type DatabaseFixture = typeof dbFixture
+</file>
+
+<file path="e2e/fixtures/test-base.ts">
+import '@playwright/test'
+import './db'
+import './auth'
+import '../pages/login-page'
+import '../pages/dashboard-page'
+import '../pages/manage-page'
+import '../pages/quick-update-page'
+export const test
+</file>
+
+<file path="e2e/pages/accounts-section.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class AccountsSection {
+    public readonly page: Page
+    public readonly accountList: Locator
+    public constructor(page: Page)
+    public async clickAdd(): Promise<void>
+    public async createAccount(data: {
+    name: string;
+    type: 'checking' | 'savings' | 'investment';
+    balance: string;
+  }): Promise<void>
+    public async editAccount(name: string): Promise<void>
+    public async updateAccountName(currentName: string, newName: string): Promise<void>
+    public async updateAccountBalance(name: string, newBalance: string): Promise<void>
+    public async deleteAccount(name: string): Promise<void>
+    public async waitForLoad(): Promise<void>
+    public async expectAccountVisible(name: string): Promise<void>
+    public async expectAccountNotVisible(name: string): Promise<void>
+    public async getAccountCount(): Promise<number>
+}
+</file>
+
+<file path="e2e/pages/credit-cards-section.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class CreditCardsSection {
+    public readonly page: Page
+    public readonly cardList: Locator
+    public constructor(page: Page)
+    public async clickAdd(): Promise<void>
+    public async createCreditCard(data: {
+    name: string;
+    balance: string;
+    dueDay: string;
+  }): Promise<void>
+    public async updateDueDay(name: string, newDueDay: string): Promise<void>
+    public async updateBalance(name: string, newBalance: string): Promise<void>
+    public async deleteCreditCard(name: string): Promise<void>
+    public async waitForLoad(): Promise<void>
+    public async expectCardVisible(name: string): Promise<void>
+    public async expectCardNotVisible(name: string): Promise<void>
+}
+</file>
+
+<file path="e2e/pages/dashboard-page.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class DashboardPage {
+    public readonly page: Page
+    public readonly cashflowChart: Locator
+    public readonly summaryPanel: Locator
+    public readonly healthIndicator: Locator
+    public readonly quickUpdateButton: Locator
+    public readonly emptyState: Locator
+    public constructor(page: Page)
+    public async goto(): Promise<void>
+    public async hasEmptyState(): Promise<boolean>
+    public async selectProjectionDays(days: 7 | 14 | 30 | 60 | 90): Promise<void>
+    public async openQuickUpdate(): Promise<void>
+    public async expectChartRendered(): Promise<void>
+    public async getIncomeTotal(): Promise<string>
+    public async getExpenseTotal(): Promise<string>
+    public async hasStaleWarning(): Promise<boolean>
+}
+</file>
+
+<file path="e2e/pages/expenses-section.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class ExpensesSection {
+    public readonly page: Page
+    public readonly fixedExpensesTab: Locator
+    public readonly singleShotTab: Locator
+    public readonly expenseList: Locator
+    public constructor(page: Page)
+    public async selectFixedExpenses(): Promise<void>
+    public async selectSingleShot(): Promise<void>
+    public async createFixedExpense(data: {
+    name: string;
+    amount: string;
+    dueDay: string;
+  }): Promise<void>
+    public async createSingleShotExpense(data: {
+    name: string;
+    amount: string;
+    date: string;
+  }): Promise<void>
+    public async toggleExpense(name: string): Promise<void>
+    public async updateExpenseAmount(name: string, newAmount: string): Promise<void>
+    public async updateSingleShotDate(name: string, newDate: string): Promise<void>
+    public async deleteExpense(name: string): Promise<void>
+    public async expectExpenseVisible(name: string): Promise<void>
+    public async expectExpenseNotVisible(name: string): Promise<void>
+    public async expectExpenseInactive(name: string): Promise<void>
+}
+</file>
+
+<file path="e2e/pages/login-page.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class LoginPage {
+    public readonly page: Page
+    public readonly emailInput: Locator
+    public readonly submitButton: Locator
+    public readonly successMessage: Locator
+    public readonly errorMessage: Locator
+    public constructor(page: Page)
+    public async goto(): Promise<void>
+    public async requestMagicLink(email: string): Promise<void>
+    public async expectMagicLinkSent(): Promise<void>
+    public async expectToBeOnLoginPage(): Promise<void>
+}
+</file>
+
+<file path="e2e/pages/manage-page.ts">
+import '@playwright/test'
+import './accounts-section'
+import './expenses-section'
+import './projects-section'
+import './credit-cards-section'
+
+export class ManagePage {
+    public readonly page: Page
+    public readonly accountsTab: Locator
+    public readonly creditCardsTab: Locator
+    public readonly expensesTab: Locator
+    public readonly projectsTab: Locator
+    public constructor(page: Page)
+    public async goto(): Promise<void>
+    public async selectAccountsTab(): Promise<void>
+    public async selectCreditCardsTab(): Promise<void>
+    public async selectExpensesTab(): Promise<void>
+    public async selectProjectsTab(): Promise<void>
+    public accounts(): AccountsSection
+    public expenses(): ExpensesSection
+    public projects(): ProjectsSection
+    public creditCards(): CreditCardsSection
+}
+</file>
+
+<file path="e2e/pages/projects-section.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class ProjectsSection {
+    public readonly page: Page
+    public readonly recurringTab: Locator
+    public readonly singleShotTab: Locator
+    public readonly projectList: Locator
+    public constructor(page: Page)
+    public async selectRecurring(): Promise<void>
+    public async selectSingleShot(): Promise<void>
+    public async createRecurringProject(data: {
+    name: string;
+    amount: string;
+    paymentDay: string;
+    frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly';
+    certainty: 'guaranteed' | 'probable' | 'uncertain';
+  }): Promise<void>
+    public async createSingleShotIncome(data: {
+    name: string;
+    amount: string;
+    date: string;
+    certainty: 'guaranteed' | 'probable' | 'uncertain';
+  }): Promise<void>
+    public async toggleProject(name: string): Promise<void>
+    public async updateProjectFrequency(name: string, frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'): Promise<void>
+    public async updateProjectCertainty(name: string, certainty: 'guaranteed' | 'probable' | 'uncertain'): Promise<void>
+    public async updateSingleShotCertainty(name: string, certainty: 'guaranteed' | 'probable' | 'uncertain'): Promise<void>
+    public async deleteProject(name: string): Promise<void>
+    public async expectProjectVisible(name: string): Promise<void>
+    public async expectProjectNotVisible(name: string): Promise<void>
+    public async expectProjectInactive(name: string): Promise<void>
+    public async expectCertaintyBadge(name: string, certainty: 'guaranteed' | 'probable' | 'uncertain'): Promise<void>
+}
+</file>
+
+<file path="e2e/pages/quick-update-page.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class QuickUpdatePage {
+    public readonly page: Page
+    public readonly completeButton: Locator
+    public readonly cancelButton: Locator
+    public constructor(page: Page)
+    public async waitForModal(): Promise<void>
+    public async updateAccountBalance(name: string, newBalance: string): Promise<void>
+    public async updateCreditCardBalance(name: string, newBalance: string): Promise<void>
+    public async complete(): Promise<void>
+    public async cancel(): Promise<void>
+    public async expectModalClosed(): Promise<void>
+    public async expectAccountsListed(accountNames: string[]): Promise<void>
+    public async expectCardsListed(cardNames: string[]): Promise<void>
+}
+</file>
+
+<file path="e2e/playwright.config.ts">
+import '@playwright/test'
+import 'child_process'
+import 'url'
+import 'path'
+</file>
+
+<file path="e2e/tests/accounts.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+import '../utils/format'
+</file>
+
+<file path="e2e/tests/auth.spec.ts">
+import '@playwright/test'
+import '../pages/login-page'
+import '../utils/inbucket'
+import '../fixtures/db'
+</file>
+
+<file path="e2e/tests/credit-cards.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+import '../utils/format'
+</file>
+
+<file path="e2e/tests/dashboard.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+</file>
+
+<file path="e2e/tests/edge-cases.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+import 'path'
+import 'url'
+import 'path'
+</file>
+
+<file path="e2e/tests/expenses.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+import '../utils/format'
+</file>
+
+<file path="e2e/tests/projects.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+</file>
+
+<file path="e2e/tests/quick-update.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+</file>
+
+<file path="e2e/tests/theme.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+</file>
+
+<file path="e2e/utils/format.ts">
+export function formatBRL(cents: number)
+export function parseBRL(value: string)
+export function formatDate(date: Date | string)
+export function parseDate(value: string)
+export function formatBalanceInput(cents: number)
+</file>
+
+<file path="e2e/utils/inbucket.ts">
+
+export interface MailpitAddress {
+    property Name: string
+    property Address: string
+}
+
+export interface MailpitMessageSummary {
+    property ID: string
+    property MessageID: string
+    property Read: boolean
+    property From: MailpitAddress
+    property To: MailpitAddress[]
+    property Cc: MailpitAddress[]
+    property Bcc: MailpitAddress[]
+    property ReplyTo: MailpitAddress[]
+    property Subject: string
+    property Created: string
+    property Tags: string[]
+    property Size: number
+    property Attachments: number
+    property Snippet: string
+}
+
+export interface MailpitMessagesResponse {
+    property total: number
+    property unread: number
+    property count: number
+    property messages_count: number
+    property start: number
+    property tags: string[]
+    property messages: MailpitMessageSummary[]
+}
+
+export interface MailpitMessage {
+    property ID: string
+    property MessageID: string
+    property From: MailpitAddress
+    property To: MailpitAddress[]
+    property Subject: string
+    property Date: string
+    property Text: string
+    property HTML: string
+    property Size: number
+    property Attachments: unknown[]
+}
+
+export interface InbucketMessageHeader {
+    property id: string
+    property from: string
+    property to: string[]
+    property subject: string
+    property date: string
+    property size: number
+}
+
+export interface InbucketMessageBody {
+    property text: string
+    property html: string
+}
+
+export interface InbucketMessage {
+    property mailbox: string
+    property id: string
+    property from: string
+    property to: string[]
+    property subject: string
+    property date: string
+    property size: number
+    property body: InbucketMessageBody
+    property header: Record<string, string[]>
+}
+
+export class InbucketClient {
+    public readonly baseUrl: string
+    public constructor(baseUrl: string)
+    public async listMessages(mailbox: string): Promise<InbucketMessageHeader[]>
+    public async getMessage(mailbox: string, messageId: string): Promise<InbucketMessage>
+    public async deleteMessage(_mailbox: string, messageId: string): Promise<void>
+    public async purgeMailbox(_mailbox: string): Promise<void>
+    public async getLatestMessage(mailbox: string): Promise<InbucketMessage | null>
+    public extractMagicLink(message: InbucketMessage): string | null
+}
+</file>
+
+<file path="e2e/utils/supabase-admin.ts">
+import '@supabase/supabase-js'
+export function getAdminClient()
+export function resetAdminClient()
+export async function getUserIdFromEmail(email: string)
+</file>
+
+<file path="e2e/utils/test-data.ts">
+
+export interface TestAccount {
+    property id: string
+    property name: string
+    property type: 'checking' | 'savings' | 'investment'
+    property balance: number
+    property owner_id: string | null
+}
+
+export interface TestExpense {
+    property id: string
+    property name: string
+    property amount: number
+    property due_day: number
+    property is_active: boolean
+}
+
+export interface TestSingleShotExpense {
+    property id: string
+    property name: string
+    property amount: number
+    property date: string
+}
+
+export interface TestProject {
+    property id: string
+    property name: string
+    property amount: number
+    property frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
+    property payment_schedule: | { type: 'dayOfWeek'; dayOfWeek: number }
+    | { type: 'dayOfMonth'; dayOfMonth: number }
+    | { type: 'twiceMonthly'; firstDay: number; secondDay: number }
+    property certainty: 'guaranteed' | 'probable' | 'uncertain'
+    property is_active: boolean
+}
+
+export interface TestSingleShotIncome {
+    property id: string
+    property name: string
+    property amount: number
+    property date: string
+    property certainty: 'guaranteed' | 'probable' | 'uncertain'
+}
+
+export interface TestCreditCard {
+    property id: string
+    property name: string
+    property statement_balance: number
+    property due_day: number
+}
+export function createAccount(overrides: Partial<TestAccount>)
+export function createExpense(overrides: Partial<TestExpense>)
+export function createSingleShotExpense(overrides: Partial<TestSingleShotExpense>)
+export function createProject(overrides: Partial<TestProject>)
+export function createSingleShotIncome(overrides: Partial<TestSingleShotIncome>)
+export function createCreditCard(overrides: Partial<TestCreditCard>)
+export function createBasicSeedData()
+export function createFullSeedData()
+export function createLargeSeedData(count: number)
+</file>
+
 <file path="eslint.config.js">
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+</file>
+
+<file path="playwright-report/trace/assets/codeMirrorModule-Bucv2d7q.js">
+import { q as _u } from './defaultSettingsView-BEpdCv1S.js'
+let vi = { exports }
+let Ru = vi.exports
+let ha
+function Nt()
+let qu = Nt()
+const $u = _u(qu)
+let pa = { exports }
+let ga
+function Wa()
+let va = { exports }
+let ma = { exports }
+let xa
+function Ha()
+let ya = { exports }
+let ba
+let ka
+function ju()
+let wa = { exports }
+let Sa
+function Ku()
+let La = { exports }
+let Ta
+function Uu()
+let Ca = { exports }
+let Da = { exports }
+let Ma
+function Gu()
+let Aa
+function Xu()
+let Fa = { exports }
+let Ea
+function Yu()
+let Na = { exports }
+let Oa
+function Zu()
+let Pa = { exports }
+let Ia
+function Ju()
+let za = { exports }
+let Ba
+function Qu()
+</file>
+
+<file path="playwright-report/trace/assets/defaultSettingsView-BEpdCv1S.js">
+let R1 = Object.defineProperty
+function j1(n, e, i)
+function Te(n, e, i)
+function L1(n)
+let Yf = { exports }
+let Ma = {}
+let yy
+function D1()
+let by
+function B1()
+let b = B1()
+let Xf = { exports }
+let de = {}
+let vy
+function U1()
+let Sy
+function Bh()
+let H = Bh()
+const gt = L1(H)
+function Po(n, e, i, s)
+function cs()
+function mh(n)
+function z1(n)
+function Ab(n, e, i, s, l)
+function wy(n)
+function rn(n, e)
+const yh = new Map
+const Nb = new Map
+let Fo
+function xi(n, e)
+function H1(n)
+
+class q1:
+    constructor()
+    getString(e, i)
+    setString(e, i)
+    getObject(e, i)
+    setObject(e, i)
+const es = new q1
+function Ye(...n)
+function Cb(n)
+const xy = "\\u0000-\\u0020\\u007f-\\u009f"
+const kb = new RegExp("(?:[a-zA-Z][a-zA-Z0-9+.-]{2,}:\\/\\/|www\\.)[^\\s"+xy+'"]{2,}[^\\s'+xy+`"')}\\],:;.!?]`,"ug")
+function $1()
+function t2()
+const Uh = new Set
+function I1()
+function n2(n)
+function i2(n)
+function bh()
+function V1()
+let Pf = { exports }
+let Oa = {}
+let Ff = { exports }
+let Qf = {}
+function G1()
+let Ty
+function K1()
+let Zf = { exports }
+let dt = {}
+let Ey
+function Y1()
+let Ay
+function X1()
+let Ny
+function P1()
+let Cy
+function F1()
+let s2 = F1()
+const Mb = new Map([["APIRequestContext.fetch",{title:'{method} "{url}"'}],["APIRequestContext.fetchResponseBody",{title:"Get response body",group:"getter"}],["APIRequestContext.fetchLog",{internal:!0}],["APIRequestContext.storageState",{title:"Get storage state"}],["APIRequestContext.disposeAPIResponse",{internal:!0}],["APIRequestContext.dispose",{internal:!0}],["LocalUtils.zip",{internal:!0}],["LocalUtils.harOpen",{internal:!0}],["LocalUtils.harLookup",{internal:!0}],["LocalUtils.harClose",{internal:!0}],["LocalUtils.harUnzip",{internal:!0}],["LocalUtils.connect",{internal:!0}],["LocalUtils.tracingStarted",{internal:!0}],["LocalUtils.addStackToTracingNoReply",{internal:!0}],["LocalUtils.traceDiscarded",{internal:!0}],["LocalUtils.globToRegex",{internal:!0}],["Root.initialize",{internal:!0}],["Playwright.newRequest",{title:"Create request context"}],["DebugController.initialize",{internal:!0}],["DebugController.setReportStateChanged",{internal:!0}],["DebugController.setRecorderMode",{internal:!0}],["DebugController.highlight",{internal:!0}],["DebugController.hideHighlight",{internal:!0}],["DebugController.resume",{internal:!0}],["DebugController.kill",{internal:!0}],["SocksSupport.socksConnected",{internal:!0}],["SocksSupport.socksFailed",{internal:!0}],["SocksSupport.socksData",{internal:!0}],["SocksSupport.socksError",{internal:!0}],["SocksSupport.socksEnd",{internal:!0}],["BrowserType.launch",{title:"Launch browser"}],["BrowserType.launchPersistentContext",{title:"Launch persistent context"}],["BrowserType.connectOverCDP",{title:"Connect over CDP"}],["Browser.close",{title:"Close browser",pausesBeforeAction:!0}],["Browser.killForTests",{internal:!0}],["Browser.defaultUserAgentForTest",{internal:!0}],["Browser.newContext",{title:"Create context"}],["Browser.newContextForReuse",{internal:!0}],["Browser.disconnectFromReusedContext",{internal:!0}],["Browser.newBrowserCDPSession",{title:"Create CDP session",group:"configuration"}],["Browser.startTracing",{title:"Start browser tracing",group:"configuration"}],["Browser.stopTracing",{title:"Stop browser tracing",group:"configuration"}],["EventTarget.waitForEventInfo",{title:'Wait for event "{info.event}"',snapshot:!0}],["BrowserContext.waitForEventInfo",{title:'Wait for event "{info.event}"',snapshot:!0}],["Page.waitForEventInfo",{title:'Wait for event "{info.event}"',snapshot:!0}],["Worker.waitForEventInfo",{title:'Wait for event "{info.event}"',snapshot:!0}],["WebSocket.waitForEventInfo",{title:'Wait for event "{info.event}"',snapshot:!0}],["ElectronApplication.waitForEventInfo",{title:'Wait for event "{info.event}"',snapshot:!0}],["AndroidDevice.waitForEventInfo",{title:'Wait for event "{info.event}"',snapshot:!0}],["BrowserContext.addCookies",{title:"Add cookies",group:"configuration"}],["BrowserContext.addInitScript",{title:"Add init script",group:"configuration"}],["BrowserContext.clearCookies",{title:"Clear cookies",group:"configuration"}],["BrowserContext.clearPermissions",{title:"Clear permissions",group:"configuration"}],["BrowserContext.close",{title:"Close context",pausesBeforeAction:!0}],["BrowserContext.cookies",{title:"Get cookies",group:"getter"}],["BrowserContext.exposeBinding",{title:"Expose binding",group:"configuration"}],["BrowserContext.grantPermissions",{title:"Grant permissions",group:"configuration"}],["BrowserContext.newPage",{title:"Create page"}],["BrowserContext.registerSelectorEngine",{internal:!0}],["BrowserContext.setTestIdAttributeName",{internal:!0}],["BrowserContext.setExtraHTTPHeaders",{title:"Set extra HTTP headers",group:"configuration"}],["BrowserContext.setGeolocation",{title:"Set geolocation",group:"configuration"}],["BrowserContext.setHTTPCredentials",{title:"Set HTTP credentials",group:"configuration"}],["BrowserContext.setNetworkInterceptionPatterns",{title:"Route requests",group:"route"}],["BrowserContext.setWebSocketInterceptionPatterns",{title:"Route WebSockets",group:"route"}],["BrowserContext.setOffline",{title:"Set offline mode"}],["BrowserContext.storageState",{title:"Get storage state"}],["BrowserContext.pause",{title:"Pause"}],["BrowserContext.enableRecorder",{internal:!0}],["BrowserContext.disableRecorder",{internal:!0}],["BrowserContext.newCDPSession",{title:"Create CDP session",group:"configuration"}],["BrowserContext.harStart",{internal:!0}],["BrowserContext.harExport",{internal:!0}],["BrowserContext.createTempFiles",{internal:!0}],["BrowserContext.updateSubscription",{internal:!0}],["BrowserContext.clockFastForward",{title:'Fast forward clock "{ticksNumber|ticksString}"'}],["BrowserContext.clockInstall",{title:'Install clock "{timeNumber|timeString}"'}],["BrowserContext.clockPauseAt",{title:'Pause clock "{timeNumber|timeString}"'}],["BrowserContext.clockResume",{title:"Resume clock"}],["BrowserContext.clockRunFor",{title:'Run clock "{ticksNumber|ticksString}"'}],["BrowserContext.clockSetFixedTime",{title:'Set fixed time "{timeNumber|timeString}"'}],["BrowserContext.clockSetSystemTime",{title:'Set system time "{timeNumber|timeString}"'}],["Page.addInitScript",{title:"Add init script",group:"configuration"}],["Page.close",{title:"Close page",pausesBeforeAction:!0}],["Page.consoleMessages",{title:"Get console messages",group:"getter"}],["Page.emulateMedia",{title:"Emulate media",snapshot:!0,pausesBeforeAction:!0}],["Page.exposeBinding",{title:"Expose binding",group:"configuration"}],["Page.goBack",{title:"Go back",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.goForward",{title:"Go forward",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.requestGC",{title:"Request garbage collection",group:"configuration"}],["Page.registerLocatorHandler",{title:"Register locator handler"}],["Page.resolveLocatorHandlerNoReply",{internal:!0}],["Page.unregisterLocatorHandler",{title:"Unregister locator handler"}],["Page.reload",{title:"Reload",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.expectScreenshot",{title:"Expect screenshot",snapshot:!0,pausesBeforeAction:!0}],["Page.screenshot",{title:"Screenshot",snapshot:!0,pausesBeforeAction:!0}],["Page.setExtraHTTPHeaders",{title:"Set extra HTTP headers",group:"configuration"}],["Page.setNetworkInterceptionPatterns",{title:"Route requests",group:"route"}],["Page.setWebSocketInterceptionPatterns",{title:"Route WebSockets",group:"route"}],["Page.setViewportSize",{title:"Set viewport size",snapshot:!0,pausesBeforeAction:!0}],["Page.keyboardDown",{title:'Key down "{key}"',slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.keyboardUp",{title:'Key up "{key}"',slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.keyboardInsertText",{title:'Insert "{text}"',slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.keyboardType",{title:'Type "{text}"',slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.keyboardPress",{title:'Press "{key}"',slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.mouseMove",{title:"Mouse move",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.mouseDown",{title:"Mouse down",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.mouseUp",{title:"Mouse up",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.mouseClick",{title:"Click",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.mouseWheel",{title:"Mouse wheel",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.touchscreenTap",{title:"Tap",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Page.pageErrors",{title:"Get page errors",group:"getter"}],["Page.pdf",{title:"PDF"}],["Page.requests",{title:"Get network requests",group:"getter"}],["Page.snapshotForAI",{internal:!0}],["Page.startJSCoverage",{title:"Start JS coverage",group:"configuration"}],["Page.stopJSCoverage",{title:"Stop JS coverage",group:"configuration"}],["Page.startCSSCoverage",{title:"Start CSS coverage",group:"configuration"}],["Page.stopCSSCoverage",{title:"Stop CSS coverage",group:"configuration"}],["Page.bringToFront",{title:"Bring to front"}],["Page.updateSubscription",{internal:!0}],["Frame.evalOnSelector",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["Frame.evalOnSelectorAll",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["Frame.addScriptTag",{title:"Add script tag",snapshot:!0,pausesBeforeAction:!0}],["Frame.addStyleTag",{title:"Add style tag",snapshot:!0,pausesBeforeAction:!0}],["Frame.ariaSnapshot",{title:"Aria snapshot",snapshot:!0,pausesBeforeAction:!0}],["Frame.blur",{title:"Blur",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Frame.check",{title:"Check",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.click",{title:"Click",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.content",{title:"Get content",snapshot:!0,pausesBeforeAction:!0}],["Frame.dragAndDrop",{title:"Drag and drop",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.dblclick",{title:"Double click",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.dispatchEvent",{title:'Dispatch "{type}"',slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Frame.evaluateExpression",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["Frame.evaluateExpressionHandle",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["Frame.fill",{title:'Fill "{value}"',slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.focus",{title:"Focus",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Frame.frameElement",{title:"Get frame element",group:"getter"}],["Frame.resolveSelector",{internal:!0}],["Frame.highlight",{title:"Highlight element",group:"configuration"}],["Frame.getAttribute",{title:'Get attribute "{name}"',snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.goto",{title:'Navigate to "{url}"',slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["Frame.hover",{title:"Hover",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.innerHTML",{title:"Get HTML",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.innerText",{title:"Get inner text",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.inputValue",{title:"Get input value",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.isChecked",{title:"Is checked",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.isDisabled",{title:"Is disabled",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.isEnabled",{title:"Is enabled",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.isHidden",{title:"Is hidden",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.isVisible",{title:"Is visible",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.isEditable",{title:"Is editable",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.press",{title:'Press "{key}"',slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.querySelector",{title:"Query selector",snapshot:!0}],["Frame.querySelectorAll",{title:"Query selector all",snapshot:!0}],["Frame.queryCount",{title:"Query count",snapshot:!0,pausesBeforeAction:!0}],["Frame.selectOption",{title:"Select option",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.setContent",{title:"Set content",snapshot:!0,pausesBeforeAction:!0}],["Frame.setInputFiles",{title:"Set input files",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.tap",{title:"Tap",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.textContent",{title:"Get text content",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["Frame.title",{title:"Get page title",group:"getter"}],["Frame.type",{title:'Type "{text}"',slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.uncheck",{title:"Uncheck",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["Frame.waitForTimeout",{title:"Wait for timeout",snapshot:!0}],["Frame.waitForFunction",{title:"Wait for function",snapshot:!0,pausesBeforeAction:!0}],["Frame.waitForSelector",{title:"Wait for selector",snapshot:!0}],["Frame.expect",{title:'Expect "{expression}"',snapshot:!0,pausesBeforeAction:!0}],["Worker.evaluateExpression",{title:"Evaluate"}],["Worker.evaluateExpressionHandle",{title:"Evaluate"}],["Worker.updateSubscription",{internal:!0}],["JSHandle.dispose",{internal:!0}],["ElementHandle.dispose",{internal:!0}],["JSHandle.evaluateExpression",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.evaluateExpression",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["JSHandle.evaluateExpressionHandle",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.evaluateExpressionHandle",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["JSHandle.getPropertyList",{title:"Get property list",group:"getter"}],["ElementHandle.getPropertyList",{title:"Get property list",group:"getter"}],["JSHandle.getProperty",{title:"Get JS property",group:"getter"}],["ElementHandle.getProperty",{title:"Get JS property",group:"getter"}],["JSHandle.jsonValue",{title:"Get JSON value",group:"getter"}],["ElementHandle.jsonValue",{title:"Get JSON value",group:"getter"}],["ElementHandle.evalOnSelector",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.evalOnSelectorAll",{title:"Evaluate",snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.boundingBox",{title:"Get bounding box",snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.check",{title:"Check",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.click",{title:"Click",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.contentFrame",{title:"Get content frame",group:"getter"}],["ElementHandle.dblclick",{title:"Double click",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.dispatchEvent",{title:"Dispatch event",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.fill",{title:'Fill "{value}"',slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.focus",{title:"Focus",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.getAttribute",{title:"Get attribute",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.hover",{title:"Hover",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.innerHTML",{title:"Get HTML",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.innerText",{title:"Get inner text",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.inputValue",{title:"Get input value",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.isChecked",{title:"Is checked",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.isDisabled",{title:"Is disabled",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.isEditable",{title:"Is editable",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.isEnabled",{title:"Is enabled",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.isHidden",{title:"Is hidden",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.isVisible",{title:"Is visible",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.ownerFrame",{title:"Get owner frame",group:"getter"}],["ElementHandle.press",{title:'Press "{key}"',slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.querySelector",{title:"Query selector",snapshot:!0}],["ElementHandle.querySelectorAll",{title:"Query selector all",snapshot:!0}],["ElementHandle.screenshot",{title:"Screenshot",snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.scrollIntoViewIfNeeded",{title:"Scroll into view",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.selectOption",{title:"Select option",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.selectText",{title:"Select text",slowMo:!0,snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.setInputFiles",{title:"Set input files",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.tap",{title:"Tap",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.textContent",{title:"Get text content",snapshot:!0,pausesBeforeAction:!0,group:"getter"}],["ElementHandle.type",{title:"Type",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.uncheck",{title:"Uncheck",slowMo:!0,snapshot:!0,pausesBeforeInput:!0}],["ElementHandle.waitForElementState",{title:"Wait for state",snapshot:!0,pausesBeforeAction:!0}],["ElementHandle.waitForSelector",{title:"Wait for selector",snapshot:!0}],["Request.response",{internal:!0}],["Request.rawRequestHeaders",{internal:!0}],["Route.redirectNavigationRequest",{internal:!0}],["Route.abort",{title:"Abort request",group:"route"}],["Route.continue",{title:"Continue request",group:"route"}],["Route.fulfill",{title:"Fulfill request",group:"route"}],["WebSocketRoute.connect",{title:"Connect WebSocket to server",group:"route"}],["WebSocketRoute.ensureOpened",{internal:!0}],["WebSocketRoute.sendToPage",{title:"Send WebSocket message",group:"route"}],["WebSocketRoute.sendToServer",{title:"Send WebSocket message",group:"route"}],["WebSocketRoute.closePage",{internal:!0}],["WebSocketRoute.closeServer",{internal:!0}],["Response.body",{title:"Get response body",group:"getter"}],["Response.securityDetails",{internal:!0}],["Response.serverAddr",{internal:!0}],["Response.rawResponseHeaders",{internal:!0}],["Response.sizes",{internal:!0}],["BindingCall.reject",{internal:!0}],["BindingCall.resolve",{internal:!0}],["Dialog.accept",{title:"Accept dialog"}],["Dialog.dismiss",{title:"Dismiss dialog"}],["Tracing.tracingStart",{title:"Start tracing",group:"configuration"}],["Tracing.tracingStartChunk",{title:"Start tracing",group:"configuration"}],["Tracing.tracingGroup",{title:'Trace "{name}"'}],["Tracing.tracingGroupEnd",{title:"Group end"}],["Tracing.tracingStopChunk",{title:"Stop tracing",group:"configuration"}],["Tracing.tracingStop",{title:"Stop tracing",group:"configuration"}],["Artifact.pathAfterFinished",{internal:!0}],["Artifact.saveAs",{internal:!0}],["Artifact.saveAsStream",{internal:!0}],["Artifact.failure",{internal:!0}],["Artifact.stream",{internal:!0}],["Artifact.cancel",{internal:!0}],["Artifact.delete",{internal:!0}],["Stream.read",{internal:!0}],["Stream.close",{internal:!0}],["WritableStream.write",{internal:!0}],["WritableStream.close",{internal:!0}],["CDPSession.send",{title:"Send CDP command",group:"configuration"}],["CDPSession.detach",{title:"Detach CDP session",group:"configuration"}],["Electron.launch",{title:"Launch electron"}],["ElectronApplication.browserWindow",{internal:!0}],["ElectronApplication.evaluateExpression",{title:"Evaluate"}],["ElectronApplication.evaluateExpressionHandle",{title:"Evaluate"}],["ElectronApplication.updateSubscription",{internal:!0}],["Android.devices",{internal:!0}],["AndroidSocket.write",{internal:!0}],["AndroidSocket.close",{internal:!0}],["AndroidDevice.wait",{title:"Wait"}],["AndroidDevice.fill",{title:'Fill "{text}"'}],["AndroidDevice.tap",{title:"Tap"}],["AndroidDevice.drag",{title:"Drag"}],["AndroidDevice.fling",{title:"Fling"}],["AndroidDevice.longTap",{title:"Long tap"}],["AndroidDevice.pinchClose",{title:"Pinch close"}],["AndroidDevice.pinchOpen",{title:"Pinch open"}],["AndroidDevice.scroll",{title:"Scroll"}],["AndroidDevice.swipe",{title:"Swipe"}],["AndroidDevice.info",{internal:!0}],["AndroidDevice.screenshot",{title:"Screenshot"}],["AndroidDevice.inputType",{title:"Type"}],["AndroidDevice.inputPress",{title:"Press"}],["AndroidDevice.inputTap",{title:"Tap"}],["AndroidDevice.inputSwipe",{title:"Swipe"}],["AndroidDevice.inputDrag",{title:"Drag"}],["AndroidDevice.launchBrowser",{title:"Launch browser"}],["AndroidDevice.open",{title:"Open app"}],["AndroidDevice.shell",{title:"Execute shell command",group:"configuration"}],["AndroidDevice.installApk",{title:"Install apk"}],["AndroidDevice.push",{title:"Push"}],["AndroidDevice.connectToWebView",{title:"Connect to Web View"}],["AndroidDevice.close",{internal:!0}],["JsonPipe.send",{internal:!0}],["JsonPipe.close",{internal:!0}]])
+function Q1(n, e)
+function Z1(n, e)
+function J1(n, e)
+function W1(n)
+const Ha = Symbol("context")
+const Ob = Symbol("nextInContext")
+const Rb = Symbol("prevByEndTime")
+const jb = Symbol("nextByStartTime")
+const ky = Symbol("events")
+
+class r2:
+    constructor(e, i)
+    createRelativeUrl(e)
+    failedAction()
+    filteredActions(e)
+    _errorDescriptorsFromActions()
+    _errorDescriptorsFromTestRunner()
+function ex(n)
+function tx(n)
+let My = 0
+function nx(n)
+function ix(n, e)
+function sx(n, e)
+function rx(n)
+function Lb(n)
+function ax(n)
+function Oy(n)
+function Ry(n)
+function lx(n)
+function ox(n)
+function cx(n, e)
+const ux = 50
+const Qo = ({sidebarSize:n,sidebarHidden:e=!1,sidebarIsFirst:i=!1,orientation:s="vertical",minSidebarSize:l=ux,settingName:o,sidebar:u,main:f})
+const Qe = (n, e, i)
+function Mt(n)
+function jy(n)
+function fx(n)
+function hx(n)
+function dx(n)
+function px(n)
+function Do(n)
+function Ly(n)
+function gx(n)
+function Bo(n)
+function Vn(n)
+const mx = 1114111
+
+class zh extends Error:
+    constructor(e)
+function yx(n)
+function We(n)
+function Db(n)
+
+class Xe:
+    constructor()
+    toJSON()
+    toString()
+    toSource()
+
+class Bb extends Xe:
+    constructor()
+
+class Uo extends Xe:
+    constructor()
+
+class Zo extends Xe:
+    constructor()
+    toString()
+    toSource()
+
+class Ub extends Xe:
+    constructor()
+    toSource()
+
+class zb extends Xe:
+    constructor()
+    toSource()
+
+class Hb extends Xe:
+    constructor()
+
+class qb extends Xe:
+    constructor()
+
+class $b extends Xe:
+    constructor()
+
+class _r extends Xe:
+    constructor()
+
+class Ib extends _r:
+    constructor()
+
+class Vb extends _r:
+    constructor()
+
+class Gb extends _r:
+    constructor()
+
+class vh extends _r:
+    constructor()
+
+class Kb extends _r:
+    constructor()
+
+class Hh extends _r:
+    constructor()
+
+class bx extends Xe:
+    constructor()
+
+class vx extends Xe:
+    constructor()
+
+class Sx extends Xe:
+    constructor()
+
+class wx extends Xe:
+    constructor()
+
+class xx extends Xe:
+    constructor()
+
+class Yb extends Xe:
+    constructor()
+
+class zo extends Xe:
+    constructor()
+    toSource()
+
+class lt extends Xe:
+    constructor(e)
+    toString()
+    toJSON()
+    toSource()
+
+class Tr extends Xe:
+    constructor()
+    ASCIIMatch(e)
+    toJSON()
+
+class qh extends Tr:
+    constructor(e)
+    toString()
+    toSource()
+
+class Ka extends Tr:
+    constructor(e)
+    toString()
+    toSource()
+
+class Xb extends Tr:
+    constructor(e)
+    toString()
+    toSource()
+
+class Pb extends Tr:
+    constructor(e)
+    toString()
+    toJSON()
+    toSource()
+
+class $h extends Tr:
+    constructor(e)
+    toString()
+
+class Fb extends Tr:
+    constructor(e)
+    toString()
+    toSource()
+
+class Qb extends Xe:
+    constructor()
+    toString()
+    toJSON()
+    toSource()
+
+class Zb extends Xe:
+    constructor()
+    toString()
+    toJSON()
+    toSource()
+
+class _x extends Xe:
+    constructor()
+    toString()
+    toJSON()
+    toSource()
+function al(n)
+function Tx(n)
+function Jb(n)
+
+class Ot extends Error:
+function Ex(n, e)
+const Sh = new Set(["internal:has","internal:has-not","internal:and","internal:or","internal:chain","left-of","right-of","above","below","near"])
+const Ax = new Set(["left-of","right-of","above","below","near"])
+const Wb = new Set(["not","is","where","has","scope","light","visible","text","text-matches","text-is","has-text","above","below","right-of","left-of","near","nth-match"])
+function ll(n)
+function Nx(n, e)
+function Xn(n, e)
+function Cx(n, e)
+function kx(n)
+function as(n, e)
+function cc(n, e = "'")
+function Jo(n)
+function e0(n)
+function or(n)
+let Zi
+function Mx()
+function Tt(n)
+function uc(n)
+function t0(n)
+function Rt(n, e)
+function xt(n, e)
+function Ox(n, e, i = "")
+function Dy(n, e)
+function Wo(n)
+function Rx(n, e)
+function jx(n, e)
+function Lx(n)
+function ls(n, e, i = !1)
+function n0(n, e, i = !1, s = 20, l)
+function ts(n, e, i = !1, s = 20)
+function Dx(n, e, i)
+function Ra(n)
+
+class Bx:
+    constructor(e)
+    generateLocator(e, i, s, l = {})
+    chainLocators(e)
+    regexToSourceString(e)
+    toCallWithExact(e, i, s)
+    toHasText(e)
+    toTestIdValue(e)
+    quote(e)
+
+class Ux:
+    generateLocator(e, i, s, l = {})
+    chainLocators(e)
+    regexToString(e)
+    toCallWithExact(e, i, s)
+    toHasText(e)
+    toTestIdValue(e)
+    quote(e)
+
+class zx:
+    generateLocator(e, i, s, l = {})
+    chainLocators(e)
+    regexToString(e)
+    toCallWithExact(e, i, s, l)
+    toHasText(e)
+    toTestIdValue(e)
+    quote(e)
+
+class Hx:
+    generateLocator(e, i, s, l = {})
+    chainLocators(e)
+    regexToString(e)
+    toCallWithExact(e, i, s)
+    toHasText(e)
+    toTestIdValue(e)
+    toHasNotText(e)
+    quote(e)
+
+class qx:
+    generateLocator(e, i, s, l = {})
+    chainLocators(e)
+const i0 = { javascript, python, java, csharp, jsonl }
+function ot(n)
+const By = new Map
+function $x({name:n,rootItem:e,render:i,title:s,icon:l,isError:o,isVisible:u,selectedItem:f,onAccepted:d,onSelected:p,onHighlighted:m,treeState:y,setTreeState:v,noItemsMessage:S,dataTestId:E,autoExpandDepth:x})
+function s0({item:n,treeItems:e,selectedItem:i,onSelected:s,highlightedItem:l,setHighlightedItem:o,isError:u,onAccepted:f,toggleExpanded:d,toggleSubtree:p,render:m,title:y,icon:v,isKeyboardNavigation:S,setIsKeyboardNavigation:E})
+function Ix(n, e, i, s, l = ()=>!0)
+const Dt = H.forwardRef(function({children:e,title:i="",icon:s,disabled:l=!1,toggled:o=!1,onClick:u=()=>{},style:f,testId:d,className:p,ariaLabel:m},y){return b.jsxs("button",{ref:y,className:Ye(p,"toolbar-button",s,o&&"toggled"),onMouseDown:Uy,onClick:u,onDoubleClick:Uy,title:i,disabled:!!l,style:f,"data-testid":d,"aria-label":m||i,children:[s&&b.jsx("span",{className:`codicon codicon-${s}`,style:e?{marginRight:5}:{}}),e]})})
+const Uy = (n)
+function r0(n)
+function Vx(n)
+const $x
+const Kx = ({actions:n,selectedAction:e,selectedTime:i,setSelectedTime:s,treeState:l,setTreeState:o,sdkLanguage:u,onSelected:f,onHighlighted:d,revealConsole:p,revealActionAttachment:m,isLive:y})
+const Ih = (n, e)
+function a0(n)
+const Vh = ({value:n,description:e})
+const Ho = ({value:n,description:e,copiedDescription:i=e,style:s})
+const us = ({text:n})
+const Yx = ({action:n,startTimeOffset:e,sdkLanguage:i})
+function Xx(n)
+function Eo(n)
+function zy(n, e, i, s)
+function ec(n, e)
+const Hy = new Map
+function fc({name:n,items:e=[],id:i,render:s,icon:l,isError:o,isWarning:u,isInfo:f,selectedItem:d,onAccepted:p,onSelected:m,onHighlighted:y,onIconClicked:v,noItemsMessage:S,dataTestId:E,notSelectable:x,ariaLabel:T})
+const fc
+const Fx = ({action:n,isLive:e})
+function el(n, e)
+const qy = { 0, 1, 2, 3, 4, 5, 6, 7 }
+const $y = { 0, 1, 2, 3, 4, 5, 6, 7 }
+function Qx(n)
+function Zx(n)
+const Jx = ({error:n})
+const l0 = ({cursor:n,onPaneMouseMove:e,onPaneMouseUp:i,onPaneDoubleClick:s})
+const Wx = { position, top, right, bottom, left }
+const o0 = ({orientation:n,offsets:e,setOffsets:i,resizerColor:s,resizerWidth:l,minColumnWidth:o})
+async function Jf(n)
+const wh = { backgroundImage, backgroundSize, backgroundPosition, boxShadow }
+const e_ = ({diff:n,noTargetBlank:e,hideDetails:i})
+const t_ = ({expectedImage:n,actualImage:e,canvasWidth:i,canvasHeight:s,scale:l,expectedTitle:o,hideSize:u})
+const Gn = ({image:n,title:e,alt:i,hideSize:s,canvasWidth:l,canvasHeight:o,scale:u,onClick:f})
+const n_ = "modulepreload"
+const i_ = (n, e)
+const Iy = {}
+const s_ = (e, i, s)
+const r_ = 20
+const Sr = ({text:n,highlighter:e,mimeType:i,linkify:s,readOnly:l,highlight:o,revealLine:u,lineNumbers:f,isFocused:d,focusOnChange:p,wrapLines:m,onChange:y,dataTestId:v,placeholder:S})
+function a_(n)
+let Vy = !1
+function l_(n)
+function o_(n)
+function c_(n)
+function u_(n)
+const c0 = ({title:n,children:e,setExpanded:i,expanded:s,expandOnTitleClick:l,className:o})
+function u0(n)
+function f_(n)
+const f0 = H.createContext(void 0)
+const Ci = ()
+const h_ = ({attachment:n,reveal:e})
+const d_ = ({revealedAttachmentCallId:n})
+function hc(n, e)
+function qo(n, e)
+function p_(n, e)
+const g_ = `
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+`.trimStart()
+async function m_({testInfo:n,metadata:e,errorContext:i,errors:s,buildCodeFrame:l,stdout:o,stderr:u})
+const y_ = new RegExp("([\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~])))","g")
+function $o(n)
+const fc
+const v_ = ({stack:n,setSelectedFrame:e,selectedFrame:i})
+const Gh = ({noShadow:n,children:e,noMinHeight:i,className:s,sidebarBackground:l,onClick:o})
+function S_(n, e, i, s, l)
+const w_ = ({stack:n,sources:e,rootDir:i,fallbackLocation:s,stackFrameLocation:l,onOpenExternally:o})
+async function h0(n)
+function x_(n)
+function T_(n)
+function E_({message:n,error:e,sdkLanguage:i,revealInSource:s})
+const A_ = ({errorsModel:n,sdkLanguage:e,revealInSource:i,wallTime:s,testRunMetadata:l})
+function N_({source:n,message:e,location:i,linesAbove:s,linesBelow:l})
+const fc
+function k_(n, e)
+const M_ = ({consoleModel:n,boundaries:e,onEntryHovered:i,onAccepted:s})
+function O_(n)
+function d0(n)
+function R_(n)
+function j_(n)
+const xh = ({tabs:n,selectedTab:e,setSelectedTab:i,leftToolbar:s,rightToolbar:l,dataTestId:o,mode:u})
+const p0 = ({id:n,title:e,count:i,errorCount:s,selected:l,onSelect:o,ariaControls:u})
+async function L_(n)
+async function D_(n, e = 0)
+async function g0(n)
+
+class B_:
+    generatePlaywrightRequestCall(e, i)
+    prettyPrintObject(e, i = 2, s = 0)
+    stringLiteral(e)
+
+class U_:
+    generatePlaywrightRequestCall(e, i)
+    indent(e, i)
+    prettyPrintObject(e, i = 2, s = 0)
+    stringLiteral(e)
+
+class z_:
+    generatePlaywrightRequestCall(e, i)
+    toFunctionName(e)
+    prettyPrintObject(e, i = 2, s = 0)
+    stringLiteral(e)
+
+class H_:
+    generatePlaywrightRequestCall(e, i)
+    stringLiteral(e)
+function q_(n)
+const $_ = ({resource:n,sdkLanguage:e,startTimeOffset:i,onClose:s})
+const I_ = ({resource:n,sdkLanguage:e,requestBody:i})
+const cr = ({title:n,children:e,className:i})
+const V_ = ({resource:n,startTimeOffset:e,requestBody:i})
+const G_ = ({resource:n})
+const K_ = ({resource:n})
+const Y_ = ({font:n})
+function X_(n)
+function P_(n)
+function F_(n, e)
+const Q_ = ["Fetch","HTML","JS","CSS","Font","Image"]
+const Z_ = { searchValue, resourceTypes }
+const J_ = ({filterState:n,onFilterStateChange:e})
+const P_
+function eT(n, e)
+const tT = ({boundaries:n,networkModel:e,onResourceHovered:i,sdkLanguage:s})
+const nT = (n)
+const iT = (n)
+function sT(n, e)
+function m0()
+const rT = (n, e)
+
+class aT:
+    constructor(e)
+    contextId(e)
+    _pageId(e)
+    _apiRequestContextId(e)
+function Gy(n)
+const lT = (n, e, i, s)
+function oT(n)
+function cT(n, e)
+function uT(n)
+const fT = { Fetch(n), HTML(n), CSS(n), JS(n), Font(n), Image(n) }
+function hT({searchValue:n,resourceTypes:e})
+function dT(n, e)
+function Kh(n, e, i = {})
+const pT = { kind, role }
+function y0(n)
+function Wf(n)
+
+class tc:
+    static parse(e, i, s)
+    constructor(e)
+    _peek()
+    _next()
+    _eof()
+    _isWhitespace()
+    _skipWhitespace()
+    _readIdentifier(e)
+    _readString()
+    _throwError(e, i = 0)
+    _readRegex()
+    _readStringOrRegex()
+    _readAttributes(e)
+    _parse()
+    _applyAttribute(e, i, s, l)
+    _assert(e, i, s)
+
+class Ky extends Error:
+    constructor(e, i)
+let b0 = {}
+function gT(n)
+function tl(n, e)
+function pt(n)
+function v0(n)
+function S0(n)
+function qa(n, e, i)
+function ki(n, e)
+function w0(n, e)
+function nc(n)
+function Ti(n)
+function x0(n)
+function Ke(n)
+let Yh
+let Xh
+let Ph
+function Fh()
+function Qh()
+function Yy(n)
+const Xy = "article:not([role]), aside:not([role]), main:not([role]), nav:not([role]), section:not([role]), [role=article], [role=complementary], [role=main], [role=navigation], [role=region]"
+const mT = [["aria-atomic",void 0],["aria-busy",void 0],["aria-controls",void 0],["aria-current",void 0],["aria-describedby",void 0],["aria-details",void 0],["aria-dropeffect",void 0],["aria-flowto",void 0],["aria-grabbed",void 0],["aria-hidden",void 0],["aria-keyshortcuts",void 0],["aria-label",["caption","code","deletion","emphasis","generic","insertion","paragraph","presentation","strong","subscript","superscript"]],["aria-labelledby",["caption","code","deletion","emphasis","generic","insertion","paragraph","presentation","strong","subscript","superscript"]],["aria-live",void 0],["aria-owns",void 0],["aria-relevant",void 0],["aria-roledescription",["generic"]]]
+function T0(n, e)
+function E0(n)
+function yT(n)
+function bT(n)
+const eh = { A(n), AREA(n), ARTICLE(), ASIDE(), BLOCKQUOTE(), BUTTON(), CAPTION(), CODE(), DATALIST(), DD(), DEL(), DETAILS(), DFN(), DIALOG(), DT(), EM(), FIELDSET(), FIGURE(), FOOTER(n), FORM(n), H1(), H2(), H3(), H4(), H5(), H6(), HEADER(n), HR(), HTML(), IMG(n), INPUT(n), INS(), LI(), MAIN(), MARK(), MATH(), MENU(), METER(), NAV(), OL(), OPTGROUP(), OPTION(), OUTPUT(), P(), PROGRESS(), SEARCH(), SECTION(n), SELECT(n), STRONG(), SUB(), SUP(), SVG(), TABLE(), TBODY(), TD(n), TEXTAREA(), TFOOT(), TH(n), THEAD(), TIME(), TR(), UL() }
+function Py(n)
+function Fy(n)
+const vT = { DD, DIV, DT, LI, TBODY, TD, TFOOT, TH, THEAD, TR }
+function Qy(n)
+const ST = ["alert","alertdialog","application","article","banner","blockquote","button","caption","cell","checkbox","code","columnheader","combobox","complementary","contentinfo","definition","deletion","dialog","directory","document","emphasis","feed","figure","form","generic","grid","gridcell","group","heading","img","insertion","link","list","listbox","listitem","log","main","mark","marquee","math","meter","menu","menubar","menuitem","menuitemcheckbox","menuitemradio","navigation","none","note","option","paragraph","presentation","progressbar","radio","radiogroup","region","row","rowgroup","rowheader","scrollbar","search","searchbox","separator","slider","spinbutton","status","strong","subscript","superscript","switch","tab","table","tablist","tabpanel","term","textbox","time","timer","toolbar","tooltip","tree","treegrid","treeitem"]
+function Zh(n)
+function A0(n, e)
+function ct(n)
+function N0(n)
+function C0(n)
+function sn(n)
+function k0(n)
+function Er(n, e)
+function Kn(n)
+function Ya(n)
+function Zy(n, e)
+function Xa(n, e)
+function wT(n, e, i)
+function M0(n)
+function xT(n, e)
+function nl(n, e)
+function Jy(n, e)
+function TT(n)
+function ET(n)
+function gn(n, e)
+function AT(n, e)
+const Jh = ["gridcell","option","row","tab","rowheader","columnheader","treeitem"]
+function O0(n)
+const Wh = ["checkbox","menuitemcheckbox","option","radio","switch","menuitemradio","treeitem"]
+function R0(n)
+function NT(n)
+function CT(n)
+function ed(n, e)
+const kT = ["checkbox","combobox","grid","gridcell","listbox","radiogroup","slider","spinbutton","textbox","columnheader","rowheader","searchbox","switch","treegrid"]
+function MT(n)
+const td = ["button"]
+function j0(n)
+const nd = ["application","button","checkbox","combobox","gridcell","link","listbox","menuitem","row","rowheader","tab","treeitem","columnheader","menuitemcheckbox","menuitemradio","rowheader","switch"]
+function L0(n)
+const id = ["heading","listitem","row","treeitem"]
+function D0(n)
+const B0 = ["application","button","composite","gridcell","group","input","link","menuitem","scrollbar","separator","tab","checkbox","columnheader","combobox","grid","listbox","menu","menubar","menuitemcheckbox","menuitemradio","option","radio","radiogroup","row","rowheader","searchbox","select","slider","spinbutton","switch","tablist","textbox","toolbar","tree","treegrid","treeitem"]
+function ic(n)
+function U0(n)
+function OT(n)
+function RT(n)
+function z0(n, e = !1)
+function ja(n, e)
+function jT(n)
+let sd
+let rd
+let ad
+let ld
+let fr
+let od
+let cd
+let ud
+let fd
+let H0 = 0
+function dc()
+function pc()
+const LT = { button, checkbox, image, number, radio, range, reset, submit }
+function DT(n)
+function th(n)
+function q0(n)
+function BT(n, e)
+let UT = 0
+function $0(n)
+function Pa(n, e)
+function Wy(n, e)
+function zT(n, e)
+function HT(n)
+function qT(n)
+function $T(n, e)
+function eb(n, e)
+const nh = Symbol("cachedRegex")
+function IT(n)
+function VT(n, e)
+function GT(n, e)
+function hd(n, e, i)
+function tb(n, e, i)
+function nb(n, e)
+function I0(n, e, i, s)
+function V0(n, e = new Map)
+function KT(n, e)
+function YT(n, e)
+function Fa(n, e, i)
+function XT(n)
+function PT(n, e)
+function sc(n)
+const ib = ":host{font-size:13px;font-family:system-ui,Ubuntu,Droid Sans,sans-serif;color:#333}svg{position:absolute;height:0}x-pw-tooltip{-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);background-color:#fff;border-radius:6px;box-shadow:0 .5rem 1.2rem #0000004d;display:none;font-size:12.8px;font-weight:400;left:0;line-height:1.5;max-width:600px;position:absolute;top:0;padding:0;flex-direction:column;overflow:hidden}x-pw-tooltip-line{display:flex;max-width:600px;padding:6px;-webkit-user-select:none;user-select:none;cursor:pointer}x-pw-tooltip-footer{display:flex;max-width:600px;padding:6px;-webkit-user-select:none;user-select:none;color:#777}x-pw-dialog{background-color:#fff;pointer-events:auto;border-radius:6px;box-shadow:0 .5rem 1.2rem #0000004d;display:flex;flex-direction:column;position:absolute;z-index:10;font-size:13px}x-pw-dialog:not(.autosize){width:400px;height:150px}x-pw-dialog-body{display:flex;flex-direction:column;flex:auto}x-pw-dialog-body label{margin:5px 8px;display:flex;flex-direction:row;align-items:center}x-pw-highlight{position:absolute;top:0;left:0;width:0;height:0}x-pw-action-point{position:absolute;width:20px;height:20px;background:red;border-radius:10px;margin:-10px 0 0 -10px;z-index:2}x-pw-separator{height:1px;margin:6px 9px;background:#949494e5}x-pw-tool-gripper{height:28px;width:24px;margin:2px 0;cursor:grab}x-pw-tool-gripper:active{cursor:grabbing}x-pw-tool-gripper>x-div{width:16px;height:16px;margin:6px 4px;clip-path:url(#icon-gripper);background-color:#555}x-pw-tools-list>label{display:flex;align-items:center;margin:0 10px;-webkit-user-select:none;user-select:none}x-pw-tools-list{display:flex;width:100%;border-bottom:1px solid #dddddd}x-pw-tool-item{pointer-events:auto;height:28px;width:28px;border-radius:3px}x-pw-tool-item:not(.disabled){cursor:pointer}x-pw-tool-item:not(.disabled):hover{background-color:#dbdbdb}x-pw-tool-item.toggled{background-color:#8acae480}x-pw-tool-item.toggled:not(.disabled):hover{background-color:#8acae4c4}x-pw-tool-item>x-div{width:16px;height:16px;margin:6px;background-color:#3a3a3a}x-pw-tool-item.disabled>x-div{background-color:#61616180;cursor:default}x-pw-tool-item.record.toggled{background-color:transparent}x-pw-tool-item.record.toggled:not(.disabled):hover{background-color:#dbdbdb}x-pw-tool-item.record.toggled>x-div{background-color:#a1260d}x-pw-tool-item.record.disabled.toggled>x-div{opacity:.8}x-pw-tool-item.accept>x-div{background-color:#388a34}x-pw-tool-item.record>x-div{clip-path:url(#icon-circle-large-filled)}x-pw-tool-item.record.toggled>x-div{clip-path:url(#icon-stop-circle)}x-pw-tool-item.pick-locator>x-div{clip-path:url(#icon-inspect)}x-pw-tool-item.text>x-div{clip-path:url(#icon-whole-word)}x-pw-tool-item.visibility>x-div{clip-path:url(#icon-eye)}x-pw-tool-item.value>x-div{clip-path:url(#icon-symbol-constant)}x-pw-tool-item.snapshot>x-div{clip-path:url(#icon-gist)}x-pw-tool-item.accept>x-div{clip-path:url(#icon-check)}x-pw-tool-item.cancel>x-div{clip-path:url(#icon-close)}x-pw-tool-item.succeeded>x-div{clip-path:url(#icon-pass);background-color:#388a34!important}x-pw-overlay{position:absolute;top:0;max-width:min-content;z-index:2147483647;background:transparent;pointer-events:auto}x-pw-overlay x-pw-tools-list{background-color:#fffd;box-shadow:#0000001a 0 5px 5px;border-radius:3px;border-bottom:none}x-pw-overlay x-pw-tool-item{margin:2px}textarea.text-editor{font-family:system-ui,Ubuntu,Droid Sans,sans-serif;flex:auto;border:none;margin:6px 10px;color:#333;outline:1px solid transparent!important;resize:none;padding:0;font-size:13px}textarea.text-editor.does-not-match{outline:1px solid red!important}x-div{display:block}x-spacer{flex:auto}*{box-sizing:border-box}*[hidden]{display:none!important}x-locator-editor{flex:none;width:100%;height:60px;padding:4px;border-bottom:1px solid #dddddd;outline:1px solid transparent}x-locator-editor.does-not-match{outline:1px solid red}.CodeMirror{width:100%!important;height:100%!important}x-pw-action-list{flex:auto;display:flex;flex-direction:column;-webkit-user-select:none;user-select:none}x-pw-action-item{padding:6px 10px;cursor:pointer;overflow:hidden}x-pw-action-item:hover{background-color:#f2f2f2}x-pw-action-item:last-child{border-bottom-left-radius:6px;border-bottom-right-radius:6px}"
+
+class ih:
+    constructor(e)
+    install()
+    setLanguage(e)
+    runHighlightOnRaf(e)
+    uninstall()
+    showActionPoint(e, i)
+    hideActionPoint()
+    clearHighlight()
+    maskElements(e, i)
+    updateHighlight(e)
+    firstBox()
+    firstTooltipBox()
+    tooltipPosition(e, i)
+    _highlightIsUpToDate(e)
+    _createHighlightElement()
+    appendChild(e)
+    onGlassPaneClick(e)
+    offGlassPaneClick(e)
+function FT(n, e, i)
+function QT(n, e, i)
+function ZT(n, e, i)
+function JT(n, e, i)
+function WT(n, e, i)
+const eE = ["left-of","right-of","above","below","near"]
+function G0(n, e, i, s)
+function K0(n, e)
+function Y0(n, e)
+function dd(n)
+function Lt(n, e)
+function gc(n, e, i)
+function X0(n, e)
+function sb(n)
+function tE(n)
+function nE(n)
+function iE(n)
+function sE(n)
+function P0(n)
+function F0(n, e, i = [])
+function Q0(n, e = [])
+const rE = ()
+const Z0 = ["selected","checked","pressed","expanded","level","disabled","name","include-hidden"]
+function La(n, e, i)
+function nr(n, e)
+function ir(n, e)
+function aE(n, e)
+function lE(n, e, i)
+function rb(n)
+
+class oE:
+    constructor()
+    begin()
+    end()
+    _cached(e, i, s, l)
+    _checkSelector(e)
+    matches(e, i, s)
+    query(e, i)
+    _markScore(e, i)
+    _hasScopeClause(e)
+    _expandContextForScopeMatching(e)
+    _matchesSimple(e, i, s)
+    _querySimple(e, i)
+    _matchesParents(e, i, s, l)
+    _matchesEngine(e, i, s, l)
+    _queryEngine(e, i, s)
+    _callMatches(e, i, s, l)
+    _callQuery(e, i, s)
+    _matchesCSS(e, i)
+    _queryCSS(e, i)
+    _getEngine(e)
+const $a = { matches(n, e, i, s), query(n, e, i) }
+const cE = { matches(n, e, i, s) }
+const uE = { matches(n, e, i, s), query(n, e, i) }
+const fE = { matches(n, e, i, s) }
+const hE = { query(n, e, i), matches(n, e, i, s) }
+const dE = { matches(n, e, i, s) }
+const pE = { matches(n, e, i, s) }
+const gE = { matches(n, e, i, s) }
+const mE = { matches(n, e, i, s) }
+const yE = { matches(n, e, i, s) }
+function Da(n)
+const bE = { query(n, e, i) }
+function Ao(n, e)
+function sh(n, e)
+function J0(n)
+const W0 = 10
+const Ar = W0/2
+const ab = 1
+const vE = 2
+const SE = 10
+const wE = 50
+const ev = 100
+const tv = 120
+const nv = 140
+const iv = 160
+const Io = 180
+const sv = 200
+const lb = 250
+const xE = tv+Ar
+const TE = ev+Ar
+const EE = iv+Ar
+const AE = Io+Ar
+const NE = sv+Ar
+const CE = 300
+const kE = 500
+const rv = 510
+const rh = 520
+const av = 530
+const Th = 1e4
+const ME = 1e7
+const OE = 1e3
+function ob(n, e, i)
+function Ji(n, e, i, s)
+function RE(n, e, i)
+function jE(n, e, i)
+function lv(n)
+function ah(n)
+function Ia(n, e, i)
+function Eh(n)
+function Vo(n)
+function Wi(n)
+function LE(n)
+function No(n, e)
+function hr(n)
+function Yn(n)
+function DE(n)
+function BE(n, e)
+function ov(n, e)
+function UE(n, e)
+const zE = /(?:^|[-_/])(\w)/g
+const cv = (n)
+function HE(n)
+function qE(n)
+function uv(n, e, i = [])
+function fv(n, e = [])
+const $E = ()
+const cb = { queryAll(n, e) }
+function pd(n, e, i)
+function IE(n, e)
+function VE(n, e)
+function GE(n, e)
+function KE(n, e)
+function YE(n, e)
+function XE(n, e)
+function PE(n, e = {})
+const Ba = Symbol("selector")
+const FE = class Va{constructor(e,i,s){if(s!=null&&s.hasText&&(i+=` >> internal:has-text=${Rt(s.hasText,!1)}`),s!=null&&s.hasNotText&&(i+=` >> internal:has-not-text=${Rt(s.hasNotText,!1)}`),s!=null&&s.has&&(i+=" >> internal:has="+JSON.stringify(s.has[Ba])),s!=null&&s.hasNot&&(i+=" >> internal:has-not="+JSON.stringify(s.hasNot[Ba])),(s==null?void 0:s.visible)!==void 0&&(i+=` >> visible=${s.visible?"true":"false"}`),this[Ba]=i,i){const u=e.parseSelector(i);this.element=e.querySelector(u,e.document,!1),this.elements=e.querySelectorAll(u,e.document)}const l=i,o=this;o.locator=(u,f)=>new Va(e,l?l+" >> "+u:u,f),o.getByTestId=u=>o.locator(IE(e.testIdAttributeNameForStrictErrorAndConsoleCodegen(),u)),o.getByAltText=(u,f)=>o.locator(GE(u,f)),o.getByLabel=(u,f)=>o.locator(VE(u,f)),o.getByPlaceholder=(u,f)=>o.locator(YE(u,f)),o.getByText=(u,f)=>o.locator(XE(u,f)),o.getByTitle=(u,f)=>o.locator(KE(u,f)),o.getByRole=(u,f={})=>o.locator(PE(u,f)),o.filter=u=>new Va(e,i,u),o.first=()=>o.locator("nth=0"),o.last=()=>o.locator("nth=-1"),o.nth=u=>o.locator(`nth=${u}`),o.and=u=>new Va(e,l+" >> internal:and="+JSON.stringify(u[Ba])),o.or=u=>new Va(e,l+" >> internal:or="+JSON.stringify(u[Ba]))}}
+let FE
+
+class ZE:
+    constructor(e)
+    install()
+    _querySelector(e, i)
+    _querySelectorAll(e)
+    _inspect(e)
+    _selector(e)
+    _generateLocator(e, i)
+    _resume()
+function JE(n)
+function WE(n)
+function eA(n)
+function tA(n)
+function nA(n, e)
+const hv = { i8, ui8, ui8c, i16, ui16, i32, ui32, f32, f64, bi64, bui64 }
+function iA(n)
+function sA(n, e)
+function Ah(n, e = [], i = new Map)
+function rA(n, e)
+function Nh(n, e, i)
+function dv(n, e, i)
+
+class aA:
+    constructor(e, i)
+    evaluate(e, i, s, l, ...o)
+    jsonValue(e, i)
+    _promiseAwareJsonValueNoThrow(e)
+
+class pv:
+    constructor(e, i)
+    eval(e)
+    testIdAttributeNameForStrictErrorAndConsoleCodegen()
+    parseSelector(e)
+    generateSelector(e, i)
+    generateSelectorSimple(e, i)
+    querySelector(e, i, s)
+    _queryNth(e, i)
+    _queryLayoutSelector(e, i, s)
+    ariaSnapshot(e, i)
+    incrementalAriaSnapshot(e, i)
+    ariaSnapshotForRecorder()
+    getAllElementsMatchingExpectAriaTemplate(e, i)
+    querySelectorAll(e, i)
+    _queryEngineAll(e, i)
+    _createAttributeEngine(e, i)
+    _createCSSEngine()
+    _createTextEngine(e, i)
+    _createInternalHasTextEngine()
+    _createInternalHasNotTextEngine()
+    _createInternalLabelEngine()
+    _createNamedAttributeEngine()
+    _createDescribeEngine()
+    _createControlEngine()
+    _createHasEngine()
+    _createHasNotEngine()
+    _createVisibleEngine()
+    _createInternalChainEngine()
+    extend(e, i)
+    async viewportRatio(e)
+    getElementBorderWidth(e)
+    describeIFrameStyle(e)
+    retarget(e, i)
+    async checkElementStates(e, i)
+    async _checkElementIsStable(e)
+    _createAriaRefEngine()
+    elementState(e, i)
+    selectOptions(e, i)
+    fill(e, i)
+    selectText(e)
+    _activelyFocused(e)
+    focusNode(e, i)
+    blurNode(e)
+    setInputFiles(e, i)
+    expectHitTarget(e, i)
+    setupHitTargetInterceptor(e, i, s, l)
+    dispatchEvent(e, i, s)
+    previewNode(e)
+    strictModeViolationError(e, i)
+    createStacklessError(e)
+    createHighlight()
+    maskSelectors(e, i)
+    highlight(e)
+    hideHighlight()
+    markTargetElements(e, i)
+    _setupGlobalListenersRemovalDetection()
+    _setupHitTargetInterceptors()
+    async expect(e, i, s)
+    async expectSingleElement(e, i)
+    expectArray(e, i)
+    _matchSequentially(e, i, s)
+function Co(n)
+function lA(n)
+function ko(n, e)
+
+class sr:
+    constructor(e)
+    matches(e)
+    matchesClassList(e, i, s)
+    normalize(e)
+function Ch(n, e)
+const oA = { tagName, children }
+const an = { multiple, single, assert, action }
+
+class ub:
+
+class lh:
+    constructor(e, i)
+    cursor()
+    uninstall()
+    onClick(e)
+    onPointerDown(e)
+    onPointerUp(e)
+    onMouseDown(e)
+    onMouseUp(e)
+    onMouseMove(e)
+    onMouseEnter(e)
+    onMouseLeave(e)
+    onKeyDown(e)
+    onKeyUp(e)
+    onScroll(e)
+    _commit(e, i)
+    _reset(e)
+
+class cA:
+    constructor(e)
+    cursor()
+    _installObserverIfNeeded()
+    uninstall()
+    onClick(e)
+    onDblClick(e)
+    _commitPendingClickAction()
+    _cancelPendingClickAction()
+    onContextMenu(e)
+    onPointerDown(e)
+    onPointerUp(e)
+    onMouseDown(e)
+    onMouseUp(e)
+    onMouseMove(e)
+    onMouseLeave(e)
+    onFocus(e)
+    onInput(e)
+    onKeyDown(e)
+    onKeyUp(e)
+    onScroll(e)
+    _showActionListDialog(e, i)
+    _resetHoveredModel()
+    _onFocus(e)
+    _shouldIgnoreMouseEvent(e)
+    _actionInProgress(e)
+    _consumedDueToNoModel(e, i)
+    _consumedDueWrongTarget(e)
+    _consumeWhenAboutToPerform(e)
+    _recordAction(e)
+    _performAction(e)
+    _shouldGenerateKeyPressFor(e)
+    _updateModelForHoveredElement()
+    _updateHighlight(e)
+
+class uA:
+    constructor(e)
+    install()
+    uninstall()
+    onClick(e)
+    onContextMenu(e)
+    onInput(e)
+    onKeyDown(e)
+    _shouldIgnoreMouseEvent(e)
+    _shouldGenerateKeyPressFor(e)
+    _isEditable(e)
+    _ariaSnapshot(e)
+
+class oh:
+    constructor(e, i)
+    cursor()
+    uninstall()
+    onClick(e)
+    onMouseDown(e)
+    onPointerUp(e)
+    onMouseMove(e)
+    onKeyDown(e)
+    onScroll(e)
+    _elementHasValue(e)
+    _generateAction()
+    _renderValue(e)
+    _commit()
+    _showDialog()
+    _showTextDialog(e)
+    _commitAssertValue()
+
+class fA:
+    constructor(e)
+    _refreshListeners()
+    install()
+    contains(e)
+    setUIState(e)
+    flashToolSucceeded(e)
+    _hideOverlay()
+    _showOverlay()
+    _updateVisualPosition()
+    onMouseMove(e)
+    onMouseUp(e)
+    onClick(e)
+    onDblClick(e)
+
+class hA:
+    constructor(e, i)
+    installListeners()
+    _switchCurrentTool()
+    setUIState(e, i)
+    clearHighlight()
+    _onClick(e)
+    _onDblClick(e)
+    _onContextMenu(e)
+    _onDragStart(e)
+    _onPointerDown(e)
+    _onPointerUp(e)
+    _onMouseDown(e)
+    _onMouseUp(e)
+    _onMouseMove(e)
+    _onMouseEnter(e)
+    _onMouseLeave(e)
+    _onFocus(e)
+    _onScroll(e)
+    _onInput(e)
+    _onKeyDown(e)
+    _onKeyUp(e)
+    updateHighlight(e, i)
+    _updateHighlight(e, i)
+    _ignoreOverlayEvent(e)
+    deepEventTarget(e)
+    setMode(e)
+    _captureAutoExpectSnapshot()
+    async performAction(e)
+    recordAction(e)
+    setOverlayState(e)
+    elementPicked(e, i)
+let gv = class{constructor(e){this._dialogElement=null,this._recorder=e}isShowing(){return!!this._dialogElement}show(e){const i=this._recorder.document.createElement("x-pw-tool-item");i.title="Accept",i.classList.add("accept"),i.appendChild(this._recorder.document.createElement("x-div")),i.addEventListener("click",()=>{var f;return(f=e.onCommit)==null?void 0:f.call(e)});const s=this._recorder.document.createElement("x-pw-tool-item");s.title="Close",s.classList.add("cancel"),s.appendChild(this._recorder.document.createElement("x-div")),s.addEventListener("click",()=>{var f;this.close(),(f=e.onCancel)==null||f.call(e)}),this._dialogElement=this._recorder.document.createElement("x-pw-dialog"),e.autosize&&this._dialogElement.classList.add("autosize"),this._keyboardListener=f=>{var d;if(f.key==="Escape"){this.close(),(d=e.onCancel)==null||d.call(e);return}if(e.onCommit&&f.key==="Enter"&&(f.ctrlKey||f.metaKey)){this._dialogElement&&e.onCommit();return}},this._onGlassPaneClickHandler=f=>{var d;this.close(),(d=e.onCancel)==null||d.call(e)},this._dialogElement.addEventListener("click",f=>f.stopPropagation());const l=this._recorder.document.createElement("x-pw-tools-list"),o=this._recorder.document.createElement("label");o.textContent=e.label,l.appendChild(o),l.appendChild(this._recorder.document.createElement("x-spacer")),e.onCommit&&l.appendChild(i),l.appendChild(s),this._dialogElement.appendChild(l);const u=this._recorder.document.createElement("x-pw-dialog-body");return u.appendChild(e.body),this._dialogElement.appendChild(u),this._recorder.highlight.appendChild(this._dialogElement),this._recorder.highlight.onGlassPaneClick(this._onGlassPaneClickHandler),this._recorder.document.addEventListener("keydown",this._keyboardListener,!0),this._dialogElement}moveTo(e,i){this._dialogElement&&(this._dialogElement.style.top=e+"px",this._dialogElement.style.left=i+"px")}close(){this._dialogElement&&(this._dialogElement.remove(),this._recorder.highlight.offGlassPaneClick(this._onGlassPaneClickHandler),this._recorder.document.removeEventListener("keydown",this._keyboardListener),this._dialogElement=null)}}
+function dA(n)
+function yr(n)
+function kh(n)
+function Qa(n)
+function ze(n)
+function Za(n)
+function Ja(n)
+function De(n, e, i, s)
+function mv(n)
+function pA(n, e, i, s)
+function yv(n, {tagName:e,attrs:i,children:s})
+function gA(n)
+function mA(n, e)
+function yA(n, e)
+function fb(n)
+function hb(n, e)
+function bv(n, e, i)
+function bA(n, e, i)
+function vA(n, e, i)
+function db(n, e)
+const SA = ({url:n})
+const gd = Symbol.for("yaml.alias")
+const Mh = Symbol.for("yaml.document")
+const Ei = Symbol.for("yaml.map")
+const vv = Symbol.for("yaml.pair")
+const Tn = Symbol.for("yaml.scalar")
+const Nr = Symbol.for("yaml.seq")
+const on = Symbol.for("yaml.node.type")
+const fs = (n)
+const hs = (n)
+const Cr = (n)
+const Be = (n)
+const Re = (n)
+const kr = (n)
+function He(n)
+function qe(n)
+const wA = (n)
+const jt = Symbol("break visit")
+const Sv = Symbol("skip children")
+function Ai(n, e)
+function dr(n, e, i, s)
+async function mc(n, e)
+async function pr(n, e, i, s)
+function wv(n)
+function xv(n, e, i, s)
+const xA = { "!", ",", "[", "]", "{", "}" }
+
+class wt:
+    constructor(e, i)
+    clone()
+    atDocument()
+    add(e, i)
+    tagName(e, i)
+    tagString(e)
+    toString(e)
+function Tv(n)
+function Ev(n)
+function Av(n, e)
+function TA(n, e)
+function gr(n, e, i, s)
+function ln(n, e, i)
+
+class md:
+    constructor(e)
+    clone()
+    toJS(e)
+
+class yc extends md:
+    constructor(e)
+    resolve(e)
+    toJSON(e, i)
+    toString(e, i, s)
+function Go(n, e, i)
+const Nv = (n)
+
+class he extends md:
+    constructor(e)
+    toJSON(e, i)
+    toString()
+const EA = "tag:yaml.org,2002:"
+function AA(n, e, i)
+function il(n, e, i)
+function rc(n, e, i)
+const Ga = (n)
+
+class Cv extends md:
+    constructor(e, i)
+    clone(e)
+    addIn(e, i)
+    deleteIn(e)
+    getIn(e, i)
+    hasAllNullValues(e)
+    hasIn(e)
+    setIn(e, i)
+const NA = (n)
+function Pn(n, e)
+const is = (n, e, i)
+const kv = "flow"
+const Oh = "block"
+const Ko = "quoted"
+function bc(n, e, i = "flow")
+function pb(n, e, i)
+const vc = (n, e)
+const Sc = (n)
+function CA(n, e, i)
+function Wa(n, e)
+function Rh(n, e)
+function mr(n, e)
+let jh
+function Yo({comment:n,type:e,value:i}, s, l, o)
+function kA(n, e, i, s)
+function ol(n, e, i, s)
+function Mv(n, e)
+function MA(n, e)
+function OA(n, e, {anchors:i,doc:s})
+function wr(n, e, i, s)
+function RA({key:n,value:e}, i, s, l)
+function Ov(n, e)
+const Mo = "<<"
+const Fn = { identify(n), default, tag, test, resolve(), stringify() }
+const jA = (n, e)
+function Rv(n, e, i)
+function ch(n, e, i)
+function jv(n, e, {key:i,value:s})
+function LA(n, e, i)
+function yd(n, e, i)
+
+class mt:
+    constructor(e, i = null)
+    clone(e)
+    toJSON(e, i)
+    toString(e, i, s)
+function Lv(n, e, i)
+function DA({comment:n,items:e}, i, {blockItemPrefix:s,flowChars:l,itemIndent:o,onChompKeep:u,onComment:f})
+function BA({items:n}, e, {flowChars:i,itemIndent:s})
+function ac({indent:n,options:{commentString:e}}, i, s, l)
+function ss(n, e)
+
+class Vt extends Cv:
+    get tagName()
+    constructor(e)
+    static from(e, i, s)
+    add(e, i)
+    delete(e)
+    get(e, i)
+    has(e)
+    set(e, i)
+    toJSON(e, i, s)
+    toString(e, i, s)
+const Mr = { collection, default, nodeClass, tag, resolve(n, e), createNode(n, e, i) }
+
+class Ni extends Cv:
+    get tagName()
+    constructor(e)
+    add(e)
+    delete(e)
+    get(e, i)
+    has(e)
+    set(e, i)
+    toJSON(e, i)
+    toString(e, i, s)
+    static from(e, i, s)
+function Oo(n)
+const Or = { collection, default, nodeClass, tag, resolve(n, e), createNode(n, e, i) }
+const wc = { identify(n), default, tag, resolve(n), stringify(n, e, i, s) }
+const xc = { identify(n), createNode(), default, tag, test, resolve(), stringify({source:n}, e) }
+const bd = { identify(n), default, tag, test, resolve(n), stringify(i) }
+function mn({format:n,minFractionDigits:e,tag:i,value:s})
+const Dv = { identify(n), default, tag, test, resolve(n), stringify }
+const Bv = { identify(n), default, tag, format, test, resolve(n), stringify(n) }
+const Uv = { identify(n), default, tag, test, resolve(n), stringify }
+const vd = (n, e, i, {intAsBigInt:s})
+function zv(n, e, i)
+const Hv = { identify(n), default, tag, format, test, resolve(n, e, i), stringify(n) }
+const qv = { identify, default, tag, test, resolve(n, e, i), stringify }
+const $v = { identify(n), default, tag, format, test, resolve(n, e, i), stringify(n) }
+const UA = [Mr,Or,wc,xc,bd,Hv,qv,$v,Dv,Bv,Uv]
+function gb(n)
+const Ro = ({value:n})
+const zA = [{identify:n=>typeof n=="string",default:!0,tag:"tag:yaml.org,2002:str",resolve:n=>n,stringify:Ro},{identify:n=>n==null,createNode:()=>new he(null),default:!0,tag:"tag:yaml.org,2002:null",test:/^null$/,resolve:()=>null,stringify:Ro},{identify:n=>typeof n=="boolean",default:!0,tag:"tag:yaml.org,2002:bool",test:/^true|false$/,resolve:n=>n==="true",stringify:Ro},{identify:gb,default:!0,tag:"tag:yaml.org,2002:int",test:/^-?(?:0|[1-9][0-9]*)$/,resolve:(n,e,{intAsBigInt:i})=>i?BigInt(n):parseInt(n,10),stringify:({value:n})=>gb(n)?n.toString():JSON.stringify(n)},{identify:n=>typeof n=="number",default:!0,tag:"tag:yaml.org,2002:float",test:/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?$/,resolve:n=>parseFloat(n),stringify:Ro}]
+const HA = { default, tag, test, resolve(n, e) }
+const qA = [Mr,Or].concat(zA,HA)
+const Sd = { identify(n), default, tag, resolve(n, e), stringify(s, l, o) }
+function Iv(n, e)
+function Vv(n, e, i)
+const wd = { collection, default, tag, resolve, createNode }
+
+class br extends Ni:
+    constructor()
+    toJSON(e, i)
+    static from(e, i, s)
+const xd = { collection, identify(n), nodeClass, default, tag, resolve(n, e), createNode(n, e, i) }
+function Gv({value:n,source:e}, i)
+const Kv = { identify(n), default, tag, test, resolve(), stringify }
+const Yv = { identify(n), default, tag, test, resolve(), stringify }
+const $A = { identify(n), default, tag, test, resolve(n), stringify }
+const IA = { identify(n), default, tag, format, test, resolve(n), stringify(n) }
+const VA = { identify(n), default, tag, test, resolve(n), stringify }
+const cl = (n)
+function Tc(n, e, i, {intAsBigInt:s})
+const GA = { identify, default, tag, format, test, resolve(n, e, i), stringify(n) }
+const KA = { identify, default, tag, format, test, resolve(n, e, i), stringify(n) }
+const YA = { identify, default, tag, test, resolve(n, e, i), stringify }
+const XA = { identify, default, tag, format, test, resolve(n, e, i), stringify(n) }
+
+class vr extends Vt:
+    constructor(e)
+    add(e)
+    get(e, i)
+    set(e, i)
+    toJSON(e, i)
+    toString(e, i, s)
+    static from(e, i, s)
+const Td = { collection, identify(n), nodeClass, default, tag, createNode(n, e, i), resolve(n, e) }
+function Ed(n, e)
+function Xv(n)
+const Pv = { identify(n), default, tag, format, test, resolve(n, e, {intAsBigInt:i}), stringify }
+const Fv = { identify(n), default, tag, format, test, resolve(n), stringify }
+const Ec = { identify(n), default, tag, test, resolve(n), stringify({value:n}) }
+const mb = [Mr,Or,wc,xc,Kv,Yv,GA,KA,YA,XA,$A,IA,VA,Sd,Fn,xd,wd,Td,Pv,Fv,Ec]
+const yb = new Map([["core",UA],["failsafe",[Mr,Or,wc]],["json",qA],["yaml11",mb],["yaml-1.1",mb]])
+const bb = { binary, bool, float, floatExp, floatNaN, floatTime, int, intHex, intOct, intTime, map, merge, null, omap, pairs, seq, set, timestamp }
+const PA = { "tag:yaml.org,2002:binary", "tag:yaml.org,2002:merge", "tag:yaml.org,2002:omap", "tag:yaml.org,2002:pairs", "tag:yaml.org,2002:set", "tag:yaml.org,2002:timestamp" }
+function uh(n, e, i)
+const FA = (n, e)
+
+class Ac:
+    constructor({compat:e,customTags:i,merge:s,resolveKnownTags:l,schema:o,sortMapEntries:u,toStringDefaults:f})
+    clone()
+function QA(n, e)
+
+class Rr:
+    constructor(e, i, s)
+    clone()
+    add(e)
+    addIn(e, i)
+    createAlias(e, i)
+    createNode(e, i, s)
+    createPair(e, i, s = {})
+    delete(e)
+    deleteIn(e)
+    get(e, i)
+    getIn(e, i)
+    has(e)
+    hasIn(e)
+    set(e, i)
+    setIn(e, i)
+    setSchema(e, i = {})
+    toJS()
+    toJSON(e, i)
+    toString(e = {})
+function rr(n)
+
+class Ad extends Error:
+    constructor(e, i, s, l)
+
+class rs extends Ad:
+    constructor(e, i, s)
+
+class Qv extends Ad:
+    constructor(e, i, s)
+const lc = (n, e)
+function xr(n, {flow:e,indicator:i,next:s,offset:l,onError:o,parentIndent:u,startOnNewline:f})
+function sl(n)
+function Lh(n, e, i)
+function Zv(n, e, i)
+const vb = "All mapping items must start at the same column"
+function ZA({composeNode:n,composeEmptyNode:e}, i, s, l, o)
+function JA({composeNode:n,composeEmptyNode:e}, i, s, l, o)
+function ul(n, e, i, s)
+const fh = "Block collections are not allowed within flow collections"
+const hh = (n)
+function WA({composeNode:n,composeEmptyNode:e}, i, s, l, o)
+function dh(n, e, i, s, l, o)
+function eN(n, e, i, s, l)
+function Jv(n, e, i)
+function tN({offset:n,props:e}, i, s)
+function nN(n)
+function Wv(n, e, i)
+function iN(n, e)
+function sN(n, e)
+function eS(n)
+function rN(n, e)
+function aN(n, e)
+const lN = { 0, a, b, e, f, n, r, t, v, N, _, L, P, " ", '"', "/", "\\", "	" }
+function oN(n, e, i, s)
+function tS(n, e, i, s)
+function cN(n, e, i, s, l)
+function uN({atKey:n,directives:e,schema:i}, s, l, o)
+function fN(n, e, i)
+const hN = { composeNode, composeEmptyNode }
+function nS(n, e, i, s)
+function Nd(n, e, i, s, {spaceBefore:l,comment:o,anchor:u,tag:f,end:d}, p)
+function dN({options:n}, {offset:e,source:i,end:s}, l)
+function pN(n, e, {offset:i,start:s,value:l,end:o}, u)
+function Ua(n)
+function Sb(n)
+
+class Cd:
+    constructor(e = {})
+    decorate(e, i)
+    streamInfo()
+    * compose(e, i = !1, s = -1)
+    * next(e)
+    * end(e = !1, i = -1)
+function gN(n, e = !0, i)
+function mN(n, e)
+function yN(n, e, i = {})
+function bN(n, e)
+function iS(n, e)
+function ph(n, e, i)
+const vN = (n)
+function oc(n)
+function Xo({start:n,key:e,sep:i,value:s})
+const Dh = Symbol("break visit")
+const SN = Symbol("skip children")
+const sS = Symbol("remove item")
+function os(n, e)
+function rS(n, e, i)
+const Nc = "\uFEFF"
+const Cc = ""
+const kc = ""
+const rl = ""
+const wN = (n)
+const xN = (n)
+function aS(n)
+const TN = Object.freeze(Object.defineProperty({__proto__:null,BOM:Nc,DOCUMENT:Cc,FLOW_END:kc,SCALAR:rl,createScalarToken:mN,isCollection:wN,isScalar:xN,prettyToken:_N,resolveAsScalar:gN,setScalarValue:yN,stringify:vN,tokenType:aS,visit:os},Symbol.toStringTag,{value:"Module"}))
+function pn(n)
+const wb = new Set("0123456789ABCDEFabcdef")
+const EN = new Set("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-#;/?:@&=+$_.!~*'()")
+const jo = new Set(",[]{}")
+const AN = new Set(` ,[]{}
+\r	`)
+const gh = (n)
+
+class lS:
+    constructor()
+    * lex(e, i = !1)
+    atLineEnd()
+    charAt(e)
+    continueScalar(e)
+    getLine()
+    hasChars(e)
+    setNext(e)
+    peek(e)
+    * parseNext(e)
+    * parseStream()
+    * parseLineStart()
+    * parseBlockStart()
+    * parseDocument()
+    * parseFlowCollection()
+    * parseQuotedScalar()
+    * parseBlockScalarHeader()
+    * parseBlockScalar()
+    * parsePlainScalar()
+    * pushCount(e)
+    * pushToIndex(e, i)
+    * pushIndicators()
+    * pushTag()
+    * pushNewline()
+    * pushSpaces(e)
+    * pushUntil(e)
+
+class oS:
+    constructor()
+function ns(n, e)
+function xb(n)
+function cS(n)
+function Lo(n)
+function ar(n)
+
+class kd:
+    constructor(e)
+    * parse(e, i = !1)
+    * next(e)
+    * end()
+    get sourceToken()
+    * step()
+    peek(e)
+    * pop(e)
+    * stream()
+    * document(e)
+    * scalar(e)
+    * blockScalar(e)
+    * blockMap(e)
+    * blockSequence(e)
+    * flowCollection(e)
+    flowScalar(e)
+    startBlockValue(e)
+    atIndentedComment(e, i)
+    * documentEnd(e)
+    * lineEnd(e)
+function uS(n)
+function NN(n, e = {})
+function fS(n, e = {})
+function CN(n, e, i)
+function kN(n, e, i)
+const hS = Object.freeze(Object.defineProperty({__proto__:null,Alias:yc,CST:TN,Composer:Cd,Document:Rr,Lexer:lS,LineCounter:oS,Pair:mt,Parser:kd,Scalar:he,Schema:Ac,YAMLError:Ad,YAMLMap:Vt,YAMLParseError:rs,YAMLSeq:Ni,YAMLWarning:Qv,isAlias:fs,isCollection:He,isDocument:hs,isMap:Cr,isNode:qe,isPair:Be,isScalar:Re,isSeq:kr,parse:CN,parseAllDocuments:NN,parseDocument:fS,stringify:kN,visit:Ai,visitAsync:mc},Symbol.toStringTag,{value:"Module"}))
+const MN = ({action:n,model:e,sdkLanguage:i,testIdAttributeName:s,isInspecting:l,setIsInspecting:o,highlightedElement:u,setHighlightedElement:f})
+const ON = ({snapshotUrls:n,sdkLanguage:e,testIdAttributeName:i,isInspecting:s,setIsInspecting:l,highlightedElement:o,setHighlightedElement:u})
+const RN = ({snapshotInfo:n,children:e})
+function jN(n)
+const Tb = ({iframe:n,isInspecting:e,sdkLanguage:i,testIdAttributeName:s,highlightedElement:l,setHighlightedElement:o,iteration:u})
+function dS(n, e, i, s, l, o, u)
+const za = (n, e, i = !1)
+function LN(n)
+const pS = new URLSearchParams(window.location.search).has("isUnderTest")
+function DN(n, e, i)
+async function BN(n)
+const gS = { width, height }
+const UN = 'data:text/html,<body style="background: #ddd"></body>'
+const mS = { width, height }
+const ur = 2.5
+const zN = mS.height+ur*2
+const HN = ({boundaries:n,previewPoint:e})
+const qN = ({boundaries:n,page:e,width:i})
+function yS(n, e)
+function bS(n, e)
+const $N = ({model:n,boundaries:e,consoleEntries:i,networkResources:s,onSelected:l,highlightedAction:o,highlightedResourceOrdinal:u,highlightedConsoleEntryOrdinal:f,selectedTime:d,setSelectedTime:p,sdkLanguage:m})
+function IN(n, e)
+function nn(n, e, i)
+function xn(n, e, i)
+function VN(n)
+const GN = ({model:n})
+const KN = ({annotations:n})
+const YN = ({sdkLanguage:n,isInspecting:e,setIsInspecting:i,highlightedElement:s,setHighlightedElement:l})
+const XN = ({className:n,style:e,open:i,isModal:s,minWidth:l,verticalOffset:o,requestClose:u,anchor:f,dataTestId:d,children:p})
+function PN(n, e, i = 4, s = 4)
+const FN = ({title:n,icon:e,buttonChildren:i,anchorRef:s,dialogDataTestId:l,children:o})
+const vS = ({settings:n})
+const QN = (n, e)
+const l2 = (n)
+const ZN = (n)
+const JN = ({counters:n,hiddenActionsCount:e})
+let Eb
+
+class lr:
+    constructor()
+    fire(e)
+    dispose()
+
+class WN extends Error:
+    constructor()
+
+class o2:
+    constructor(e)
+    onmessage(e)
+    onopen(e)
+    onerror(e)
+    onclose(e)
+    send(e)
+    close()
+
+class c2:
+    constructor(e)
+    isClosed()
+    async _sendMessage(e, i)
+    _sendMessageNoReply(e, i)
+    _dispatchEvent(e, i)
+    async initialize(e)
+    async ping(e)
+    async pingNoReply(e)
+    async watch(e)
+    watchNoReply(e)
+    async open(e)
+    openNoReply(e)
+    async resizeTerminal(e)
+    resizeTerminalNoReply(e)
+    async checkBrowsers(e)
+    async installBrowsers(e)
+    async runGlobalSetup(e)
+    async runGlobalTeardown(e)
+    async startDevServer(e)
+    async stopDevServer(e)
+    async clearCache(e)
+    async listFiles(e)
+    async listTests(e)
+    async runTests(e)
+    async findRelatedTestFiles(e)
+    async stopTests(e)
+    stopTestsNoReply(e)
+    async closeGracefully(e)
+    close()
+const u2 = ({location:n})
+</file>
+
+<file path="playwright-report/trace/index.BxQ34UMZ.js">
+import { M as m, r as s, T as M, W as C, j as e, D as F, a as I, b as k, c as z, d as O, e as V } from './assets/defaultSettingsView-BEpdCv1S.js'
+const $ = ()
+const N = new m("",[])
+const q = ({traceJson:o})
+async function A(o)
+</file>
+
+<file path="playwright-report/trace/sw.bundle.js">
+let Qs = Object.defineProperty
+function zs(s, t, e)
+function L(s, t, e)
+function er(s, t)
+
+class tr:
+    constructor(t, e)
+    serveSnapshot(t, e, n)
+    async serveClosestScreenshot(t, e)
+    serveSnapshotInfo(t, e)
+    _snapshot(t, e)
+    _respondWithJson(t)
+    async serveResource(t, e, n)
+function nr(s)
+function sr(s)
+const Hn = { "&", "<", ">", '"', "'" }
+function rr(s)
+function ir(s)
+function Wt(s, t, e)
+function Bn(s)
+function ar(s)
+
+class or:
+    constructor(t, e, n, r, i)
+    snapshot()
+    viewport()
+    closestScreenshot()
+    render()
+    resourceByUrl(t, e)
+const cr = new Set(["AREA","BASE","BR","COL","COMMAND","EMBED","HR","IMG","INPUT","KEYGEN","LINK","MENUITEM","META","PARAM","SOURCE","TRACK","WBR"])
+function lr(s)
+function fr(s, ...t)
+const jn = ["about:","blob:","data:","file:","ftp:","http:","https:","mailto:","sftp:","ws:","wss:"]
+const Ht = "http://playwright.bloburl/#"
+function ft(s)
+const ur = /url\(['"]?([\w-]+:)\/\//ig
+function dr(s)
+const hr = /url\(\s*"([^"]*)"\s*\)/ig
+function pr(s)
+
+class mr:
+    constructor(t)
+    getOrCompute(t, e)
+
+class wr:
+    constructor()
+    addResource(t, e)
+    addFrameSnapshot(t, e, n)
+    snapshotByName(t, e)
+    snapshotsForTest()
+    finalize()
+    _ensureResourcesForContext(t)
+
+class Gn extends Error:
+    constructor(t)
+const Bt = 8
+
+class gr:
+    constructor(t, e)
+    appendTrace(t)
+    actions()
+    _pageEntry(t)
+    _appendEvent(t)
+    _innerAppendEvent(t)
+    _processedContextCreatedEvent()
+    _modernize(t)
+    _modernize_0_to_1(t)
+    _modernize_1_to_2(t)
+    _modernize_2_to_3(t)
+    _modernize_3_to_4(t)
+    _modernize_event_3_to_4(t)
+    _modernize_4_to_5(t)
+    _modernize_event_4_to_5(t)
+    _modernize_5_to_6(t)
+    _modernize_6_to_7(t)
+    _modernize_7_to_8(t)
+
+class br:
+    constructor()
+    async load(t, e)
+    async hasEntry(t)
+    async resourceForSha1(t)
+    storage()
+function jt(s)
+function yr()
+const Er = 15
+const M = 0
+const se = 1
+const xr = 2
+const X = -2
+const B = -3
+const Gt = -4
+const re = -5
+const $ = [0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535]
+const Yn = 1440
+const Tr = 0
+const Sr = 4
+const Rr = 9
+const Ar = 5
+const Or = [96,7,256,0,8,80,0,8,16,84,8,115,82,7,31,0,8,112,0,8,48,0,9,192,80,7,10,0,8,96,0,8,32,0,9,160,0,8,0,0,8,128,0,8,64,0,9,224,80,7,6,0,8,88,0,8,24,0,9,144,83,7,59,0,8,120,0,8,56,0,9,208,81,7,17,0,8,104,0,8,40,0,9,176,0,8,8,0,8,136,0,8,72,0,9,240,80,7,4,0,8,84,0,8,20,85,8,227,83,7,43,0,8,116,0,8,52,0,9,200,81,7,13,0,8,100,0,8,36,0,9,168,0,8,4,0,8,132,0,8,68,0,9,232,80,7,8,0,8,92,0,8,28,0,9,152,84,7,83,0,8,124,0,8,60,0,9,216,82,7,23,0,8,108,0,8,44,0,9,184,0,8,12,0,8,140,0,8,76,0,9,248,80,7,3,0,8,82,0,8,18,85,8,163,83,7,35,0,8,114,0,8,50,0,9,196,81,7,11,0,8,98,0,8,34,0,9,164,0,8,2,0,8,130,0,8,66,0,9,228,80,7,7,0,8,90,0,8,26,0,9,148,84,7,67,0,8,122,0,8,58,0,9,212,82,7,19,0,8,106,0,8,42,0,9,180,0,8,10,0,8,138,0,8,74,0,9,244,80,7,5,0,8,86,0,8,22,192,8,0,83,7,51,0,8,118,0,8,54,0,9,204,81,7,15,0,8,102,0,8,38,0,9,172,0,8,6,0,8,134,0,8,70,0,9,236,80,7,9,0,8,94,0,8,30,0,9,156,84,7,99,0,8,126,0,8,62,0,9,220,82,7,27,0,8,110,0,8,46,0,9,188,0,8,14,0,8,142,0,8,78,0,9,252,96,7,256,0,8,81,0,8,17,85,8,131,82,7,31,0,8,113,0,8,49,0,9,194,80,7,10,0,8,97,0,8,33,0,9,162,0,8,1,0,8,129,0,8,65,0,9,226,80,7,6,0,8,89,0,8,25,0,9,146,83,7,59,0,8,121,0,8,57,0,9,210,81,7,17,0,8,105,0,8,41,0,9,178,0,8,9,0,8,137,0,8,73,0,9,242,80,7,4,0,8,85,0,8,21,80,8,258,83,7,43,0,8,117,0,8,53,0,9,202,81,7,13,0,8,101,0,8,37,0,9,170,0,8,5,0,8,133,0,8,69,0,9,234,80,7,8,0,8,93,0,8,29,0,9,154,84,7,83,0,8,125,0,8,61,0,9,218,82,7,23,0,8,109,0,8,45,0,9,186,0,8,13,0,8,141,0,8,77,0,9,250,80,7,3,0,8,83,0,8,19,85,8,195,83,7,35,0,8,115,0,8,51,0,9,198,81,7,11,0,8,99,0,8,35,0,9,166,0,8,3,0,8,131,0,8,67,0,9,230,80,7,7,0,8,91,0,8,27,0,9,150,84,7,67,0,8,123,0,8,59,0,9,214,82,7,19,0,8,107,0,8,43,0,9,182,0,8,11,0,8,139,0,8,75,0,9,246,80,7,5,0,8,87,0,8,23,192,8,0,83,7,51,0,8,119,0,8,55,0,9,206,81,7,15,0,8,103,0,8,39,0,9,174,0,8,7,0,8,135,0,8,71,0,9,238,80,7,9,0,8,95,0,8,31,0,9,158,84,7,99,0,8,127,0,8,63,0,9,222,82,7,27,0,8,111,0,8,47,0,9,190,0,8,15,0,8,143,0,8,79,0,9,254,96,7,256,0,8,80,0,8,16,84,8,115,82,7,31,0,8,112,0,8,48,0,9,193,80,7,10,0,8,96,0,8,32,0,9,161,0,8,0,0,8,128,0,8,64,0,9,225,80,7,6,0,8,88,0,8,24,0,9,145,83,7,59,0,8,120,0,8,56,0,9,209,81,7,17,0,8,104,0,8,40,0,9,177,0,8,8,0,8,136,0,8,72,0,9,241,80,7,4,0,8,84,0,8,20,85,8,227,83,7,43,0,8,116,0,8,52,0,9,201,81,7,13,0,8,100,0,8,36,0,9,169,0,8,4,0,8,132,0,8,68,0,9,233,80,7,8,0,8,92,0,8,28,0,9,153,84,7,83,0,8,124,0,8,60,0,9,217,82,7,23,0,8,108,0,8,44,0,9,185,0,8,12,0,8,140,0,8,76,0,9,249,80,7,3,0,8,82,0,8,18,85,8,163,83,7,35,0,8,114,0,8,50,0,9,197,81,7,11,0,8,98,0,8,34,0,9,165,0,8,2,0,8,130,0,8,66,0,9,229,80,7,7,0,8,90,0,8,26,0,9,149,84,7,67,0,8,122,0,8,58,0,9,213,82,7,19,0,8,106,0,8,42,0,9,181,0,8,10,0,8,138,0,8,74,0,9,245,80,7,5,0,8,86,0,8,22,192,8,0,83,7,51,0,8,118,0,8,54,0,9,205,81,7,15,0,8,102,0,8,38,0,9,173,0,8,6,0,8,134,0,8,70,0,9,237,80,7,9,0,8,94,0,8,30,0,9,157,84,7,99,0,8,126,0,8,62,0,9,221,82,7,27,0,8,110,0,8,46,0,9,189,0,8,14,0,8,142,0,8,78,0,9,253,96,7,256,0,8,81,0,8,17,85,8,131,82,7,31,0,8,113,0,8,49,0,9,195,80,7,10,0,8,97,0,8,33,0,9,163,0,8,1,0,8,129,0,8,65,0,9,227,80,7,6,0,8,89,0,8,25,0,9,147,83,7,59,0,8,121,0,8,57,0,9,211,81,7,17,0,8,105,0,8,41,0,9,179,0,8,9,0,8,137,0,8,73,0,9,243,80,7,4,0,8,85,0,8,21,80,8,258,83,7,43,0,8,117,0,8,53,0,9,203,81,7,13,0,8,101,0,8,37,0,9,171,0,8,5,0,8,133,0,8,69,0,9,235,80,7,8,0,8,93,0,8,29,0,9,155,84,7,83,0,8,125,0,8,61,0,9,219,82,7,23,0,8,109,0,8,45,0,9,187,0,8,13,0,8,141,0,8,77,0,9,251,80,7,3,0,8,83,0,8,19,85,8,195,83,7,35,0,8,115,0,8,51,0,9,199,81,7,11,0,8,99,0,8,35,0,9,167,0,8,3,0,8,131,0,8,67,0,9,231,80,7,7,0,8,91,0,8,27,0,9,151,84,7,67,0,8,123,0,8,59,0,9,215,82,7,19,0,8,107,0,8,43,0,9,183,0,8,11,0,8,139,0,8,75,0,9,247,80,7,5,0,8,87,0,8,23,192,8,0,83,7,51,0,8,119,0,8,55,0,9,207,81,7,15,0,8,103,0,8,39,0,9,175,0,8,7,0,8,135,0,8,71,0,9,239,80,7,9,0,8,95,0,8,31,0,9,159,84,7,99,0,8,127,0,8,63,0,9,223,82,7,27,0,8,111,0,8,47,0,9,191,0,8,15,0,8,143,0,8,79,0,9,255]
+const Ir = [80,5,1,87,5,257,83,5,17,91,5,4097,81,5,5,89,5,1025,85,5,65,93,5,16385,80,5,3,88,5,513,84,5,33,92,5,8193,82,5,9,90,5,2049,86,5,129,192,5,24577,80,5,2,87,5,385,83,5,25,91,5,6145,81,5,7,89,5,1537,85,5,97,93,5,24577,80,5,4,88,5,769,84,5,49,92,5,12289,82,5,13,90,5,3073,86,5,193,192,5,24577]
+const Cr = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258,0,0]
+const Nr = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,112,112]
+const Dr = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577]
+const Pr = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13]
+const ae = 15
+function ut()
+const He = 0
+const Yt = 1
+const qt = 2
+const Vt = 3
+const Zt = 4
+const Kt = 5
+const Xt = 6
+const et = 7
+const $t = 8
+const Be = 9
+function kr()
+const Jt = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]
+const ge = 0
+const tt = 1
+const Qt = 2
+const zt = 3
+const en = 4
+const tn = 5
+const je = 6
+const Ge = 7
+const nn = 8
+const pe = 9
+function Lr(s, t)
+const Fr = 32
+const Mr = 8
+const vr = 0
+const sn = 1
+const rn = 2
+const an = 3
+const on = 4
+const cn = 5
+const nt = 6
+const Se = 7
+const ln = 12
+const oe = 13
+const Ur = [0,0,255,255]
+function Wr()
+function qn()
+function Hr(s)
+const me = 4294967295
+const fe = 65535
+const Br = 8
+const jr = 0
+const Gr = 99
+const Yr = 67324752
+const Vn = 134695760
+const Vn
+const fn = 33639248
+const Vr = 101010256
+const un = 101075792
+const Zr = 117853008
+const ne = 22
+const st = 20
+const rt = 56
+const Kr = 12
+const Xr = 20
+const dn = 4
+const $r = 1
+const Jr = 39169
+const Qr = 10
+const zr = 1
+const ei = 21589
+const ti = 28789
+const ni = 25461
+const si = 6534
+const ri = 6
+const hn = 8
+const pn = 2048
+const mn = 16
+const ii = 61440
+const ai = 16384
+const oi = 73
+const wn = "/"
+const it = 30
+const ci = 10
+const li = 14
+const fi = 18
+const G = void 0
+const ke = "function"
+
+class gn:
+    constructor(t)
+const ui = 64
+let Zn = 2
+const di = { chunkSize, maxWorkers, terminateWorkerTimeout, useWebWorkers, useCompressionStream, workerScripts, CompressionStreamNative, DecompressionStreamNative }
+const ue = Object.assign({},di)
+function Kn()
+function Xn(s)
+function ce(s, t)
+function hi()
+const $n = []
+let s = 0
+let s
+let e = 0
+
+class Ze:
+    constructor(t)
+    append(t)
+    get()
+
+class Jn extends TransformStream:
+    constructor()
+function pi(s)
+const K = { concat(s, t), bitLength(s), clamp(s, t), partial(s, t, e), getPartial(s), _shiftRight(s, t, e, n) }
+const Ke = { bytes }
+const Qn = {}
+const zn = {}
+const mi = { getRandomValues(s) }
+const es = {}
+const we = { importKey(s), pbkdf2(s, t, e, n) }
+const wi = typeof crypto!=_e&&typeof crypto.getRandomValues==ke
+const Et = "Invalid password"
+const xt = "Invalid signature"
+const Tt = "zipjs-abort-check-password"
+function ts(s)
+const be = 16
+const gi = "raw"
+const ns = { name }
+const bi = { name }
+const yi = "SHA-1"
+const Ei = Object.assign({hash:bi},ns)
+const dt = Object.assign({iterations:1e3,hash:{name:yi}},ns)
+const xi = ["deriveBits"]
+const Ie = [8,12,16]
+const Re = [16,24,32]
+const le = 10
+const Ti = [0,0,0,0]
+const Je = typeof crypto!=_e
+const Le = Je&&crypto.subtle
+const ss = Je&&typeof Le!=_e
+const ee = Ke.bytes
+const Si = zn.aes
+const Ri = es.ctrGladman
+const Ai = we.hmacSha1
+let bn = Je&&ss&&typeof Le.importKey==ke
+let yn = Je&&ss&&typeof Le.deriveBits==ke
+
+class Oi extends TransformStream:
+    constructor({password:t,rawPassword:e,signed:n,encryptionStrength:r,checkPasswordOnly:i})
+
+class Ii extends TransformStream:
+    constructor({password:t,rawPassword:e,encryptionStrength:n})
+function rs(s, t, e, n, r, i)
+async function Ci(s, t, e, n)
+async function Ni(s, t, e)
+async function is(s, t, e, n)
+async function Di(s, t, e, n, r)
+async function Pi(s, t, e)
+function as(s, t)
+function St(s, t)
+function ki(s, t)
+function J(s, t, e)
+function Ce(s, t)
+function Ne(s, t)
+const Oe = 12
+
+class Li extends TransformStream:
+    constructor({password:t,passwordVerification:e,checkPasswordOnly:n})
+
+class Fi extends TransformStream:
+    constructor({password:t,passwordVerification:e})
+function En(s, t)
+function xn(s, t)
+function os(s, t)
+function Rt(s, t)
+function cs(s)
+function ls(s)
+function Tn(s)
+const At = "Invalid uncompressed size"
+const Sn = "deflate-raw"
+
+class Mi extends TransformStream:
+    constructor(t, {chunkSize:e,CompressionStream:n,CompressionStreamNative:r})
+
+class vi extends TransformStream:
+    constructor(t, {chunkSize:e,DecompressionStream:n,DecompressionStreamNative:r})
+function fs(s, t, e)
+function us(s, t, e, n, r)
+function ie(s, t)
+const Ui = "message"
+const Wi = "start"
+const Hi = "pull"
+const Rn = "data"
+const Bi = "ack"
+const An = "close"
+const ji = "deflate"
+const ds = "inflate"
+
+class Gi extends TransformStream:
+    constructor(t, e)
+
+class Yi extends TransformStream:
+    constructor(t)
+
+class at:
+    constructor(t, {readable:e,writable:n}, {options:r,config:i,streamOptions:a,useWebWorkers:o,transferStreams:l,scripts:_}, d)
+
+class qi extends TransformStream:
+    constructor({onstart:t,onprogress:e,size:n,onend:r})
+async function ot(s, ...t)
+function hs(s, t)
+function Vi(s, t)
+async function Zi({options:s,readable:t,writable:e,onTaskFinished:n}, r)
+async function Ki(s, t)
+function Xi(s)
+let On = !0
+let In = !0
+function $i(s, t, e)
+function Ye(s, {worker:t,writer:e,onTaskFinished:n,transferStreams:r})
+async function Ji({data:s}, t)
+let de = []
+const ct = []
+let Cn = 0
+async function Qi(s, t)
+function zi(s, t)
+async function ea()
+const ps = "HTTP error "
+const Fe = "HTTP Range not supported"
+const ms = "Writer iterator completed too soon"
+const ws = "Writer not initialized"
+const ta = "text/plain"
+const na = "Content-Length"
+const sa = "Content-Range"
+const ra = "Accept-Ranges"
+const ia = "Range"
+const aa = "Content-Type"
+const oa = "HEAD"
+const Ot = "GET"
+const gs = "bytes"
+const ca = 64*1024
+const It = "writable"
+
+class Qe:
+    constructor()
+    init()
+
+class he extends Qe:
+    get readable()
+
+class Ct extends Qe:
+    constructor()
+    writeUint8Array()
+
+class la extends he:
+    constructor(t)
+    readUint8Array(t, e)
+
+class fa extends Ct:
+    constructor(t)
+    writeUint8Array(t)
+    getData()
+
+class Nt extends he:
+    constructor(t)
+    async readUint8Array(t, e)
+
+class bs extends Qe:
+    constructor(t)
+    getData()
+
+class ua extends Nt:
+    constructor(t)
+
+class da extends bs:
+    constructor(t)
+    async getData()
+
+class _a extends he:
+    constructor(t, e)
+    async init()
+    readUint8Array(t, e)
+
+class ha extends he:
+    constructor(t, e)
+    async init()
+    readUint8Array(t, e)
+function ys(s, t, e)
+async function Es(s, t, e)
+async function xs(s, t, e, n, r)
+function Ts(s, t = 0, e = 1)
+function Dt({options:s})
+async function Nn(s)
+async function Dn(s)
+async function Ss(s, t)
+async function Pn(s, t, e)
+async function ht(s, {options:t,url:e}, n)
+function pt(s, {url:t}, e)
+
+class Rs extends he:
+    constructor(t, e = {})
+    set size(t)
+    get size()
+    async init()
+    readUint8Array(t, e)
+
+class pa extends Rs:
+    constructor(t, e = {})
+
+class ma extends he:
+    constructor(t)
+    readUint8Array(t, e)
+
+class wa extends Ct:
+    init(t = 0)
+    writeUint8Array(t)
+    getData()
+
+class Pt extends he:
+    constructor(t)
+    async init()
+    async readUint8Array(t, e, n = 0)
+
+class Xe extends Qe:
+    constructor(t, e = 4294967295)
+
+class As:
+    constructor(t)
+
+class Os:
+    constructor(t)
+function ga(s)
+async function De(s, t)
+function Y(s, t, e, n)
+const Pt
+const Xe
+const Is = "\0☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼ !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~⌂ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ".split("")
+const Ea = Is.length==256
+function xa(s)
+function qe(s, t)
+const Cs = "filename"
+const Ns = "rawFilename"
+const Ds = "comment"
+const Ps = "rawComment"
+const ks = "uncompressedSize"
+const Ls = "compressedSize"
+const Fs = "offset"
+const mt = "diskNumberStart"
+const wt = "lastModDate"
+const gt = "rawLastModDate"
+const Ms = "lastAccessDate"
+const Ta = "rawLastAccessDate"
+const vs = "creationDate"
+const Sa = "rawCreationDate"
+const Ra = "internalFileAttribute"
+const Aa = "internalFileAttributes"
+const Oa = "externalFileAttribute"
+const Ia = "externalFileAttributes"
+const Ca = "msDosCompatible"
+const Na = "zip64"
+const Da = "encrypted"
+const Pa = "version"
+const ka = "versionMadeBy"
+const La = "zipCrypto"
+const Fa = "directory"
+const Ma = "executable"
+const va = "compressionMethod"
+const Ua = "signature"
+const Wa = "extraField"
+const Ha = [Cs,Ns,Ls,ks,wt,gt,Ds,Ps,Ms,vs,Fs,mt,mt,Ra,Aa,Oa,Ia,Ca,Na,Da,Pa,ka,La,Fa,Ma,va,Ua,Wa,"bitFlag","filenameUTF8","commentUTF8","rawExtraField","extraFieldZip64","extraFieldUnicodePath","extraFieldUnicodeComment","extraFieldAES","extraFieldNTFS","extraFieldExtendedTimestamp"]
+
+class kn:
+    constructor(t)
+const Ba = "filenameEncoding"
+const ja = "commentEncoding"
+const Ga = "decodeText"
+const Ya = "extractPrependedData"
+const qa = "extractAppendedData"
+const Va = "password"
+const Za = "rawPassword"
+const Ka = "passThrough"
+const Xa = "signal"
+const $a = "checkPasswordOnly"
+const Ja = "checkOverlappingEntryOnly"
+const Qa = "checkOverlappingEntry"
+const za = "checkSignature"
+const eo = "useWebWorkers"
+const to = "useCompressionStream"
+const no = "transferStreams"
+const so = "preventClose"
+const Ve = "File format is not recognized"
+const Us = "End of central directory not found"
+const Ws = "End of Zip64 central directory locator not found"
+const Hs = "Central directory header not found"
+const Bs = "Local file header not found"
+const js = "Zip64 extra field not found"
+const Gs = "File contains encrypted entry"
+const Ys = "Encryption method not supported"
+const bt = "Compression method not supported"
+const yt = "Split zip file"
+const qs = "Overlapping entry found"
+const Ln = "utf-8"
+const Fn = "cp437"
+const ro = [[ks,me],[Ls,me],[Fs,me],[mt,fe]]
+const io = { [fe], [me] }
+
+class Vs:
+    constructor(t, e = {})
+    async * getEntriesGenerator(t = {})
+    async getEntries(t = {})
+    async close()
+
+class ao:
+    constructor(t = {})
+
+class oo:
+    constructor(t, e, n)
+    async getData(t, e, n, r = {})
+function Zs(s, t, e)
+function Ks(s, t, e, n, r)
+function co(s, t)
+function Mn(s, t, e, n, r)
+function lo(s, t, e)
+function fo(s, t)
+function uo(s, t, e)
+async function ho(s, t, e, n, r)
+function V(s, t, e)
+function po(s)
+function lt(s)
+function ye(s, t)
+function q(s, t)
+function H(s, t)
+function Ee(s, t)
+function mo(s, t, e)
+function j(s)
+const wo = Object.freeze(Object.defineProperty({__proto__:null,BlobReader:Nt,BlobWriter:bs,Data64URIReader:la,Data64URIWriter:fa,ERR_BAD_FORMAT:Ve,ERR_CENTRAL_DIRECTORY_NOT_FOUND:Hs,ERR_ENCRYPTED:Gs,ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND:Ws,ERR_EOCDR_NOT_FOUND:Us,ERR_EXTRAFIELD_ZIP64_NOT_FOUND:js,ERR_HTTP_RANGE:Fe,ERR_INVALID_PASSWORD:Et,ERR_INVALID_SIGNATURE:xt,ERR_INVALID_UNCOMPRESSED_SIZE:At,ERR_ITERATOR_COMPLETED_TOO_SOON:ms,ERR_LOCAL_FILE_HEADER_NOT_FOUND:Bs,ERR_OVERLAPPING_ENTRY:qs,ERR_SPLIT_ZIP_FILE:yt,ERR_UNSUPPORTED_COMPRESSION:bt,ERR_UNSUPPORTED_ENCRYPTION:Ys,ERR_WRITER_NOT_INITIALIZED:ws,GenericReader:As,GenericWriter:Os,HttpRangeReader:pa,HttpReader:Rs,Reader:he,SplitDataReader:Pt,SplitDataWriter:Xe,SplitZipReader:ba,SplitZipWriter:ya,TextReader:ua,TextWriter:da,Uint8ArrayReader:ma,Uint8ArrayWriter:wa,Writer:Ct,ZipReader:Vs,ZipReaderStream:ao,configure:Xn,getMimeType:hi,initStream:De,readUint8Array:Y,terminateWorkers:ea},Symbol.toStringTag,{value:"Module"}))
+const wo
+
+class go:
+    constructor(t, e)
+    _resolveTraceURL(t)
+    isLive()
+    traceURL()
+    async entryNames()
+    async hasEntry(t)
+    async readText(t)
+    async readBlob(t)
+
+class bo:
+    constructor(t)
+    isLive()
+    traceURL()
+    async entryNames()
+    async hasEntry(t)
+    async readText(t)
+    async readBlob(t)
+    async _readEntry(t)
+    async _readFile(t)
+function kt(s)
+const yo = new URL(self.registration.scope).pathname
+const Pe = new Map
+const $e = new Map
+const vn = self.registration.scope.startsWith("https://")
+function Eo()
+async function Un(s, t, e, n)
+function Xs(s, t, e, n)
+async function xo(s, t)
+async function To(s)
+function So(s)
+async function Ro()
+function Wn(s)
+function Ao(s, t)
+function $s(s)
+</file>
+
+<file path="playwright-report/trace/uiMode.BWTwXl41.js">
+import { u as At, r as K, f as Ut, _ as Wt, g as zt, h as Vt, j as r, R as u, E as Kt, s as xt, i as ht, k as Ht, t as $t, m as qt, l as H, n as O, M as St, b as Yt, o as ot, T as Qt, W as Xt, S as Jt, p as Zt, a as Gt, d as te, e as ee } from './assets/defaultSettingsView-BEpdCv1S.js'
+let se = {}
+
+class dt:
+    constructor(t, e = {})
+    reset()
+    dispatch(t)
+    _onConfigure(t)
+    _onProject(t)
+    _onBegin()
+    _onTestBegin(t, e)
+    _onTestEnd(t, e)
+    _onStepBegin(t, e, s)
+    _onStepEnd(t, e, s)
+    _onAttach(t, e, s)
+    _onError(t)
+    _onStdIO(t, e, s, i, d)
+    async _onEnd(t)
+    _onExit()
+    _parseConfig(t)
+    _parseProject(t)
+    _parseAttachments(t)
+    _mergeSuiteInto(t, e)
+    _mergeTestInto(t, e)
+    _updateTest(t, e)
+    _absoluteAnnotationLocationsInplace(t)
+    _absoluteLocation(t)
+    _absolutePath(t)
+
+class X:
+    constructor(t, e)
+    get type()
+    get suites()
+    get tests()
+    entries()
+    allTests()
+    titlePath()
+    project()
+    _addTest(t)
+    _addSuite(t)
+
+class ie:
+    constructor(t, e, s, i)
+    titlePath()
+    outcome()
+    ok()
+    _createTestResult(t)
+
+class oe:
+    constructor(t, e, s, i)
+    titlePath()
+    get startTime()
+    set startTime(t)
+    get attachments()
+    get annotations()
+
+class re:
+    constructor(t, e)
+    setStartTimeNumber(t)
+    get startTime()
+    set startTime(t)
+const ne = { forbidOnly, fullyParallel, globalSetup, globalTeardown, globalTimeout, grep, grepInvert, maxFailures, metadata, preserveOutput, projects, reporter, reportSlowTests, configFile, rootDir, quiet, shard, tags, updateSnapshots, updateSourceMethod, version, workers, webServer }
+function rt(o)
+function ae(o)
+
+class ut:
+    constructor(t, e, s, i, d, n)
+    _addChild(t, e)
+    filterTree(t, e, s)
+    _fileItem(t, e)
+    _defaultDescribeItem()
+    sortAndPropagateStatus()
+    flattenForSingleProject()
+    shortenRoot()
+    testIds()
+    fileNames()
+    flatTreeItems()
+    treeItemById(t)
+    collectTestIds(t)
+function Tt(o)
+function le(o)
+const J = Symbol("statusEx")
+
+class ce:
+    constructor(t)
+    _createReporter()
+    processGlobalReport(t)
+    processListReport(t)
+    processTestReportEvent(t)
+    _handleOnError(t)
+    asModel()
+const de = ({source:o})
+const ue = { foreground, background, cursor, black, red, green, yellow, blue, magenta, cyan, white, brightBlack, brightRed, brightGreen, brightYellow, brightBlue, brightMagenta, brightCyan, brightWhite, selectionBackground, selectionForeground }
+const he = { foreground, background, cursor, black, red, green, yellow, blue, magenta, cyan, white, brightBlack, brightRed, brightGreen, brightYellow, brightBlue, brightMagenta, brightCyan, brightWhite, selectionBackground, selectionForeground }
+const fe = ({filterText:o,setFilterText:t,statusFilters:e,setStatusFilters:s,projectFilters:i,setProjectFilters:d,testModel:n,runTests:m})
+const pe = ({tag:o,style:t,onClick:e})
+function ge(o)
+const Ht
+function ve(o, t)
+function we(o)
+const be = ({item:o,rootDir:t,onOpenExternally:e,revealSource:s,pathSeparator:i})
+const xe = (o)
+async function vt(o)
+let wt = { cols }
+const z = { pending, clear(), write(o), resize() }
+const A = new URLSearchParams(window.location.search)
+const Se = new URL(A.get("server")??"../",window.location.href)
+const ft = new URL(A.get("ws"),Se)
+const B = { args, grep, grepInvert, projects, workers, headed, updateSnapshots, reporters, pathSeparator }
+const bt = navigator.platform==="MacIntel"
+const Te = ({})
 </file>
 
 <file path="specs/003-cashflow-engine/contracts/cashflow-engine.ts">
@@ -153,6 +2887,323 @@ export interface UseHealthIndicatorResult {
 
 export interface UseCashflowProjectionOptions {
     property projectionDays: ProjectionDays
+}
+</file>
+
+<file path="specs/019-e2e-testing/contracts/fixtures.ts">
+import '@supabase/supabase-js'
+import '@playwright/test'
+
+export interface TestAccount {
+    property id: string
+    property name: string
+    property type: 'checking' | 'savings' | 'investment'
+    property balance: number
+    property owner_id: string | null
+}
+
+export interface TestExpense {
+    property id: string
+    property name: string
+    property amount: number
+    property due_day: number
+    property is_active: boolean
+}
+
+export interface TestSingleShotExpense {
+    property id: string
+    property name: string
+    property amount: number
+    property date: string
+}
+
+export interface TestProject {
+    property id: string
+    property name: string
+    property amount: number
+    property payment_day: number
+    property frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
+    property certainty: 'guaranteed' | 'probable' | 'uncertain'
+    property is_active: boolean
+}
+
+export interface TestSingleShotIncome {
+    property id: string
+    property name: string
+    property amount: number
+    property date: string
+    property certainty: 'guaranteed' | 'probable' | 'uncertain'
+}
+
+export interface TestCreditCard {
+    property id: string
+    property name: string
+    property statement_balance: number
+    property due_day: number
+}
+
+export interface IAuthFixture {
+    property testEmail: string
+    property inbucketUrl: string
+    property storageStatePath: string
+    method requestMagicLink(email: string, page: Page): Promise<void>
+    method getMagicLinkUrl(email: string, previousUrl: string): Promise<string>
+    method waitForMagicLinkEmail(email: string, previousUrl: string, maxRetries: number, intervalMs: number): Promise<string>
+    method authenticate(page: Page): Promise<void>
+    method logout(page: Page): Promise<void>
+    method loadSession(page: Page): Promise<void>
+}
+
+export interface IDatabaseFixture {
+    property adminClient: SupabaseClient
+    method resetDatabase(): Promise<void>
+    method ensureTestUser(email: string): Promise<void>
+    method removeTestUser(email: string): Promise<void>
+    method seedAccounts(accounts: TestAccount[]): Promise<TestAccount[]>
+    method seedExpenses(expenses: TestExpense[]): Promise<TestExpense[]>
+    method seedSingleShotExpenses(expenses: TestSingleShotExpense[]): Promise<TestSingleShotExpense[]>
+    method seedProjects(projects: TestProject[]): Promise<TestProject[]>
+    method seedSingleShotIncome(income: TestSingleShotIncome[]): Promise<TestSingleShotIncome[]>
+    method seedCreditCards(cards: TestCreditCard[]): Promise<TestCreditCard[]>
+    method seedFullScenario(data: {
+    accounts?: TestAccount[];
+    expenses?: TestExpense[];
+    singleShotExpenses?: TestSingleShotExpense[];
+    projects?: TestProject[];
+    singleShotIncome?: TestSingleShotIncome[];
+    creditCards?: TestCreditCard[];
+  }): Promise<void>
+}
+
+export interface InbucketMessageHeader {
+    property id: string
+    property from: string
+    property to: string[]
+    property subject: string
+    property date: string
+    property size: number
+}
+
+export interface InbucketMessageBody {
+    property text: string
+    property html: string
+}
+
+export interface InbucketMessage {
+    property mailbox: string
+    property id: string
+    property from: string
+    property to: string[]
+    property subject: string
+    property date: string
+    property size: number
+    property body: InbucketMessageBody
+    property header: Record<string, string[]>
+}
+
+export interface IInbucketClient {
+    property baseUrl: string
+    method listMessages(mailbox: string): Promise<InbucketMessageHeader[]>
+    method getMessage(mailbox: string, messageId: string): Promise<InbucketMessage>
+    method deleteMessage(mailbox: string, messageId: string): Promise<void>
+    method purgeMailbox(mailbox: string): Promise<void>
+    method getLatestMessage(mailbox: string): Promise<InbucketMessage | null>
+    method extractMagicLink(message: InbucketMessage): string | null
+}
+
+export interface ITestDataFactory {
+    method createAccount(overrides: Partial<TestAccount>): TestAccount
+    method createExpense(overrides: Partial<TestExpense>): TestExpense
+    method createSingleShotExpense(overrides: Partial<TestSingleShotExpense>): TestSingleShotExpense
+    method createProject(overrides: Partial<TestProject>): TestProject
+    method createSingleShotIncome(overrides: Partial<TestSingleShotIncome>): TestSingleShotIncome
+    method createCreditCard(overrides: Partial<TestCreditCard>): TestCreditCard
+    method createBasicSeedData(): {
+    accounts: TestAccount[];
+    expenses: TestExpense[];
+    projects: TestProject[];
+  }
+    method createFullSeedData(): {
+    accounts: TestAccount[];
+    expenses: TestExpense[];
+    singleShotExpenses: TestSingleShotExpense[];
+    projects: TestProject[];
+    singleShotIncome: TestSingleShotIncome[];
+    creditCards: TestCreditCard[];
+  }
+    method createLargeSeedData(count: number): {
+    accounts: TestAccount[];
+    expenses: TestExpense[];
+    projects: TestProject[];
+  }
+}
+
+export interface IFormatUtils {
+    method formatBRL(cents: number): string
+    method parseBRL(value: string): number
+    method formatDate(date: Date | string): string
+    method parseDate(value: string): string
+}
+</file>
+
+<file path="specs/019-e2e-testing/contracts/page-objects.ts">
+import '@playwright/test'
+
+export interface ILoginPage {
+    property page: Page
+    property emailInput: Locator
+    property submitButton: Locator
+    property successMessage: Locator
+    property errorMessage: Locator
+    method goto(): Promise<void>
+    method requestMagicLink(email: string): Promise<void>
+    method expectMagicLinkSent(): Promise<void>
+    method expectToBeOnLoginPage(): Promise<void>
+}
+
+export interface IDashboardPage {
+    property page: Page
+    property cashflowChart: Locator
+    property summaryPanel: Locator
+    property projectionSelector: Locator
+    property healthIndicator: Locator
+    property quickUpdateButton: Locator
+    property emptyState: Locator
+    method goto(): Promise<void>
+    method hasEmptyState(): Promise<boolean>
+    method selectProjectionDays(days: 30 | 60 | 90): Promise<void>
+    method openQuickUpdate(): Promise<void>
+    method expectChartRendered(): Promise<void>
+    method getIncomeTotal(): Promise<string>
+    method getExpenseTotal(): Promise<string>
+    method hasStaleWarning(): Promise<boolean>
+}
+
+export interface IManagePage {
+    property page: Page
+    property accountsTab: Locator
+    property creditCardsTab: Locator
+    property expensesTab: Locator
+    property projectsTab: Locator
+    method goto(): Promise<void>
+    method selectAccountsTab(): Promise<void>
+    method selectCreditCardsTab(): Promise<void>
+    method selectExpensesTab(): Promise<void>
+    method selectProjectsTab(): Promise<void>
+    method accounts(): IAccountsSection
+    method expenses(): IExpensesSection
+    method projects(): IProjectsSection
+    method creditCards(): ICreditCardsSection
+}
+
+export interface IAccountsSection {
+    property page: Page
+    property addButton: Locator
+    property accountList: Locator
+    method clickAdd(): Promise<void>
+    method createAccount(data: {
+    name: string;
+    type: 'checking' | 'savings' | 'investment';
+    balance: string;
+  }): Promise<void>
+    method editAccount(name: string): Promise<void>
+    method updateAccountName(currentName: string, newName: string): Promise<void>
+    method updateAccountBalance(name: string, newBalance: string): Promise<void>
+    method deleteAccount(name: string): Promise<void>
+    method expectAccountVisible(name: string): Promise<void>
+    method expectAccountNotVisible(name: string): Promise<void>
+    method getAccountCount(): Promise<number>
+}
+
+export interface IExpensesSection {
+    property page: Page
+    property fixedExpensesTab: Locator
+    property singleShotTab: Locator
+    property addButton: Locator
+    property expenseList: Locator
+    method selectFixedExpenses(): Promise<void>
+    method selectSingleShot(): Promise<void>
+    method createFixedExpense(data: {
+    name: string;
+    amount: string;
+    dueDay: string;
+  }): Promise<void>
+    method createSingleShotExpense(data: {
+    name: string;
+    amount: string;
+    date: string;
+  }): Promise<void>
+    method toggleExpense(name: string): Promise<void>
+    method updateExpenseAmount(name: string, newAmount: string): Promise<void>
+    method deleteExpense(name: string): Promise<void>
+    method expectExpenseVisible(name: string): Promise<void>
+    method expectExpenseNotVisible(name: string): Promise<void>
+    method expectExpenseInactive(name: string): Promise<void>
+}
+
+export interface IProjectsSection {
+    property page: Page
+    property recurringTab: Locator
+    property singleShotTab: Locator
+    property addButton: Locator
+    property projectList: Locator
+    method selectRecurring(): Promise<void>
+    method selectSingleShot(): Promise<void>
+    method createRecurringProject(data: {
+    name: string;
+    amount: string;
+    paymentDay: string;
+    frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly';
+    certainty: 'guaranteed' | 'probable' | 'uncertain';
+  }): Promise<void>
+    method createSingleShotIncome(data: {
+    name: string;
+    amount: string;
+    date: string;
+    certainty: 'guaranteed' | 'probable' | 'uncertain';
+  }): Promise<void>
+    method toggleProject(name: string): Promise<void>
+    method updateProjectFrequency(name: string, frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'): Promise<void>
+    method updateProjectCertainty(name: string, certainty: 'guaranteed' | 'probable' | 'uncertain'): Promise<void>
+    method deleteProject(name: string): Promise<void>
+    method expectProjectVisible(name: string): Promise<void>
+    method expectProjectNotVisible(name: string): Promise<void>
+    method expectProjectInactive(name: string): Promise<void>
+    method expectCertaintyBadge(name: string, certainty: 'guaranteed' | 'probable' | 'uncertain'): Promise<void>
+}
+
+export interface ICreditCardsSection {
+    property page: Page
+    property addButton: Locator
+    property cardList: Locator
+    method clickAdd(): Promise<void>
+    method createCreditCard(data: {
+    name: string;
+    balance: string;
+    dueDay: string;
+  }): Promise<void>
+    method updateDueDay(name: string, newDueDay: string): Promise<void>
+    method updateBalance(name: string, newBalance: string): Promise<void>
+    method deleteCreditCard(name: string): Promise<void>
+    method expectCardVisible(name: string): Promise<void>
+    method expectCardNotVisible(name: string): Promise<void>
+}
+
+export interface IQuickUpdatePage {
+    property page: Page
+    property modal: Locator
+    property accountsList: Locator
+    property creditCardsList: Locator
+    property completeButton: Locator
+    property cancelButton: Locator
+    method waitForModal(): Promise<void>
+    method updateAccountBalance(name: string, newBalance: string): Promise<void>
+    method updateCreditCardBalance(name: string, newBalance: string): Promise<void>
+    method complete(): Promise<void>
+    method cancel(): Promise<void>
+    method expectModalClosed(): Promise<void>
+    method expectAccountsListed(accountNames: string[]): Promise<void>
+    method expectCardsListed(cardNames: string[]): Promise<void>
 }
 </file>
 
@@ -520,9 +3571,47 @@ export function ProjectListItem()
 
 <file path="src/components/manage/projects/project-list.tsx">
 import '@/types'
+import '@/components/ui/button'
 import '@/components/manage/shared/entity-empty-state'
 import './project-list-item'
 export function ProjectList()
+</file>
+
+<file path="src/components/manage/projects/project-section.tsx">
+import '@/components/ui/tabs'
+import './project-list'
+import './single-shot-income-list'
+import '@/types'
+export function ProjectSection()
+</file>
+
+<file path="src/components/manage/projects/single-shot-income-form.tsx">
+import 'react'
+import 'date-fns'
+import '@/components/ui/button'
+import '@/components/ui/currency-input'
+import '@/components/ui/input'
+import '@/components/ui/label'
+import '@/components/ui/select'
+import '@/types'
+export function SingleShotIncomeForm()
+</file>
+
+<file path="src/components/manage/projects/single-shot-income-list-item.tsx">
+import 'date-fns'
+import 'date-fns/locale'
+import '@/components/ui/button'
+import '@/lib/utils'
+import '@/types'
+export function SingleShotIncomeListItem()
+</file>
+
+<file path="src/components/manage/projects/single-shot-income-list.tsx">
+import '@/types'
+import '@/components/ui/button'
+import '@/lib/utils'
+import './single-shot-income-list-item'
+export function SingleShotIncomeList()
 </file>
 
 <file path="src/components/manage/shared/delete-confirmation.tsx">
@@ -769,6 +3858,7 @@ import '@supabase/supabase-js'
 export interface UseFinanceDataReturn {
     property accounts: BankAccount[]
     property projects: Project[]
+    property singleShotIncome: SingleShotIncome[]
     property expenses: Expense[]
     property fixedExpenses: FixedExpense[]
     property singleShotExpenses: SingleShotExpense[]
@@ -945,6 +4035,7 @@ export interface CashflowEngineInput {
     property projects: Project[]
     property expenses: FixedExpense[]
     property singleShotExpenses: SingleShotExpense[]
+    property singleShotIncome: SingleShotIncome[]
     property creditCards: CreditCard[]
     property projectionDays: number
     property options: z.infer<typeof CashflowEngineOptionsSchema>
@@ -956,6 +4047,7 @@ export interface ValidatedInput {
     property guaranteedProjects: Project[]
     property activeExpenses: FixedExpense[]
     property singleShotExpenses: SingleShotExpense[]
+    property singleShotIncome: SingleShotIncome[]
     property creditCards: CreditCard[]
     property options: ValidatedOptions
 }
@@ -996,7 +4088,8 @@ export interface ProjectRow {
     property id: string
     property name: string
     property amount: number
-    property frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
+    property type: 'recurring' | 'single_shot'
+    property frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly' | null
     property payment_schedule: {
     type: 'dayOfWeek'
     dayOfWeek: number
@@ -1007,9 +4100,10 @@ export interface ProjectRow {
     type: 'twiceMonthly'
     firstDay: number
     secondDay: number
-  }
+  } | null
+    property is_active: boolean | null
+    property date: string | null
     property certainty: 'guaranteed' | 'probable' | 'uncertain'
-    property is_active: boolean
     property created_at: string
     property updated_at: string
 }
@@ -1127,8 +4221,9 @@ import '@/hooks/use-coordinated-loading'
 import '@/stores/finance-store'
 import '@/components/manage/accounts/account-list'
 import '@/components/manage/accounts/account-form'
-import '@/components/manage/projects/project-list'
+import '@/components/manage/projects/project-section'
 import '@/components/manage/projects/project-form'
+import '@/components/manage/projects/single-shot-income-form'
 import '@/components/manage/expenses/expense-form'
 import '@/components/manage/expenses/expense-section'
 import '@/components/manage/expenses/single-shot-expense-form'
@@ -1212,10 +4307,22 @@ type PaymentSchedule = z.infer<typeof PaymentScheduleSchema>
 export const FrequencySchema
 type Frequency = z.infer<typeof FrequencySchema>
 export function validateFrequencyScheduleMatch(frequency: Frequency, schedule: PaymentSchedule)
+export const ProjectTypeSchema
+type ProjectType = z.infer<typeof ProjectTypeSchema>
+export const RecurringProjectInputSchema
+export const RecurringProjectSchema
+type RecurringProjectInput = z.infer<typeof RecurringProjectInputSchema>
+type RecurringProject = z.infer<typeof RecurringProjectSchema>
 export const ProjectInputSchema
 export const ProjectSchema
-type ProjectInput = z.infer<typeof ProjectInputSchema>
-type Project = z.infer<typeof ProjectSchema>
+type ProjectInput = RecurringProjectInput
+type Project = RecurringProject
+export const SingleShotIncomeInputSchema
+export const SingleShotIncomeSchema
+type SingleShotIncomeInput = z.infer<typeof SingleShotIncomeInputSchema>
+type SingleShotIncome = z.infer<typeof SingleShotIncomeSchema>
+export function isSingleShotIncome(project: unknown)
+export function isRecurringProject(project: unknown)
 export const ExpenseTypeSchema
 type ExpenseType = z.infer<typeof ExpenseTypeSchema>
 export const FixedExpenseInputSchema
