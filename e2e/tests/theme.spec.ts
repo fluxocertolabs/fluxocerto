@@ -47,11 +47,15 @@ test.describe('Theme Switching', () => {
     // Force start with 'light' theme to ensure next click goes to 'dark'
     // This avoids the issue where 'system' resolves to 'light' in CI, 
     // causing 'system' -> 'light' transition to have no visual change
+    // NOTE: We use a flag to prevent overwriting the theme on reload
     await page.addInitScript(() => {
-      window.localStorage.setItem('family-finance-theme', JSON.stringify({
-        state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
-        version: 0
-      }));
+      if (!window.localStorage.getItem('e2e-test-initialized')) {
+        window.localStorage.setItem('family-finance-theme', JSON.stringify({
+          state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
+          version: 0
+        }));
+        window.localStorage.setItem('e2e-test-initialized', 'true');
+      }
     });
 
     await dashboardPage.goto();
@@ -64,8 +68,31 @@ test.describe('Theme Switching', () => {
     const html = page.locator('html');
     const initialClass = await html.getAttribute('class');
 
+    // Wait for the theme preference to be saved to Supabase
+    // This ensures that when we reload, we fetch the correct updated preference
+    const saveRequestPromise = page.waitForResponse(response => 
+      response.url().includes('user_preferences') && 
+      response.request().method() !== 'GET' &&
+      response.status() >= 200 && response.status() < 300
+    ).catch(() => {
+      // If no request happens (e.g. already synced or debounced), that might be okay if tests pass,
+      // but for T070 we explicitly expect a sync because we are changing the theme.
+      // If this timeouts, it means no sync request was observed.
+      console.warn('Warning: Theme sync request not observed or timed out');
+    });
+
     // Click toggle to change theme
     await themeToggle.click();
+    
+    // Wait for the save request to complete (with a small buffer)
+    // We race with a timeout just in case the network request is too fast or happens differently,
+    // but ideally we catch it.
+    await Promise.race([
+      saveRequestPromise,
+      page.waitForTimeout(2000) // Fallback if request is missed or very fast
+    ]);
+    
+    // Also wait for UI update
     await page.waitForTimeout(500);
 
     // Get the new class after toggle
@@ -77,7 +104,7 @@ test.describe('Theme Switching', () => {
     // Refresh the page
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000); // Give time for useTheme hook to fetch and apply
 
     // Verify theme persisted (class should match post-toggle state, not initial)
     const classAfterRefresh = await html.getAttribute('class');
@@ -107,10 +134,13 @@ test.describe('Theme Switching', () => {
 
     // Force start with 'light' theme
     await page.addInitScript(() => {
-      window.localStorage.setItem('family-finance-theme', JSON.stringify({
-        state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
-        version: 0
-      }));
+      if (!window.localStorage.getItem('e2e-test-initialized')) {
+        window.localStorage.setItem('family-finance-theme', JSON.stringify({
+          state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
+          version: 0
+        }));
+        window.localStorage.setItem('e2e-test-initialized', 'true');
+      }
     });
 
     await dashboardPage.goto();
