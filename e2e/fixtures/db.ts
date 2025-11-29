@@ -23,6 +23,7 @@ export async function resetDatabase(): Promise<void> {
 
   // Delete in order to respect foreign key constraints
   const tables = [
+    'user_preferences',
     'single_shot_expenses',
     'credit_cards',
     'expenses',

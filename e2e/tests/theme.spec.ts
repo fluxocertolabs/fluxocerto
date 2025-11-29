@@ -41,6 +41,16 @@ test.describe('Theme Switching', () => {
     page,
     dashboardPage,
   }) => {
+    // Force start with 'light' theme to ensure next click goes to 'dark'
+    // This avoids the issue where 'system' resolves to 'light' in CI, 
+    // causing 'system' -> 'light' transition to have no visual change
+    await page.addInitScript(() => {
+      window.localStorage.setItem('family-finance-theme', JSON.stringify({
+        state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
+        version: 0
+      }));
+    });
+
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
 
@@ -91,6 +101,14 @@ test.describe('Theme Switching', () => {
       certainty: 'guaranteed',
       is_active: true,
     })]);
+
+    // Force start with 'light' theme
+    await page.addInitScript(() => {
+      window.localStorage.setItem('family-finance-theme', JSON.stringify({
+        state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
+        version: 0
+      }));
+    });
 
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
