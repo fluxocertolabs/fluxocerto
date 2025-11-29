@@ -12,11 +12,18 @@ import { createAccount, createProject } from '../utils/test-data';
  * Max 3 clicks to avoid infinite loops.
  */
 async function setThemeMode(page: Page, targetMode: 'light' | 'dark' | 'system'): Promise<void> {
+  // Wait for the theme toggle button to be visible and stable
   const themeToggle = page.getByRole('button', { name: /tema atual/i });
   await expect(themeToggle).toBeVisible({ timeout: 10000 });
+  // Additional wait for React hydration to complete
+  await page.waitForTimeout(500);
 
   for (let i = 0; i < 3; i++) {
-    const label = await themeToggle.getAttribute('aria-label');
+    // Re-locate the element each iteration to handle any re-renders
+    const currentToggle = page.getByRole('button', { name: /tema atual/i });
+    await expect(currentToggle).toBeVisible({ timeout: 5000 });
+    
+    const label = await currentToggle.getAttribute('aria-label');
     if (!label) break;
 
     // Check if we're at the target mode based on aria-label
@@ -32,22 +39,14 @@ async function setThemeMode(page: Page, targetMode: 'light' | 'dark' | 'system')
       return; // Already at target mode
     }
 
-    await themeToggle.click();
-    await page.waitForTimeout(300); // Wait for state update
+    await currentToggle.click();
+    await page.waitForTimeout(500); // Wait for state update and re-render
   }
 }
 
 test.describe('Theme Switching', () => {
   test.beforeAll(async ({ db }) => {
     await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
-  });
-
-  // Clear localStorage before each test to ensure clean theme state
-  test.beforeEach(async ({ page }) => {
-    // Clear theme storage to start fresh
-    await page.addInitScript(() => {
-      localStorage.removeItem('family-finance-theme');
-    });
   });
 
   test('T069: click theme toggle → theme cycles through light, dark, and system modes', async ({
@@ -82,6 +81,9 @@ test.describe('Theme Switching', () => {
   }) => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
+    
+    // Wait for page to be fully interactive
+    await page.waitForTimeout(1000);
 
     // Set to dark mode using helper
     await setThemeMode(page, 'dark');
@@ -93,6 +95,9 @@ test.describe('Theme Switching', () => {
     // Refresh the page
     await page.reload();
     await page.waitForLoadState('networkidle');
+    
+    // Wait for theme to be applied after reload
+    await page.waitForTimeout(500);
 
     // Verify dark mode persisted after refresh
     await expect(html).toHaveClass(/dark/, { timeout: 5000 });
@@ -116,6 +121,9 @@ test.describe('Theme Switching', () => {
 
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
+    
+    // Wait for page to be fully interactive
+    await page.waitForTimeout(1000);
 
     // Set to dark mode using helper
     await setThemeMode(page, 'dark');
