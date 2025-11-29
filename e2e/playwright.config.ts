@@ -44,8 +44,12 @@ process.env.VITE_SUPABASE_URL = process.env.VITE_SUPABASE_URL || supabase.url;
 process.env.VITE_SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || supabase.anonKey;
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || supabase.serviceRoleKey;
 process.env.INBUCKET_URL = process.env.INBUCKET_URL || supabase.inbucketUrl;
-process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:5174';
+process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 process.env.TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
+
+// Extract port from BASE_URL for webServer configuration
+const baseUrl = new URL(process.env.BASE_URL);
+const port = baseUrl.port || '5173';
 
 /**
  * Playwright configuration for E2E tests
@@ -102,8 +106,8 @@ export default defineConfig({
 
   // Web server configuration - starts the app before tests
   webServer: {
-    command: 'pnpm dev:app --port 5174',
-    url: 'http://localhost:5174',
+    command: `pnpm dev:app --port ${port}`,
+    url: process.env.BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000, // 2 minutes to start
     cwd: resolve(__dirname, '..'),
