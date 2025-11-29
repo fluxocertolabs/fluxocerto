@@ -40,7 +40,10 @@ test.describe('Theme Switching', () => {
   test('T070: theme preference persists after page refresh', async ({
     page,
     dashboardPage,
+    db,
   }) => {
+    await db.resetDatabase();
+
     // Force start with 'light' theme to ensure next click goes to 'dark'
     // This avoids the issue where 'system' resolves to 'light' in CI, 
     // causing 'system' -> 'light' transition to have no visual change
