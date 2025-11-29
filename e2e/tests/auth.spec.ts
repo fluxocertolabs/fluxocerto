@@ -158,21 +158,16 @@ test.describe('Authentication Flow', () => {
     await page.goto(magicLink!);
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 10000 });
 
-    // Click sign out
-    const signOutButton = page.getByRole('button', { name: /sair|sign out|logout/i });
-    if (await signOutButton.isVisible()) {
-      await signOutButton.click();
-    } else {
-      // Try user menu
-      const userMenu = page.getByRole('button', { name: /menu|user|perfil/i });
-      if (await userMenu.isVisible()) {
-        await userMenu.click();
-        await page.getByRole('menuitem', { name: /sair|sign out|logout/i }).click();
-      }
-    }
+    // Wait for the page to fully load and sign out button to appear
+    await page.waitForLoadState('networkidle');
+    
+    // Click sign out - the button text is "Sair" in Portuguese
+    const signOutButton = page.getByRole('button', { name: /sair/i });
+    await expect(signOutButton).toBeVisible({ timeout: 10000 });
+    await signOutButton.click();
 
-    // Verify redirected to login
-    await expect(page).toHaveURL(/\/login/);
+    // Verify redirected to login (with longer timeout for auth state to update)
+    await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
   });
 
   test('T027: unauthenticated user accesses dashboard directly → redirected to login', async ({
