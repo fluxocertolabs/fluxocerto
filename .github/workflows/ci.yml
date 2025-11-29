@@ -1,9 +1,9 @@
 # GitHub Actions CI/CD Workflow
-# Purpose: Run quality gates (typecheck, lint, test, build) and deploy to Vercel only if all checks pass
+# Purpose: Run quality gates (typecheck, lint, test, build, e2e) and deploy to Vercel only if all checks pass
 #
 # Deployment Strategy:
-# - Preview deployments: On pull requests (after quality checks pass)
-# - Production deployments: On push to main (after quality checks pass)
+# - Preview deployments: On pull requests (after quality checks AND e2e tests pass)
+# - Production deployments: On push to main (after quality checks AND e2e tests pass)
 #
 # Required Secrets:
 # - VERCEL_TOKEN: Vercel API token
@@ -64,10 +64,74 @@ jobs:
       - name: Build
         run: pnpm build
 
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      # Step 3: Setup Node.js with cache
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Step 4: Install Supabase CLI
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Step 5: Start Supabase local environment
+      - name: Start Supabase
+        run: |
+          supabase start
+          # Export keys for tests
+          echo "VITE_SUPABASE_URL=http://localhost:54321" >> $GITHUB_ENV
+          echo "VITE_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_ENV
+          echo "INBUCKET_URL=http://localhost:54324" >> $GITHUB_ENV
+          echo "BASE_URL=http://localhost:5173" >> $GITHUB_ENV
+          echo "TEST_USER_EMAIL=e2e-test@example.com" >> $GITHUB_ENV
+
+      # Step 6: Install dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Step 7: Install Playwright browsers
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Step 8: Run E2E tests
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          CI: true
+
+      # Step 9: Upload test artifacts on failure
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   deploy-preview:
     name: Deploy Preview
     runs-on: ubuntu-latest
-    needs: quality
+    needs: [quality, e2e]
     if: github.event_name == 'pull_request'
     environment:
       name: preview
@@ -116,13 +180,16 @@ jobs:
                     '| Environment | URL |\n' +
                     '|-------------|-----|\n' +
                     '| Preview | ${{ steps.deploy.outputs.url }} |\n\n' +
-                    '_This preview was deployed after all quality checks passed._'
+                    '✅ All checks passed:\n' +
+                    '- Quality checks (typecheck, lint, unit tests, build)\n' +
+                    '- E2E tests (Playwright)\n\n' +
+                    '_Deployments only happen when all tests pass._'
             })
 
   deploy-production:
     name: Deploy Production
     runs-on: ubuntu-latest
-    needs: quality
+    needs: [quality, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
