@@ -96,9 +96,10 @@ Deno.serve(async (req) => {
       },
     })
 
-    // Check if email is in allowed list (citext handles case-insensitivity)
+    // Check if email is in allowed list (profiles table, formerly allowed_emails)
+    // citext handles case-insensitivity
     const { data, error } = await supabaseAdmin
-      .from('allowed_emails')
+      .from('profiles')
       .select('id')
       .eq('email', email)
       .single()

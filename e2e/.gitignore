@@ -1,0 +1,12 @@
+# Auth state - contains session tokens
+.auth/
+
+# Test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Screenshots and traces (generated on failure)
+*.png
+*.zip
+

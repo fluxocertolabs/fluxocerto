@@ -1,0 +1,93 @@
+# GitHub Actions E2E Testing Workflow
+# Purpose: Run Playwright E2E tests on PRs with Supabase local environment
+#
+# Required Secrets:
+# - SUPABASE_SERVICE_ROLE_KEY: Service role key for database admin access
+#
+# Note: SUPABASE_ANON_KEY is obtained from `supabase start` output
+
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: e2e-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      # Step 3: Setup Node.js with cache
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Step 4: Install Supabase CLI
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Step 5: Start Supabase local environment
+      - name: Start Supabase
+        run: |
+          supabase start
+          # Export keys for tests
+          echo "VITE_SUPABASE_URL=http://localhost:54321" >> $GITHUB_ENV
+          echo "VITE_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_ENV
+          echo "INBUCKET_URL=http://localhost:54324" >> $GITHUB_ENV
+          echo "BASE_URL=http://localhost:5173" >> $GITHUB_ENV
+          echo "TEST_USER_EMAIL=e2e-test@example.com" >> $GITHUB_ENV
+
+      # Step 6: Install dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Step 7: Install Playwright browsers
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Step 8: Run E2E tests
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          CI: true
+
+      # Step 9: Upload test artifacts on failure
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
+
+      # Step 10: Upload test results for PR comment
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: e2e/test-results/
+          retention-days: 3
+
