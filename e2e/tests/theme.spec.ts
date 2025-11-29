@@ -3,15 +3,51 @@
  * Tests theme toggle, persistence, and visual consistency
  */
 
-import { test, expect } from '../fixtures/test-base';
+import { test, expect, Page } from '../fixtures/test-base';
 import { createAccount, createProject } from '../utils/test-data';
 
-test.describe('Theme Switching', () => {
-  // Run tests serially to avoid theme state conflicts
-  test.describe.configure({ mode: 'serial' });
+/**
+ * Helper to set theme to a specific mode by clicking toggle until we reach it.
+ * The cycle is: light → dark → system → light
+ * Max 3 clicks to avoid infinite loops.
+ */
+async function setThemeMode(page: Page, targetMode: 'light' | 'dark' | 'system'): Promise<void> {
+  const themeToggle = page.getByRole('button', { name: /tema atual/i });
+  await expect(themeToggle).toBeVisible({ timeout: 10000 });
 
+  for (let i = 0; i < 3; i++) {
+    const label = await themeToggle.getAttribute('aria-label');
+    if (!label) break;
+
+    // Check if we're at the target mode based on aria-label
+    const isLight = label.includes('Claro. Clique');
+    const isDark = label.includes('Escuro. Clique');
+    const isSystem = label.includes('Sistema. Clique');
+
+    if (
+      (targetMode === 'light' && isLight) ||
+      (targetMode === 'dark' && isDark) ||
+      (targetMode === 'system' && isSystem)
+    ) {
+      return; // Already at target mode
+    }
+
+    await themeToggle.click();
+    await page.waitForTimeout(300); // Wait for state update
+  }
+}
+
+test.describe('Theme Switching', () => {
   test.beforeAll(async ({ db }) => {
     await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
+  });
+
+  // Clear localStorage before each test to ensure clean theme state
+  test.beforeEach(async ({ page }) => {
+    // Clear theme storage to start fresh
+    await page.addInitScript(() => {
+      localStorage.removeItem('family-finance-theme');
+    });
   });
 
   test('T069: click theme toggle → theme cycles through light, dark, and system modes', async ({
@@ -21,17 +57,18 @@ test.describe('Theme Switching', () => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
 
-    // Find theme toggle button - matches aria-label patterns like "Tema atual: Claro. Clique para mudar para Escuro"
+    // Find theme toggle button
     const themeToggle = page.getByRole('button', { name: /tema atual/i });
-    await expect(themeToggle).toBeVisible();
+    await expect(themeToggle).toBeVisible({ timeout: 10000 });
 
-    // Get initial aria-label to determine current theme
+    // Get initial aria-label
     const initialLabel = await themeToggle.getAttribute('aria-label');
+    expect(initialLabel).toBeTruthy();
 
-    // Click toggle and verify the aria-label changes (indicating theme state changed)
+    // Click toggle
     await themeToggle.click();
-    
-    // Wait for the button's aria-label to change (theme state update)
+
+    // Wait for the button's aria-label to change
     await expect(themeToggle).not.toHaveAttribute('aria-label', initialLabel!, { timeout: 5000 });
 
     // Verify the aria-label actually changed
@@ -46,38 +83,19 @@ test.describe('Theme Switching', () => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
 
-    const themeToggle = page.getByRole('button', { name: /tema atual/i });
+    // Set to dark mode using helper
+    await setThemeMode(page, 'dark');
+
+    // Verify we're in dark mode (check HTML class)
     const html = page.locator('html');
-
-    // Ensure we're in dark mode - may need to click once or twice depending on current state
-    let currentClass = await html.getAttribute('class');
-    while (!currentClass?.includes('dark')) {
-      await themeToggle.click();
-      await page.waitForTimeout(500);
-      currentClass = await html.getAttribute('class');
-      // Safety check - if we've cycled back to light, break to avoid infinite loop
-      if (currentClass?.includes('light') && !currentClass?.includes('dark')) {
-        await themeToggle.click();
-        await page.waitForTimeout(500);
-        currentClass = await html.getAttribute('class');
-        break;
-      }
-    }
-
-    // Verify we're in dark mode
-    currentClass = await html.getAttribute('class');
-    expect(currentClass).toContain('dark');
+    await expect(html).toHaveClass(/dark/, { timeout: 5000 });
 
     // Refresh the page
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Wait for theme to be applied after reload
-    await page.waitForTimeout(500);
-
-    // Verify dark mode persisted
-    const afterRefreshClass = await html.getAttribute('class');
-    expect(afterRefreshClass).toContain('dark');
+    // Verify dark mode persisted after refresh
+    await expect(html).toHaveClass(/dark/, { timeout: 5000 });
   });
 
   test('T071: dark mode active, view dashboard → all components render correctly with dark theme colors', async ({
@@ -99,30 +117,14 @@ test.describe('Theme Switching', () => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
 
-    const themeToggle = page.getByRole('button', { name: /tema atual/i });
-    const html = page.locator('html');
-
-    // Ensure dark mode - may need to click once or twice depending on current state
-    let currentClass = await html.getAttribute('class');
-    while (!currentClass?.includes('dark')) {
-      await themeToggle.click();
-      await page.waitForTimeout(500);
-      currentClass = await html.getAttribute('class');
-      // Safety check - if we've cycled back to light, break to avoid infinite loop
-      if (currentClass?.includes('light') && !currentClass?.includes('dark')) {
-        await themeToggle.click();
-        await page.waitForTimeout(500);
-        currentClass = await html.getAttribute('class');
-        break;
-      }
-    }
+    // Set to dark mode using helper
+    await setThemeMode(page, 'dark');
 
     // Verify dark mode is active
-    currentClass = await html.getAttribute('class');
-    expect(currentClass).toContain('dark');
+    const html = page.locator('html');
+    await expect(html).toHaveClass(/dark/, { timeout: 5000 });
 
-    // Verify dashboard components are visible and render correctly
-    // Check that the page doesn't have any broken elements
+    // Verify dashboard components are visible
     const body = page.locator('body');
     await expect(body).toBeVisible();
 
@@ -130,8 +132,6 @@ test.describe('Theme Switching', () => {
     const backgroundColor = await body.evaluate((el) =>
       window.getComputedStyle(el).backgroundColor
     );
-    // Dark backgrounds typically have low RGB values
-    // This is a basic check - could be more sophisticated
     expect(backgroundColor).not.toBe('rgb(255, 255, 255)');
   });
 });
