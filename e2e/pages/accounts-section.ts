@@ -195,11 +195,13 @@ export class AccountsSection {
    * Verify account does not appear in the list
    */
   async expectAccountNotVisible(name: string): Promise<void> {
-    // Use the same locator pattern as editAccount with exact matching
-    const account = this.page.locator('div.group.relative').filter({ 
-      has: this.page.getByRole('heading', { name, level: 3, exact: true }) 
-    });
-    await expect(account).not.toBeVisible({ timeout: 5000 });
+    // Use toPass to handle realtime deletion delays
+    await expect(async () => {
+      const account = this.page.locator('div.group.relative').filter({ 
+        has: this.page.getByRole('heading', { name, level: 3, exact: true }) 
+      });
+      await expect(account).not.toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   }
 
   /**

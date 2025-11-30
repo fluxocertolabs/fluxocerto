@@ -149,11 +149,11 @@ test.describe('Edge Cases & Error Handling', () => {
     // Perform a single update
     await accounts.updateAccountBalance(seeded.name, '4.000,00');
 
-    // Wait for update to complete
-    await page.waitForLoadState('networkidle');
-
-    // Final value should be displayed (use .first() to avoid strict mode)
-    await expect(page.getByText(/4\.000|4000/).first()).toBeVisible();
+    // Wait for update to complete via realtime subscription
+    // Use toPass to retry until realtime update propagates
+    await expect(async () => {
+      await expect(page.getByText(/4\.000|4000/).first()).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   });
 
   test('T068: network latency simulation → loading states displayed', async ({

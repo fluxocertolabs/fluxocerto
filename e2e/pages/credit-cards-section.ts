@@ -173,10 +173,13 @@ export class CreditCardsSection {
    * Verify credit card is not visible in list
    */
   async expectCardNotVisible(name: string): Promise<void> {
-    const card = this.page.locator('div.group.relative').filter({ 
-      has: this.page.getByRole('heading', { name, level: 3, exact: true }) 
-    });
-    await expect(card).not.toBeVisible({ timeout: 5000 });
+    // Use toPass to handle realtime deletion delays
+    await expect(async () => {
+      const card = this.page.locator('div.group.relative').filter({ 
+        has: this.page.getByRole('heading', { name, level: 3, exact: true }) 
+      });
+      await expect(card).not.toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   }
 }
 

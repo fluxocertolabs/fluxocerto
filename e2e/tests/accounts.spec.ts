@@ -79,11 +79,11 @@ test.describe('Account Management', () => {
     await accounts.expectAccountVisible(seeded.name);
     await accounts.updateAccountBalance(seeded.name, '2.500,00');
 
-    // Wait for update to complete
-    await page.waitForLoadState('networkidle');
-    
-    // Verify new balance is displayed (use .first() in case of multiple matches)
-    await expect(page.getByText(formatBRL(250000)).first()).toBeVisible();
+    // Wait for update to complete via realtime subscription
+    // Use toPass to retry until realtime update propagates
+    await expect(async () => {
+      await expect(page.getByText(formatBRL(250000)).first()).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   });
 
   test('T032: delete account with confirmation → removed from list', async ({

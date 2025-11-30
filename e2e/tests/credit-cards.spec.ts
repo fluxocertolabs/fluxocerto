@@ -49,11 +49,11 @@ test.describe('Credit Card Management', () => {
     await creditCards.expectCardVisible(seeded.name);
     await creditCards.updateCardBalance(seeded.name, '750,00');
 
-    // Wait for update to complete
-    await page.waitForLoadState('networkidle');
-    
-    // Verify new balance is displayed (use .first() in case of multiple matches)
-    await expect(page.getByText(formatBRL(75000)).first()).toBeVisible();
+    // Wait for update to complete via realtime subscription
+    // Use toPass to retry until realtime update propagates
+    await expect(async () => {
+      await expect(page.getByText(formatBRL(75000)).first()).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   });
 
   test('T060: delete credit card with confirmation → removed from list', async ({
