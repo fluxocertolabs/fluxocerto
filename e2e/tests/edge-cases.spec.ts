@@ -30,11 +30,12 @@ test.describe('Edge Cases & Error Handling', () => {
     managePage,
     db,
   }) => {
-    const [seeded] = await db.seedAccounts([createAccount({ name: 'Conta Zerada', balance: 0 })]);
+    // Use unique name to avoid collisions
+    const uniqueId = Date.now();
+    const [seeded] = await db.seedAccounts([createAccount({ name: `Conta Zerada ${uniqueId}`, balance: 0 })]);
 
-    // Navigate and reload to ensure fresh data
+    // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.reload();
     await page.waitForLoadState('networkidle');
     await managePage.selectAccountsTab();
 
@@ -54,21 +55,19 @@ test.describe('Edge Cases & Error Handling', () => {
     managePage,
     db,
   }) => {
+    // Use unique name to avoid collisions
+    const uniqueId = Date.now();
     // Credit cards typically show statement balance as positive (amount owed)
     const [seeded] = await db.seedCreditCards([
-      createCreditCard({ name: 'Cartão Negativo', statement_balance: 150000, due_day: 10 }),
+      createCreditCard({ name: `Cartão Negativo ${uniqueId}`, statement_balance: 150000, due_day: 10 }),
     ]);
 
-    // Navigate to manage page and wait for it to fully load
+    // Navigate and wait for page to be fully ready
     await managePage.goto();
     await page.waitForLoadState('networkidle');
     
     // Select credit cards tab
     await managePage.selectCreditCardsTab();
-    
-    // Wait for tab panel to update after clicking tab
-    await page.waitForTimeout(500);
-    await page.waitForLoadState('networkidle');
     
     // Wait for the credit cards section to load
     const creditCards = managePage.creditCards();
@@ -86,19 +85,19 @@ test.describe('Edge Cases & Error Handling', () => {
     managePage,
     db,
   }) => {
+    // Use unique name with special characters to avoid collisions
+    const uniqueId = Date.now();
     const [seeded] = await db.seedExpenses([
-      createExpense({ name: 'Café & Cia.', amount: 15000 }),
+      createExpense({ name: `Café & Cia. ${uniqueId}`, amount: 15000 }),
     ]);
 
-    // Navigate and reload to ensure fresh data
+    // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.reload();
     await page.waitForLoadState('networkidle');
     await managePage.selectExpensesTab();
 
     const expenses = managePage.expenses();
     await expenses.selectFixedExpenses();
-    await page.waitForTimeout(500);
     
     await expenses.expectExpenseVisible(seeded.name);
   });
@@ -108,12 +107,13 @@ test.describe('Edge Cases & Error Handling', () => {
     managePage,
     db,
   }) => {
-    const longName = 'Conta com Nome Muito Longo para Testar Truncamento';
+    // Use unique name with long text to avoid collisions
+    const uniqueId = Date.now();
+    const longName = `Conta com Nome Muito Longo para Testar Truncamento ${uniqueId}`;
     const [seeded] = await db.seedAccounts([createAccount({ name: longName, balance: 100000 })]);
 
-    // Navigate and reload to ensure fresh data
+    // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.reload();
     await page.waitForLoadState('networkidle');
     await managePage.selectAccountsTab();
 
@@ -133,11 +133,12 @@ test.describe('Edge Cases & Error Handling', () => {
     managePage,
     db,
   }) => {
-    const [seeded] = await db.seedAccounts([createAccount({ name: 'Conta Rápida', balance: 100000 })]);
+    // Use unique name to avoid collisions
+    const uniqueId = Date.now();
+    const [seeded] = await db.seedAccounts([createAccount({ name: `Conta Rápida ${uniqueId}`, balance: 100000 })]);
 
-    // Navigate and reload to ensure fresh data
+    // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.reload();
     await page.waitForLoadState('networkidle');
     await managePage.selectAccountsTab();
 
@@ -150,9 +151,8 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Wait for update to complete
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
-    // Final value should be displayed
+    // Final value should be displayed (use .first() to avoid strict mode)
     await expect(page.getByText(/4\.000|4000/).first()).toBeVisible();
   });
 
@@ -161,8 +161,10 @@ test.describe('Edge Cases & Error Handling', () => {
     dashboardPage,
     db,
   }) => {
+    // Use unique name to avoid collisions
+    const uniqueId = Date.now();
     // Seed some data first
-    await db.seedAccounts([createAccount({ name: 'Conta Latência', balance: 100000 })]);
+    await db.seedAccounts([createAccount({ name: `Conta Latência ${uniqueId}`, balance: 100000 })]);
 
     // Navigate to dashboard
     await dashboardPage.goto();
@@ -180,19 +182,19 @@ test.describe('Edge Cases & Error Handling', () => {
     managePage,
     db,
   }) => {
+    // Use unique name to avoid collisions
+    const uniqueId = Date.now();
     const [seeded] = await db.seedExpenses([
-      createExpense({ name: 'Despesa Dia 31', amount: 50000, due_day: 31 }),
+      createExpense({ name: `Despesa Dia 31 ${uniqueId}`, amount: 50000, due_day: 31 }),
     ]);
 
-    // Navigate and reload to ensure fresh data
+    // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.reload();
     await page.waitForLoadState('networkidle');
     await managePage.selectExpensesTab();
 
     const expenses = managePage.expenses();
     await expenses.selectFixedExpenses();
-    await page.waitForTimeout(500);
     
     await expenses.expectExpenseVisible(seeded.name);
   });
@@ -207,9 +209,8 @@ test.describe('Edge Cases & Error Handling', () => {
     // Seed a single account
     const [seeded] = await db.seedAccounts([createAccount({ name: `Única Conta ${uniqueId}`, balance: 50000 })]);
 
-    // Navigate and reload to ensure fresh data
+    // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.reload();
     await page.waitForLoadState('networkidle');
     await managePage.selectAccountsTab();
 

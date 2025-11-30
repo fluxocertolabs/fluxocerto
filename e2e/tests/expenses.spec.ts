@@ -43,21 +43,33 @@ test.describe('Expense Management', () => {
         createExpense({ name: `Despesa Ativa ${uniqueId}`, amount: 100000, is_active: true }),
       ]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
       await expenses.selectFixedExpenses();
-      await page.waitForTimeout(500);
       
       // Wait for the expense to be visible before toggling
       await expenses.expectExpenseVisible(seeded.name);
       
-      await expenses.toggleExpense(seeded.name);
-
+      // Find the switch and verify initial state is checked (active)
+      const expenseName = page.getByText(seeded.name, { exact: true }).first();
+      const row = expenseName.locator('xpath=ancestor::div[contains(@class, "flex") and contains(@class, "items-center") and contains(@class, "justify-between")][1]');
+      const toggle = row.getByRole('switch').first();
+      await expect(toggle).toHaveAttribute('data-state', 'checked');
+      
+      // Toggle the expense
+      await toggle.click();
+      
+      // Wait for the toggle state to change
+      await page.waitForLoadState('networkidle');
+      
+      // Verify the expense is now inactive (state should be unchecked)
+      await expect(toggle).toHaveAttribute('data-state', 'unchecked');
+      
+      // Also verify the "Inativo" badge appears
       await expenses.expectExpenseInactive(seeded.name);
     });
 
@@ -66,21 +78,24 @@ test.describe('Expense Management', () => {
       managePage,
       db,
     }) => {
-      const [seeded] = await db.seedExpenses([createExpense({ name: 'Aluguel Edit', amount: 200000 })]);
+      // Use unique name to avoid collisions
+      const uniqueId = Date.now();
+      const [seeded] = await db.seedExpenses([createExpense({ name: `Aluguel Edit ${uniqueId}`, amount: 200000 })]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
       await expenses.selectFixedExpenses();
-      await page.waitForTimeout(500);
       
       await expenses.expectExpenseVisible(seeded.name);
       await expenses.updateExpenseAmount(seeded.name, '2.200,00');
 
+      // Wait for update to complete
+      await page.waitForLoadState('networkidle');
+      
       // Verify the expense row shows the updated amount (use .first() to avoid strict mode)
       await expect(page.getByText(formatBRL(220000)).first()).toBeVisible();
     });
@@ -94,15 +109,13 @@ test.describe('Expense Management', () => {
       const uniqueId = Date.now();
       const [seeded] = await db.seedExpenses([createExpense({ name: `Despesa Excluir ${uniqueId}`, amount: 50000 })]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
       await expenses.selectFixedExpenses();
-      await page.waitForTimeout(500);
       
       await expenses.expectExpenseVisible(seeded.name);
 
@@ -151,19 +164,19 @@ test.describe('Expense Management', () => {
       managePage,
       db,
     }) => {
+      // Use unique name to avoid collisions
+      const uniqueId = Date.now();
       const [seeded] = await db.seedSingleShotExpenses([
-        createSingleShotExpense({ name: 'Despesa Avulsa', amount: 100000, date: '2025-12-15' }),
+        createSingleShotExpense({ name: `Despesa Avulsa ${uniqueId}`, amount: 100000, date: '2025-12-15' }),
       ]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
       await expenses.selectSingleShot();
-      await page.waitForTimeout(500);
       
       // Wait for the expense to be visible
       await expenses.expectExpenseVisible(seeded.name);
@@ -189,15 +202,13 @@ test.describe('Expense Management', () => {
         createSingleShotExpense({ name: `Despesa Avulsa Excluir ${uniqueId}`, amount: 50000 }),
       ]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
       await expenses.selectSingleShot();
-      await page.waitForTimeout(500);
       
       await expenses.expectExpenseVisible(seeded.name);
 

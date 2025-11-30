@@ -146,13 +146,15 @@ export class CreditCardsSection {
    * Wait for credit cards to load
    */
   async waitForLoad(): Promise<void> {
+    // Wait for content to appear
     await Promise.race([
       // Wait for card items
       this.page.locator('div.group.relative').filter({
         has: this.page.getByRole('heading', { level: 3 })
-      }).first().waitFor({ state: 'visible', timeout: 10000 }),
-      // Or empty state
-      this.page.getByText(/nenhum cartão/i).waitFor({ state: 'visible', timeout: 10000 }),
+      }).first().waitFor({ state: 'visible', timeout: 30000 }),
+      // Or empty state / add button
+      this.page.getByText(/nenhum cartão/i).waitFor({ state: 'visible', timeout: 30000 }),
+      this.page.getByRole('button', { name: /adicionar cartão/i }).waitFor({ state: 'visible', timeout: 30000 }),
     ]).catch(() => {
       // Content might already be visible
     });

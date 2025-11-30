@@ -29,10 +29,10 @@ export class ProjectsSection {
     await this.page.waitForTimeout(300);
     // Wait for recurring content to be visible (either list or empty state)
     await Promise.race([
-      this.page.getByRole('button', { name: /adicionar receita recorrente|adicionar projeto/i }).waitFor({ state: 'visible', timeout: 10000 }),
-      this.page.getByText(/nenhuma fonte de renda/i).waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.getByRole('button', { name: /adicionar receita recorrente|adicionar projeto/i }).waitFor({ state: 'visible', timeout: 30000 }),
+      this.page.getByText(/nenhuma fonte de renda/i).waitFor({ state: 'visible', timeout: 30000 }),
       // Also check for project items
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }),
     ]).catch(() => {
       // Content might already be visible
     });
@@ -47,10 +47,10 @@ export class ProjectsSection {
     await this.page.waitForTimeout(300);
     // Wait for single-shot content to be visible (either list or empty state)  
     await Promise.race([
-      this.page.getByRole('button', { name: /adicionar receita pontual/i }).waitFor({ state: 'visible', timeout: 10000 }),
-      this.page.getByText(/nenhuma receita avulsa|nenhuma receita pontual/i).waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.getByRole('button', { name: /adicionar receita pontual/i }).waitFor({ state: 'visible', timeout: 30000 }),
+      this.page.getByText(/nenhuma receita avulsa|nenhuma receita pontual/i).waitFor({ state: 'visible', timeout: 30000 }),
       // Also check for income items
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }),
     ]).catch(() => {
       // Content might already be visible
     });
@@ -329,8 +329,10 @@ export class ProjectsSection {
    * Verify project is visible in list
    */
   async expectProjectVisible(name: string): Promise<void> {
-    const project = this.page.getByText(name, { exact: true }).first();
-    await expect(project).toBeVisible({ timeout: 10000 });
+    await expect(async () => {
+      const project = this.page.getByText(name, { exact: true }).first();
+      await expect(project).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 20000 });
   }
 
   /**

@@ -27,7 +27,8 @@ test.describe('Quick Update Modal', () => {
 
     // Navigate AFTER seeding
     await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
+    await dashboardPage.expectChartRendered();
+    
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
 
@@ -52,8 +53,7 @@ test.describe('Quick Update Modal', () => {
 
     // Navigate AFTER seeding
     await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000); // Wait for data to load
+    await dashboardPage.expectChartRendered();
     
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
@@ -77,9 +77,12 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
-    await db.seedAccounts([createAccount({ name: 'Conta Cancel', balance: 100000 })]);
+    // Use unique name to avoid collisions
+    const uniqueId = Date.now();
+    await db.seedAccounts([createAccount({ name: `Conta Cancel ${uniqueId}`, balance: 100000 })]);
 
     await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
 
@@ -96,12 +99,18 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
+    // Use unique name to avoid collisions
+    const uniqueId = Date.now();
     // Seed accounts - they may show as stale depending on app's staleness threshold
     await db.seedAccounts([
-      createAccount({ name: 'Conta Stale', balance: 100000 }),
+      createAccount({ name: `Conta Stale ${uniqueId}`, balance: 100000 }),
     ]);
 
     await dashboardPage.goto();
+    
+    // Ensure dashboard is fully loaded with content before trying to interact
+    await dashboardPage.expectChartRendered();
+
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
 

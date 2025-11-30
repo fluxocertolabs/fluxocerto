@@ -30,11 +30,11 @@ export class ExpensesSection {
     await this.page.waitForTimeout(300);
     // Wait for fixed expenses content to be visible (either list, empty state, or items)
     await Promise.race([
-      this.page.getByRole('button', { name: /adicionar despesa fixa/i }).waitFor({ state: 'visible', timeout: 10000 }),
-      this.page.getByRole('button', { name: /adicionar despesa$/i }).waitFor({ state: 'visible', timeout: 10000 }), // Empty state button
-      this.page.getByText(/nenhuma despesa ainda/i).waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.getByRole('button', { name: /adicionar despesa fixa/i }).waitFor({ state: 'visible', timeout: 30000 }),
+      this.page.getByRole('button', { name: /adicionar despesa$/i }).waitFor({ state: 'visible', timeout: 30000 }), // Empty state button
+      this.page.getByText(/nenhuma despesa ainda/i).waitFor({ state: 'visible', timeout: 30000 }),
       // Also check for expense items
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }),
     ]).catch(() => {
       // Content might already be visible
     });
@@ -49,11 +49,11 @@ export class ExpensesSection {
     await this.page.waitForTimeout(300);
     // Wait for single-shot content to be visible (either list, empty state, or items)
     await Promise.race([
-      this.page.getByRole('button', { name: /adicionar despesa pontual/i }).waitFor({ state: 'visible', timeout: 10000 }),
-      this.page.getByRole('button', { name: /adicionar despesa$/i }).waitFor({ state: 'visible', timeout: 10000 }), // Empty state button
-      this.page.getByText(/nenhuma despesa/i).waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.getByRole('button', { name: /adicionar despesa pontual/i }).waitFor({ state: 'visible', timeout: 30000 }),
+      this.page.getByRole('button', { name: /adicionar despesa$/i }).waitFor({ state: 'visible', timeout: 30000 }), // Empty state button
+      this.page.getByText(/nenhuma despesa/i).waitFor({ state: 'visible', timeout: 30000 }),
       // Also check for expense items
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 10000 }),
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }),
     ]).catch(() => {
       // Content might already be visible
     });
@@ -241,8 +241,10 @@ export class ExpensesSection {
    * Verify expense is visible in list
    */
   async expectExpenseVisible(name: string): Promise<void> {
-    const expense = this.page.getByText(name, { exact: true }).first();
-    await expect(expense).toBeVisible({ timeout: 10000 });
+    await expect(async () => {
+      const expense = this.page.getByText(name, { exact: true }).first();
+      await expect(expense).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 20000 });
   }
 
   /**

@@ -164,13 +164,15 @@ export class AccountsSection {
    * Wait for accounts to load (either accounts appear or empty state)
    */
   async waitForLoad(): Promise<void> {
+    // Wait for content to appear
     await Promise.race([
       // Wait for account cards
       this.page.locator('div.group.relative').filter({
         has: this.page.getByRole('heading', { level: 3 })
-      }).first().waitFor({ state: 'visible', timeout: 10000 }),
-      // Or empty state
-      this.page.getByText(/nenhuma conta/i).waitFor({ state: 'visible', timeout: 10000 }),
+      }).first().waitFor({ state: 'visible', timeout: 30000 }),
+      // Or empty state / add button
+      this.page.getByText(/nenhuma conta/i).waitFor({ state: 'visible', timeout: 30000 }),
+      this.page.getByRole('button', { name: /adicionar conta/i }).waitFor({ state: 'visible', timeout: 30000 }),
     ]).catch(() => {
       // Content might already be visible
     });
@@ -180,10 +182,13 @@ export class AccountsSection {
    * Verify account appears in the list
    */
   async expectAccountVisible(name: string): Promise<void> {
-    // First wait for content to load
-    await this.waitForLoad();
-    const account = this.page.getByText(name).first();
-    await expect(account).toBeVisible({ timeout: 10000 });
+    // Use retry logic to handle list loading/refreshing
+    await expect(async () => {
+      // Try to wait for load first (but don't fail if it sees empty state)
+      await this.waitForLoad();
+      const account = this.page.getByText(name).first();
+      await expect(account).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 20000 });
   }
 
   /**

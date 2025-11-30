@@ -30,7 +30,7 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
     'expenses',
     'projects',
     'accounts',
-    'profiles',
+    // 'profiles', // Don't delete profiles to preserve auth linkage with existing sessions
   ] as const;
 
   // Determine the pattern to match for deletion
@@ -49,10 +49,11 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
         }
       } else if (table === 'profiles') {
         // profiles uses email pattern matching
-        const { error } = await client.from(table).delete().like('email', pattern);
-        if (error && !error.message.includes('does not exist')) {
-          console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
-        }
+        // Skipped to preserve auth linkage
+        // const { error } = await client.from(table).delete().like('email', pattern);
+        // if (error && !error.message.includes('does not exist')) {
+        //   console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
+        // }
       } else {
         // Other tables use name pattern matching
         const { error } = await client.from(table).delete().like(filterColumn, pattern);

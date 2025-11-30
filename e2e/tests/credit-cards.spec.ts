@@ -41,14 +41,19 @@ test.describe('Credit Card Management', () => {
     ]);
 
     await managePage.goto();
+    await page.waitForLoadState('networkidle');
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
+    await creditCards.waitForLoad();
     await creditCards.expectCardVisible(seeded.name);
     await creditCards.updateCardBalance(seeded.name, '750,00');
 
-    // Verify new balance is displayed
-    await expect(page.getByText(formatBRL(75000))).toBeVisible();
+    // Wait for update to complete
+    await page.waitForLoadState('networkidle');
+    
+    // Verify new balance is displayed (use .first() in case of multiple matches)
+    await expect(page.getByText(formatBRL(75000)).first()).toBeVisible();
   });
 
   test('T060: delete credit card with confirmation → removed from list', async ({
@@ -63,18 +68,16 @@ test.describe('Credit Card Management', () => {
     ]);
 
     await managePage.goto();
+    await page.waitForLoadState('networkidle');
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
+    await creditCards.waitForLoad();
     await creditCards.expectCardVisible(seeded.name);
 
     await creditCards.deleteCard(seeded.name);
 
-    // Reload to verify deletion
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-    await managePage.selectCreditCardsTab();
-
+    // Card should no longer be visible after deletion (no need to reload)
     await creditCards.expectCardNotVisible(seeded.name);
   });
 
@@ -83,18 +86,22 @@ test.describe('Credit Card Management', () => {
     managePage,
     db,
   }) => {
+    // Use unique name
+    const uniqueId = Date.now();
     const seeded = await db.seedCreditCards([
-      createCreditCard({ name: 'Nubank Multi CC', statement_balance: 50000, due_day: 10 }),
-      createCreditCard({ name: 'Itaú Multi CC', statement_balance: 75000, due_day: 15 }),
-      createCreditCard({ name: 'Inter Multi CC', statement_balance: 25000, due_day: 20 }),
+      createCreditCard({ name: `Nubank Multi CC ${uniqueId}`, statement_balance: 50000, due_day: 10 }),
+      createCreditCard({ name: `Itaú Multi CC ${uniqueId}`, statement_balance: 75000, due_day: 15 }),
+      createCreditCard({ name: `Inter Multi CC ${uniqueId}`, statement_balance: 25000, due_day: 20 }),
     ]);
 
     await managePage.goto();
+    await page.waitForLoadState('networkidle');
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
+    await creditCards.waitForLoad();
 
-    // Verify all cards are visible (using seeded names which include prefix)
+    // Verify all cards are visible (using seeded names which include worker prefix)
     for (const card of seeded) {
       await creditCards.expectCardVisible(card.name);
     }

@@ -2,8 +2,11 @@
 import '@playwright/test'
 import './auth'
 import './db'
+import './worker-context'
 import 'fs'
 import 'path'
+import 'url'
+import 'os'
 </file>
 
 <file path="e2e/fixtures/auth.ts">
@@ -11,12 +14,21 @@ import '@playwright/test'
 import 'url'
 import 'path'
 import '../utils/inbucket'
+import './worker-context'
+
+export interface AuthFixtureOptions {
+    property testEmail: string
+    property inbucketUrl: string
+    property storageStatePath: string
+    property workerIndex: number
+}
 
 export class AuthFixture {
     public readonly testEmail: string
     public readonly inbucketUrl: string
     public readonly storageStatePath: string
-    public constructor(options: { testEmail?: string; inbucketUrl?: string })
+    public readonly workerIndex: number
+    public constructor(options: AuthFixtureOptions)
     public async requestMagicLink(email: string, page: Page): Promise<void>
     public async getMagicLinkUrl(email: string, previousUrl: string): Promise<string>
     public async waitForMagicLinkEmail(email: string, previousUrl: string, maxRetries: number, intervalMs: number): Promise<string>
@@ -24,42 +36,75 @@ export class AuthFixture {
     public async logout(page: Page): Promise<void>
     public async loadSession(_page: Page): Promise<void>
 }
-export function createAuthFixture(options: { testEmail?: string; inbucketUrl?: string })
+export function createAuthFixture(options: AuthFixtureOptions)
+export function createWorkerAuthFixture(workerContext: IWorkerContext)
 </file>
 
 <file path="e2e/fixtures/db.ts">
 import '../utils/supabase-admin'
+import './worker-context'
+import './worker-context'
 import '../utils/test-data'
-export async function resetDatabase()
-export async function ensureTestUser(email: string)
-export async function removeTestUser(email: string)
-export async function seedAccounts(accounts: TestAccount[])
-export async function seedExpenses(expenses: TestExpense[])
-export async function seedSingleShotExpenses(expenses: TestSingleShotExpense[])
-export async function seedProjects(projects: TestProject[])
-export async function seedSingleShotIncome(income: TestSingleShotIncome[])
-export async function seedCreditCards(cards: TestCreditCard[])
+export async function resetDatabase(workerIndex: number)
+export async function ensureTestUser(email: string, workerIndex: number)
+export async function removeTestUser(email: string, workerIndex: number)
+export async function seedAccounts(accounts: TestAccount[], workerIndex: number)
+export async function seedExpenses(expenses: TestExpense[], workerIndex: number)
+export async function seedSingleShotExpenses(expenses: TestSingleShotExpense[], workerIndex: number)
+export async function seedProjects(projects: TestProject[], workerIndex: number)
+export async function seedSingleShotIncome(income: TestSingleShotIncome[], workerIndex: number)
+export async function seedCreditCards(cards: TestCreditCard[], workerIndex: number)
 export async function seedFullScenario(data: {
-  accounts?: TestAccount[];
-  expenses?: TestExpense[];
-  singleShotExpenses?: TestSingleShotExpense[];
-  projects?: TestProject[];
-  singleShotIncome?: TestSingleShotIncome[];
-  creditCards?: TestCreditCard[];
-})
+    accounts?: TestAccount[];
+    expenses?: TestExpense[];
+    singleShotExpenses?: TestSingleShotExpense[];
+    projects?: TestProject[];
+    singleShotIncome?: TestSingleShotIncome[];
+    creditCards?: TestCreditCard[];
+  }, workerIndex: number)
+export async function expenseExists(name: string)
+export async function projectExists(name: string)
+export async function accountExists(name: string)
+export function createWorkerDbFixture(workerContext: IWorkerContext)
 export const dbFixture
 type DatabaseFixture = typeof dbFixture
+type WorkerDatabaseFixture = ReturnType<typeof createWorkerDbFixture>
 </file>
 
 <file path="e2e/fixtures/test-base.ts">
 import '@playwright/test'
 import './db'
 import './auth'
+import './worker-context'
 import '../pages/login-page'
 import '../pages/dashboard-page'
 import '../pages/manage-page'
 import '../pages/quick-update-page'
+import 'fs'
 export const test
+</file>
+
+<file path="e2e/fixtures/worker-context.ts">
+import 'path'
+import 'url'
+import 'path'
+
+export interface IWorkerContext {
+    property workerIndex: number
+    property email: string
+    property authStatePath: string
+    property dataPrefix: string
+    property schemaName: string
+}
+export const MAX_WORKERS
+export const AUTH_MAX_RETRIES
+export const AUTH_RETRY_DELAYS
+export const ALL_WORKERS_PATTERN
+export function getWorkerContext(workerIndex: number)
+export function getWorkerSchemaName(workerIndex: number)
+export function addWorkerPrefix(name: string, workerIndex: number)
+export function stripWorkerPrefix(name: string)
+export function getWorkerPrefixPattern(workerIndex: number)
 </file>
 
 <file path="e2e/pages/accounts-section.ts">
@@ -102,8 +147,8 @@ export class CreditCardsSection {
     dueDay: string;
   }): Promise<void>
     public async updateDueDay(name: string, newDueDay: string): Promise<void>
-    public async updateBalance(name: string, newBalance: string): Promise<void>
-    public async deleteCreditCard(name: string): Promise<void>
+    public async updateCardBalance(name: string, newBalance: string): Promise<void>
+    public async deleteCard(name: string): Promise<void>
     public async waitForLoad(): Promise<void>
     public async expectCardVisible(name: string): Promise<void>
     public async expectCardNotVisible(name: string): Promise<void>
@@ -121,6 +166,8 @@ export class DashboardPage {
     public readonly healthIndicator: Locator
     public readonly quickUpdateButton: Locator
     public readonly emptyState: Locator
+    public readonly chartErrorHeading: Locator
+    public readonly chartRetryButton: Locator
     public constructor(page: Page)
     public async goto(): Promise<void>
     public async hasEmptyState(): Promise<boolean>
@@ -263,6 +310,9 @@ export class QuickUpdatePage {
     public async expectModalClosed(): Promise<void>
     public async expectAccountsListed(accountNames: string[]): Promise<void>
     public async expectCardsListed(cardNames: string[]): Promise<void>
+    public async updateBalance(name: string, newBalance: string): Promise<void>
+    public async save(): Promise<void>
+    public async isModalVisible(): Promise<boolean>
 }
 </file>
 
@@ -271,6 +321,8 @@ import '@playwright/test'
 import 'child_process'
 import 'url'
 import 'path'
+import 'os'
+import './fixtures/worker-context'
 </file>
 
 <file path="e2e/tests/accounts.spec.ts">
@@ -300,9 +352,6 @@ import '../utils/test-data'
 <file path="e2e/tests/edge-cases.spec.ts">
 import '../fixtures/test-base'
 import '../utils/test-data'
-import 'path'
-import 'url'
-import 'path'
 </file>
 
 <file path="e2e/tests/expenses.spec.ts">
@@ -419,11 +468,31 @@ export class InbucketClient {
 }
 </file>
 
+<file path="e2e/utils/schema-manager.ts">
+import './supabase-admin'
+import '../fixtures/worker-context'
+export function getWorkerSchemaName(workerIndex: number)
+export async function createWorkerSchema(workerIndex: number)
+export async function dropWorkerSchema(workerIndex: number)
+export async function dropAllWorkerSchemas(MAX_WORKERS: number)
+export async function clearWorkerSchemaData(workerIndex: number)
+export async function workerSchemaExists(workerIndex: number)
+export async function setupWorkerSchema(workerIndex: number)
+export async function initializeAllWorkerSchemas(workerCount: number)
+</file>
+
 <file path="e2e/utils/supabase-admin.ts">
 import '@supabase/supabase-js'
+import '../fixtures/worker-context'
+import 'pg'
 export function getAdminClient()
 export function resetAdminClient()
 export async function getUserIdFromEmail(email: string)
+export async function executeSQL(sql: string)
+export async function executeSQLWithResult<T>(sql: string)
+export async function insertIntoWorkerSchema<T extends Record<string, any>>(workerIndex: number, table: string, records: T[])
+export async function upsertIntoWorkerSchema<T extends Record<string, any>>(workerIndex: number, table: string, record: T, conflictColumn: string)
+export async function deleteFromWorkerSchema(workerIndex: number, table: string, where: { column: string; op: string; value: any })
 </file>
 
 <file path="e2e/utils/test-data.ts">

@@ -38,29 +38,30 @@ test.describe('Project (Income) Management', () => {
       managePage,
       db,
     }) => {
+      // Use unique name to avoid collisions
+      const uniqueId = Date.now();
       const [seeded] = await db.seedProjects([
-        createProject({ name: 'Projeto Mensal', frequency: 'monthly' }),
+        createProject({ name: `Projeto Mensal ${uniqueId}`, frequency: 'monthly' }),
       ]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
       await projects.selectRecurring();
-      await page.waitForTimeout(500);
       
       await projects.expectProjectVisible(seeded.name);
       await projects.updateProjectFrequency(seeded.name, 'biweekly');
 
       // Wait for update to complete
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(500);
 
       // Verify frequency is updated
-      await expect(page.getByText(/quinzenal|biweekly/i).first()).toBeVisible();
+      await expect(async () => {
+        await expect(page.getByText(/quinzenal|biweekly/i).first()).toBeVisible({ timeout: 2000 });
+      }).toPass({ timeout: 15000 });
     });
 
     test('T046: toggle project inactive → toggle switch state changes', async ({
@@ -68,19 +69,19 @@ test.describe('Project (Income) Management', () => {
       managePage,
       db,
     }) => {
+      // Use unique name to avoid collisions
+      const uniqueId = Date.now();
       const [seeded] = await db.seedProjects([
-        createProject({ name: 'Projeto Ativo', is_active: true }),
+        createProject({ name: `Projeto Ativo ${uniqueId}`, is_active: true }),
       ]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
       await projects.selectRecurring();
-      await page.waitForTimeout(500);
       
       await projects.expectProjectVisible(seeded.name);
       
@@ -94,7 +95,9 @@ test.describe('Project (Income) Management', () => {
       
       // Click toggle
       await toggle.click();
-      await page.waitForTimeout(500);
+      
+      // Wait for the toggle state to change
+      await page.waitForLoadState('networkidle');
       
       // Verify state changed to unchecked (inactive)
       await expect(toggle).toHaveAttribute('data-state', 'unchecked');
@@ -105,26 +108,25 @@ test.describe('Project (Income) Management', () => {
       managePage,
       db,
     }) => {
+      // Use unique name to avoid collisions
+      const uniqueId = Date.now();
       const [seeded] = await db.seedProjects([
-        createProject({ name: 'Projeto Garantido', certainty: 'guaranteed' }),
+        createProject({ name: `Projeto Garantido ${uniqueId}`, certainty: 'guaranteed' }),
       ]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
       await projects.selectRecurring();
-      await page.waitForTimeout(500);
       
       await projects.expectProjectVisible(seeded.name);
       await projects.updateProjectCertainty(seeded.name, 'probable');
 
       // Wait for update to complete
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(500);
 
       // Verify certainty badge is updated - look for "Provável" text anywhere on the page
       await expect(page.getByText(/provável/i).first()).toBeVisible();
@@ -159,19 +161,19 @@ test.describe('Project (Income) Management', () => {
       managePage,
       db,
     }) => {
+      // Use unique name to avoid collisions
+      const uniqueId = Date.now();
       const [seeded] = await db.seedSingleShotIncome([
-        createSingleShotIncome({ name: 'Receita Avulsa', certainty: 'guaranteed' }),
+        createSingleShotIncome({ name: `Receita Avulsa ${uniqueId}`, certainty: 'guaranteed' }),
       ]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
       await projects.selectSingleShot();
-      await page.waitForTimeout(500);
 
       await projects.expectProjectVisible(seeded.name);
       
@@ -180,7 +182,6 @@ test.describe('Project (Income) Management', () => {
 
       // Wait for update to complete
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(500);
 
       // Verify certainty badge is updated - look for "Incerta" text anywhere on the page
       await expect(page.getByText(/incert/i).first()).toBeVisible();
@@ -195,15 +196,13 @@ test.describe('Project (Income) Management', () => {
       const uniqueId = Date.now();
       const [seededProject] = await db.seedProjects([createProject({ name: `Projeto Excluir ${uniqueId}` })]);
 
-      // Navigate and reload to ensure fresh data
+      // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.reload();
       await page.waitForLoadState('networkidle');
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
       await projects.selectRecurring();
-      await page.waitForTimeout(500);
       
       await projects.expectProjectVisible(seededProject.name);
       

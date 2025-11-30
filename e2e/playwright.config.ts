@@ -77,7 +77,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 3, // 3 automatic retries per test for parallel execution stability
   workers: workerCount, // Auto-detect based on CPU cores
-  reporter: process.env.CI ? 'github' : 'html',
+  reporter: process.env.CI ? 'github' : 'list',
   timeout: 45000, // 45s per test to handle parallel execution timing
   expect: {
     timeout: 10000, // 10s for assertions to handle data loading delays

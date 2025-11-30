@@ -83,6 +83,7 @@ test.describe('Dashboard & Cashflow Projection', () => {
     await db.seedFullScenario(seedData);
 
     await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
 
     // Get totals from summary panel
     const incomeTotal = await dashboardPage.getIncomeTotal();
@@ -125,6 +126,7 @@ test.describe('Dashboard & Cashflow Projection', () => {
     await db.seedFullScenario(seedData);
 
     await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
 
     await dashboardPage.openQuickUpdate();
 
