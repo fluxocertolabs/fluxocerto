@@ -20,26 +20,30 @@ test.describe('Dashboard & Cashflow Projection', () => {
     // the empty state messaging exists in the UI even if not currently shown
     
     await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
     
-    // Wait for the dashboard to fully load - either empty state or chart should appear
-    // Use explicit waits instead of immediate visibility checks to avoid race conditions
+    // Define locators using stable, semantic selectors
     const emptyStateLocator = page.getByRole('heading', { name: /nenhum dado financeiro/i });
-    const chartLocator = page.locator('.recharts-wrapper, .recharts-line, .recharts-area, [data-testid="cashflow-chart"]').first();
+    const chartLocator = page.locator('.recharts-wrapper').first();
     const quickUpdateButton = page.getByRole('button', { name: /atualizar saldos/i });
     
-    // Use toPass for retry logic - this is more robust than Promise.race
+    // Use Playwright's auto-waiting with expect assertions
+    // This is more reliable than manual isVisible() checks
+    // Test passes if ANY of these conditions are met (empty state OR loaded dashboard)
+    let contentFound = false;
+    
     await expect(async () => {
-      const hasEmpty = await emptyStateLocator.isVisible();
-      const hasChart = await chartLocator.isVisible();
-      const hasQuickUpdate = await quickUpdateButton.isVisible();
+      // Check each condition - at least ONE must be true
+      const checks = await Promise.all([
+        emptyStateLocator.isVisible().catch(() => false),
+        chartLocator.isVisible().catch(() => false),
+        quickUpdateButton.isVisible().catch(() => false),
+      ]);
       
-      // The test passes if either:
-      // 1. Empty state is shown (no data)
-      // 2. Chart is shown (has data from other workers, which is expected in parallel)
-      // 3. Quick update button is visible (dashboard is loaded with data)
-      expect(hasEmpty || hasChart || hasQuickUpdate).toBe(true);
-    }).toPass({ timeout: 20000 });
+      contentFound = checks.some(check => check === true);
+      
+      // Assert that at least one element is visible
+      expect(contentFound).toBe(true);
+    }).toPass({ timeout: 15000, intervals: [1000, 2000, 5000] });
   });
 
   test('T053: accounts, expenses, projects exist → cashflow chart renders with data points', async ({

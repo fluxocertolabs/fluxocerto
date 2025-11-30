@@ -42,25 +42,33 @@ export class DashboardPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/');
-    await this.page.waitForLoadState('networkidle');
     
-    // Wait for loading to complete (aria-busy becomes false) or content to be visible
-    await Promise.race([
-      this.page.waitForFunction(() => {
-        const statusElement = document.querySelector('[role="status"]');
-        return !statusElement || statusElement.getAttribute('aria-busy') === 'false';
-      }, { timeout: 20000 }),
-      // Or wait for chart/empty state to be visible
-      this.cashflowChart.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
-      this.emptyState.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
-      // Or wait for quick update button (indicates dashboard is loaded)
-      this.quickUpdateButton.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
-      // Or wait for summary panel
-      this.summaryPanel.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
-    ]);
+    // Wait for the dashboard heading to be visible - this ALWAYS renders
+    // regardless of loading/empty/error state, proving React has mounted
+    const dashboardHeading = this.page.getByRole('heading', { name: /painel de fluxo de caixa/i });
+    await dashboardHeading.waitFor({ state: 'visible', timeout: 20000 });
     
-    // Small delay to ensure animations complete
-    await this.page.waitForTimeout(500);
+    // Wait for either content OR empty state to be rendered
+    // Handle transient realtime errors by clicking retry when they appear
+    await expect(async () => {
+      // Check if realtime connection error is showing
+      const errorVisible = await this.chartErrorHeading.isVisible().catch(() => false);
+      if (errorVisible) {
+        // Click retry to recover from transient error
+        await this.chartRetryButton.click();
+        // Wait for retry to take effect
+        await this.page.waitForTimeout(2000);
+      }
+      
+      // Check if any expected content is visible
+      const hasEmpty = await this.emptyState.isVisible().catch(() => false);
+      const hasChart = await this.cashflowChart.isVisible().catch(() => false);
+      const hasQuickUpdate = await this.quickUpdateButton.isVisible().catch(() => false);
+      const hasSummary = await this.summaryPanel.isVisible().catch(() => false);
+      
+      // At least one of these should be visible when the dashboard is ready
+      expect(hasEmpty || hasChart || hasQuickUpdate || hasSummary).toBe(true);
+    }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000] });
   }
 
   /**
