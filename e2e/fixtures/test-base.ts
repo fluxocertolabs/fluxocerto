@@ -65,7 +65,25 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const hasAuthState = existsSync(storageStatePath);
 
       if (!hasAuthState) {
-        console.error(`⚠️  Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}`);
+        console.error(`❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}`);
+      } else {
+        // Read and validate the auth state file
+        try {
+          const fs = await import('fs/promises');
+          const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
+          const authState = JSON.parse(authStateContent);
+          
+          const hasCookies = authState.cookies && authState.cookies.length > 0;
+          const hasOrigins = authState.origins && authState.origins.length > 0;
+          
+          console.log(`Worker ${workerCtx.workerIndex} auth state: ${hasCookies ? authState.cookies.length : 0} cookies, ${hasOrigins ? authState.origins.length : 0} origins`);
+          
+          if (!hasCookies && !hasOrigins) {
+            console.error(`⚠️  Worker ${workerCtx.workerIndex}: Auth state file exists but appears empty!`);
+          }
+        } catch (error) {
+          console.error(`⚠️  Worker ${workerCtx.workerIndex}: Failed to read auth state file:`, error);
+        }
       }
 
       const context = await browser.newContext(

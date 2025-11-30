@@ -145,25 +145,62 @@ export class AuthFixture {
     // Wait for the page to be fully loaded and auth state established
     await page.waitForLoadState('networkidle');
     
-    // Additional wait to ensure Supabase session is fully established in browser storage
-    // This is critical - if we save the storage state too early, the session cookies
-    // and localStorage won't be complete
-    await page.waitForTimeout(2000);
+    // Wait for Supabase auth state to be fully established
+    // We need to verify that the session is actually saved in browser storage
+    console.log(`Verifying auth session for worker ${this.workerIndex}...`);
+    
+    const hasValidAuth = await page.evaluate(() => {
+      // Check for Supabase auth tokens in localStorage
+      const keys = Object.keys(localStorage);
+      const hasAuthToken = keys.some(key => 
+        key.includes('sb-') && key.includes('-auth-token')
+      );
+      
+      // Also check sessionStorage
+      const sessionKeys = Object.keys(sessionStorage);
+      const hasSessionAuth = sessionKeys.some(key => 
+        key.includes('sb-') || key.includes('supabase')
+      );
+      
+      return hasAuthToken || hasSessionAuth;
+    });
+    
+    if (!hasValidAuth) {
+      console.error(`❌ Worker ${this.workerIndex}: No Supabase auth tokens found in storage!`);
+      // Wait a bit more and check again
+      await page.waitForTimeout(3000);
+      
+      const hasValidAuthRetry = await page.evaluate(() => {
+        const keys = Object.keys(localStorage);
+        return keys.some(key => key.includes('sb-') && key.includes('-auth-token'));
+      });
+      
+      if (!hasValidAuthRetry) {
+        console.error(`❌ Worker ${this.workerIndex}: Still no auth tokens after retry`);
+      } else {
+        console.log(`✓ Worker ${this.workerIndex}: Auth tokens found after retry`);
+      }
+    } else {
+      console.log(`✓ Worker ${this.workerIndex}: Auth tokens present in storage`);
+    }
     
     // Verify we're actually authenticated by checking for a dashboard element
-    // This ensures the page has fully loaded with auth state
     try {
       await page.getByRole('heading', { name: /painel|dashboard/i }).waitFor({ 
         state: 'visible', 
         timeout: 10000 
       });
+      console.log(`✓ Worker ${this.workerIndex}: Dashboard loaded successfully`);
     } catch (error) {
-      console.error(`Warning: Dashboard heading not found after auth for ${this.testEmail}`);
-      // Continue anyway, the waitForURL should be sufficient
+      console.error(`⚠️  Worker ${this.workerIndex}: Dashboard heading not found`);
     }
+
+    // Final wait to ensure everything is stable
+    await page.waitForTimeout(1000);
 
     // Save storage state
     await page.context().storageState({ path: this.storageStatePath });
+    console.log(`✓ Worker ${this.workerIndex}: Storage state saved to ${this.storageStatePath}`);
   }
 
   /**

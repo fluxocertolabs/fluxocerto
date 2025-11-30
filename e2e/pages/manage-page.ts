@@ -42,11 +42,26 @@ export class ManagePage {
       // Get storage state to help diagnose auth issues
       const cookies = await this.page.context().cookies();
       const hasAuthCookie = cookies.some(c => c.name.includes('sb-') || c.name.includes('supabase'));
+      
+      // Check localStorage for auth tokens
+      const localStorageAuth = await this.page.evaluate(() => {
+        const keys = Object.keys(localStorage);
+        const authKeys = keys.filter(k => k.includes('sb-') || k.includes('auth'));
+        return {
+          totalKeys: keys.length,
+          authKeys: authKeys,
+          hasAuthToken: authKeys.some(k => k.includes('auth-token'))
+        };
+      });
+      
       console.error(`❌ Redirected to login! URL: ${currentUrl}`);
-      console.error(`   Cookies present: ${cookies.length}, Has Supabase cookie: ${hasAuthCookie}`);
+      console.error(`   Cookies: ${cookies.length} total, Supabase: ${hasAuthCookie}`);
       if (cookies.length > 0) {
         console.error(`   Cookie names: ${cookies.map(c => c.name).join(', ')}`);
       }
+      console.error(`   localStorage: ${localStorageAuth.totalKeys} keys, auth keys: ${localStorageAuth.authKeys.join(', ')}`);
+      console.error(`   Has auth token: ${localStorageAuth.hasAuthToken}`);
+      
       throw new Error(`Expected to be on /manage page, but got: ${currentUrl}`);
     }
     
