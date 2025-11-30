@@ -6,7 +6,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/login-page';
 import { InbucketClient } from '../utils/inbucket';
-import { resetDatabase, ensureTestUser, removeTestUser } from '../fixtures/db';
+import { ensureTestUser } from '../fixtures/db';
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
 const NON_ALLOWED_EMAIL = 'not-allowed@example.com';
@@ -19,7 +19,6 @@ test.describe('Authentication Flow', () => {
 
   test.beforeAll(async () => {
     inbucket = new InbucketClient();
-    await resetDatabase();
     await ensureTestUser(TEST_EMAIL);
     // Purge all mailboxes at the start
     await inbucket.purgeMailbox(TEST_EMAIL.split('@')[0]);

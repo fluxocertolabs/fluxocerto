@@ -44,12 +44,13 @@ test.describe('Theme Switching', () => {
     // causing 'system' -> 'light' transition to have no visual change
     // NOTE: We use a flag to prevent overwriting the theme on reload
     await page.addInitScript(() => {
-      if (!window.localStorage.getItem('e2e-test-initialized')) {
+      const guardKey = 'e2e-theme-init-t070';
+      if (!window.sessionStorage.getItem(guardKey)) {
         window.localStorage.setItem('family-finance-theme', JSON.stringify({
           state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
           version: 0
         }));
-        window.localStorage.setItem('e2e-test-initialized', 'true');
+        window.sessionStorage.setItem(guardKey, 'true');
       }
     });
 
@@ -94,7 +95,10 @@ test.describe('Theme Switching', () => {
     const newClass = await html.getAttribute('class');
     
     // Verify the theme changed (class should be different)
-    expect(newClass).not.toBe(initialClass);
+    // Use poll to wait for class update
+    await expect.poll(async () => {
+      return await html.getAttribute('class');
+    }, { timeout: 10000 }).not.toBe(initialClass);
 
     // Refresh the page
     await page.reload();
@@ -128,12 +132,13 @@ test.describe('Theme Switching', () => {
 
     // Force start with 'light' theme
     await page.addInitScript(() => {
-      if (!window.localStorage.getItem('e2e-test-initialized')) {
+      const guardKey = 'e2e-theme-init-t071';
+      if (!window.sessionStorage.getItem(guardKey)) {
         window.localStorage.setItem('family-finance-theme', JSON.stringify({
           state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
           version: 0
         }));
-        window.localStorage.setItem('e2e-test-initialized', 'true');
+        window.sessionStorage.setItem(guardKey, 'true');
       }
     });
 
@@ -158,12 +163,10 @@ test.describe('Theme Switching', () => {
     await page.waitForTimeout(500);
 
     // Verify background color changed (theme actually applied)
-    const newBgColor = await body.evaluate((el) =>
-      window.getComputedStyle(el).backgroundColor
-    );
-    
-    // Background color should be different after theme toggle
-    expect(newBgColor).not.toBe(initialBgColor);
+    // Use poll to wait for color transition
+    await expect.poll(async () => {
+      return await body.evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    }, { timeout: 10000 }).not.toBe(initialBgColor);
     
     // Dashboard should still be visible
     await expect(body).toBeVisible();
