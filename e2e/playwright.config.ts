@@ -44,6 +44,8 @@ function getSupabaseConfig() {
  * In CI: Uses all available CPU cores (dedicated runner)
  * Locally: Uses half of available CPU cores (don't overwhelm dev machine)
  * Always capped at MAX_WORKERS
+ * 
+ * Note: Reduced to max 4 workers to minimize realtime event contention between parallel tests
  */
 function getWorkerCount(): number {
   const cpuCount = os.cpus().length;
@@ -53,7 +55,9 @@ function getWorkerCount(): number {
   // Locally, use half to leave resources for other apps
   const workers = isCI ? cpuCount : Math.floor(cpuCount / 2);
   
-  return Math.min(Math.max(1, workers), MAX_WORKERS);
+  // Cap at 2 workers to reduce flakiness from realtime event interference
+  // This significantly reduces contention while maintaining parallel execution
+  return Math.min(Math.max(1, workers), 2);
 }
 
 const supabase = getSupabaseConfig();
