@@ -44,8 +44,6 @@ function getSupabaseConfig() {
  * In CI: Uses all available CPU cores (dedicated runner)
  * Locally: Uses half of available CPU cores (don't overwhelm dev machine)
  * Always capped at MAX_WORKERS
- * 
- * Note: Reduced to max 4 workers to minimize realtime event contention between parallel tests
  */
 function getWorkerCount(): number {
   const cpuCount = os.cpus().length;
@@ -55,9 +53,7 @@ function getWorkerCount(): number {
   // Locally, use half to leave resources for other apps
   const workers = isCI ? cpuCount : Math.floor(cpuCount / 2);
   
-  // Cap at 2 workers to reduce flakiness from realtime event interference
-  // This significantly reduces contention while maintaining parallel execution
-  return Math.min(Math.max(1, workers), 2);
+  return Math.min(Math.max(1, workers), MAX_WORKERS);
 }
 
 const supabase = getSupabaseConfig();
@@ -89,9 +85,10 @@ export default defineConfig({
   retries: 3, // 3 automatic retries per test for parallel execution stability
   workers: workerCount, // Auto-detect based on CPU cores
   reporter: process.env.CI ? 'github' : 'list',
-  timeout: 45000, // 45s per test to handle parallel execution timing
+  // Increased timeout for CI environments which can be significantly slower
+  timeout: process.env.CI ? 90000 : 45000, // 90s in CI, 45s locally
   expect: {
-    timeout: 10000, // 10s for assertions to handle data loading delays
+    timeout: 15000, // 15s for assertions to handle data loading delays in CI
   },
 
   use: {

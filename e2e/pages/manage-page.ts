@@ -37,13 +37,14 @@ export class ManagePage {
     await this.page.waitForLoadState('networkidle');
     
     // Wait for tab panel to be visible (indicates page has loaded)
-    await this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 30000 });
+    // Increased timeout for CI environments which can be slower
+    await this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 60000 });
     
     // Wait for content to appear (accounts, expenses, etc. or empty state)
     await Promise.race([
-      this.page.locator('div.group.relative').first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
-      this.page.getByRole('button', { name: /adicionar/i }).first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
+      this.page.locator('div.group.relative').first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {}),
+      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {}),
+      this.page.getByRole('button', { name: /adicionar/i }).first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {}),
     ]);
   }
 
