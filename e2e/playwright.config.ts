@@ -2,8 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import os from 'os';
-import { MAX_WORKERS } from './fixtures/worker-context';
+import { getWorkerCount } from './fixtures/worker-count';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -37,23 +36,6 @@ function getSupabaseConfig() {
       inbucketUrl: 'http://localhost:54324',
     };
   }
-}
-
-/**
- * Determine the number of workers based on CPU cores
- * In CI: Uses all available CPU cores (dedicated runner)
- * Locally: Uses half of available CPU cores (don't overwhelm dev machine)
- * Always capped at MAX_WORKERS
- */
-function getWorkerCount(): number {
-  const cpuCount = os.cpus().length;
-  const isCI = !!process.env.CI;
-  
-  // In CI, use all cores since runner is dedicated to tests
-  // Locally, use half to leave resources for other apps
-  const workers = isCI ? cpuCount : Math.floor(cpuCount / 2);
-  
-  return Math.min(Math.max(1, workers), MAX_WORKERS);
 }
 
 const supabase = getSupabaseConfig();

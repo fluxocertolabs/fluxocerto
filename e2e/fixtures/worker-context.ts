@@ -8,6 +8,7 @@
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { getWorkerCount, MAX_WORKERS } from './worker-count';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -33,8 +34,8 @@ export interface IWorkerContext {
   readonly schemaName: string;
 }
 
-/** Maximum supported workers (FR-010) */
-export const MAX_WORKERS = 8;
+/** Maximum supported workers (FR-010) - re-export from shared module */
+export { MAX_WORKERS };
 
 /** Auth retry attempts (FR-011) */
 export const AUTH_MAX_RETRIES = 3;
@@ -48,15 +49,24 @@ export const ALL_WORKERS_PATTERN = '[W%]%';
 /**
  * Create worker context from worker index.
  *
- * Playwright's workerIndex can be any non-negative integer (it's a global counter
- * across test runs). We use modulo to map it to our supported range (0-7).
+ * Playwright's workerIndex is a global counter that keeps incrementing,
+ * especially during retries. We use modulo to map it to the ACTUAL number
+ * of workers we authenticated during setup (not MAX_WORKERS).
+ *
+ * Example: With 2 workers in CI:
+ * - Worker 0 → 0 % 2 = 0 (use worker-0.json)
+ * - Worker 1 → 1 % 2 = 1 (use worker-1.json)  
+ * - Worker 2 (retry) → 2 % 2 = 0 (use worker-0.json) ✓
+ * - Worker 3 (retry) → 3 % 2 = 1 (use worker-1.json) ✓
  *
  * @param workerIndex - 0-based index from Playwright (test.info().workerIndex)
  * @returns Worker context with isolation information
  */
 export function getWorkerContext(workerIndex: number): IWorkerContext {
-  // Map the global worker index to our supported range using modulo
-  const normalizedIndex = workerIndex % MAX_WORKERS;
+  // CRITICAL: Map the global worker index to the ACTUAL number of workers
+  // we authenticated during setup, not MAX_WORKERS
+  const actualWorkerCount = getWorkerCount();
+  const normalizedIndex = workerIndex % actualWorkerCount;
 
   return {
     workerIndex: normalizedIndex,

@@ -7,33 +7,15 @@
 import { test as setup } from '@playwright/test';
 import { AuthFixture } from './auth';
 import { ensureTestUser, resetDatabase } from './db';
-import { getWorkerContext, MAX_WORKERS, ALL_WORKERS_PATTERN } from './worker-context';
+import { getWorkerContext, ALL_WORKERS_PATTERN } from './worker-context';
+import { getWorkerCount } from './worker-count';
 import { existsSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import os from 'os';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-/**
- * Determine the number of workers to use
- * MUST match the logic in playwright.config.ts to ensure all workers are authenticated
- * In CI: Uses all available CPU cores (dedicated runner)
- * Locally: Uses half of available CPU cores (don't overwhelm dev machine)
- * Always capped at MAX_WORKERS
- */
-function getWorkerCount(): number {
-  const cpuCount = os.cpus().length;
-  const isCI = !!process.env.CI;
-  
-  // In CI, use all cores since runner is dedicated to tests
-  // Locally, use half to leave resources for other apps
-  const workers = isCI ? cpuCount : Math.floor(cpuCount / 2);
-  
-  return Math.min(Math.max(1, workers), MAX_WORKERS);
-}
 
 /**
  * Global setup: Clean up old test data and authenticate all workers
