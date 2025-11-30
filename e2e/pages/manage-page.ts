@@ -39,6 +39,14 @@ export class ManagePage {
     // Verify we're actually on the manage page (not redirected to login)
     const currentUrl = this.page.url();
     if (!currentUrl.includes('/manage')) {
+      // Get storage state to help diagnose auth issues
+      const cookies = await this.page.context().cookies();
+      const hasAuthCookie = cookies.some(c => c.name.includes('sb-') || c.name.includes('supabase'));
+      console.error(`❌ Redirected to login! URL: ${currentUrl}`);
+      console.error(`   Cookies present: ${cookies.length}, Has Supabase cookie: ${hasAuthCookie}`);
+      if (cookies.length > 0) {
+        console.error(`   Cookie names: ${cookies.map(c => c.name).join(', ')}`);
+      }
       throw new Error(`Expected to be on /manage page, but got: ${currentUrl}`);
     }
     

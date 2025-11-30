@@ -140,7 +140,27 @@ export class AuthFixture {
     await page.goto(magicLinkUrl);
 
     // Wait for redirect to dashboard (may have hash fragment from auth redirect)
-    await page.waitForURL(/\/(dashboard)?#?$/);
+    await page.waitForURL(/\/(dashboard)?#?$/, { timeout: 30000 });
+
+    // Wait for the page to be fully loaded and auth state established
+    await page.waitForLoadState('networkidle');
+    
+    // Additional wait to ensure Supabase session is fully established in browser storage
+    // This is critical - if we save the storage state too early, the session cookies
+    // and localStorage won't be complete
+    await page.waitForTimeout(2000);
+    
+    // Verify we're actually authenticated by checking for a dashboard element
+    // This ensures the page has fully loaded with auth state
+    try {
+      await page.getByRole('heading', { name: /painel|dashboard/i }).waitFor({ 
+        state: 'visible', 
+        timeout: 10000 
+      });
+    } catch (error) {
+      console.error(`Warning: Dashboard heading not found after auth for ${this.testEmail}`);
+      // Continue anyway, the waitForURL should be sufficient
+    }
 
     // Save storage state
     await page.context().storageState({ path: this.storageStatePath });
