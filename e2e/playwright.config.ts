@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import os from 'os';
+import { MAX_WORKERS } from './fixtures/worker-context';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -37,7 +39,18 @@ function getSupabaseConfig() {
   }
 }
 
+/**
+ * Determine the number of workers based on CPU cores
+ * Uses half of available CPU cores, capped at MAX_WORKERS
+ */
+function getWorkerCount(): number {
+  const cpuCount = os.cpus().length;
+  // Use half of CPUs for workers, minimum 1, maximum MAX_WORKERS
+  return Math.min(Math.max(1, Math.floor(cpuCount / 2)), MAX_WORKERS);
+}
+
 const supabase = getSupabaseConfig();
+const workerCount = getWorkerCount();
 
 // Set environment variables for test files
 process.env.VITE_SUPABASE_URL = process.env.VITE_SUPABASE_URL || supabase.url;
@@ -45,26 +58,28 @@ process.env.VITE_SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || supab
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || supabase.serviceRoleKey;
 process.env.INBUCKET_URL = process.env.INBUCKET_URL || supabase.inbucketUrl;
 process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
-process.env.TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
+// Note: TEST_USER_EMAIL is now per-worker, set dynamically in fixtures
 
 // Extract port from BASE_URL for webServer configuration
 const baseUrl = new URL(process.env.BASE_URL);
 const port = baseUrl.port || '5173';
 
+
 /**
  * Playwright configuration for E2E tests
+ * Configured for parallel execution with per-worker schema isolation
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: false, // Disable parallel execution to avoid database race conditions
+  fullyParallel: true, // Enable parallel execution - each worker has isolated schema
   forbidOnly: !!process.env.CI,
-  retries: 2, // FR-016: 2 automatic retries per test
-  workers: 1, // Run tests sequentially to avoid database conflicts
+  retries: 3, // 3 automatic retries per test for parallel execution stability
+  workers: workerCount, // Auto-detect based on CPU cores
   reporter: process.env.CI ? 'github' : 'html',
-  timeout: 30000, // 30s per test
+  timeout: 45000, // 45s per test to handle parallel execution timing
   expect: {
-    timeout: 5000, // 5s for assertions
+    timeout: 10000, // 10s for assertions to handle data loading delays
   },
 
   use: {
@@ -76,13 +91,14 @@ export default defineConfig({
   },
 
   projects: [
-    // Setup project - runs first, authenticates and saves state
+    // Setup project - runs first, creates schemas and authenticates all workers
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
       testDir: resolve(__dirname, 'fixtures'),
     },
     // Auth tests - run WITHOUT storage state (unauthenticated)
+    // These tests remain serial due to email rate limiting
     {
       name: 'auth-tests',
       testMatch: /auth\.spec\.ts/,
@@ -90,15 +106,20 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         // No storageState - start unauthenticated
       },
-      dependencies: ['setup'], // Still depend on setup for database seeding
+      dependencies: ['setup'],
+      // Auth tests run serially to avoid rate limiting
+      fullyParallel: false,
     },
-    // Main tests - depend on setup, use authenticated storage state
+    // Main tests - depend on setup, use per-worker authenticated storage state
+    // Storage state is loaded dynamically per worker via the test fixture
     {
       name: 'chromium',
       testIgnore: /auth\.spec\.ts/, // Skip auth tests in this project
       use: {
         ...devices['Desktop Chrome'],
-        storageState: resolve(__dirname, '.auth/user.json'),
+        // Note: Storage state is NOT set here because it needs to be per-worker
+        // The test-base.ts fixture handles loading the correct auth state per worker
+        // by using workerContext.authStatePath
       },
       dependencies: ['setup'],
     },
@@ -113,4 +134,3 @@ export default defineConfig({
     cwd: resolve(__dirname, '..'),
   },
 });
-

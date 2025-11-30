@@ -124,5 +124,34 @@ export class QuickUpdatePage {
       await expect(this.page.getByText(name).first()).toBeVisible();
     }
   }
+
+  /**
+   * Update balance for any item (account or credit card) by name
+   */
+  async updateBalance(name: string, newBalance: string): Promise<void> {
+    // Find the input with aria-label like "Saldo de {name}"
+    // Use partial match since the name might include a prefix
+    const balanceInput = this.page.getByLabel(new RegExp(`Saldo de.*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i')).last();
+    await balanceInput.clear();
+    await balanceInput.fill(newBalance);
+    // Trigger blur to save
+    await balanceInput.blur();
+    // Wait a moment for auto-save
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Save changes (same as complete)
+   */
+  async save(): Promise<void> {
+    await this.complete();
+  }
+
+  /**
+   * Check if modal is currently visible
+   */
+  async isModalVisible(): Promise<boolean> {
+    return await this.completeButton.isVisible();
+  }
 }
 

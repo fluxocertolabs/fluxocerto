@@ -1,30 +1,86 @@
 /**
  * Authentication setup project
  * Runs once before all tests to authenticate and save session state
+ * Updated for per-worker isolation in parallel test execution using data prefixing
  */
 
 import { test as setup } from '@playwright/test';
 import { AuthFixture } from './auth';
 import { ensureTestUser, resetDatabase } from './db';
+import { getWorkerContext, MAX_WORKERS, ALL_WORKERS_PATTERN } from './worker-context';
 import { existsSync, mkdirSync } from 'fs';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import os from 'os';
 
-const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-setup('authenticate', async ({ page }) => {
-  const auth = new AuthFixture({ testEmail: TEST_EMAIL });
+/**
+ * Determine the number of workers to use
+ * Uses half of available CPU cores, capped at MAX_WORKERS
+ */
+function getWorkerCount(): number {
+  const cpuCount = os.cpus().length;
+  // Use half of CPUs for workers, minimum 1, maximum MAX_WORKERS
+  return Math.min(Math.max(1, Math.floor(cpuCount / 2)), MAX_WORKERS);
+}
+
+/**
+ * Global setup: Clean up old test data and authenticate all workers
+ * This runs once before any tests start
+ */
+setup('setup-parallel-workers', async ({ page, browser }) => {
+  const workerCount = getWorkerCount();
+  console.log(`Setting up ${workerCount} parallel workers...`);
 
   // Ensure .auth directory exists
-  const authDir = dirname(auth.storageStatePath);
+  const authDir = resolve(__dirname, '../.auth');
   if (!existsSync(authDir)) {
     mkdirSync(authDir, { recursive: true });
   }
 
-  // Reset database and ensure test user exists
-  await resetDatabase();
-  await ensureTestUser(TEST_EMAIL);
+  // Clean up ALL worker-prefixed data from previous test runs
+  // This ensures a clean slate for all workers
+  console.log('Cleaning up previous test data...');
+  await resetDatabase(); // This cleans all [W*] prefixed data
 
-  // Perform authentication
-  await auth.authenticate(page);
+  // Setup each worker
+  for (let i = 0; i < workerCount; i++) {
+    const workerContext = getWorkerContext(i);
+    console.log(`Setting up worker ${i}: ${workerContext.email}`);
+
+    // Ensure test user exists in profiles table
+    await ensureTestUser(workerContext.email, i);
+
+    // Create auth fixture for this worker
+    const auth = new AuthFixture({
+      testEmail: workerContext.email,
+      storageStatePath: workerContext.authStatePath,
+      workerIndex: i,
+    });
+
+    // Create a new context for authentication (to avoid session conflicts)
+    const context = await browser.newContext();
+    const authPage = await context.newPage();
+
+    try {
+      // Perform authentication for this worker
+      await auth.authenticate(authPage);
+      console.log(`Worker ${i} authenticated successfully`);
+    } catch (error) {
+      console.error(`Failed to authenticate worker ${i}:`, error);
+      throw error;
+    } finally {
+      await context.close();
+    }
+
+    // Small delay between authentications to avoid rate limiting
+    if (i < workerCount - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
+  console.log('All workers setup complete');
 });
-

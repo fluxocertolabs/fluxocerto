@@ -79,7 +79,14 @@ export class DashboardPage {
    * Open Quick Update modal
    */
   async openQuickUpdate(): Promise<void> {
-    await expect(this.quickUpdateButton).toBeVisible({ timeout: 10000 });
+    // Wait for page to be fully loaded first
+    await this.page.waitForLoadState('networkidle');
+    
+    // Use retry logic to handle race conditions where button may not be immediately visible
+    await expect(async () => {
+      await expect(this.quickUpdateButton).toBeVisible();
+    }).toPass({ timeout: 20000 });
+    
     await this.quickUpdateButton.click();
   }
 

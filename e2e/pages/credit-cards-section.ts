@@ -97,7 +97,7 @@ export class CreditCardsSection {
   /**
    * Update credit card statement balance
    */
-  async updateBalance(name: string, newBalance: string): Promise<void> {
+  async updateCardBalance(name: string, newBalance: string): Promise<void> {
     await this.editCreditCard(name);
     const dialog = this.page.getByRole('dialog');
     const balanceInput = dialog.getByLabel(/saldo.*fatura/i);
@@ -110,7 +110,7 @@ export class CreditCardsSection {
   /**
    * Delete credit card with confirmation dialog
    */
-  async deleteCreditCard(name: string): Promise<void> {
+  async deleteCard(name: string): Promise<void> {
     // Find the card containing the name - use more specific selector
     const cardElement = this.page.locator('div.group.relative').filter({ 
       has: this.page.getByRole('heading', { name, level: 3 }) 
@@ -136,6 +136,10 @@ export class CreditCardsSection {
     await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     await confirmDialog.getByRole('button', { name: /confirmar|sim|yes|excluir/i }).click();
     await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+    
+    // Wait for UI to update
+    await this.page.waitForTimeout(500);
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**

@@ -1,12 +1,14 @@
 /**
  * Authentication fixture for managing test user sessions
  * Implements IAuthFixture contract from specs/019-e2e-testing/contracts/fixtures.ts
+ * Updated for per-worker isolation in parallel test execution
  */
 
 import type { Page } from '@playwright/test';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { InbucketClient } from '../utils/inbucket';
+import type { IWorkerContext } from './worker-context';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -15,16 +17,34 @@ const __dirname = dirname(__filename);
 const DEFAULT_TEST_EMAIL = 'e2e-test@example.com';
 const STORAGE_STATE_PATH = resolve(__dirname, '../.auth/user.json');
 
+export interface AuthFixtureOptions {
+  testEmail?: string;
+  inbucketUrl?: string;
+  storageStatePath?: string;
+  workerIndex?: number;
+}
+
 export class AuthFixture {
   readonly testEmail: string;
   readonly inbucketUrl: string;
   readonly storageStatePath: string;
+  readonly workerIndex?: number;
   private inbucketClient: InbucketClient;
 
-  constructor(options?: { testEmail?: string; inbucketUrl?: string }) {
-    this.testEmail = options?.testEmail || process.env.TEST_USER_EMAIL || DEFAULT_TEST_EMAIL;
+  constructor(options?: AuthFixtureOptions) {
+    this.workerIndex = options?.workerIndex;
+
+    // Use worker-specific email if workerIndex is provided
+    if (this.workerIndex !== undefined) {
+      this.testEmail = options?.testEmail || `e2e-test-worker-${this.workerIndex}@example.com`;
+      this.storageStatePath =
+        options?.storageStatePath || resolve(__dirname, `../.auth/worker-${this.workerIndex}.json`);
+    } else {
+      this.testEmail = options?.testEmail || process.env.TEST_USER_EMAIL || DEFAULT_TEST_EMAIL;
+      this.storageStatePath = options?.storageStatePath || STORAGE_STATE_PATH;
+    }
+
     this.inbucketUrl = options?.inbucketUrl || process.env.INBUCKET_URL || 'http://localhost:54324';
-    this.storageStatePath = STORAGE_STATE_PATH;
     this.inbucketClient = new InbucketClient(this.inbucketUrl);
   }
 
@@ -45,13 +65,13 @@ export class AuthFixture {
   async getMagicLinkUrl(email: string, previousUrl?: string): Promise<string> {
     const mailbox = email.split('@')[0];
     const message = await this.inbucketClient.getLatestMessage(mailbox);
-    
+
     if (!message) {
       throw new Error(`No email found for ${email}`);
     }
 
     const url = this.inbucketClient.extractMagicLink(message);
-    
+
     if (!url) {
       throw new Error('Could not extract magic link from email');
     }
@@ -73,14 +93,14 @@ export class AuthFixture {
     intervalMs: number = 500
   ): Promise<string> {
     const mailbox = email.split('@')[0];
-    
+
     for (let i = 0; i < maxRetries; i++) {
       try {
         const message = await this.inbucketClient.getLatestMessage(mailbox);
-        
+
         if (message) {
           const url = this.inbucketClient.extractMagicLink(message);
-          
+
           if (url && url !== previousUrl) {
             return url;
           }
@@ -88,7 +108,7 @@ export class AuthFixture {
       } catch {
         // Ignore errors during polling
       }
-      
+
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
 
@@ -108,7 +128,7 @@ export class AuthFixture {
 
     // Wait for and get magic link
     let magicLinkUrl = await this.waitForMagicLinkEmail(this.testEmail);
-    
+
     // Rewrite 127.0.0.1 to localhost for browser compatibility
     // Also update the redirect URL to match our test server port
     const baseUrl = process.env.BASE_URL || 'http://localhost:5174';
@@ -132,7 +152,7 @@ export class AuthFixture {
   async logout(page: Page): Promise<void> {
     // Look for sign out button or link
     const signOutButton = page.getByRole('button', { name: /sair|sign out|logout/i });
-    
+
     if (await signOutButton.isVisible()) {
       await signOutButton.click();
     } else {
@@ -165,9 +185,20 @@ export class AuthFixture {
 /**
  * Create auth fixture instance
  */
-export function createAuthFixture(options?: { testEmail?: string; inbucketUrl?: string }) {
+export function createAuthFixture(options?: AuthFixtureOptions) {
   return new AuthFixture(options);
 }
 
-export type { AuthFixture as AuthFixtureType };
+/**
+ * Create a worker-scoped auth fixture
+ * This returns an AuthFixture configured for a specific worker
+ */
+export function createWorkerAuthFixture(workerContext: IWorkerContext): AuthFixture {
+  return new AuthFixture({
+    testEmail: workerContext.email,
+    storageStatePath: workerContext.authStatePath,
+    workerIndex: workerContext.workerIndex,
+  });
+}
 
+export type { AuthFixture as AuthFixtureType };

@@ -142,10 +142,15 @@ export class ExpensesSection {
     // First ensure the name is visible
     await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
     
-    // Find the switch in the same container as the expense name
+    // Find the expense row that contains this specific name
+    // The structure is: row > (name info) + (actions with switch)
+    // Use a more specific locator that finds the immediate parent row
     const expenseName = this.page.getByText(name, { exact: true }).first();
-    const container = expenseName.locator('xpath=ancestor::*[.//button[@role="switch"]]').first();
-    const toggle = container.getByRole('switch');
+    
+    // Navigate to the parent div that contains both the name and the switch
+    // This is the div with class "flex items-center justify-between gap-4"
+    const row = expenseName.locator('xpath=ancestor::div[contains(@class, "flex") and contains(@class, "items-center") and contains(@class, "justify-between")][1]');
+    const toggle = row.getByRole('switch').first();
     await toggle.click();
     // Wait a bit for the state change to process
     await this.page.waitForTimeout(500);
@@ -214,14 +219,22 @@ export class ExpensesSection {
     await this.page.waitForTimeout(200);
     await deleteButton.click();
     
-    // Wait for confirmation dialog and confirm
-    const confirmDialog = this.page.getByRole('alertdialog').or(this.page.getByRole('dialog'));
+    // Wait for confirmation dialog
+    const confirmDialog = this.page.getByRole('alertdialog');
     await expect(confirmDialog).toBeVisible({ timeout: 5000 });
-    await confirmDialog.getByRole('button', { name: /confirmar|sim|yes|excluir/i }).click();
-    await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+    
+    // The AlertDialogAction button has text "Excluir" or "Excluindo..."
+    // It's the destructive action button (red background)
+    const confirmButton = confirmDialog.locator('button').filter({ hasText: /^Excluir$/ });
+    await expect(confirmButton).toBeVisible({ timeout: 5000 });
+    await confirmButton.click();
+    
+    // Wait for the "Excluindo..." state and then dialog to close
+    await expect(confirmDialog).not.toBeVisible({ timeout: 10000 });
     
     // Wait for UI to update after deletion
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(2000);
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -234,10 +247,18 @@ export class ExpensesSection {
 
   /**
    * Verify expense is not visible in list
+   * Uses count() check to handle multiple workers' data being visible
    */
   async expectExpenseNotVisible(name: string): Promise<void> {
-    const expense = this.page.getByText(name, { exact: true });
-    await expect(expense).not.toBeVisible({ timeout: 5000 });
+    // Wait for any pending updates
+    await this.page.waitForTimeout(500);
+    
+    // Get all matching elements - in parallel execution, other workers' data may be visible
+    const expenses = this.page.getByText(name, { exact: true });
+    const count = await expenses.count();
+    
+    // The specific expense should not be visible (count should be 0)
+    await expect(expenses).toHaveCount(0, { timeout: 5000 });
   }
 
   /**

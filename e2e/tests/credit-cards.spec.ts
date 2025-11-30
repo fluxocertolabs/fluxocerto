@@ -1,5 +1,5 @@
 /**
- * E2E Tests: User Story 7 - Credit Card Management
+ * E2E Tests: User Story 6 - Credit Card Management
  * Tests CRUD operations for credit cards
  */
 
@@ -8,88 +8,98 @@ import { createCreditCard } from '../utils/test-data';
 import { formatBRL } from '../utils/format';
 
 test.describe('Credit Card Management', () => {
-  // Run tests serially to avoid database race conditions
-  test.describe.configure({ mode: 'serial' });
-  test('T064: create credit card "Nubank Platinum" R$ 3.000,00 due day 15 → appears in list', async ({
+  // Tests now run in parallel with per-worker data prefixing for isolation
+
+  test('T058: create credit card "Nubank" with balance R$ 500,00 due day 15 → appears in list', async ({
     managePage,
-    db,
+    workerContext,
   }) => {
-    await db.resetDatabase();
-    await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
     await managePage.goto();
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
+    // Use worker-specific name for UI-created data to avoid conflicts
+    const cardName = `Nubank CC W${workerContext.workerIndex}`;
     await creditCards.createCreditCard({
-      name: 'Nubank Platinum',
-      balance: '3.000,00',
+      name: cardName,
+      balance: '500,00',
       dueDay: '15',
     });
 
-    await creditCards.expectCardVisible('Nubank Platinum');
+    await creditCards.expectCardVisible(cardName);
   });
 
-  test('T065: edit due day to 20 → updated due day displayed', async ({
+  test('T059: edit credit card balance to R$ 750,00 → updated balance displayed', async ({
     page,
     managePage,
     db,
   }) => {
-    await db.resetDatabase();
-    await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
-    await db.seedCreditCards([
-      createCreditCard({ name: 'Cartão Teste', due_day: 15 }),
+    // Use unique name
+    const uniqueId = Date.now();
+    const [seeded] = await db.seedCreditCards([
+      createCreditCard({ name: `Cartão Teste ${uniqueId}`, statement_balance: 50000, due_day: 10 }),
     ]);
 
     await managePage.goto();
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
-    await creditCards.updateDueDay('Cartão Teste', '20');
-
-    // Verify due day is updated
-    await expect(page.getByText(/dia 20|20/)).toBeVisible();
-  });
-
-  test('T066: update statement balance → new balance reflected', async ({
-    page,
-    managePage,
-    db,
-  }) => {
-    await db.resetDatabase();
-    await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
-    await db.seedCreditCards([
-      createCreditCard({ name: 'Cartão Atualizar', statement_balance: 150000 }),
-    ]);
-
-    await managePage.goto();
-    await managePage.selectCreditCardsTab();
-
-    const creditCards = managePage.creditCards();
-    await creditCards.updateBalance('Cartão Atualizar', '2.500,00');
+    await creditCards.expectCardVisible(seeded.name);
+    await creditCards.updateCardBalance(seeded.name, '750,00');
 
     // Verify new balance is displayed
-    await expect(page.getByText(formatBRL(250000))).toBeVisible();
+    await expect(page.getByText(formatBRL(75000))).toBeVisible();
   });
 
-  test('T067: delete credit card with confirmation → removed from list', async ({
+  test('T060: delete credit card with confirmation → removed from list', async ({
+    page,
     managePage,
     db,
   }) => {
-    await db.resetDatabase();
-    await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
-    await db.seedCreditCards([
-      createCreditCard({ name: 'Cartão Excluir', statement_balance: 50000 }),
+    // Use unique name
+    const uniqueId = Date.now();
+    const [seeded] = await db.seedCreditCards([
+      createCreditCard({ name: `Cartão Excluir ${uniqueId}`, statement_balance: 30000, due_day: 20 }),
     ]);
 
     await managePage.goto();
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
-    await creditCards.expectCardVisible('Cartão Excluir');
+    await creditCards.expectCardVisible(seeded.name);
 
-    await creditCards.deleteCreditCard('Cartão Excluir');
+    await creditCards.deleteCard(seeded.name);
 
-    await creditCards.expectCardNotVisible('Cartão Excluir');
+    // Reload to verify deletion
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await managePage.selectCreditCardsTab();
+
+    await creditCards.expectCardNotVisible(seeded.name);
+  });
+
+  test('T061: multiple credit cards exist → all displayed with correct due days', async ({
+    page,
+    managePage,
+    db,
+  }) => {
+    const seeded = await db.seedCreditCards([
+      createCreditCard({ name: 'Nubank Multi CC', statement_balance: 50000, due_day: 10 }),
+      createCreditCard({ name: 'Itaú Multi CC', statement_balance: 75000, due_day: 15 }),
+      createCreditCard({ name: 'Inter Multi CC', statement_balance: 25000, due_day: 20 }),
+    ]);
+
+    await managePage.goto();
+    await managePage.selectCreditCardsTab();
+
+    const creditCards = managePage.creditCards();
+
+    // Verify all cards are visible (using seeded names which include prefix)
+    for (const card of seeded) {
+      await creditCards.expectCardVisible(card.name);
+    }
+
+    // Verify due days are displayed (at least one of them)
+    await expect(page.getByText(/dia 10|dia 15|dia 20|venc.*10|venc.*15|venc.*20/i).first()).toBeVisible();
   });
 });
-

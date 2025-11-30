@@ -306,22 +306,20 @@ export class ProjectsSection {
     await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
     await deleteButton.click();
     
-    // Wait for confirmation dialog (AlertDialog) - try both alertdialog and dialog roles
-    const confirmDialog = this.page.getByRole('alertdialog').or(this.page.getByRole('dialog'));
+    // Wait for confirmation dialog (AlertDialog)
+    const confirmDialog = this.page.getByRole('alertdialog');
     await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     
-    // Click the "Excluir" button in the confirmation dialog (it's the destructive action button)
-    // The button text is "Excluir" or "Excluindo..." when loading
-    // Use a more flexible selector that matches the button text
-    const confirmButton = confirmDialog.getByRole('button', { name: /^excluir$/i });
-    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
+    // The AlertDialogAction button has text "Excluir" or "Excluindo..."
+    const confirmButton = confirmDialog.locator('button').filter({ hasText: /^Excluir$/ });
+    await expect(confirmButton).toBeVisible({ timeout: 5000 });
     await confirmButton.click();
     
     // Wait for dialog to close
     await expect(confirmDialog).not.toBeVisible({ timeout: 10000 });
     
     // Wait for the UI to update after deletion
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForTimeout(2000);
     
     // Also wait for network to settle
     await this.page.waitForLoadState('networkidle');
@@ -352,10 +350,11 @@ export class ProjectsSection {
     await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
     
     // Check for "Inativo" badge text near the project name
-    // The badge should be in the same container as the project name
+    // The badge should be in the same row as the project name
     const projectName = this.page.getByText(name, { exact: true }).first();
-    const container = projectName.locator('xpath=ancestor::*[.//button[@role="switch"]]').first();
-    const inactiveBadge = container.getByText(/inativo/i);
+    // Find the immediate parent row that contains the project info
+    const row = projectName.locator('xpath=ancestor::div[contains(@class, "flex") and contains(@class, "items-center")][1]');
+    const inactiveBadge = row.getByText(/inativo/i).first();
     await expect(inactiveBadge).toBeVisible({ timeout: 5000 });
   }
 

@@ -7,9 +7,7 @@ import { test, expect } from '../fixtures/test-base';
 import { createAccount, createProject } from '../utils/test-data';
 
 test.describe('Theme Switching', () => {
-  test.beforeAll(async ({ db }) => {
-    await db.ensureTestUser(process.env.TEST_USER_EMAIL || 'e2e-test@example.com');
-  });
+  // Tests now run in parallel with per-worker data prefixing for isolation
 
   test('T069: click theme toggle → theme cycles through light, dark, and system modes', async ({
     page,
@@ -40,10 +38,7 @@ test.describe('Theme Switching', () => {
   test('T070: theme preference persists after page refresh', async ({
     page,
     dashboardPage,
-    db,
   }) => {
-    await db.resetDatabase();
-
     // Force start with 'light' theme to ensure next click goes to 'dark'
     // This avoids the issue where 'system' resolves to 'light' in CI, 
     // causing 'system' -> 'light' transition to have no visual change
@@ -122,7 +117,6 @@ test.describe('Theme Switching', () => {
     db,
   }) => {
     // Seed some data so dashboard has content
-    await db.resetDatabase();
     await db.seedAccounts([createAccount({ name: 'Test Account', type: 'checking', balance: 100000 })]);
     await db.seedProjects([createProject({
       name: 'Test Project',
@@ -175,4 +169,3 @@ test.describe('Theme Switching', () => {
     await expect(body).toBeVisible();
   });
 });
-
