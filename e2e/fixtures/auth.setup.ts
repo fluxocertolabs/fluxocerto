@@ -19,12 +19,20 @@ const __dirname = dirname(__filename);
 
 /**
  * Determine the number of workers to use
- * Uses half of available CPU cores, capped at MAX_WORKERS
+ * MUST match the logic in playwright.config.ts to ensure all workers are authenticated
+ * In CI: Uses all available CPU cores (dedicated runner)
+ * Locally: Uses half of available CPU cores (don't overwhelm dev machine)
+ * Always capped at MAX_WORKERS
  */
 function getWorkerCount(): number {
   const cpuCount = os.cpus().length;
-  // Use half of CPUs for workers, minimum 1, maximum MAX_WORKERS
-  return Math.min(Math.max(1, Math.floor(cpuCount / 2)), MAX_WORKERS);
+  const isCI = !!process.env.CI;
+  
+  // In CI, use all cores since runner is dedicated to tests
+  // Locally, use half to leave resources for other apps
+  const workers = isCI ? cpuCount : Math.floor(cpuCount / 2);
+  
+  return Math.min(Math.max(1, workers), MAX_WORKERS);
 }
 
 /**
