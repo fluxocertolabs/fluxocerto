@@ -131,7 +131,7 @@ export class AuthFixture {
 
     // Rewrite 127.0.0.1 to localhost for browser compatibility
     // Also update the redirect URL to match our test server port
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5174';
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5173';
     magicLinkUrl = magicLinkUrl
       .replace(/127\.0\.0\.1/g, 'localhost')
       .replace(/redirect_to=http:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?/g, `redirect_to=${baseUrl}`);

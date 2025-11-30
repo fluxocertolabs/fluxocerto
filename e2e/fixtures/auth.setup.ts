@@ -90,5 +90,19 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
     }
   }
 
+  // Verify all auth state files were created
+  console.log('Verifying auth state files...');
+  for (let i = 0; i < workerCount; i++) {
+    const workerContext = getWorkerContext(i);
+    const authFilePath = workerContext.authStatePath;
+    if (!existsSync(authFilePath)) {
+      throw new Error(`Auth state file not found for worker ${i}: ${authFilePath}`);
+    }
+    console.log(`✓ Worker ${i} auth state verified: ${authFilePath}`);
+  }
+
+  // Small delay to ensure all files are fully flushed to disk
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
   console.log('All workers setup complete');
 });

@@ -64,6 +64,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const storageStatePath = workerCtx.authStatePath;
       const hasAuthState = existsSync(storageStatePath);
 
+      if (!hasAuthState) {
+        console.error(`⚠️  Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}`);
+      }
+
       const context = await browser.newContext(
         hasAuthState ? { storageState: storageStatePath } : {}
       );
