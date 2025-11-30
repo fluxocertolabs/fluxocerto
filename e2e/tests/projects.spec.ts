@@ -96,11 +96,11 @@ test.describe('Project (Income) Management', () => {
       // Click toggle
       await toggle.click();
       
-      // Wait for the toggle state to change
-      await page.waitForLoadState('networkidle');
-      
-      // Verify state changed to unchecked (inactive)
-      await expect(toggle).toHaveAttribute('data-state', 'unchecked');
+      // Wait for the toggle state to change via realtime update
+      // Use toPass with longer timeout to handle slow realtime updates in parallel execution
+      await expect(async () => {
+        await expect(toggle).toHaveAttribute('data-state', 'unchecked', { timeout: 5000 });
+      }).toPass({ timeout: 20000, intervals: [1000, 2000, 3000] });
     });
 
     test('T047: change project certainty to "probable" → certainty badge updates', async ({

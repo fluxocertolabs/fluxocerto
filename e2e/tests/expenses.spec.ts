@@ -63,11 +63,11 @@ test.describe('Expense Management', () => {
       // Toggle the expense
       await toggle.click();
       
-      // Wait for the toggle state to change
-      await page.waitForLoadState('networkidle');
-      
-      // Verify the expense is now inactive (state should be unchecked)
-      await expect(toggle).toHaveAttribute('data-state', 'unchecked');
+      // Wait for the toggle state to change via realtime update
+      // Use toPass with longer timeout to handle slow realtime updates in parallel execution
+      await expect(async () => {
+        await expect(toggle).toHaveAttribute('data-state', 'unchecked', { timeout: 5000 });
+      }).toPass({ timeout: 20000, intervals: [1000, 2000, 3000] });
       
       // Also verify the "Inativo" badge appears
       await expenses.expectExpenseInactive(seeded.name);

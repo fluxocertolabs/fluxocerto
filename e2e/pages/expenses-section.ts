@@ -272,9 +272,11 @@ export class ExpensesSection {
     await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
     
     // Check for "Inativo" badge text near the expense name
+    // Use a more specific selector to avoid matching other expenses in parallel tests
     const expenseName = this.page.getByText(name, { exact: true }).first();
-    const container = expenseName.locator('xpath=ancestor::*[.//button[@role="switch"]]').first();
-    const inactiveBadge = container.getByText(/inativo/i);
+    // Find the parent flex container (closest ancestor div with flex classes)
+    const row = expenseName.locator('xpath=ancestor::div[contains(@class, "flex") and contains(@class, "rounded-lg")][1]');
+    const inactiveBadge = row.getByText(/inativo/i, { exact: false }).first();
     await expect(inactiveBadge).toBeVisible({ timeout: 5000 });
   }
 }
