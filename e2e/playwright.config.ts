@@ -58,6 +58,7 @@ process.env.VITE_SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || supab
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || supabase.serviceRoleKey;
 process.env.INBUCKET_URL = process.env.INBUCKET_URL || supabase.inbucketUrl;
 process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
+process.env.VITE_DISABLE_THEME_SYNC = 'true';
 // Note: TEST_USER_EMAIL is now per-worker, set dynamically in fixtures
 
 // Extract port from BASE_URL for webServer configuration

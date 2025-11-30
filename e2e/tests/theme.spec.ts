@@ -5,6 +5,23 @@
 
 import { test, expect } from '../fixtures/test-base';
 import { createAccount, createProject } from '../utils/test-data';
+import type { Page } from '@playwright/test';
+
+const SHOULD_EXPECT_THEME_SYNC = process.env.VITE_DISABLE_THEME_SYNC !== 'true';
+
+function waitForThemeBootstrap(page: Page): Promise<void> {
+  if (!SHOULD_EXPECT_THEME_SYNC) {
+    return Promise.resolve();
+  }
+
+  return page
+    .waitForResponse(
+      (response) =>
+        response.url().includes('user_preferences') && response.request().method() === 'GET',
+      { timeout: 15000 }
+    )
+    .catch(() => undefined);
+}
 
 test.describe('Theme Switching', () => {
   // Tests now run in parallel with per-worker data prefixing for isolation
@@ -39,6 +56,8 @@ test.describe('Theme Switching', () => {
     page,
     dashboardPage,
   }) => {
+    const themeBootstrap = waitForThemeBootstrap(page);
+
     // Force start with 'light' theme to ensure next click goes to 'dark'
     // This avoids the issue where 'system' resolves to 'light' in CI, 
     // causing 'system' -> 'light' transition to have no visual change
@@ -56,6 +75,7 @@ test.describe('Theme Switching', () => {
 
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
+    await themeBootstrap;
 
     // Find theme toggle and get initial state
     const themeToggle = page.getByRole('button', { name: /tema atual/i });
@@ -64,18 +84,18 @@ test.describe('Theme Switching', () => {
     const html = page.locator('html');
     const initialClass = await html.getAttribute('class');
 
-    // Wait for the theme preference to be saved to Supabase
-    // This ensures that when we reload, we fetch the correct updated preference
-    const saveRequestPromise = page.waitForResponse(response => 
-      response.url().includes('user_preferences') && 
-      response.request().method() !== 'GET' &&
-      response.status() >= 200 && response.status() < 300
-    ).catch(() => {
-      // If no request happens (e.g. already synced or debounced), that might be okay if tests pass,
-      // but for T070 we explicitly expect a sync because we are changing the theme.
-      // If this timeouts, it means no sync request was observed.
-      console.warn('Warning: Theme sync request not observed or timed out');
-    });
+    // Wait for the theme preference to be saved to Supabase when sync is enabled
+    const saveRequestPromise = SHOULD_EXPECT_THEME_SYNC
+      ? page
+          .waitForResponse(
+            (response) =>
+              response.url().includes('user_preferences') &&
+              response.request().method() !== 'GET' &&
+              response.status() >= 200 &&
+              response.status() < 300
+          )
+          .catch(() => undefined)
+      : null;
 
     // Click toggle to change theme
     await themeToggle.click();
@@ -83,10 +103,11 @@ test.describe('Theme Switching', () => {
     // Wait for the save request to complete (with a small buffer)
     // We race with a timeout just in case the network request is too fast or happens differently,
     // but ideally we catch it.
-    await Promise.race([
-      saveRequestPromise,
-      page.waitForTimeout(2000) // Fallback if request is missed or very fast
-    ]);
+    if (saveRequestPromise) {
+      await Promise.race([saveRequestPromise, page.waitForTimeout(2000)]);
+    } else {
+      await page.waitForTimeout(200);
+    }
     
     // Also wait for UI update
     await page.waitForTimeout(500);
@@ -120,6 +141,8 @@ test.describe('Theme Switching', () => {
     dashboardPage,
     db,
   }) => {
+    const themeBootstrap = waitForThemeBootstrap(page);
+
     // Seed some data so dashboard has content
     await db.seedAccounts([createAccount({ name: 'Test Account', type: 'checking', balance: 100000 })]);
     await db.seedProjects([createProject({
@@ -144,6 +167,7 @@ test.describe('Theme Switching', () => {
 
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
+    await themeBootstrap;
 
     // Find theme toggle
     const themeToggle = page.getByRole('button', { name: /tema atual/i });

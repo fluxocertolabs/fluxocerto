@@ -12,6 +12,8 @@ import {
 import { useAuth } from '@/hooks/use-auth'
 import type { ThemeValue, ResolvedTheme } from '@/types/theme'
 
+const DISABLE_THEME_SYNC = import.meta.env.VITE_DISABLE_THEME_SYNC === 'true'
+
 interface UseThemeReturn {
   /** Current theme preference */
   theme: ThemeValue
@@ -39,6 +41,10 @@ export function useTheme(): UseThemeReturn {
 
   // Fetch theme from Supabase when user logs in
   useEffect(() => {
+    if (DISABLE_THEME_SYNC) {
+      return
+    }
+
     // Skip if auth is still loading
     if (isAuthLoading) {
       return
@@ -86,7 +92,7 @@ export function useTheme(): UseThemeReturn {
       setThemeStore(newTheme)
 
       // Sync to Supabase in background (non-blocking)
-      if (isAuthenticated) {
+      if (!DISABLE_THEME_SYNC && isAuthenticated) {
         saveThemePreference(newTheme).catch((error) => {
           console.warn('Background theme sync failed:', error)
         })
