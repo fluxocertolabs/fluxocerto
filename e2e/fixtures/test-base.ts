@@ -65,30 +65,52 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const hasAuthState = existsSync(storageStatePath);
 
       if (!hasAuthState) {
-        console.error(`❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}`);
-      } else {
-        // Read and validate the auth state file
-        try {
-          const fs = await import('fs/promises');
-          const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
-          const authState = JSON.parse(authStateContent);
-          
-          const hasCookies = authState.cookies && authState.cookies.length > 0;
-          const hasOrigins = authState.origins && authState.origins.length > 0;
-          
-          console.log(`Worker ${workerCtx.workerIndex} auth state: ${hasCookies ? authState.cookies.length : 0} cookies, ${hasOrigins ? authState.origins.length : 0} origins`);
-          
-          if (!hasCookies && !hasOrigins) {
-            console.error(`⚠️  Worker ${workerCtx.workerIndex}: Auth state file exists but appears empty!`);
-          }
-        } catch (error) {
-          console.error(`⚠️  Worker ${workerCtx.workerIndex}: Failed to read auth state file:`, error);
-        }
+        throw new Error(`❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}. Run setup first.`);
       }
 
-      const context = await browser.newContext(
-        hasAuthState ? { storageState: storageStatePath } : {}
-      );
+      // Read and validate the auth state file
+      try {
+        const fs = await import('fs/promises');
+        const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
+        const authState = JSON.parse(authStateContent);
+        
+        const hasCookies = authState.cookies && authState.cookies.length > 0;
+        const hasOrigins = authState.origins && authState.origins.length > 0;
+        
+        // Validate that we have SOME auth data
+        if (!hasCookies && !hasOrigins) {
+          throw new Error(`❌ Worker ${workerCtx.workerIndex}: Auth state file is empty! No cookies or origins found.`);
+        }
+        
+        // For Supabase (localStorage-based auth), we need at least one origin with localStorage data
+        if (hasOrigins) {
+          const origin = authState.origins[0];
+          const hasLocalStorage = origin.localStorage && origin.localStorage.length > 0;
+          
+          if (!hasLocalStorage) {
+            throw new Error(`❌ Worker ${workerCtx.workerIndex}: Auth state has origin but no localStorage data!`);
+          }
+          
+          // Check for Supabase auth token specifically
+          const hasAuthToken = origin.localStorage.some((item: any) => 
+            item.name && (item.name.includes('sb-') && item.name.includes('auth-token'))
+          );
+          
+          if (!hasAuthToken) {
+            throw new Error(`❌ Worker ${workerCtx.workerIndex}: No Supabase auth token found in localStorage!`);
+          }
+        }
+        
+        console.log(`✓ Worker ${workerCtx.workerIndex} auth state validated: ${authState.origins[0].localStorage.length} localStorage items`);
+      } catch (error) {
+        // If validation fails, throw to prevent tests from running with invalid auth
+        if (error instanceof Error && error.message.includes('Worker')) {
+          throw error; // Re-throw our custom errors
+        }
+        throw new Error(`❌ Worker ${workerCtx.workerIndex}: Failed to validate auth state: ${error}`);
+      }
+
+      const context = await browser.newContext({ storageState: storageStatePath });
 
       await use(context);
 

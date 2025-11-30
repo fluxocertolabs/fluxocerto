@@ -200,7 +200,34 @@ export class AuthFixture {
 
     // Save storage state
     await page.context().storageState({ path: this.storageStatePath });
-    console.log(`✓ Worker ${this.workerIndex}: Storage state saved to ${this.storageStatePath}`);
+    
+    // CRITICAL: Verify the saved file contains auth data
+    const fs = await import('fs/promises');
+    try {
+      const savedState = JSON.parse(await fs.readFile(this.storageStatePath, 'utf-8'));
+      const hasOrigins = savedState.origins && savedState.origins.length > 0;
+      
+      if (!hasOrigins) {
+        throw new Error(`Worker ${this.workerIndex}: Saved auth state has no origins!`);
+      }
+      
+      const origin = savedState.origins[0];
+      const localStorageItems = origin.localStorage || [];
+      const hasAuthToken = localStorageItems.some((item: any) => 
+        item.name && item.name.includes('sb-') && item.name.includes('-auth-token')
+      );
+      
+      if (!hasAuthToken) {
+        throw new Error(`Worker ${this.workerIndex}: Saved auth state has no Supabase auth token in localStorage!`);
+      }
+      
+      console.log(`✓ Worker ${this.workerIndex}: Auth state saved and validated (${localStorageItems.length} localStorage items)`);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Worker')) {
+        throw error; // Re-throw our validation errors
+      }
+      throw new Error(`Worker ${this.workerIndex}: Failed to validate saved auth state: ${error}`);
+    }
   }
 
   /**
