@@ -36,16 +36,69 @@ export class ManagePage {
     await this.page.goto('/manage');
     await this.page.waitForLoadState('networkidle');
     
-    // Wait for tab panel to be visible (indicates page has loaded)
-    // Increased timeout for CI environments which can be slower
-    await this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 60000 });
+    // Verify we're actually on the manage page (not redirected to login)
+    const currentUrl = this.page.url();
+    if (!currentUrl.includes('/manage')) {
+      throw new Error(`Expected to be on /manage page, but got: ${currentUrl}`);
+    }
     
-    // Wait for content to appear (accounts, expenses, etc. or empty state)
-    await Promise.race([
-      this.page.locator('div.group.relative').first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {}),
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {}),
-      this.page.getByRole('button', { name: /adicionar/i }).first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {}),
-    ]);
+    // First, wait for the PageLoadingWrapper to appear (role="status")
+    const loadingWrapper = this.page.locator('[role="status"][aria-live="polite"]').first();
+    try {
+      await loadingWrapper.waitFor({ state: 'visible', timeout: 10000 });
+    } catch (error) {
+      // Log page state for debugging
+      const pageContent = await this.page.textContent('body').catch(() => 'Unable to read page content');
+      console.error('Failed to find PageLoadingWrapper. Page content:', pageContent);
+      throw error;
+    }
+    
+    // Wait for loading to complete by checking aria-busy attribute becomes "false"
+    // The PageLoadingWrapper sets aria-busy=true during loading and false when done
+    try {
+      await this.page.waitForFunction(
+        () => {
+          // Check if loading completed successfully
+          const wrapper = document.querySelector('[role="status"][aria-live="polite"]');
+          return wrapper && wrapper.getAttribute('aria-busy') === 'false';
+        },
+        { timeout: 60000 }
+      );
+      
+      // Wait for the opacity transition to complete (PageLoadingWrapper uses 250ms transition)
+      // Add extra buffer for slower environments
+      await this.page.waitForTimeout(500);
+    } catch (error) {
+      // Take screenshot and log state for debugging
+      await this.page.screenshot({ path: 'debug-manage-page-timeout.png', fullPage: true }).catch(() => {});
+      const ariaBusy = await loadingWrapper.getAttribute('aria-busy');
+      const pageUrl = this.page.url();
+      console.error(`Loading timeout. URL: ${pageUrl}, aria-busy: ${ariaBusy}`);
+      throw error;
+    }
+    
+    // Now wait for the tabs structure to be visible
+    // Use multiple fallback selectors to be more resilient
+    try {
+      await Promise.race([
+        // Primary: Wait for tabpanel (actual content)
+        this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 10000 }),
+        // Fallback 1: Wait for tablist (tabs bar)
+        this.page.getByRole('tablist').first().waitFor({ state: 'visible', timeout: 10000 }),
+        // Fallback 2: Wait for any tab trigger
+        this.page.getByRole('tab').first().waitFor({ state: 'visible', timeout: 10000 }),
+      ]);
+    } catch (error) {
+      // If none appeared, capture diagnostic info and throw
+      const html = await this.page.content();
+      console.error('Tabs structure did not appear after loading.');
+      console.error('HTML snippet:', html.substring(0, 1000));
+      console.error('Checking for specific elements:');
+      console.error('  - Tabs wrapper exists:', await this.page.locator('[role="tablist"]').count());
+      console.error('  - Tab triggers exist:', await this.page.locator('[role="tab"]').count());
+      console.error('  - Tab panels exist:', await this.page.locator('[role="tabpanel"]').count());
+      throw new Error('Manage page tabs did not render after loading completed');
+    }
   }
 
   /**
