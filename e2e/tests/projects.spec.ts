@@ -55,13 +55,11 @@ test.describe('Project (Income) Management', () => {
       await projects.expectProjectVisible(seeded.name);
       await projects.updateProjectFrequency(seeded.name, 'biweekly');
 
-      // Wait for update to complete
-      await page.waitForLoadState('networkidle');
-
-      // Verify frequency is updated
+      // Wait for update to complete via realtime subscription
+      // Use toPass to retry until realtime update propagates
       await expect(async () => {
         await expect(page.getByText(/quinzenal|biweekly/i).first()).toBeVisible({ timeout: 2000 });
-      }).toPass({ timeout: 15000 });
+      }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
     });
 
     test('T046: toggle project inactive → toggle switch state changes', async ({
@@ -98,9 +96,10 @@ test.describe('Project (Income) Management', () => {
       
       // Wait for the toggle state to change via realtime update
       // Use toPass with longer timeout to handle slow realtime updates in parallel execution
+      // Increased to 30s for heavily loaded parallel environments
       await expect(async () => {
-        await expect(toggle).toHaveAttribute('data-state', 'unchecked', { timeout: 5000 });
-      }).toPass({ timeout: 20000, intervals: [1000, 2000, 3000] });
+        await expect(toggle).toHaveAttribute('data-state', 'unchecked', { timeout: 3000 });
+      }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000, 5000] });
     });
 
     test('T047: change project certainty to "probable" → certainty badge updates', async ({

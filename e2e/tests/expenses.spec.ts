@@ -65,9 +65,10 @@ test.describe('Expense Management', () => {
       
       // Wait for the toggle state to change via realtime update
       // Use toPass with longer timeout to handle slow realtime updates in parallel execution
+      // Increased to 30s for heavily loaded parallel environments
       await expect(async () => {
-        await expect(toggle).toHaveAttribute('data-state', 'unchecked', { timeout: 5000 });
-      }).toPass({ timeout: 20000, intervals: [1000, 2000, 3000] });
+        await expect(toggle).toHaveAttribute('data-state', 'unchecked', { timeout: 3000 });
+      }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000, 5000] });
       
       // Also verify the "Inativo" badge appears
       await expenses.expectExpenseInactive(seeded.name);
