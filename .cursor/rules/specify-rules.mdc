@@ -30,6 +30,7 @@ Auto-generated from all feature plans. Last updated: 2025-11-25
 - Supabase PostgreSQL (extends existing `projects` table) (018-single-shot-income)
 - TypeScript 5.9.3 + Playwright 1.57.0, @playwright/test 1.57.0 (019-e2e-testing)
 - Local Supabase PostgreSQL (port 54322), Inbucket email server (port 54324) (019-e2e-testing)
+- TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, @supabase/supabase-js 2.86.0, Zustand 5.0.8 (020-household-multitenancy)
 
 - TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Tailwind CSS 4.1.17, shadcn/ui, Dexie.js 4.2.1, Zustand 5.0.8 (001-monorepo-base-structure)
 
@@ -49,9 +50,9 @@ npm test && npm run lint
 TypeScript 5.9.3: Follow standard conventions
 
 ## Recent Changes
+- 020-household-multitenancy: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, @supabase/supabase-js 2.86.0, Zustand 5.0.8
 - 019-e2e-testing: Added TypeScript 5.9.3 + Playwright 1.57.0, @playwright/test 1.57.0
 - 018-single-shot-income: Added TypeScript 5.9.3 + React 19.2.0, Vite 7.2.4, Supabase (@supabase/supabase-js 2.86.0), Zustand 5.0.8, Zod 4.1.13
-- 017-account-owner: Added TypeScript 5.9.3 + React 19.2.0, Zustand 5.0.8, Zod 4.1.13, @supabase/supabase-js 2.86.0
 
 
 <!-- MANUAL ADDITIONS START -->
