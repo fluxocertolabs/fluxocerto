@@ -38,16 +38,26 @@ export interface UseFinanceDataReturn {
   retry: () => void
 }
 
-// Helper to convert snake_case database rows to camelCase TypeScript types
-function mapProfileFromDb(row: ProfileRow): Profile {
+// =============================================================================
+// DATABASE ROW MAPPERS
+// Exported for unit testing - convert snake_case database rows to camelCase types
+// =============================================================================
+
+/**
+ * Map profile database row to Profile type.
+ */
+export function mapProfileFromDb(row: ProfileRow): Profile {
   return {
     id: row.id,
     name: row.name,
   }
 }
 
-// Supabase returns owner as array for FK joins, we need to extract first element or null
-function normalizeOwner(owner: unknown): { id: string; name: string } | null {
+/**
+ * Normalize owner field from Supabase FK join.
+ * Supabase returns owner as array for FK joins, we need to extract first element or null.
+ */
+export function normalizeOwner(owner: unknown): { id: string; name: string } | null {
   if (!owner) return null
   if (Array.isArray(owner)) {
     return owner.length > 0 ? owner[0] : null
@@ -55,7 +65,10 @@ function normalizeOwner(owner: unknown): { id: string; name: string } | null {
   return owner as { id: string; name: string }
 }
 
-function mapAccountFromDb(row: AccountRow): BankAccount {
+/**
+ * Map account database row to BankAccount type.
+ */
+export function mapAccountFromDb(row: AccountRow): BankAccount {
   return {
     id: row.id,
     name: row.name,
@@ -69,7 +82,10 @@ function mapAccountFromDb(row: AccountRow): BankAccount {
   }
 }
 
-function mapProjectFromDb(row: ProjectRow): Project {
+/**
+ * Map project database row to Project type (recurring income).
+ */
+export function mapProjectFromDb(row: ProjectRow): Project {
   return {
     id: row.id,
     type: 'recurring',
@@ -84,7 +100,10 @@ function mapProjectFromDb(row: ProjectRow): Project {
   }
 }
 
-function mapSingleShotIncomeFromDb(row: ProjectRow): SingleShotIncome {
+/**
+ * Map project database row to SingleShotIncome type.
+ */
+export function mapSingleShotIncomeFromDb(row: ProjectRow): SingleShotIncome {
   return {
     id: row.id,
     type: 'single_shot',
@@ -97,7 +116,10 @@ function mapSingleShotIncomeFromDb(row: ProjectRow): SingleShotIncome {
   }
 }
 
-function mapExpenseFromDb(row: ExpenseRow): Expense {
+/**
+ * Map expense database row to Expense type (fixed or single-shot).
+ */
+export function mapExpenseFromDb(row: ExpenseRow): Expense {
   const base = {
     id: row.id,
     name: row.name,
@@ -122,7 +144,10 @@ function mapExpenseFromDb(row: ExpenseRow): Expense {
   }
 }
 
-function mapCreditCardFromDb(row: CreditCardRow): CreditCard {
+/**
+ * Map credit card database row to CreditCard type.
+ */
+export function mapCreditCardFromDb(row: CreditCardRow): CreditCard {
   return {
     id: row.id,
     name: row.name,

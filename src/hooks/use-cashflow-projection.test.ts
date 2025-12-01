@@ -4,8 +4,9 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { transformToChartData } from './use-cashflow-projection'
+import { transformToChartData, getDangerRanges } from './use-cashflow-projection'
 import type { DailySnapshot } from '@/lib/cashflow/types'
+import type { ChartDataPoint } from '@/components/cashflow/types'
 
 /**
  * Helper to create a mock DailySnapshot for testing.
@@ -143,6 +144,272 @@ describe('transformToChartData', () => {
       expect(result[0].optimisticBalance).toBe(1234.56)
       expect(result[0].pessimisticBalance).toBe(789.01)
       expect(result[0].investmentInclusiveBalance).toBe(1345.67) // (123456 + 11111) / 100
+    })
+  })
+})
+
+// =============================================================================
+// getDangerRanges TESTS
+// =============================================================================
+
+/**
+ * Helper to create a mock ChartDataPoint for testing danger ranges.
+ */
+function createMockChartPoint(overrides: Partial<ChartDataPoint> = {}): ChartDataPoint {
+  return {
+    date: '15 Jan',
+    timestamp: new Date('2025-01-15').getTime(),
+    optimisticBalance: 1000,
+    pessimisticBalance: 800,
+    investmentInclusiveBalance: 1500,
+    isOptimisticDanger: false,
+    isPessimisticDanger: false,
+    snapshot: createMockSnapshot(),
+    ...overrides,
+  }
+}
+
+describe('getDangerRanges', () => {
+  describe('empty and no-danger scenarios', () => {
+    it('should return empty array for empty input', () => {
+      const result = getDangerRanges([])
+      expect(result).toEqual([])
+    })
+
+    it('should return empty array when no danger days', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('single danger day scenarios', () => {
+    it('should create range for single optimistic danger day', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: true, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({
+        start: '2 Jan',
+        end: '2 Jan',
+        scenario: 'optimistic',
+      })
+    })
+
+    it('should create range for single pessimistic danger day', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({
+        start: '2 Jan',
+        end: '2 Jan',
+        scenario: 'pessimistic',
+      })
+    })
+
+    it('should create range for single day with both scenarios in danger', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({
+        start: '2 Jan',
+        end: '2 Jan',
+        scenario: 'both',
+      })
+    })
+  })
+
+  describe('consecutive danger days consolidation', () => {
+    it('should consolidate consecutive optimistic danger days', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: true, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: true, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: true, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({
+        start: '1 Jan',
+        end: '3 Jan',
+        scenario: 'optimistic',
+      })
+    })
+
+    it('should consolidate consecutive pessimistic danger days', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '4 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({
+        start: '1 Jan',
+        end: '3 Jan',
+        scenario: 'pessimistic',
+      })
+    })
+
+    it('should consolidate consecutive both-scenario danger days', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({
+        start: '1 Jan',
+        end: '2 Jan',
+        scenario: 'both',
+      })
+    })
+  })
+
+  describe('scenario transitions', () => {
+    it('should create separate ranges when scenario changes', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: true, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(3)
+      expect(result[0]).toEqual({ start: '1 Jan', end: '1 Jan', scenario: 'pessimistic' })
+      expect(result[1]).toEqual({ start: '2 Jan', end: '2 Jan', scenario: 'both' })
+      expect(result[2]).toEqual({ start: '3 Jan', end: '3 Jan', scenario: 'optimistic' })
+    })
+
+    it('should handle alternating danger and safe days', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: true, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: true, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(2)
+      expect(result[0]).toEqual({ start: '1 Jan', end: '1 Jan', scenario: 'optimistic' })
+      expect(result[1]).toEqual({ start: '3 Jan', end: '3 Jan', scenario: 'optimistic' })
+    })
+  })
+
+  describe('edge cases', () => {
+    it('should handle danger at start of period', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({ start: '1 Jan', end: '1 Jan', scenario: 'both' })
+    })
+
+    it('should handle danger at end of period', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({ start: '2 Jan', end: '2 Jan', scenario: 'pessimistic' })
+    })
+
+    it('should handle entire period in danger', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({
+        start: '1 Jan',
+        end: '3 Jan',
+        scenario: 'both',
+      })
+    })
+
+    it('should handle single day input with danger', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(1)
+      expect(result[0]).toEqual({ start: '1 Jan', end: '1 Jan', scenario: 'pessimistic' })
+    })
+
+    it('should handle single day input without danger', () => {
+      const chartData: ChartDataPoint[] = [
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('complex real-world scenarios', () => {
+    it('should handle typical month with multiple danger ranges', () => {
+      const chartData: ChartDataPoint[] = [
+        // Week 1 - Safe
+        createMockChartPoint({ date: '1 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        createMockChartPoint({ date: '2 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        // Week 2 - Pessimistic danger (waiting for income)
+        createMockChartPoint({ date: '3 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '4 Jan', isOptimisticDanger: false, isPessimisticDanger: true }),
+        // Week 3 - Safe (after income)
+        createMockChartPoint({ date: '5 Jan', isOptimisticDanger: false, isPessimisticDanger: false }),
+        // Week 4 - Both in danger (end of month)
+        createMockChartPoint({ date: '6 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+        createMockChartPoint({ date: '7 Jan', isOptimisticDanger: true, isPessimisticDanger: true }),
+      ]
+
+      const result = getDangerRanges(chartData)
+      
+      expect(result.length).toBe(2)
+      expect(result[0]).toEqual({ start: '3 Jan', end: '4 Jan', scenario: 'pessimistic' })
+      expect(result[1]).toEqual({ start: '6 Jan', end: '7 Jan', scenario: 'both' })
     })
   })
 })
