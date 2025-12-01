@@ -10,7 +10,10 @@ interface HouseholdBadgeProps {
  */
 export function HouseholdBadge({ name }: HouseholdBadgeProps) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
+    <span
+      data-testid="household-badge"
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md"
+    >
       <Home className="h-3 w-3" />
       {name}
     </span>

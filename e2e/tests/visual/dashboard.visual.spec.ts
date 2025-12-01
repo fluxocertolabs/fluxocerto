@@ -2,6 +2,10 @@
  * Visual Regression Tests: Dashboard Page
  * Tests visual appearance of dashboard in various states and themes
  *
+ * IMPORTANT: Each test explicitly resets the database to ensure isolation.
+ * This is necessary because tests run in parallel and the page reload
+ * in setTheme() could show stale data from previous tests.
+ *
  * @visual
  */
 
@@ -10,8 +14,9 @@ import { createFullSeedData } from '../../utils/test-data';
 
 visualTest.describe('Dashboard Visual Regression @visual', () => {
   visualTest(
-    'dashboard empty state - light theme',
-    async ({ page, dashboardPage, visual }) => {
+    'dashboard - light empty',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.resetDatabase(); // Explicit reset for empty state
       await dashboardPage.goto();
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -21,8 +26,9 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
   );
 
   visualTest(
-    'dashboard empty state - dark theme',
-    async ({ page, dashboardPage, visual }) => {
+    'dashboard - dark empty',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.resetDatabase(); // Explicit reset for empty state
       await dashboardPage.goto();
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
@@ -32,9 +38,8 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
   );
 
   visualTest(
-    'dashboard populated state - light theme',
+    'dashboard - light populated',
     async ({ page, dashboardPage, db, visual }) => {
-      // Seed data
       const seedData = createFullSeedData();
       await db.seedFullScenario(seedData);
 
@@ -50,9 +55,8 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
   );
 
   visualTest(
-    'dashboard populated state - dark theme',
+    'dashboard - dark populated',
     async ({ page, dashboardPage, db, visual }) => {
-      // Seed data
       const seedData = createFullSeedData();
       await db.seedFullScenario(seedData);
 

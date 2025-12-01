@@ -120,8 +120,9 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
-    // Visual regression tests - run separately with consistent viewport
-    // Uses main setup to authenticate workers, runs in parallel
+    // Visual regression tests - run in parallel with household-based isolation
+    // Each worker has its own household, ensuring complete data isolation via RLS
+    // Screenshots mask worker-specific elements (like household name) for consistency
     {
       name: 'visual',
       testMatch: /visual\/.*\.spec\.ts/,
@@ -130,7 +131,7 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 }, // Fixed viewport for consistent screenshots
       },
       dependencies: ['setup'], // Use main setup which authenticates all workers
-      fullyParallel: true, // Run visual tests in parallel for speed
+      fullyParallel: true, // Run visual tests in parallel - household isolation handles data separation
     },
   ],
 

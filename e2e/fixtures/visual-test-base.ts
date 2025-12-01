@@ -5,9 +5,14 @@
  *
  * Uses a fixed date (2025-01-15) for deterministic screenshots.
  * All test data and chart projections will be consistent across runs.
+ *
+ * ISOLATION STRATEGY:
+ * - Each worker has its own household for complete data isolation via RLS
+ * - Worker-specific elements (like household name in header) are masked in screenshots
+ * - This allows parallel execution while maintaining deterministic visual comparisons
  */
 
-import { test as base, expect, type Page, type BrowserContext } from '@playwright/test';
+import { test as base, expect, type Page, type BrowserContext, type Locator } from '@playwright/test';
 import { createWorkerDbFixture, type WorkerDatabaseFixture } from './db';
 import { AuthFixture, createWorkerAuthFixture } from './auth';
 import { getWorkerContext, type IWorkerContext } from './worker-context';
@@ -43,9 +48,16 @@ export interface VisualTestHelpers {
   setTheme(page: Page, theme: ThemeMode): Promise<void>;
 
   /**
-   * Take a screenshot (no masking - all data is deterministic)
+   * Take a screenshot with worker-specific elements masked for consistency.
+   * Masks: household badge in header, worker-prefixed data names
    */
-  takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean }): Promise<void>;
+  takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean; mask?: Locator[] }): Promise<void>;
+
+  /**
+   * Get locators for elements that should be masked in screenshots.
+   * These are worker-specific elements that would differ between parallel workers.
+   */
+  getWorkerSpecificMasks(page: Page): Locator[];
 }
 
 /**
@@ -102,12 +114,17 @@ export async function waitForStableUI(page: Page): Promise<void> {
 
 /**
  * Set the theme mode (call AFTER navigation)
+ * 
+ * This function directly manipulates localStorage and the DOM to set the theme.
+ * It does NOT reload the page to avoid disrupting the current page state.
  */
 export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
   const resolvedTheme = theme === 'system' ? 'light' : theme;
 
+  // Set localStorage and apply theme class directly to DOM
   await page.evaluate(
     ({ theme, resolvedTheme }) => {
+      // Update localStorage for Zustand persistence
       window.localStorage.setItem(
         'family-finance-theme',
         JSON.stringify({
@@ -115,39 +132,66 @@ export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
           version: 0,
         })
       );
-      window.dispatchEvent(new StorageEvent('storage', { key: 'family-finance-theme' }));
+      
+      // Directly apply the theme class to the DOM
+      const root = document.documentElement;
+      root.classList.remove('light', 'dark');
+      root.classList.add(resolvedTheme);
     },
     { theme, resolvedTheme }
   );
 
-  // Wait for theme class to be applied
-  const expectedClass = resolvedTheme === 'dark' ? 'dark' : '';
+  // Wait for the theme class to be applied
   await page
     .waitForFunction(
       (expected) => {
         const html = document.documentElement;
-        return expected === 'dark' ? html.classList.contains('dark') : !html.classList.contains('dark');
+        return html.classList.contains(expected);
       },
-      expectedClass,
+      resolvedTheme,
       { timeout: 5000 }
     )
-    .catch(() => {
-      // Theme might already be set correctly, continue
+    .catch(async () => {
+      // If theme not applied, try applying directly again
+      await page.evaluate((themeClass) => {
+        const root = document.documentElement;
+        root.classList.remove('light', 'dark');
+        root.classList.add(themeClass);
+      }, resolvedTheme);
     });
 
+  // Small wait for any CSS transitions
   await page.waitForTimeout(100);
 }
 
 /**
- * Take a screenshot without masking (all data is deterministic with fixed date)
+ * Get locators for elements that should be masked in screenshots.
+ * These are worker-specific elements that would differ between parallel workers:
+ * - Household badge in header (shows "Test Worker N")
+ */
+function getWorkerSpecificMasks(page: Page): Locator[] {
+  return [
+    // Household badge in header - contains worker-specific household name
+    page.locator('[data-testid="household-badge"]'),
+  ];
+}
+
+/**
+ * Take a screenshot with worker-specific elements automatically masked.
+ * This ensures screenshots are consistent across parallel workers.
  */
 async function takeScreenshot(
   page: Page,
   name: string,
-  options?: { fullPage?: boolean }
+  options?: { fullPage?: boolean; mask?: Locator[] }
 ): Promise<void> {
+  // Combine default worker-specific masks with any additional masks provided
+  const defaultMasks = getWorkerSpecificMasks(page);
+  const allMasks = [...defaultMasks, ...(options?.mask ?? [])];
+
   await expect(page).toHaveScreenshot(name, {
     fullPage: options?.fullPage ?? false,
+    mask: allMasks,
   });
 }
 
@@ -283,6 +327,7 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
       waitForStableUI,
       setTheme,
       takeScreenshot,
+      getWorkerSpecificMasks,
     });
   },
 });

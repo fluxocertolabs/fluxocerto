@@ -282,9 +282,38 @@ export async function removeTestUser(email: string, workerIndex?: number): Promi
 }
 
 /**
- * Seed accounts with test data
+ * Seed accounts with test data using explicit household ID
+ * This is the preferred method for worker-scoped fixtures to ensure correct isolation
+ */
+export async function seedAccountsWithHousehold(
+  accounts: TestAccount[],
+  workerIndex: number,
+  householdId: string
+): Promise<TestAccount[]> {
+  const client = getAdminClient();
+  
+  const records = accounts.map((a) => ({
+    name: addWorkerPrefix(a.name, workerIndex),
+    type: a.type,
+    balance: a.balance,
+    owner_id: a.owner_id ?? null,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('accounts').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed accounts: ${error.message}`);
+  }
+
+  return data as TestAccount[];
+}
+
+/**
+ * Seed accounts with test data (legacy - uses email lookup)
  * When workerIndex is provided, prefixes names with worker identifier
  * When userEmail is provided, uses that user's household
+ * @deprecated Use seedAccountsWithHousehold for better isolation
  */
 export async function seedAccounts(
   accounts: TestAccount[],
@@ -316,8 +345,37 @@ export async function seedAccounts(
 }
 
 /**
- * Seed fixed expenses with test data
+ * Seed fixed expenses with test data using explicit household ID
+ */
+export async function seedExpensesWithHousehold(
+  expenses: TestExpense[],
+  workerIndex: number,
+  householdId: string
+): Promise<TestExpense[]> {
+  const client = getAdminClient();
+  
+  const records = expenses.map((e) => ({
+    name: addWorkerPrefix(e.name, workerIndex),
+    amount: e.amount,
+    due_day: e.due_day,
+    is_active: e.is_active,
+    type: 'fixed',
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('expenses').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed expenses: ${error.message}`);
+  }
+
+  return data as TestExpense[];
+}
+
+/**
+ * Seed fixed expenses with test data (legacy - uses email lookup)
  * Note: Fixed expenses are stored in the 'expenses' table with type='fixed'
+ * @deprecated Use seedExpensesWithHousehold for better isolation
  */
 export async function seedExpenses(
   expenses: TestExpense[],
@@ -350,8 +408,37 @@ export async function seedExpenses(
 }
 
 /**
- * Seed single-shot expenses with test data
+ * Seed single-shot expenses with test data using explicit household ID
+ */
+export async function seedSingleShotExpensesWithHousehold(
+  expenses: TestSingleShotExpense[],
+  workerIndex: number,
+  householdId: string
+): Promise<TestSingleShotExpense[]> {
+  const client = getAdminClient();
+  
+  const records = expenses.map((e) => ({
+    name: addWorkerPrefix(e.name, workerIndex),
+    amount: e.amount,
+    date: e.date,
+    type: 'single_shot',
+    due_day: null,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('expenses').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed single-shot expenses: ${error.message}`);
+  }
+
+  return data as TestSingleShotExpense[];
+}
+
+/**
+ * Seed single-shot expenses with test data (legacy - uses email lookup)
  * Note: Single-shot expenses are stored in the 'expenses' table with type='single_shot'
+ * @deprecated Use seedSingleShotExpensesWithHousehold for better isolation
  */
 export async function seedSingleShotExpenses(
   expenses: TestSingleShotExpense[],
@@ -384,9 +471,40 @@ export async function seedSingleShotExpenses(
 }
 
 /**
- * Seed projects/income with test data
+ * Seed projects/income with test data using explicit household ID
+ */
+export async function seedProjectsWithHousehold(
+  projects: TestProject[],
+  workerIndex: number,
+  householdId: string
+): Promise<TestProject[]> {
+  const client = getAdminClient();
+  
+  const records = projects.map((p) => ({
+    type: 'recurring',
+    name: addWorkerPrefix(p.name, workerIndex),
+    amount: p.amount,
+    frequency: p.frequency,
+    payment_schedule: p.payment_schedule,
+    certainty: p.certainty,
+    is_active: p.is_active,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('projects').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed projects: ${error.message}`);
+  }
+
+  return data as TestProject[];
+}
+
+/**
+ * Seed projects/income with test data (legacy - uses email lookup)
  * Note: user_id column was removed in migration 002_invite_auth.sql
  * Projects are now shared among all authenticated family members
+ * @deprecated Use seedProjectsWithHousehold for better isolation
  */
 export async function seedProjects(
   projects: TestProject[],
@@ -421,9 +539,41 @@ export async function seedProjects(
 }
 
 /**
- * Seed single-shot income with test data
+ * Seed single-shot income with test data using explicit household ID
+ */
+export async function seedSingleShotIncomeWithHousehold(
+  income: TestSingleShotIncome[],
+  workerIndex: number,
+  householdId: string
+): Promise<TestSingleShotIncome[]> {
+  const client = getAdminClient();
+  
+  const records = income.map((i) => ({
+    type: 'single_shot',
+    name: addWorkerPrefix(i.name, workerIndex),
+    amount: i.amount,
+    date: i.date,
+    certainty: i.certainty,
+    frequency: null,
+    payment_schedule: null,
+    is_active: null,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('projects').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed single-shot income: ${error.message}`);
+  }
+
+  return data as TestSingleShotIncome[];
+}
+
+/**
+ * Seed single-shot income with test data (legacy - uses email lookup)
  * Single-shot income is stored in the projects table with type='single_shot'
  * Note: user_id column was removed in migration 002_invite_auth.sql
+ * @deprecated Use seedSingleShotIncomeWithHousehold for better isolation
  */
 export async function seedSingleShotIncome(
   income: TestSingleShotIncome[],
@@ -459,7 +609,34 @@ export async function seedSingleShotIncome(
 }
 
 /**
- * Seed credit cards with test data
+ * Seed credit cards with test data using explicit household ID
+ */
+export async function seedCreditCardsWithHousehold(
+  cards: TestCreditCard[],
+  workerIndex: number,
+  householdId: string
+): Promise<TestCreditCard[]> {
+  const client = getAdminClient();
+  
+  const records = cards.map((c) => ({
+    name: addWorkerPrefix(c.name, workerIndex),
+    statement_balance: c.statement_balance,
+    due_day: c.due_day,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('credit_cards').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed credit cards: ${error.message}`);
+  }
+
+  return data as TestCreditCard[];
+}
+
+/**
+ * Seed credit cards with test data (legacy - uses email lookup)
+ * @deprecated Use seedCreditCardsWithHousehold for better isolation
  */
 export async function seedCreditCards(
   cards: TestCreditCard[],
@@ -619,7 +796,43 @@ export async function deleteProfileByEmail(email: string): Promise<void> {
 }
 
 /**
- * Seed complete test scenario with all entity types
+ * Seed complete test scenario with all entity types using explicit household ID
+ */
+export async function seedFullScenarioWithHousehold(
+  data: {
+    accounts?: TestAccount[];
+    expenses?: TestExpense[];
+    singleShotExpenses?: TestSingleShotExpense[];
+    projects?: TestProject[];
+    singleShotIncome?: TestSingleShotIncome[];
+    creditCards?: TestCreditCard[];
+  },
+  workerIndex: number,
+  householdId: string
+): Promise<void> {
+  if (data.accounts?.length) {
+    await seedAccountsWithHousehold(data.accounts, workerIndex, householdId);
+  }
+  if (data.expenses?.length) {
+    await seedExpensesWithHousehold(data.expenses, workerIndex, householdId);
+  }
+  if (data.singleShotExpenses?.length) {
+    await seedSingleShotExpensesWithHousehold(data.singleShotExpenses, workerIndex, householdId);
+  }
+  if (data.projects?.length) {
+    await seedProjectsWithHousehold(data.projects, workerIndex, householdId);
+  }
+  if (data.singleShotIncome?.length) {
+    await seedSingleShotIncomeWithHousehold(data.singleShotIncome, workerIndex, householdId);
+  }
+  if (data.creditCards?.length) {
+    await seedCreditCardsWithHousehold(data.creditCards, workerIndex, householdId);
+  }
+}
+
+/**
+ * Seed complete test scenario with all entity types (legacy - uses email lookup)
+ * @deprecated Use seedFullScenarioWithHousehold for better isolation
  */
 export async function seedFullScenario(
   data: {
@@ -719,13 +932,35 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
       return ensureTestUser(userEmail ?? email, workerIndex, householdId);
     },
     removeTestUser: (userEmail?: string) => removeTestUser(userEmail ?? email, workerIndex),
-    seedAccounts: (accounts: TestAccount[]) => seedAccounts(accounts, workerIndex, email),
-    seedExpenses: (expenses: TestExpense[]) => seedExpenses(expenses, workerIndex, email),
-    seedSingleShotExpenses: (expenses: TestSingleShotExpense[]) => seedSingleShotExpenses(expenses, workerIndex, email),
-    seedProjects: (projects: TestProject[]) => seedProjects(projects, workerIndex, email),
-    seedSingleShotIncome: (income: TestSingleShotIncome[]) => seedSingleShotIncome(income, workerIndex, email),
-    seedCreditCards: (cards: TestCreditCard[]) => seedCreditCards(cards, workerIndex, email),
-    seedFullScenario: (data: Parameters<typeof seedFullScenario>[0]) => seedFullScenario(data, workerIndex, email),
+    // CRITICAL: Pass household ID directly to avoid fallback to default household
+    seedAccounts: async (accounts: TestAccount[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedAccountsWithHousehold(accounts, workerIndex, householdId);
+    },
+    seedExpenses: async (expenses: TestExpense[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedExpensesWithHousehold(expenses, workerIndex, householdId);
+    },
+    seedSingleShotExpenses: async (expenses: TestSingleShotExpense[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedSingleShotExpensesWithHousehold(expenses, workerIndex, householdId);
+    },
+    seedProjects: async (projects: TestProject[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedProjectsWithHousehold(projects, workerIndex, householdId);
+    },
+    seedSingleShotIncome: async (income: TestSingleShotIncome[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedSingleShotIncomeWithHousehold(income, workerIndex, householdId);
+    },
+    seedCreditCards: async (cards: TestCreditCard[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedCreditCardsWithHousehold(cards, workerIndex, householdId);
+    },
+    seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedFullScenarioWithHousehold(data, workerIndex, householdId);
+    },
     seedHouseholds: (households: TestHousehold[]) => seedHouseholds(households, workerIndex),
     expenseExists,
     projectExists,
