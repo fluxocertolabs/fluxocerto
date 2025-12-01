@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useFinanceData } from '@/hooks/use-finance-data'
+import { useHousehold } from '@/hooks/use-household'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { useFinanceStore } from '@/stores/finance-store'
 import { AccountList } from '@/components/manage/accounts/account-list'
@@ -21,7 +23,8 @@ import { SingleShotExpenseForm } from '@/components/manage/expenses/single-shot-
 import { CreditCardList } from '@/components/manage/credit-cards/credit-card-list'
 import { CreditCardForm } from '@/components/manage/credit-cards/credit-card-form'
 import { DeleteConfirmation } from '@/components/manage/shared/delete-confirmation'
-import { PageLoadingWrapper, ManageSkeleton } from '@/components/loading'
+import { MembersList } from '@/components/household'
+import { PageLoadingWrapper, ManageSkeleton, SkeletonLine } from '@/components/loading'
 import { cn } from '@/lib/utils'
 import type {
   BankAccount,
@@ -36,7 +39,7 @@ import type {
   CreditCardInput,
 } from '@/types'
 
-type TabValue = 'accounts' | 'projects' | 'expenses' | 'cards'
+type TabValue = 'accounts' | 'projects' | 'expenses' | 'cards' | 'household'
 
 type DialogState =
   | { type: 'none' }
@@ -65,7 +68,7 @@ type DeleteState =
 export function ManagePage() {
   const [activeTab, setActiveTab] = useState<TabValue>(() => {
     const stored = sessionStorage.getItem('manage-active-tab')
-    if (stored && ['accounts', 'projects', 'expenses', 'cards'].includes(stored)) {
+    if (stored && ['accounts', 'projects', 'expenses', 'cards', 'household'].includes(stored)) {
       return stored as TabValue
     }
     return 'accounts'
@@ -78,6 +81,7 @@ export function ManagePage() {
   const [error, setError] = useState<string | null>(null)
 
   const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, profiles, isLoading, error: fetchError, retry } = useFinanceData()
+  const { household, members, isLoading: householdLoading, error: householdError } = useHousehold()
   const store = useFinanceStore()
 
   // Coordinated loading state for smooth transitions
@@ -516,11 +520,12 @@ export function ManagePage() {
       >
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <TabsList className="grid w-full sm:w-auto grid-cols-4">
+            <TabsList className="grid w-full sm:w-auto grid-cols-5">
               <TabsTrigger value="accounts">Contas</TabsTrigger>
               <TabsTrigger value="projects">Receitas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
               <TabsTrigger value="cards">Cartões</TabsTrigger>
+              <TabsTrigger value="household">Residência</TabsTrigger>
             </TabsList>
 
             {activeTab === 'accounts' && (
@@ -615,6 +620,35 @@ export function ManagePage() {
               }}
               onUpdateBalance={handleUpdateCreditCardBalance}
             />
+          </TabsContent>
+
+          <TabsContent value="household">
+            <Card>
+              <CardHeader>
+                <CardTitle>Membros da Residência</CardTitle>
+                <CardDescription>
+                  {household ? (
+                    <>Membros da residência <strong>{household.name}</strong></>
+                  ) : (
+                    'Carregando...'
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {householdLoading ? (
+                  <div className="space-y-2">
+                    <SkeletonLine width="w-full" height="h-10" />
+                    <SkeletonLine width="w-full" height="h-10" />
+                  </div>
+                ) : householdError ? (
+                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    {householdError}
+                  </div>
+                ) : (
+                  <MembersList members={members} />
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </PageLoadingWrapper>

@@ -50,6 +50,7 @@ export function mapProfileFromDb(row: ProfileRow): Profile {
   return {
     id: row.id,
     name: row.name,
+    householdId: row.household_id,
   }
 }
 

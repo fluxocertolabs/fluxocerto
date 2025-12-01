@@ -1,9 +1,20 @@
 import { z } from 'zod'
 
+// === Household ===
+export const HouseholdSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type Household = z.infer<typeof HouseholdSchema>
+
 // === Profile (Owner) ===
 export const ProfileSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),
+  householdId: z.string().uuid(),
 })
 
 export type Profile = z.infer<typeof ProfileSchema>

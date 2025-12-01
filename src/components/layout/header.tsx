@@ -2,12 +2,15 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme'
+import { HouseholdBadge } from '@/components/household'
 import { signOut } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
+import { useHousehold } from '@/hooks/use-household'
 
 export function Header() {
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuth()
+  const { household, isLoading: householdLoading } = useHousehold()
 
   const handleSignOut = async () => {
     const { error } = await signOut()
@@ -20,12 +23,17 @@ export function Header() {
   return (
     <header className="border-b bg-background">
       <nav className="container mx-auto flex items-center justify-between h-14 px-4">
-        <Link
-          to="/"
-          className="font-semibold text-lg text-foreground hover:text-foreground/80 transition-colors cursor-pointer"
-        >
-          Finanças da Família
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="font-semibold text-lg text-foreground hover:text-foreground/80 transition-colors cursor-pointer"
+          >
+            Finanças da Família
+          </Link>
+          {isAuthenticated && household && !householdLoading && (
+            <HouseholdBadge name={household.name} />
+          )}
+        </div>
         <div className="flex items-center gap-4">
           <NavLink
             to="/"

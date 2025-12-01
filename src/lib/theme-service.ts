@@ -3,7 +3,7 @@
  * Handles fetching, saving, and deleting theme preferences.
  */
 
-import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
+import { getSupabase, getHouseholdId, isSupabaseConfigured } from '@/lib/supabase'
 import type { ThemeValue } from '@/types/theme'
 import { themeValueSchema } from '@/types/theme'
 
@@ -77,17 +77,25 @@ export async function saveThemePreference(theme: ThemeValue): Promise<void> {
     return
   }
 
+  // Get current user's household_id
+  const householdId = await getHouseholdId()
+  if (!householdId) {
+    console.warn('Cannot save theme preference: household not found')
+    return
+  }
+
   for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
     try {
       const { error } = await supabase.from('user_preferences').upsert(
         {
           user_id: user.id,
+          household_id: householdId,
           key: 'theme',
           value: theme,
           updated_at: new Date().toISOString(),
         },
         {
-          onConflict: 'user_id,key',
+          onConflict: 'household_id,key',
         }
       )
 

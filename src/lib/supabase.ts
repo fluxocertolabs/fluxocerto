@@ -2,11 +2,19 @@ import { createClient, type SupabaseClient, type User } from '@supabase/supabase
 import type { Result } from '@/stores/finance-store'
 
 // Database row types for type-safe responses
-// Note: user_id removed - all authenticated users share data
+
+export interface HouseholdRow {
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
 export interface ProfileRow {
   id: string
   name: string
   email: string | null
+  household_id: string
   created_at: string
   created_by: string | null
 }
@@ -249,6 +257,99 @@ export async function signOut(): Promise<{ error: Error | null }> {
  */
 export function isOnline(): boolean {
   return navigator.onLine
+}
+
+/**
+ * Get the current user's household_id.
+ * Returns null if not authenticated or no profile found.
+ */
+export async function getHouseholdId(): Promise<string | null> {
+  if (!isSupabaseConfigured()) {
+    return null
+  }
+
+  const client = getSupabase()
+  const { data: { user } } = await client.auth.getUser()
+  
+  if (!user) {
+    return null
+  }
+
+  const { data: profile, error } = await client
+    .from('profiles')
+    .select('household_id')
+    .eq('id', user.id)
+    .single()
+
+  if (error || !profile) {
+    return null
+  }
+
+  return profile.household_id
+}
+
+/**
+ * Invite a new user to the current user's household.
+ * Creates a profile entry with the household_id, allowing the user to sign up.
+ * 
+ * @param email - Email address of the user to invite
+ * @returns Result with success/error status
+ */
+export async function inviteUser(email: string): Promise<Result<void>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+  
+  // Get current user's household_id
+  const householdId = await getHouseholdId()
+  if (!householdId) {
+    return { success: false, error: 'Não foi possível identificar sua residência' }
+  }
+
+  // Check if email already exists in any household
+  const { data: existingProfile, error: checkError } = await client
+    .from('profiles')
+    .select('id, household_id')
+    .eq('email', email.toLowerCase())
+    .maybeSingle()
+
+  if (checkError) {
+    return handleSupabaseError(checkError)
+  }
+
+  if (existingProfile) {
+    if (existingProfile.household_id === householdId) {
+      return { success: false, error: 'Este email já é membro da sua residência' }
+    }
+    return { success: false, error: 'Este email já pertence a outra residência' }
+  }
+
+  // Extract name from email (part before @)
+  const name = email.split('@')[0].replace(/[._-]/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+
+  // Create profile with household_id
+  const { error: insertError } = await client
+    .from('profiles')
+    .insert({
+      name,
+      email: email.toLowerCase(),
+      household_id: householdId,
+    })
+
+  if (insertError) {
+    // Handle duplicate key error specifically
+    if (insertError.code === '23505') {
+      return { success: false, error: 'Este email já está cadastrado no sistema' }
+    }
+    return handleSupabaseError(insertError)
+  }
+
+  return { success: true, data: undefined }
 }
 
 // Error code mappings for Supabase/PostgREST errors

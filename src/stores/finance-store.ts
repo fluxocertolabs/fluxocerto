@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { z } from 'zod'
 import {
   getSupabase,
+  getHouseholdId,
   handleSupabaseError,
   isSupabaseConfigured,
 } from '../lib/supabase'
@@ -110,13 +111,18 @@ function checkSupabaseConfigured(): Result<never> | null {
 
 export const useFinanceStore = create<FinanceStore>()(() => ({
   // === Bank Account Actions ===
-  // Note: user_id removed - all authenticated users share data
   addAccount: async (input) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
     try {
       const validated = BankAccountInputSchema.parse(input)
+      
+      // Get current user's household_id
+      const householdId = await getHouseholdId()
+      if (!householdId) {
+        return { success: false, error: 'Não foi possível identificar sua residência' }
+      }
 
       const { data, error } = await getSupabase()
         .from('accounts')
@@ -125,6 +131,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           type: validated.type,
           balance: validated.balance,
           owner_id: validated.ownerId ?? null,
+          household_id: householdId,
         })
         .select('id')
         .single()
@@ -203,6 +210,12 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = ProjectInputSchema.parse(input)
+      
+      // Get current user's household_id
+      const householdId = await getHouseholdId()
+      if (!householdId) {
+        return { success: false, error: 'Não foi possível identificar sua residência' }
+      }
 
       const { data, error } = await getSupabase()
         .from('projects')
@@ -213,6 +226,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           payment_schedule: validated.paymentSchedule,
           certainty: validated.certainty,
           is_active: validated.isActive,
+          household_id: householdId,
         })
         .select('id')
         .single()
@@ -328,6 +342,12 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = FixedExpenseInputSchema.parse(input)
+      
+      // Get current user's household_id
+      const householdId = await getHouseholdId()
+      if (!householdId) {
+        return { success: false, error: 'Não foi possível identificar sua residência' }
+      }
 
       const { data, error } = await getSupabase()
         .from('expenses')
@@ -338,6 +358,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           due_day: validated.dueDay,
           date: null,
           is_active: validated.isActive,
+          household_id: householdId,
         })
         .select('id')
         .single()
@@ -451,6 +472,12 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = SingleShotExpenseInputSchema.parse(input)
+      
+      // Get current user's household_id
+      const householdId = await getHouseholdId()
+      if (!householdId) {
+        return { success: false, error: 'Não foi possível identificar sua residência' }
+      }
 
       const { data, error } = await getSupabase()
         .from('expenses')
@@ -461,6 +488,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           date: validated.date.toISOString().split('T')[0],
           due_day: null,
           is_active: true,
+          household_id: householdId,
         })
         .select('id')
         .single()
@@ -537,6 +565,12 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = SingleShotIncomeInputSchema.parse(input)
+      
+      // Get current user's household_id
+      const householdId = await getHouseholdId()
+      if (!householdId) {
+        return { success: false, error: 'Não foi possível identificar sua residência' }
+      }
 
       const { data, error } = await getSupabase()
         .from('projects')
@@ -549,6 +583,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           frequency: null,
           payment_schedule: null,
           is_active: null,
+          household_id: householdId,
         })
         .select('id')
         .single()
@@ -626,6 +661,12 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
     try {
       const validated = CreditCardInputSchema.parse(input)
+      
+      // Get current user's household_id
+      const householdId = await getHouseholdId()
+      if (!householdId) {
+        return { success: false, error: 'Não foi possível identificar sua residência' }
+      }
 
       const { data, error } = await getSupabase()
         .from('credit_cards')
@@ -634,6 +675,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           statement_balance: validated.statementBalance,
           due_day: validated.dueDay,
           owner_id: validated.ownerId ?? null,
+          household_id: householdId,
         })
         .select('id')
         .single()

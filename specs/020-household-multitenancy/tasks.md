@@ -29,29 +29,29 @@ No setup tasks required. Project structure exists and all dependencies are alrea
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T001 Create migration file `supabase/migrations/009_households.sql`
-- [ ] T002 Add households table with id, name, created_at, updated_at columns in `supabase/migrations/009_households.sql`
-- [ ] T003 Add `get_user_household_id()` helper function in `supabase/migrations/009_households.sql`
-- [ ] T004 Insert default household "Fonseca Floriano" in `supabase/migrations/009_households.sql`
-- [ ] T005 Add `household_id` FK column to `profiles` table with NOT NULL constraint in `supabase/migrations/009_households.sql`
-- [ ] T006 Add `household_id` FK column to `accounts` table in `supabase/migrations/009_households.sql`
-- [ ] T007 Add `household_id` FK column to `projects` table in `supabase/migrations/009_households.sql`
-- [ ] T008 Add `household_id` FK column to `expenses` table in `supabase/migrations/009_households.sql`
-- [ ] T009 Add `household_id` FK column to `credit_cards` table in `supabase/migrations/009_households.sql`
-- [ ] T010 Add `household_id` FK column to `user_preferences` table with updated unique constraint in `supabase/migrations/009_households.sql`
-- [ ] T011 Create indexes on `household_id` for all modified tables in `supabase/migrations/009_households.sql`
-- [ ] T012 Drop existing RLS policies (USING true) from all tables in `supabase/migrations/009_households.sql`
-- [ ] T013 Create household-based RLS policies for `households` table in `supabase/migrations/009_households.sql`
-- [ ] T014 Create household-based RLS policies for `profiles` table in `supabase/migrations/009_households.sql`
-- [ ] T015 Create household-based RLS policies for `accounts` table in `supabase/migrations/009_households.sql`
-- [ ] T016 Create household-based RLS policies for `projects` table in `supabase/migrations/009_households.sql`
-- [ ] T017 Create household-based RLS policies for `expenses` table in `supabase/migrations/009_households.sql`
-- [ ] T018 Create household-based RLS policies for `credit_cards` table in `supabase/migrations/009_households.sql`
-- [ ] T019 Create household-based RLS policies for `user_preferences` table in `supabase/migrations/009_households.sql`
-- [ ] T020 Update existing records to reference default household in `supabase/migrations/009_households.sql`
-- [ ] T021 Apply migration to database with `supabase db push`
-- [ ] T022 Verify migration: confirm households table exists and default household created
-- [ ] T023 Verify migration: confirm all existing data assigned to default household
+- [X] T001 Create migration file `supabase/migrations/009_households.sql`
+- [X] T002 Add households table with id, name, created_at, updated_at columns in `supabase/migrations/009_households.sql`
+- [X] T003 Add `get_user_household_id()` helper function in `supabase/migrations/009_households.sql`
+- [X] T004 Insert default household "Fonseca Floriano" in `supabase/migrations/009_households.sql`
+- [X] T005 Add `household_id` FK column to `profiles` table with NOT NULL constraint in `supabase/migrations/009_households.sql`
+- [X] T006 Add `household_id` FK column to `accounts` table in `supabase/migrations/009_households.sql`
+- [X] T007 Add `household_id` FK column to `projects` table in `supabase/migrations/009_households.sql`
+- [X] T008 Add `household_id` FK column to `expenses` table in `supabase/migrations/009_households.sql`
+- [X] T009 Add `household_id` FK column to `credit_cards` table in `supabase/migrations/009_households.sql`
+- [X] T010 Add `household_id` FK column to `user_preferences` table with updated unique constraint in `supabase/migrations/009_households.sql`
+- [X] T011 Create indexes on `household_id` for all modified tables in `supabase/migrations/009_households.sql`
+- [X] T012 Drop existing RLS policies (USING true) from all tables in `supabase/migrations/009_households.sql`
+- [X] T013 Create household-based RLS policies for `households` table in `supabase/migrations/009_households.sql`
+- [X] T014 Create household-based RLS policies for `profiles` table in `supabase/migrations/009_households.sql`
+- [X] T015 Create household-based RLS policies for `accounts` table in `supabase/migrations/009_households.sql`
+- [X] T016 Create household-based RLS policies for `projects` table in `supabase/migrations/009_households.sql`
+- [X] T017 Create household-based RLS policies for `expenses` table in `supabase/migrations/009_households.sql`
+- [X] T018 Create household-based RLS policies for `credit_cards` table in `supabase/migrations/009_households.sql`
+- [X] T019 Create household-based RLS policies for `user_preferences` table in `supabase/migrations/009_households.sql`
+- [X] T020 Update existing records to reference default household in `supabase/migrations/009_households.sql`
+- [X] T021 Apply migration to database with `supabase db push`
+- [X] T022 Verify migration: confirm households table exists and default household created
+- [X] T023 Verify migration: confirm all existing data assigned to default household
 
 **Checkpoint**: Database ready - user story implementation can now begin in parallel
 
@@ -65,27 +65,27 @@ No setup tasks required. Project structure exists and all dependencies are alrea
 
 ### Type Definitions (Parallel)
 
-- [ ] T024 [P] [US1] Add `HouseholdSchema` Zod schema and `Household` type to `src/types/index.ts`
-- [ ] T025 [P] [US1] Update `ProfileSchema` to include `householdId` field in `src/types/index.ts`
-- [ ] T026 [P] [US1] Add `HouseholdRow` interface to `src/lib/supabase.ts`
-- [ ] T027 [P] [US1] Update `ProfileRow` interface to include `household_id` in `src/lib/supabase.ts`
+- [X] T024 [P] [US1] Add `HouseholdSchema` Zod schema and `Household` type to `src/types/index.ts`
+- [X] T025 [P] [US1] Update `ProfileSchema` to include `householdId` field in `src/types/index.ts`
+- [X] T026 [P] [US1] Add `HouseholdRow` interface to `src/lib/supabase.ts`
+- [X] T027 [P] [US1] Update `ProfileRow` interface to include `household_id` in `src/lib/supabase.ts`
 
 ### RLS Isolation Verification (SC-007)
 
-- [ ] T028 [US1] Verify RLS isolation: Create test household B in database
-- [ ] T029 [US1] Verify RLS isolation: Query accounts as user from household A, confirm zero results from household B
-- [ ] T030 [US1] Verify RLS isolation: Query projects, expenses, credit_cards, user_preferences with same cross-household test
-- [ ] T031 [US1] Verify RLS isolation: Attempt INSERT with wrong household_id, confirm RLS rejects
+- [X] T028 [US1] Verify RLS isolation: Create test household B in database
+- [X] T029 [US1] Verify RLS isolation: Query accounts as user from household A, confirm zero results from household B
+- [X] T030 [US1] Verify RLS isolation: Query projects, expenses, credit_cards, user_preferences with same cross-household test
+- [X] T031 [US1] Verify RLS isolation: Attempt INSERT with wrong household_id, confirm RLS rejects
 
 ### Data Layer Updates
 
-- [ ] T032 [US1] Update `mapProfileFromDb` function to map `household_id` → `householdId` in `src/hooks/use-finance-data.ts`
-- [ ] T033 [US1] Create `getHouseholdId` helper function to fetch current user's household_id in `src/lib/supabase.ts`
-- [ ] T034 [US1] Update `addAccount` store method to include `household_id` in `src/stores/finance-store.ts`
-- [ ] T035 [US1] Update `addProject` store method to include `household_id` in `src/stores/finance-store.ts`
-- [ ] T036 [US1] Update `addExpense` store method to include `household_id` in `src/stores/finance-store.ts`
-- [ ] T037 [US1] Update `addCreditCard` store method to include `household_id` in `src/stores/finance-store.ts`
-- [ ] T038 [US1] Update `updateUserPreference` store method to include `household_id` in `src/stores/finance-store.ts`
+- [X] T032 [US1] Update `mapProfileFromDb` function to map `household_id` → `householdId` in `src/hooks/use-finance-data.ts`
+- [X] T033 [US1] Create `getHouseholdId` helper function to fetch current user's household_id in `src/lib/supabase.ts`
+- [X] T034 [US1] Update `addAccount` store method to include `household_id` in `src/stores/finance-store.ts`
+- [X] T035 [US1] Update `addProject` store method to include `household_id` in `src/stores/finance-store.ts`
+- [X] T036 [US1] Update `addExpense` store method to include `household_id` in `src/stores/finance-store.ts`
+- [X] T037 [US1] Update `addCreditCard` store method to include `household_id` in `src/stores/finance-store.ts`
+- [X] T038 [US1] Update `updateUserPreference` store method to include `household_id` in `src/stores/finance-store.ts`
 
 **Checkpoint**: Data isolation is enforced - User Story 1 is fully functional and testable independently
 
@@ -99,10 +99,10 @@ No setup tasks required. Project structure exists and all dependencies are alrea
 
 ### Implementation for User Story 2
 
-- [ ] T039 [US2] Update invite function to include `household_id` when creating profile in `src/lib/supabase.ts` (inviteUser function)
-- [ ] T040 [US2] Add validation to reject invites for emails already in a household in `src/lib/supabase.ts`
-- [ ] T041 [US2] Add pre-registration validation to verify household assignment is valid before profile creation completes (FR-014) in `src/lib/supabase.ts`
-- [ ] T042 [US2] Update invite error handling with PT-BR messages ("Este email já pertence a outra residência") in `src/lib/supabase.ts`
+- [X] T039 [US2] Update invite function to include `household_id` when creating profile in `src/lib/supabase.ts` (inviteUser function)
+- [X] T040 [US2] Add validation to reject invites for emails already in a household in `src/lib/supabase.ts`
+- [X] T041 [US2] Add pre-registration validation to verify household assignment is valid before profile creation completes (FR-014) in `src/lib/supabase.ts`
+- [X] T042 [US2] Update invite error handling with PT-BR messages ("Este email já pertence a outra residência") in `src/lib/supabase.ts`
 
 **Checkpoint**: Invite flow assigns correct household - User Story 2 is fully functional and testable independently
 
@@ -116,13 +116,13 @@ No setup tasks required. Project structure exists and all dependencies are alrea
 
 ### Implementation for User Story 3
 
-- [ ] T043 [P] [US3] Create household directory `src/components/household/`
-- [ ] T044 [P] [US3] Create `HouseholdBadge` component in `src/components/household/household-badge.tsx`
-- [ ] T045 [P] [US3] Create `MembersList` component in `src/components/household/members-list.tsx`
-- [ ] T046 [P] [US3] Create `UseHouseholdReturn` interface and `useHousehold` hook in `src/hooks/use-household.ts`
-- [ ] T047 [US3] Update header to display household badge using `useHousehold` hook in `src/components/layout/header.tsx`
-- [ ] T048 [US3] Add "Membros da Residência" section to manage page using `MembersList` component in `src/pages/manage.tsx`
-- [ ] T049 [US3] Add orphaned household error state handling ("Sua conta está desassociada. Entre em contato com o administrador.") in `src/hooks/use-household.ts`
+- [X] T043 [P] [US3] Create household directory `src/components/household/`
+- [X] T044 [P] [US3] Create `HouseholdBadge` component in `src/components/household/household-badge.tsx`
+- [X] T045 [P] [US3] Create `MembersList` component in `src/components/household/members-list.tsx`
+- [X] T046 [P] [US3] Create `UseHouseholdReturn` interface and `useHousehold` hook in `src/hooks/use-household.ts`
+- [X] T047 [US3] Update header to display household badge using `useHousehold` hook in `src/components/layout/header.tsx`
+- [X] T048 [US3] Add "Membros da Residência" section to manage page using `MembersList` component in `src/pages/manage.tsx`
+- [X] T049 [US3] Add orphaned household error state handling ("Sua conta está desassociada. Entre em contato com o administrador.") in `src/hooks/use-household.ts`
 
 **Checkpoint**: Household info visible in UI - User Story 3 is fully functional and testable independently
 
@@ -134,11 +134,11 @@ No setup tasks required. Project structure exists and all dependencies are alrea
 
 ### Core Verification
 
-- [ ] T050 Verify all existing functionality works correctly scoped to household context
-- [ ] T051 Verify TypeScript compiles without errors (`pnpm tsc --noEmit`)
+- [X] T050 Verify all existing functionality works correctly scoped to household context
+- [X] T051 Verify TypeScript compiles without errors (`pnpm tsc --noEmit`)
 - [ ] T052 Verify no console errors during normal operation
 - [ ] T053 Run quickstart.md verification checklist
-- [ ] T054 Run linting and fix any issues (`pnpm lint`)
+- [X] T054 Run linting and fix any issues (`pnpm lint`)
 
 ### Edge Case Verification
 
