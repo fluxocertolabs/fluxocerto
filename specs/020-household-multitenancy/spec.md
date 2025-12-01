@@ -20,7 +20,7 @@ Como usuário de uma residência, preciso que meus dados financeiros sejam compl
 1. **Given** User A belongs to Household Alpha with 3 accounts, **When** User A views the accounts list, **Then** User A sees only the 3 accounts from Household Alpha
 2. **Given** User B belongs to Household Beta with 2 projects, **When** User B accesses the projects page, **Then** User B sees only the 2 projects from Household Beta
 3. **Given** User A belongs to Household Alpha, **When** User A attempts to access data from Household Beta via direct URL or API, **Then** the system returns empty results or access denied
-4. **Given** existing data from before the migration, **When** the migration completes, **Then** all existing data is assigned to the default "Família Padrão" household
+4. **Given** existing data from before the migration, **When** the migration completes, **Then** all existing data is assigned to the default "Fonseca Floriano" household
 
 ---
 
@@ -60,7 +60,7 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 ### Edge Cases
 
 - What happens when a user tries to access data after their household is deleted? System should gracefully handle orphaned users by blocking access and displaying appropriate message.
-- What happens when the last member of a household is removed? The household should remain with its data intact (admin-only deletion).
+- What happens when the last member of a household is removed? (Admin-only scenario in v1) The household should remain with its data intact; household deletion is admin-only via direct database access.
 - What happens when an invite is sent to an email that's already pending invite to another household? System should reject the invite with clear error message.
 - What happens when two users from different households try to invite the same new email simultaneously? First invite to complete wins; second receives "user already belongs to a household" error.
 - What happens to shared data during the migration if relationships exist across what would become different households? Not applicable - current system has single-tenant data, migration assigns ALL existing data to single default household.
@@ -84,7 +84,7 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 - **FR-008**: System MUST apply household-based access control at the database level (Row Level Security)
 
 **Migration**
-- **FR-009**: System MUST create a default household named "Família Padrão" during migration
+- **FR-009**: System MUST create a default household named "Fonseca Floriano" during migration
 - **FR-010**: System MUST assign all existing profiles and their associated data to the default household during migration
 - **FR-011**: System MUST complete migration without data loss or service interruption
 
@@ -102,6 +102,7 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 - **FR-018**: System MUST NOT allow users to switch between households
 - **FR-019**: System MUST NOT allow users to transfer to different households
 - **FR-020**: System MUST NOT allow self-service household creation (admin-only)
+- **FR-021**: System MUST NOT allow member removal via UI (admin-only via direct database access)
 
 ### Key Entities
 
@@ -121,8 +122,24 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 - **SC-006**: All existing application functionality continues to work correctly, scoped to household context
 - **SC-007**: 100% of RLS policy tests pass, verifying isolation between at least 2 distinct households
 
+## Clarifications
+
+### Session 2025-12-01
+
+- Q: Should there be differentiated roles (owner vs member) within a household? → A: All members equal - anyone can invite new members
+- Q: What is the canonical terminology for household concept? → A: "household" for code/DB, "residência" for user-facing PT-BR text
+- Q: Should there be a maximum number of members per household? → A: No limit - unlimited members per household
+- Q: How can members be removed from a household in v1? → A: No member removal in v1 - admin-only via direct database
+- Q: Should there be rate limiting on invites to prevent spam? → A: No rate limiting - trust users fully
+- Q: What should the default household name be for migrated users? → A: "Fonseca Floriano"
+
 ## Assumptions
 
+- All household members have equal permissions; there is no owner/admin distinction in v1 (any member can invite new members)
+- Terminology: "household" is the canonical term in code, database, and API; "residência" is used for all user-facing PT-BR text
+- No limit on members per household; UI should handle large member lists gracefully (scroll/pagination if needed)
+- No rate limiting on invites; users are trusted (can be revisited if abuse occurs)
+- Default household for migration is named "Fonseca Floriano" (all existing users/data assigned here)
 - The application currently operates with a single implicit household (all users see all data)
 - Magic link authentication flow remains unchanged; only the profile creation step is modified
 - Household names are display-only and don't need to be unique across the system
