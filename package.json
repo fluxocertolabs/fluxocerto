@@ -23,8 +23,10 @@
     "test:e2e:debug": "pnpm test:e2e:setup && playwright test --config e2e/playwright.config.ts --debug",
     "test:e2e:report": "playwright show-report",
     "test:e2e:setup": "npx supabase status > /dev/null 2>&1 || npx supabase start",
-    "test:visual": "pnpm test:e2e:setup && playwright test --config e2e/playwright.config.ts --project=visual",
-    "test:visual:update": "docker run --rm --network host -v $(pwd):/work -w /work -e CI=true mcr.microsoft.com/playwright:v1.57.0-jammy /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm test:visual --update-snapshots'",
+    "test:visual": "pnpm test:e2e:setup && pnpm test:visual:docker",
+    "test:visual:docker": "docker run --rm --network host -v $(pwd):/work -w /work -e CI=true -e VITE_SUPABASE_URL=http://localhost:54321 -e VITE_SUPABASE_ANON_KEY=$(npx supabase status -o json | jq -r '.ANON_KEY') -e SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o json | jq -r '.SERVICE_ROLE_KEY') -e INBUCKET_URL=http://localhost:54324 -e BASE_URL=http://localhost:5173 -e TEST_USER_EMAIL=e2e-test@example.com mcr.microsoft.com/playwright:v1.57.0-jammy /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && (pnpm dev:app &) && npx wait-on http://localhost:5173 -t 60000 && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual'",
+    "test:visual:update": "pnpm test:e2e:setup && docker run --rm --network host -v $(pwd):/work -w /work -e CI=true -e VITE_SUPABASE_URL=http://localhost:54321 -e VITE_SUPABASE_ANON_KEY=$(npx supabase status -o json | jq -r '.ANON_KEY') -e SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o json | jq -r '.SERVICE_ROLE_KEY') -e INBUCKET_URL=http://localhost:54324 -e BASE_URL=http://localhost:5173 -e TEST_USER_EMAIL=e2e-test@example.com mcr.microsoft.com/playwright:v1.57.0-jammy /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && (pnpm dev:app &) && npx wait-on http://localhost:5173 -t 60000 && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual --update-snapshots'",
+    "test:visual:local": "pnpm test:e2e:setup && playwright test --config e2e/playwright.config.ts --project=setup --project=visual",
     "test:visual:report": "playwright show-report",
     "prepare": "husky"
   },

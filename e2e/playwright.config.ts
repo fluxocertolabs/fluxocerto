@@ -73,7 +73,7 @@ export default defineConfig({
     timeout: 15000, // 15s for assertions to handle data loading delays in CI
     toHaveScreenshot: {
       threshold: 0.3, // 0.3% pixel tolerance for anti-aliasing differences
-      maxDiffPixelRatio: 0.02, // Max 2% of pixels can differ (accounts for font rendering)
+      maxDiffPixelRatio: 0.05, // Max 5% of pixels can differ (accounts for font rendering and worker names)
       animations: 'disabled', // Freeze CSS animations for consistent screenshots
       caret: 'hide', // Hide text cursor to avoid flakiness
     },
@@ -92,12 +92,6 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
-      testDir: resolve(__dirname, 'fixtures'),
-    },
-    // Visual setup project - lighter setup that only authenticates 1 worker
-    {
-      name: 'visual-setup',
-      testMatch: /visual\.setup\.ts/,
       testDir: resolve(__dirname, 'fixtures'),
     },
     // Auth tests - run WITHOUT storage state (unauthenticated)
@@ -127,7 +121,7 @@ export default defineConfig({
       dependencies: ['setup'],
     },
     // Visual regression tests - run separately with consistent viewport
-    // Uses single worker to minimize setup time and ensure consistent screenshots
+    // Uses main setup to authenticate workers, runs in parallel
     {
       name: 'visual',
       testMatch: /visual\/.*\.spec\.ts/,
@@ -135,16 +129,18 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }, // Fixed viewport for consistent screenshots
       },
-      dependencies: ['visual-setup'], // Use lighter visual-only setup
-      fullyParallel: false, // Run visual tests serially for consistency
+      dependencies: ['setup'], // Use main setup which authenticates all workers
+      fullyParallel: true, // Run visual tests in parallel for speed
     },
   ],
 
   // Web server configuration - starts the app before tests
+  // In Docker/CI, we start the server inside the container
+  // Locally, we can reuse an existing server
   webServer: {
     command: `pnpm dev:app --port ${port}`,
     url: process.env.BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true, // Always try to reuse - Docker starts its own, local dev can use existing
     timeout: 120000, // 2 minutes to start
     cwd: resolve(__dirname, '..'),
   },

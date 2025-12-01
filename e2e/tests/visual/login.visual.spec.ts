@@ -16,9 +16,8 @@ test.describe('Login Page Visual Regression @visual', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test('login page - initial state (light theme)', async ({ page }) => {
-    await setTheme(page, 'light');
-
     await page.goto('/login');
+    await setTheme(page, 'light');
     await waitForStableUI(page);
 
     // Verify the login form is visible
@@ -29,9 +28,8 @@ test.describe('Login Page Visual Regression @visual', () => {
   });
 
   test('login page - initial state (dark theme)', async ({ page }) => {
-    await setTheme(page, 'dark');
-
     await page.goto('/login');
+    await setTheme(page, 'dark');
     await waitForStableUI(page);
 
     // Verify the login form is visible
@@ -41,9 +39,8 @@ test.describe('Login Page Visual Regression @visual', () => {
   });
 
   test('login page - after magic link requested', async ({ page }) => {
-    await setTheme(page, 'light');
-
     await page.goto('/login');
+    await setTheme(page, 'light');
     await waitForStableUI(page);
 
     // Fill in email and submit

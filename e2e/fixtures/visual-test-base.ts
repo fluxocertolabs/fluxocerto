@@ -1,10 +1,10 @@
 /**
  * Visual Test Base Fixture
  * Extended Playwright test with helpers for visual regression testing
- * Includes masking utilities for dynamic content and theme setup helpers
+ * Based on test-base.ts but adds visual testing utilities
  */
 
-import { test as base, expect, type Page, type Locator } from '@playwright/test';
+import { test as base, expect, type Page, type Locator, type BrowserContext } from '@playwright/test';
 import { createWorkerDbFixture, type WorkerDatabaseFixture } from './db';
 import { AuthFixture, createWorkerAuthFixture } from './auth';
 import { getWorkerContext, type IWorkerContext } from './worker-context';
@@ -25,7 +25,6 @@ type ThemeMode = 'light' | 'dark' | 'system';
 export interface VisualTestHelpers {
   /**
    * Get locators for dynamic content that should be masked in screenshots
-   * This includes currency values, dates, UUIDs, and worker-prefixed names
    */
   getDynamicMasks(page: Page): Promise<Locator[]>;
 
@@ -35,7 +34,7 @@ export interface VisualTestHelpers {
   waitForStableUI(page: Page): Promise<void>;
 
   /**
-   * Set the theme mode before taking screenshots
+   * Set the theme mode (call AFTER navigation)
    */
   setTheme(page: Page, theme: ThemeMode): Promise<void>;
 
@@ -53,32 +52,22 @@ export interface VisualTestHelpers {
  * Custom test fixtures type for visual tests
  */
 type VisualTestFixtures = {
-  /** Worker context with isolation information */
   workerContext: IWorkerContext;
-  /** Database fixture scoped to worker (uses data prefixing) */
   db: WorkerDatabaseFixture;
-  /** Auth fixture scoped to worker */
   auth: AuthFixture;
-  /** Login page object */
   loginPage: LoginPage;
-  /** Dashboard page object */
   dashboardPage: DashboardPage;
-  /** Manage page object */
   managePage: ManagePage;
-  /** Quick update page object */
   quickUpdatePage: QuickUpdatePage;
-  /** Visual test helper utilities */
   visual: VisualTestHelpers;
 };
 
 /**
- * Worker-scoped fixtures (shared across all tests in a worker)
+ * Worker-scoped fixtures
  */
 type WorkerFixtures = {
-  /** Worker context - created once per worker */
   workerCtx: IWorkerContext;
-  /** Worker-scoped browser context with auth state loaded */
-  workerBrowserContext: import('@playwright/test').BrowserContext;
+  workerBrowserContext: BrowserContext;
 };
 
 /**
@@ -87,63 +76,97 @@ type WorkerFixtures = {
 async function getDynamicMasks(page: Page): Promise<Locator[]> {
   const masks: Locator[] = [];
 
-  // Currency values (R$ format)
-  const currencyElements = page.locator('[data-testid*="balance"], [data-testid*="amount"]');
-  if ((await currencyElements.count()) > 0) {
-    masks.push(currencyElements);
-  }
+  const addMaskIfExists = async (locator: Locator) => {
+    const count = await locator.count().catch(() => 0);
+    if (count > 0) {
+      masks.push(locator);
+    }
+  };
 
-  // Recharts chart elements (data varies based on seed data)
-  const chartElements = page.locator('.recharts-wrapper');
-  if ((await chartElements.count()) > 0) {
-    masks.push(chartElements);
-  }
+  // Currency values
+  await addMaskIfExists(page.locator('[data-testid*="balance"], [data-testid*="amount"]'));
 
-  // Any element with worker prefix pattern [W{n}]
-  const workerPrefixedElements = page.locator('text=/\\[W\\d+\\]/');
-  if ((await workerPrefixedElements.count()) > 0) {
-    masks.push(workerPrefixedElements);
-  }
+  // Charts (data varies)
+  await addMaskIfExists(page.locator('.recharts-wrapper'));
 
-  // Timestamps and dates (common patterns)
-  const datePatterns = page.locator('[data-testid*="date"], [data-testid*="timestamp"]');
-  if ((await datePatterns.count()) > 0) {
-    masks.push(datePatterns);
-  }
+  // Worker-prefixed names [W{n}]
+  await addMaskIfExists(page.locator('text=/\\[W\\d+\\]/'));
+
+  // Timestamps and dates
+  await addMaskIfExists(page.locator('[data-testid*="date"], [data-testid*="timestamp"]'));
+
+  // Currency text R$ pattern
+  await addMaskIfExists(page.locator('text=/R\\$\\s*[\\d.,]+/'));
 
   return masks;
 }
 
 /**
- * Wait for UI to stabilize before taking screenshots
+ * Disable all CSS animations for stable screenshots
  */
-async function waitForStableUI(page: Page): Promise<void> {
-  // Wait for network to be idle
-  await page.waitForLoadState('networkidle');
-
-  // Fixed delay to allow any animations/transitions to complete
-  // This is more reliable than trying to detect skeleton elements
-  await page.waitForTimeout(1000);
+async function disableAnimations(page: Page): Promise<void> {
+  await page.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+      }
+      .animate-pulse {
+        animation: none !important;
+      }
+    `,
+  });
 }
 
 /**
- * Set the theme mode
+ * Wait for UI to stabilize before taking screenshots
  */
-async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
-  // Inject script to set theme in localStorage before page loads
-  await page.addInitScript(
-    (themeValue: ThemeMode) => {
-      const resolvedTheme = themeValue === 'system' ? 'light' : themeValue;
+export async function waitForStableUI(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle');
+  await disableAnimations(page);
+  await page.waitForTimeout(500);
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(300);
+}
+
+/**
+ * Set the theme mode (call AFTER navigation)
+ */
+export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
+  const resolvedTheme = theme === 'system' ? 'light' : theme;
+
+  await page.evaluate(
+    ({ theme, resolvedTheme }) => {
       window.localStorage.setItem(
         'family-finance-theme',
         JSON.stringify({
-          state: { theme: themeValue, resolvedTheme, isLoaded: true },
+          state: { theme, resolvedTheme, isLoaded: true },
           version: 0,
         })
       );
+      window.dispatchEvent(new StorageEvent('storage', { key: 'family-finance-theme' }));
     },
-    theme
+    { theme, resolvedTheme }
   );
+
+  // Wait for theme class to be applied
+  const expectedClass = resolvedTheme === 'dark' ? 'dark' : '';
+  await page
+    .waitForFunction(
+      (expected) => {
+        const html = document.documentElement;
+        return expected === 'dark' ? html.classList.contains('dark') : !html.classList.contains('dark');
+      },
+      expectedClass,
+      { timeout: 5000 }
+    )
+    .catch(() => {
+      // Theme might already be set correctly, continue
+    });
+
+  await page.waitForTimeout(100);
 }
 
 /**
@@ -165,9 +188,10 @@ async function takeScreenshotWithMasks(
 
 /**
  * Extended test with visual testing fixtures
+ * Uses the same auth pattern as test-base.ts
  */
 export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
-  // Worker-scoped context - created once per worker, shared across tests
+  // Worker-scoped context - same as test-base.ts
   workerCtx: [
     async ({}, use, workerInfo) => {
       const context = getWorkerContext(workerInfo.workerIndex);
@@ -176,7 +200,7 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
     { scope: 'worker' },
   ],
 
-  // Worker-scoped browser context with auth state pre-loaded
+  // Worker-scoped browser context with auth state - same as test-base.ts
   workerBrowserContext: [
     async ({ browser, workerCtx }, use) => {
       const storageStatePath = workerCtx.authStatePath;
@@ -223,6 +247,10 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
           );
         }
       }
+
+      console.log(
+        `✓ Worker ${workerCtx.workerIndex} auth state validated: ${authState.origins[0].localStorage.length} localStorage items`
+      );
 
       const context = await browser.newContext({ storageState: storageStatePath });
       await use(context);
@@ -284,7 +312,3 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
 });
 
 export { expect };
-
-// Export standalone helper functions for use in tests that don't use visualTest fixture
-export { waitForStableUI, setTheme };
-

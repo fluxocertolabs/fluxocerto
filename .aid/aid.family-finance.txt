@@ -3700,6 +3700,11 @@ import '@/lib/utils'
 export function EntityEmptyState()
 </file>
 
+<file path="src/components/manage/shared/format-utils.test.ts">
+import 'vitest'
+import './format-utils'
+</file>
+
 <file path="src/components/manage/shared/format-utils.ts">
 export function formatCurrency(cents: number)
 export function formatRelativeTime(date: Date | undefined)
@@ -3802,7 +3807,12 @@ export function ThemeToggle()
 import 'react'
 import '@radix-ui/react-alert-dialog'
 import '@/lib/utils'
-import '@/components/ui/button'
+import '@/components/ui/button-variants'
+</file>
+
+<file path="src/components/ui/button-variants.ts">
+import 'class-variance-authority'
+export const buttonVariants
 </file>
 
 <file path="src/components/ui/button.tsx">
@@ -3810,6 +3820,7 @@ import 'react'
 import '@radix-ui/react-slot'
 import 'class-variance-authority'
 import '@/lib/utils'
+import './button-variants'
 
 export interface ButtonProps {
     property asChild: boolean
@@ -3883,6 +3894,7 @@ export function useAuth()
 import 'vitest'
 import './use-cashflow-projection'
 import '@/lib/cashflow/types'
+import '@/components/cashflow/types'
 </file>
 
 <file path="src/hooks/use-cashflow-projection.ts">
@@ -3922,6 +3934,12 @@ import '@/types/loading'
 export function useCoordinatedLoading(isLoading: boolean, error: string | null, onRetry: () => void, config: LoadingConfig)
 </file>
 
+<file path="src/hooks/use-finance-data.test.ts">
+import 'vitest'
+import './use-finance-data'
+import '@/lib/supabase'
+</file>
+
 <file path="src/hooks/use-finance-data.ts">
 import 'react'
 import '@/lib/supabase'
@@ -3943,7 +3961,19 @@ export interface UseFinanceDataReturn {
     property error: string | null
     property retry: () => void
 }
+export function mapProfileFromDb(row: ProfileRow)
+export function normalizeOwner(owner: unknown)
+export function mapAccountFromDb(row: AccountRow)
+export function mapProjectFromDb(row: ProjectRow)
+export function mapSingleShotIncomeFromDb(row: ProjectRow)
+export function mapExpenseFromDb(row: ExpenseRow)
+export function mapCreditCardFromDb(row: CreditCardRow)
 export function useFinanceData()
+</file>
+
+<file path="src/hooks/use-health-indicator.test.ts">
+import 'vitest'
+import './use-health-indicator'
 </file>
 
 <file path="src/hooks/use-health-indicator.ts">
@@ -3970,6 +4000,8 @@ export interface UseHealthIndicatorResult {
   }
     property isLoading: boolean
 }
+export function calculateHealthStatus(optimisticDangerDays: number, pessimisticDangerDays: number)
+export function getHealthMessage(status: HealthStatus, optimisticDangerDays: number, pessimisticDangerDays: number)
 export function useHealthIndicator(summaryStats: SummaryStats | null)
 </file>
 
@@ -3980,6 +4012,11 @@ import '@/lib/theme-service'
 import '@/hooks/use-auth'
 import '@/types/theme'
 export function useTheme()
+</file>
+
+<file path="src/lib/auth-errors.test.ts">
+import 'vitest'
+import './auth-errors'
 </file>
 
 <file path="src/lib/auth-errors.ts">
@@ -4129,6 +4166,11 @@ export interface ValidatedInput {
 export function validateAndFilterInput(input: CashflowEngineInput)
 </file>
 
+<file path="src/lib/format.test.ts">
+import 'vitest'
+import './format'
+</file>
+
 <file path="src/lib/format.ts">
 export function formatCurrency(cents: number)
 export function formatChartCurrency(reais: number)
@@ -4137,10 +4179,20 @@ export function formatChartDate(date: Date)
 export function formatTooltipDate(date: Date)
 </file>
 
+<file path="src/lib/staleness.test.ts">
+import 'vitest'
+import './staleness'
+</file>
+
 <file path="src/lib/staleness.ts">
 export const STALE_THRESHOLD_DAYS
 export function isStale(updatedAt: Date | undefined)
 export function getDaysSinceUpdate(updatedAt: Date | undefined)
+</file>
+
+<file path="src/lib/supabase.test.ts">
+import 'vitest'
+import './supabase'
 </file>
 
 <file path="src/lib/supabase.ts">
@@ -4228,6 +4280,11 @@ import '@/types/theme'
 export async function getThemePreference()
 export async function saveThemePreference(theme: ThemeValue)
 export async function deleteThemePreference()
+</file>
+
+<file path="src/lib/theme.test.ts">
+import 'vitest'
+import './theme'
 </file>
 
 <file path="src/lib/theme.ts">

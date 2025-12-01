@@ -12,10 +12,8 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
   visualTest(
     'dashboard empty state - light theme',
     async ({ page, dashboardPage, visual }) => {
-      // Set light theme
-      await visual.setTheme(page, 'light');
-
       await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'dashboard-light-empty.png');
@@ -25,10 +23,8 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
   visualTest(
     'dashboard empty state - dark theme',
     async ({ page, dashboardPage, visual }) => {
-      // Set dark theme
-      await visual.setTheme(page, 'dark');
-
       await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'dashboard-dark-empty.png');
@@ -42,10 +38,8 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
       const seedData = createFullSeedData();
       await db.seedFullScenario(seedData);
 
-      // Set light theme
-      await visual.setTheme(page, 'light');
-
       await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       // Wait for chart to render
@@ -62,10 +56,8 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
       const seedData = createFullSeedData();
       await db.seedFullScenario(seedData);
 
-      // Set dark theme
-      await visual.setTheme(page, 'dark');
-
       await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
       // Wait for chart to render

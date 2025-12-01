@@ -12,9 +12,8 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
   visualTest(
     'quick update - empty state (no accounts or cards)',
     async ({ page, dashboardPage, visual }) => {
-      await visual.setTheme(page, 'light');
-
       await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       // Open quick update
@@ -44,9 +43,8 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
         createCreditCard({ name: 'Itaú Visa', statement_balance: 150000, due_day: 10 }),
       ]);
 
-      await visual.setTheme(page, 'light');
-
       await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       // Open quick update

@@ -18,10 +18,9 @@ import {
 visualTest.describe('Manage Page Visual Regression @visual', () => {
   visualTest.describe('Accounts Tab', () => {
     visualTest('accounts tab - empty state', async ({ page, managePage, visual }) => {
-      await visual.setTheme(page, 'light');
-
       await managePage.goto();
       await managePage.selectAccountsTab();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'manage-accounts-empty.png');
@@ -35,10 +34,9 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
         createAccount({ name: 'XP Investimentos', type: 'investment', balance: 1000000 }),
       ]);
 
-      await visual.setTheme(page, 'light');
-
       await managePage.goto();
       await managePage.selectAccountsTab();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       const accounts = managePage.accounts();
@@ -50,10 +48,9 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
 
   visualTest.describe('Credit Cards Tab', () => {
     visualTest('credit cards tab - empty state', async ({ page, managePage, visual }) => {
-      await visual.setTheme(page, 'light');
-
       await managePage.goto();
       await managePage.selectCreditCardsTab();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'manage-credit-cards-empty.png');
@@ -68,10 +65,9 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
           createCreditCard({ name: 'Itaú Visa', statement_balance: 150000, due_day: 10 }),
         ]);
 
-        await visual.setTheme(page, 'light');
-
         await managePage.goto();
         await managePage.selectCreditCardsTab();
+        await visual.setTheme(page, 'light');
         await visual.waitForStableUI(page);
 
         const creditCards = managePage.creditCards();
@@ -84,10 +80,9 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
 
   visualTest.describe('Expenses Tab', () => {
     visualTest('expenses tab - empty state', async ({ page, managePage, visual }) => {
-      await visual.setTheme(page, 'light');
-
       await managePage.goto();
       await managePage.selectExpensesTab();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'manage-expenses-empty.png');
@@ -106,10 +101,9 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
         createSingleShotExpense({ name: 'Compra de Móveis', amount: 500000, date: '2025-12-15' }),
       ]);
 
-      await visual.setTheme(page, 'light');
-
       await managePage.goto();
       await managePage.selectExpensesTab();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'manage-expenses-populated.png');
@@ -118,10 +112,9 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
 
   visualTest.describe('Projects Tab', () => {
     visualTest('projects tab - empty state', async ({ page, managePage, visual }) => {
-      await visual.setTheme(page, 'light');
-
       await managePage.goto();
       await managePage.selectProjectsTab();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'manage-projects-empty.png');
@@ -149,10 +142,9 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
         }),
       ]);
 
-      await visual.setTheme(page, 'light');
-
       await managePage.goto();
       await managePage.selectProjectsTab();
+      await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'manage-projects-populated.png');
