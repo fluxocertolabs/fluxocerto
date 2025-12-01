@@ -34,9 +34,10 @@ export interface UseHealthIndicatorResult {
 }
 
 /**
- * Calculate health status from danger day counts
+ * Calculate health status from danger day counts.
+ * Exported for unit testing.
  */
-function calculateHealthStatus(
+export function calculateHealthStatus(
   optimisticDangerDays: number,
   pessimisticDangerDays: number
 ): HealthStatus {
@@ -46,9 +47,10 @@ function calculateHealthStatus(
 }
 
 /**
- * Generate human-readable message for health status
+ * Generate human-readable message for health status.
+ * Exported for unit testing.
  */
-function getHealthMessage(
+export function getHealthMessage(
   status: HealthStatus,
   optimisticDangerDays: number,
   pessimisticDangerDays: number
