@@ -1,0 +1,74 @@
+# Update Visual Regression Snapshots
+# Purpose: Regenerate visual regression test snapshots in CI environment
+#
+# Usage: Run manually from GitHub Actions tab to update snapshots
+# The updated snapshots will be committed directly to the branch
+
+name: Update Visual Snapshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to update snapshots on'
+        required: true
+        default: 'main'
+
+jobs:
+  update-snapshots:
+    name: Update Visual Snapshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Get Supabase keys
+        id: supabase
+        run: |
+          echo "anon_key=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_OUTPUT
+          echo "service_role_key=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_OUTPUT
+
+      - name: Update Visual Snapshots in Docker
+        run: |
+          docker run --rm \
+            --network host \
+            -v $(pwd):/work \
+            -w /work \
+            -e CI=true \
+            -e VITE_SUPABASE_URL=http://localhost:54321 \
+            -e VITE_SUPABASE_ANON_KEY=${{ steps.supabase.outputs.anon_key }} \
+            -e SUPABASE_SERVICE_ROLE_KEY=${{ steps.supabase.outputs.service_role_key }} \
+            -e INBUCKET_URL=http://localhost:54324 \
+            -e BASE_URL=http://localhost:5173 \
+            -e TEST_USER_EMAIL=e2e-test@example.com \
+            mcr.microsoft.com/playwright:v1.57.0-jammy \
+            /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && (pnpm dev:app &) && npx wait-on http://localhost:5173 -t 60000 && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual --update-snapshots'
+
+      - name: Fix file permissions
+        run: |
+          sudo chown -R $(id -u):$(id -g) e2e/tests/visual/ || true
+
+      - name: Commit updated snapshots
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add e2e/tests/visual/**/*.png
+          git diff --staged --quiet || git commit -m "chore: update visual regression snapshots from CI
+
+          Updated by GitHub Actions workflow.
+          Run ID: ${{ github.run_id }}"
+          git push
+
