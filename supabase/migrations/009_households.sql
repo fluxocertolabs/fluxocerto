@@ -141,11 +141,12 @@ ALTER TABLE user_preferences ADD CONSTRAINT user_preferences_household_key_key U
 -- HELPER FUNCTION FOR RLS POLICIES
 -- ============================================================================
 -- Efficiently lookup current user's household_id for use in RLS policies
+-- Uses email from auth.jwt() since profiles.id may not match auth.uid()
 -- Note: Created after household_id column exists on profiles table
 
 CREATE OR REPLACE FUNCTION get_user_household_id()
 RETURNS UUID AS $$
-  SELECT household_id FROM profiles WHERE id = auth.uid()
+  SELECT household_id FROM profiles WHERE email = (auth.jwt() ->> 'email')::citext
 $$ LANGUAGE SQL SECURITY DEFINER STABLE;
 
 -- ============================================================================

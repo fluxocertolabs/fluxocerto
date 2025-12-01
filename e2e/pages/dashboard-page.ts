@@ -15,6 +15,7 @@ export class DashboardPage {
   readonly emptyState: Locator;
   readonly chartErrorHeading: Locator;
   readonly chartRetryButton: Locator;
+  readonly householdBadge: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -27,6 +28,8 @@ export class DashboardPage {
     this.emptyState = page.getByRole('heading', { name: /nenhum dado financeiro/i });
     this.chartErrorHeading = page.getByRole('heading', { name: /não foi possível carregar a projeção/i });
     this.chartRetryButton = page.getByRole('button', { name: /tentar novamente/i });
+    // Household badge in header (FR-015) - contains Home icon and household name
+    this.householdBadge = page.locator('header').locator('span, div').filter({ hasText: /Fonseca Floriano|Família/i }).first();
   }
 
   /**
@@ -173,6 +176,36 @@ export class DashboardPage {
   async hasStaleWarning(): Promise<boolean> {
     const staleWarning = this.page.getByText(/desatualizado|stale|outdated/i);
     return staleWarning.isVisible();
+  }
+
+  /**
+   * Check if household badge is visible in header (FR-015)
+   */
+  async hasHouseholdBadge(): Promise<boolean> {
+    return this.householdBadge.isVisible();
+  }
+
+  /**
+   * Get the household name from the badge in header
+   */
+  async getHouseholdName(): Promise<string | null> {
+    if (await this.householdBadge.isVisible()) {
+      return this.householdBadge.textContent();
+    }
+    return null;
+  }
+
+  /**
+   * Verify household badge displays the expected name (FR-015)
+   */
+  async expectHouseholdBadgeVisible(name?: string): Promise<void> {
+    await expect(async () => {
+      await expect(this.householdBadge).toBeVisible({ timeout: 5000 });
+      if (name) {
+        const badgeText = await this.householdBadge.textContent();
+        expect(badgeText).toContain(name);
+      }
+    }).toPass({ timeout: 20000 });
   }
 }
 

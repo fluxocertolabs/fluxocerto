@@ -262,6 +262,7 @@ export function isOnline(): boolean {
 /**
  * Get the current user's household_id.
  * Returns null if not authenticated or no profile found.
+ * Uses email to lookup profile since profiles.id may not match auth.uid().
  */
 export async function getHouseholdId(): Promise<string | null> {
   if (!isSupabaseConfigured()) {
@@ -271,14 +272,14 @@ export async function getHouseholdId(): Promise<string | null> {
   const client = getSupabase()
   const { data: { user } } = await client.auth.getUser()
   
-  if (!user) {
+  if (!user?.email) {
     return null
   }
 
   const { data: profile, error } = await client
     .from('profiles')
     .select('household_id')
-    .eq('id', user.id)
+    .eq('email', user.email.toLowerCase())
     .single()
 
   if (error || !profile) {

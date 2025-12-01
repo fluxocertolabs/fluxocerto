@@ -14,6 +14,8 @@ import type {
   TestProject,
   TestSingleShotIncome,
   TestCreditCard,
+  TestHousehold,
+  TestProfile,
 } from '../utils/test-data';
 
 /**
@@ -37,9 +39,6 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
   const pattern = workerIndex !== undefined ? getWorkerPrefixPattern(workerIndex) : ALL_WORKERS_PATTERN;
 
   for (const table of tables) {
-    // For profiles, filter by email; for others, filter by name
-    const filterColumn = table === 'profiles' || table === 'user_preferences' ? 'email' : 'name';
-
     try {
       if (table === 'user_preferences') {
         // user_preferences uses email pattern matching
@@ -47,16 +46,9 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
         if (error && !error.message.includes('does not exist')) {
           console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
         }
-      } else if (table === 'profiles') {
-        // profiles uses email pattern matching
-        // Skipped to preserve auth linkage
-        // const { error } = await client.from(table).delete().like('email', pattern);
-        // if (error && !error.message.includes('does not exist')) {
-        //   console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
-        // }
       } else {
         // Other tables use name pattern matching
-        const { error } = await client.from(table).delete().like(filterColumn, pattern);
+        const { error } = await client.from(table).delete().like('name', pattern);
         if (error && !error.message.includes('does not exist')) {
           console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
         }
@@ -68,15 +60,108 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
   }
 }
 
+// Cache for household IDs to avoid repeated queries
+let cachedDefaultHouseholdId: string | null = null;
+const cachedUserHouseholdIds: Map<string, string> = new Map();
+
 /**
- * Ensure test user email exists in profiles table
+ * Get or create the default test household
+ * Returns the household ID for the "Fonseca Floriano" household created by migration
+ */
+export async function getDefaultHouseholdId(): Promise<string> {
+  if (cachedDefaultHouseholdId) {
+    return cachedDefaultHouseholdId;
+  }
+
+  const client = getAdminClient();
+  
+  // First try to get the existing default household
+  const { data: existingHousehold, error: selectError } = await client
+    .from('households')
+    .select('id')
+    .eq('name', 'Fonseca Floriano')
+    .maybeSingle();
+
+  if (selectError) {
+    throw new Error(`Failed to query default household: ${selectError.message}`);
+  }
+
+  if (existingHousehold) {
+    cachedDefaultHouseholdId = existingHousehold.id;
+    return existingHousehold.id;
+  }
+
+  // If not found (shouldn't happen after migration), create it
+  const { data: newHousehold, error: insertError } = await client
+    .from('households')
+    .insert({ name: 'Fonseca Floriano' })
+    .select('id')
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed to create default household: ${insertError.message}`);
+  }
+
+  cachedDefaultHouseholdId = newHousehold.id;
+  return newHousehold.id;
+}
+
+/**
+ * Get household ID for a specific user by email
+ * Falls back to default household if user doesn't have one
+ */
+export async function getHouseholdIdForUser(email: string): Promise<string> {
+  // Check cache first
+  const cached = cachedUserHouseholdIds.get(email);
+  if (cached) {
+    return cached;
+  }
+
+  const client = getAdminClient();
+  
+  const { data: profile, error } = await client
+    .from('profiles')
+    .select('household_id')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`Warning getting household for ${email}: ${error.message}`);
+    return getDefaultHouseholdId();
+  }
+
+  if (profile?.household_id) {
+    cachedUserHouseholdIds.set(email, profile.household_id);
+    return profile.household_id;
+  }
+
+  // Fall back to default household
+  return getDefaultHouseholdId();
+}
+
+/**
+ * Clear household ID caches (call after database reset)
+ */
+export function clearHouseholdCache(): void {
+  cachedDefaultHouseholdId = null;
+  cachedUserHouseholdIds.clear();
+}
+
+/**
+ * Ensure test user email exists in profiles table with household assignment
  * For parallel execution, the email is already prefixed by the worker context
  */
 export async function ensureTestUser(email: string, workerIndex?: number): Promise<void> {
   const client = getAdminClient();
   const name = email.split('@')[0]; // Use email prefix as name
 
-  const { error } = await client.from('profiles').upsert({ email, name }, { onConflict: 'email' });
+  // Get the default household ID for test users
+  const householdId = await getDefaultHouseholdId();
+
+  const { error } = await client.from('profiles').upsert(
+    { email, name, household_id: householdId },
+    { onConflict: 'email' }
+  );
 
   if (error) {
     throw new Error(`Failed to ensure test user: ${error.message}`);
@@ -97,14 +182,26 @@ export async function removeTestUser(email: string, workerIndex?: number): Promi
 /**
  * Seed accounts with test data
  * When workerIndex is provided, prefixes names with worker identifier
+ * When userEmail is provided, uses that user's household
  */
-export async function seedAccounts(accounts: TestAccount[], workerIndex?: number): Promise<TestAccount[]> {
+export async function seedAccounts(
+  accounts: TestAccount[],
+  workerIndex?: number,
+  userEmail?: string
+): Promise<TestAccount[]> {
   const client = getAdminClient();
+  
+  // Get household ID for seeding - use user's household if email provided
+  const householdId = userEmail
+    ? await getHouseholdIdForUser(userEmail)
+    : await getDefaultHouseholdId();
+  
   const records = accounts.map((a) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(a.name, workerIndex) : a.name,
     type: a.type,
     balance: a.balance,
     owner_id: a.owner_id ?? null,
+    household_id: householdId,
   }));
 
   const { data, error } = await client.from('accounts').insert(records).select();
@@ -120,14 +217,25 @@ export async function seedAccounts(accounts: TestAccount[], workerIndex?: number
  * Seed fixed expenses with test data
  * Note: Fixed expenses are stored in the 'expenses' table with type='fixed'
  */
-export async function seedExpenses(expenses: TestExpense[], workerIndex?: number): Promise<TestExpense[]> {
+export async function seedExpenses(
+  expenses: TestExpense[],
+  workerIndex?: number,
+  userEmail?: string
+): Promise<TestExpense[]> {
   const client = getAdminClient();
+  
+  // Get household ID for seeding - use user's household if email provided
+  const householdId = userEmail
+    ? await getHouseholdIdForUser(userEmail)
+    : await getDefaultHouseholdId();
+  
   const records = expenses.map((e) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(e.name, workerIndex) : e.name,
     amount: e.amount,
     due_day: e.due_day,
     is_active: e.is_active,
     type: 'fixed',
+    household_id: householdId,
   }));
 
   const { data, error } = await client.from('expenses').insert(records).select();
@@ -145,15 +253,23 @@ export async function seedExpenses(expenses: TestExpense[], workerIndex?: number
  */
 export async function seedSingleShotExpenses(
   expenses: TestSingleShotExpense[],
-  workerIndex?: number
+  workerIndex?: number,
+  userEmail?: string
 ): Promise<TestSingleShotExpense[]> {
   const client = getAdminClient();
+  
+  // Get household ID for seeding - use user's household if email provided
+  const householdId = userEmail
+    ? await getHouseholdIdForUser(userEmail)
+    : await getDefaultHouseholdId();
+  
   const records = expenses.map((e) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(e.name, workerIndex) : e.name,
     amount: e.amount,
     date: e.date,
     type: 'single_shot',
     due_day: null,
+    household_id: householdId,
   }));
 
   const { data, error } = await client.from('expenses').insert(records).select();
@@ -170,8 +286,18 @@ export async function seedSingleShotExpenses(
  * Note: user_id column was removed in migration 002_invite_auth.sql
  * Projects are now shared among all authenticated family members
  */
-export async function seedProjects(projects: TestProject[], workerIndex?: number): Promise<TestProject[]> {
+export async function seedProjects(
+  projects: TestProject[],
+  workerIndex?: number,
+  userEmail?: string
+): Promise<TestProject[]> {
   const client = getAdminClient();
+  
+  // Get household ID for seeding - use user's household if email provided
+  const householdId = userEmail
+    ? await getHouseholdIdForUser(userEmail)
+    : await getDefaultHouseholdId();
+  
   const records = projects.map((p) => ({
     type: 'recurring',
     name: workerIndex !== undefined ? addWorkerPrefix(p.name, workerIndex) : p.name,
@@ -180,6 +306,7 @@ export async function seedProjects(projects: TestProject[], workerIndex?: number
     payment_schedule: p.payment_schedule,
     certainty: p.certainty,
     is_active: p.is_active,
+    household_id: householdId,
   }));
 
   const { data, error } = await client.from('projects').insert(records).select();
@@ -198,9 +325,16 @@ export async function seedProjects(projects: TestProject[], workerIndex?: number
  */
 export async function seedSingleShotIncome(
   income: TestSingleShotIncome[],
-  workerIndex?: number
+  workerIndex?: number,
+  userEmail?: string
 ): Promise<TestSingleShotIncome[]> {
   const client = getAdminClient();
+  
+  // Get household ID for seeding - use user's household if email provided
+  const householdId = userEmail
+    ? await getHouseholdIdForUser(userEmail)
+    : await getDefaultHouseholdId();
+  
   const records = income.map((i) => ({
     type: 'single_shot',
     name: workerIndex !== undefined ? addWorkerPrefix(i.name, workerIndex) : i.name,
@@ -210,6 +344,7 @@ export async function seedSingleShotIncome(
     frequency: null,
     payment_schedule: null,
     is_active: null,
+    household_id: householdId,
   }));
 
   const { data, error } = await client.from('projects').insert(records).select();
@@ -224,12 +359,23 @@ export async function seedSingleShotIncome(
 /**
  * Seed credit cards with test data
  */
-export async function seedCreditCards(cards: TestCreditCard[], workerIndex?: number): Promise<TestCreditCard[]> {
+export async function seedCreditCards(
+  cards: TestCreditCard[],
+  workerIndex?: number,
+  userEmail?: string
+): Promise<TestCreditCard[]> {
   const client = getAdminClient();
+  
+  // Get household ID for seeding - use user's household if email provided
+  const householdId = userEmail
+    ? await getHouseholdIdForUser(userEmail)
+    : await getDefaultHouseholdId();
+  
   const records = cards.map((c) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(c.name, workerIndex) : c.name,
     statement_balance: c.statement_balance,
     due_day: c.due_day,
+    household_id: householdId,
   }));
 
   const { data, error } = await client.from('credit_cards').insert(records).select();
@@ -239,6 +385,135 @@ export async function seedCreditCards(cards: TestCreditCard[], workerIndex?: num
   }
 
   return data as TestCreditCard[];
+}
+
+/**
+ * Seed households with test data
+ * Used for multi-tenancy isolation tests
+ */
+export async function seedHouseholds(households: TestHousehold[], workerIndex?: number): Promise<TestHousehold[]> {
+  const client = getAdminClient();
+  const records = households.map((h) => ({
+    name: workerIndex !== undefined ? addWorkerPrefix(h.name, workerIndex) : h.name,
+  }));
+
+  const { data, error } = await client.from('households').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed households: ${error.message}`);
+  }
+
+  return data as TestHousehold[];
+}
+
+/**
+ * Get the household ID for a test user by email
+ */
+export async function getHouseholdIdByEmail(email: string): Promise<string | null> {
+  const client = getAdminClient();
+  const { data, error } = await client
+    .from('profiles')
+    .select('household_id')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`Warning getting household ID: ${error.message}`);
+    return null;
+  }
+
+  return data?.household_id ?? null;
+}
+
+/**
+ * Get household info by ID
+ */
+export async function getHouseholdById(id: string): Promise<TestHousehold | null> {
+  const client = getAdminClient();
+  const { data, error } = await client
+    .from('households')
+    .select('id, name, created_at, updated_at')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`Warning getting household: ${error.message}`);
+    return null;
+  }
+
+  return data as TestHousehold | null;
+}
+
+/**
+ * Get all members of a household
+ */
+export async function getHouseholdMembers(householdId: string): Promise<TestProfile[]> {
+  const client = getAdminClient();
+  const { data, error } = await client
+    .from('profiles')
+    .select('id, name, email, household_id')
+    .eq('household_id', householdId)
+    .order('name');
+
+  if (error) {
+    throw new Error(`Failed to get household members: ${error.message}`);
+  }
+
+  return data as TestProfile[];
+}
+
+/**
+ * Create a profile with a specific household assignment
+ * Used for invite flow testing
+ */
+export async function createProfileInHousehold(
+  email: string,
+  name: string,
+  householdId: string
+): Promise<TestProfile> {
+  const client = getAdminClient();
+  const { data, error } = await client
+    .from('profiles')
+    .insert({ email, name, household_id: householdId })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create profile: ${error.message}`);
+  }
+
+  return data as TestProfile;
+}
+
+/**
+ * Check if a profile exists by email
+ */
+export async function profileExists(email: string): Promise<boolean> {
+  const client = getAdminClient();
+  const { data, error } = await client
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`Warning checking profile existence: ${error.message}`);
+    return false;
+  }
+
+  return data !== null;
+}
+
+/**
+ * Delete a profile by email
+ */
+export async function deleteProfileByEmail(email: string): Promise<void> {
+  const client = getAdminClient();
+  const { error } = await client.from('profiles').delete().eq('email', email);
+
+  if (error) {
+    throw new Error(`Failed to delete profile: ${error.message}`);
+  }
 }
 
 /**
@@ -253,25 +528,26 @@ export async function seedFullScenario(
     singleShotIncome?: TestSingleShotIncome[];
     creditCards?: TestCreditCard[];
   },
-  workerIndex?: number
+  workerIndex?: number,
+  userEmail?: string
 ): Promise<void> {
   if (data.accounts?.length) {
-    await seedAccounts(data.accounts, workerIndex);
+    await seedAccounts(data.accounts, workerIndex, userEmail);
   }
   if (data.expenses?.length) {
-    await seedExpenses(data.expenses, workerIndex);
+    await seedExpenses(data.expenses, workerIndex, userEmail);
   }
   if (data.singleShotExpenses?.length) {
-    await seedSingleShotExpenses(data.singleShotExpenses, workerIndex);
+    await seedSingleShotExpenses(data.singleShotExpenses, workerIndex, userEmail);
   }
   if (data.projects?.length) {
-    await seedProjects(data.projects, workerIndex);
+    await seedProjects(data.projects, workerIndex, userEmail);
   }
   if (data.singleShotIncome?.length) {
-    await seedSingleShotIncome(data.singleShotIncome, workerIndex);
+    await seedSingleShotIncome(data.singleShotIncome, workerIndex, userEmail);
   }
   if (data.creditCards?.length) {
-    await seedCreditCards(data.creditCards, workerIndex);
+    await seedCreditCards(data.creditCards, workerIndex, userEmail);
   }
 }
 
@@ -317,6 +593,7 @@ export async function accountExists(name: string): Promise<boolean> {
 /**
  * Create a worker-scoped database fixture
  * This returns a fixture object that prefixes all data with the worker identifier
+ * and uses the worker's household for data isolation
  */
 export function createWorkerDbFixture(workerContext: IWorkerContext) {
   const { workerIndex, email, dataPrefix } = workerContext;
@@ -325,20 +602,32 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     resetDatabase: () => resetDatabase(workerIndex),
     ensureTestUser: (userEmail?: string) => ensureTestUser(userEmail ?? email, workerIndex),
     removeTestUser: (userEmail?: string) => removeTestUser(userEmail ?? email, workerIndex),
-    seedAccounts: (accounts: TestAccount[]) => seedAccounts(accounts, workerIndex),
-    seedExpenses: (expenses: TestExpense[]) => seedExpenses(expenses, workerIndex),
-    seedSingleShotExpenses: (expenses: TestSingleShotExpense[]) => seedSingleShotExpenses(expenses, workerIndex),
-    seedProjects: (projects: TestProject[]) => seedProjects(projects, workerIndex),
-    seedSingleShotIncome: (income: TestSingleShotIncome[]) => seedSingleShotIncome(income, workerIndex),
-    seedCreditCards: (cards: TestCreditCard[]) => seedCreditCards(cards, workerIndex),
-    seedFullScenario: (data: Parameters<typeof seedFullScenario>[0]) => seedFullScenario(data, workerIndex),
+    seedAccounts: (accounts: TestAccount[]) => seedAccounts(accounts, workerIndex, email),
+    seedExpenses: (expenses: TestExpense[]) => seedExpenses(expenses, workerIndex, email),
+    seedSingleShotExpenses: (expenses: TestSingleShotExpense[]) => seedSingleShotExpenses(expenses, workerIndex, email),
+    seedProjects: (projects: TestProject[]) => seedProjects(projects, workerIndex, email),
+    seedSingleShotIncome: (income: TestSingleShotIncome[]) => seedSingleShotIncome(income, workerIndex, email),
+    seedCreditCards: (cards: TestCreditCard[]) => seedCreditCards(cards, workerIndex, email),
+    seedFullScenario: (data: Parameters<typeof seedFullScenario>[0]) => seedFullScenario(data, workerIndex, email),
+    seedHouseholds: (households: TestHousehold[]) => seedHouseholds(households, workerIndex),
     expenseExists,
     projectExists,
     accountExists,
+    profileExists,
+    getHouseholdIdByEmail,
+    getHouseholdById,
+    getHouseholdMembers,
+    createProfileInHousehold,
+    deleteProfileByEmail,
+    getDefaultHouseholdId,
+    getHouseholdIdForUser,
+    clearHouseholdCache,
     /** The data prefix for this worker (e.g., "[W0] ") */
     dataPrefix,
     /** Worker index */
     workerIndex,
+    /** Worker email */
+    email,
   };
 }
 

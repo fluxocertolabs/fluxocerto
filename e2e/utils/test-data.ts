@@ -54,6 +54,20 @@ export interface TestCreditCard {
   due_day: number; // 1-31
 }
 
+export interface TestHousehold {
+  id?: string;
+  name: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TestProfile {
+  id?: string;
+  name: string;
+  email: string;
+  household_id: string;
+}
+
 /**
  * Create test account with defaults
  */
@@ -155,6 +169,18 @@ export function createCreditCard(
     name: 'Nubank Platinum',
     statement_balance: 300000, // R$ 3.000,00
     due_day: 15,
+    ...overrides,
+  };
+}
+
+/**
+ * Create test household with defaults
+ */
+export function createHousehold(
+  overrides: Partial<TestHousehold> = {}
+): TestHousehold {
+  return {
+    name: 'Família Teste',
     ...overrides,
   };
 }

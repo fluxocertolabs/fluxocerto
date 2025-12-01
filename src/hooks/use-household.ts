@@ -77,19 +77,22 @@ export function useHousehold(): UseHouseholdReturn {
         // Fetch members (RLS filters to same household)
         const { data: membersData, error: membersError } = await client
           .from('profiles')
-          .select('id, name, household_id')
+          .select('id, name, email, household_id')
           .order('name')
         
         if (!mounted) return
         
         if (membersError) throw membersError
         
+        // Compare by email since profile.id may not match auth.uid()
+        const currentUserEmail = user?.email?.toLowerCase()
+        
         setMembers(
           (membersData ?? []).map((m) => ({
             id: m.id as string,
             name: m.name as string,
             householdId: m.household_id as string,
-            isCurrentUser: m.id === user?.id,
+            isCurrentUser: (m.email as string)?.toLowerCase() === currentUserEmail,
           }))
         )
       } catch (err) {
