@@ -85,9 +85,19 @@ jobs:
       - name: Start Supabase
         run: supabase start
 
-      # Step 4: Run Visual Regression tests in Docker
-      # Uses the same Playwright Docker image as local development for consistency
+      # Step 4: Get Supabase keys for Docker
+      # We need to capture these before running Docker since Supabase CLI isn't in the container
+      - name: Get Supabase keys
+        id: supabase
+        run: |
+          echo "anon_key=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_OUTPUT
+          echo "service_role_key=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_OUTPUT
+
+      # Step 5: Run Visual Regression tests in Docker
+      # Uses the same Playwright Docker image and approach as local development for consistency
       # This ensures snapshots generated locally match CI exactly
+      # Note: pnpm install runs inside Docker to match local behavior - permission issues
+      # don't matter in CI since the workspace is ephemeral
       - name: Run Visual Regression tests
         run: |
           docker run --rm \
@@ -96,15 +106,16 @@ jobs:
             -w /work \
             -e CI=true \
             -e VITE_SUPABASE_URL=http://localhost:54321 \
-            -e VITE_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY') \
-            -e SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY') \
+            -e VITE_SUPABASE_ANON_KEY=${{ steps.supabase.outputs.anon_key }} \
+            -e SUPABASE_SERVICE_ROLE_KEY=${{ steps.supabase.outputs.service_role_key }} \
             -e INBUCKET_URL=http://localhost:54324 \
             -e BASE_URL=http://localhost:5173 \
             -e TEST_USER_EMAIL=e2e-test@example.com \
+            -e VITE_DISABLE_THEME_SYNC=true \
             mcr.microsoft.com/playwright:v1.57.0-jammy \
             /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && (pnpm dev:app &) && npx wait-on http://localhost:5173 -t 60000 && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual'
 
-      # Step 5: Upload visual diff artifacts on failure
+      # Step 6: Upload visual diff artifacts on failure
       - name: Upload Visual Regression report
         uses: actions/upload-artifact@v4
         if: failure()
