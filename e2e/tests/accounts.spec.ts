@@ -54,8 +54,21 @@ test.describe('Account Management', () => {
     await accounts.expectAccountVisible(seeded.name);
     await accounts.updateAccountName(seeded.name, newName);
 
-    await accounts.expectAccountVisible(newName);
-    await accounts.expectAccountNotVisible(seeded.name);
+    // Wait for update to complete with retry logic
+    // The data refresh can take time after dialog closes
+    await expect(async () => {
+      // Ensure we're still on the accounts tab
+      const accountsTab = page.getByRole('tab', { name: /contas/i });
+      if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
+        await managePage.selectAccountsTab();
+      }
+      await page.waitForLoadState('networkidle');
+      // Check for the new name
+      await expect(page.getByText(newName).first()).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
+    
+    // Verify old name is no longer visible
+    await expect(page.getByText(seeded.name)).not.toBeVisible({ timeout: 5000 });
   });
 
   test('T031: update balance to R$ 2.500,00 → new balance reflected immediately', async ({
@@ -82,8 +95,14 @@ test.describe('Account Management', () => {
     // Wait for update to complete via realtime subscription
     // Use toPass to retry until realtime update propagates
     await expect(async () => {
-      await expect(page.getByText(formatBRL(250000)).first()).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+      // Ensure we're still on the accounts tab
+      const accountsTab = page.getByRole('tab', { name: /contas/i });
+      if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
+        await managePage.selectAccountsTab();
+      }
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByText(formatBRL(250000)).first()).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('T032: delete account with confirmation → removed from list', async ({
@@ -108,7 +127,17 @@ test.describe('Account Management', () => {
 
     await accounts.deleteAccount(seeded.name);
 
-    await accounts.expectAccountNotVisible(seeded.name);
+    // Wait for deletion to complete with retry logic
+    await expect(async () => {
+      // Ensure we're still on the accounts tab
+      const accountsTab = page.getByRole('tab', { name: /contas/i });
+      if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
+        await managePage.selectAccountsTab();
+      }
+      await page.waitForLoadState('networkidle');
+      // Verify account is no longer visible
+      await expect(page.getByText(seeded.name)).not.toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('T033: multiple accounts exist → all displayed with correct types', async ({

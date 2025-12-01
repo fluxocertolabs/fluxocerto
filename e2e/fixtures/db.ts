@@ -63,6 +63,7 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
 // Cache for household IDs to avoid repeated queries
 let cachedDefaultHouseholdId: string | null = null;
 const cachedUserHouseholdIds: Map<string, string> = new Map();
+const cachedWorkerHouseholdIds: Map<number, string> = new Map();
 
 /**
  * Get or create the default test household
@@ -145,27 +146,128 @@ export async function getHouseholdIdForUser(email: string): Promise<string> {
 export function clearHouseholdCache(): void {
   cachedDefaultHouseholdId = null;
   cachedUserHouseholdIds.clear();
+  cachedWorkerHouseholdIds.clear();
 }
 
 /**
- * Ensure test user email exists in profiles table with household assignment
- * For parallel execution, the email is already prefixed by the worker context
+ * Get or create a worker-specific household for test isolation.
+ * Each worker gets its own household, ensuring complete data isolation via RLS.
+ *
+ * @param workerIndex - The worker index (0-based)
+ * @param householdName - The household name (e.g., "Test Worker 0")
+ * @returns The household ID
  */
-export async function ensureTestUser(email: string, workerIndex?: number): Promise<void> {
+export async function getOrCreateWorkerHousehold(workerIndex: number, householdName: string): Promise<string> {
+  // Check cache first
+  const cached = cachedWorkerHouseholdIds.get(workerIndex);
+  if (cached) {
+    return cached;
+  }
+
+  const client = getAdminClient();
+
+  // Try to find existing household
+  const { data: existing, error: selectError } = await client
+    .from('households')
+    .select('id')
+    .eq('name', householdName)
+    .maybeSingle();
+
+  if (selectError) {
+    throw new Error(`Failed to query worker household: ${selectError.message}`);
+  }
+
+  if (existing) {
+    cachedWorkerHouseholdIds.set(workerIndex, existing.id);
+    return existing.id;
+  }
+
+  // Create new household for this worker
+  const { data: newHousehold, error: insertError } = await client
+    .from('households')
+    .insert({ name: householdName })
+    .select('id')
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed to create worker household: ${insertError.message}`);
+  }
+
+  cachedWorkerHouseholdIds.set(workerIndex, newHousehold.id);
+  return newHousehold.id;
+}
+
+/**
+ * Delete all data for a specific worker's household.
+ * This is more reliable than name-pattern matching for cleanup.
+ *
+ * @param householdId - The household ID to clean up
+ */
+export async function resetHouseholdData(householdId: string): Promise<void> {
+  const client = getAdminClient();
+
+  // Delete in order to respect foreign key constraints
+  // Note: We don't delete profiles to preserve auth linkage
+  const tables = [
+    'user_preferences',
+    'credit_cards',
+    'expenses',
+    'projects',
+    'accounts',
+  ] as const;
+
+  for (const table of tables) {
+    try {
+      const { error } = await client.from(table).delete().eq('household_id', householdId);
+      if (error && !error.message.includes('does not exist')) {
+        console.warn(`Warning: Failed to reset ${table} for household ${householdId}: ${error.message}`);
+      }
+    } catch (err) {
+      console.warn(`Warning: Exception resetting ${table}:`, err);
+    }
+  }
+}
+
+/**
+ * Ensure test user email exists in profiles table with household assignment.
+ * For parallel execution, assigns user to their worker-specific household.
+ *
+ * @param email - The test user email
+ * @param workerIndex - Optional worker index for household assignment
+ * @param householdId - Optional explicit household ID (overrides worker lookup)
+ */
+export async function ensureTestUser(
+  email: string,
+  workerIndex?: number,
+  householdId?: string
+): Promise<void> {
   const client = getAdminClient();
   const name = email.split('@')[0]; // Use email prefix as name
 
-  // Get the default household ID for test users
-  const householdId = await getDefaultHouseholdId();
+  // Determine household ID:
+  // 1. Use explicit householdId if provided
+  // 2. Otherwise use worker's household if workerIndex provided
+  // 3. Fall back to default household
+  let targetHouseholdId = householdId;
+  if (!targetHouseholdId && workerIndex !== undefined) {
+    // Check if we have a cached worker household
+    targetHouseholdId = cachedWorkerHouseholdIds.get(workerIndex);
+  }
+  if (!targetHouseholdId) {
+    targetHouseholdId = await getDefaultHouseholdId();
+  }
 
   const { error } = await client.from('profiles').upsert(
-    { email, name, household_id: householdId },
+    { email, name, household_id: targetHouseholdId },
     { onConflict: 'email' }
   );
 
   if (error) {
     throw new Error(`Failed to ensure test user: ${error.message}`);
   }
+
+  // Update the user household cache
+  cachedUserHouseholdIds.set(email, targetHouseholdId);
 }
 
 /**
@@ -593,14 +695,29 @@ export async function accountExists(name: string): Promise<boolean> {
 /**
  * Create a worker-scoped database fixture
  * This returns a fixture object that prefixes all data with the worker identifier
- * and uses the worker's household for data isolation
+ * and uses the worker's household for data isolation via RLS
  */
 export function createWorkerDbFixture(workerContext: IWorkerContext) {
-  const { workerIndex, email, dataPrefix } = workerContext;
+  const { workerIndex, email, dataPrefix, householdName } = workerContext;
+
+  // Helper to get this worker's household ID (cached after first call)
+  const getWorkerHouseholdId = async () => {
+    return getOrCreateWorkerHousehold(workerIndex, householdName);
+  };
 
   return {
-    resetDatabase: () => resetDatabase(workerIndex),
-    ensureTestUser: (userEmail?: string) => ensureTestUser(userEmail ?? email, workerIndex),
+    /**
+     * Reset database by clearing this worker's household data.
+     * Uses household_id for reliable isolation instead of name patterns.
+     */
+    resetDatabase: async () => {
+      const householdId = await getWorkerHouseholdId();
+      await resetHouseholdData(householdId);
+    },
+    ensureTestUser: async (userEmail?: string) => {
+      const householdId = await getWorkerHouseholdId();
+      return ensureTestUser(userEmail ?? email, workerIndex, householdId);
+    },
     removeTestUser: (userEmail?: string) => removeTestUser(userEmail ?? email, workerIndex),
     seedAccounts: (accounts: TestAccount[]) => seedAccounts(accounts, workerIndex, email),
     seedExpenses: (expenses: TestExpense[]) => seedExpenses(expenses, workerIndex, email),
@@ -621,6 +738,8 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     deleteProfileByEmail,
     getDefaultHouseholdId,
     getHouseholdIdForUser,
+    getWorkerHouseholdId,
+    getOrCreateWorkerHousehold: () => getOrCreateWorkerHousehold(workerIndex, householdName),
     clearHouseholdCache,
     /** The data prefix for this worker (e.g., "[W0] ") */
     dataPrefix,
@@ -628,6 +747,8 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     workerIndex,
     /** Worker email */
     email,
+    /** Worker household name */
+    householdName,
   };
 }
 

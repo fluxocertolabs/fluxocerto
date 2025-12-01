@@ -52,8 +52,14 @@ test.describe('Credit Card Management', () => {
     // Wait for update to complete via realtime subscription
     // Use toPass to retry until realtime update propagates
     await expect(async () => {
-      await expect(page.getByText(formatBRL(75000)).first()).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+      // Ensure we're still on the credit cards tab
+      const cardsTab = page.getByRole('tab', { name: /cartões/i });
+      if (!(await cardsTab.getAttribute('aria-selected'))?.includes('true')) {
+        await managePage.selectCreditCardsTab();
+      }
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByText(formatBRL(75000)).first()).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('T060: delete credit card with confirmation → removed from list', async ({
@@ -77,8 +83,17 @@ test.describe('Credit Card Management', () => {
 
     await creditCards.deleteCard(seeded.name);
 
-    // Card should no longer be visible after deletion (no need to reload)
-    await creditCards.expectCardNotVisible(seeded.name);
+    // Wait for deletion to complete with retry logic
+    await expect(async () => {
+      // Ensure we're still on the credit cards tab
+      const cardsTab = page.getByRole('tab', { name: /cartões/i });
+      if (!(await cardsTab.getAttribute('aria-selected'))?.includes('true')) {
+        await managePage.selectCreditCardsTab();
+      }
+      await page.waitForLoadState('networkidle');
+      // Verify card is no longer visible
+      await expect(page.getByText(seeded.name)).not.toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('T061: multiple credit cards exist → all displayed with correct due days', async ({

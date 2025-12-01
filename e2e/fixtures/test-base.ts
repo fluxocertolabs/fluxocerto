@@ -1,7 +1,10 @@
 /**
  * Extended Playwright test with custom fixtures
  * Provides db, auth, and page object fixtures for all tests
- * Updated for per-worker isolation using data prefixing in parallel test execution
+ * Updated for per-worker isolation using household-based data separation
+ *
+ * Each worker gets its own household, ensuring complete data isolation via RLS.
+ * This eliminates race conditions and data conflicts between parallel workers.
  */
 
 import { test as base, expect, type BrowserContext } from '@playwright/test';
@@ -20,7 +23,7 @@ import { existsSync } from 'fs';
 type TestFixtures = {
   /** Worker context with isolation information */
   workerContext: IWorkerContext;
-  /** Database fixture scoped to worker (uses data prefixing) */
+  /** Database fixture scoped to worker (uses household-based isolation) */
   db: WorkerDatabaseFixture;
   /** Auth fixture scoped to worker */
   auth: AuthFixture;
@@ -129,14 +132,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(workerCtx);
   },
 
-  // Database fixture scoped to worker (uses data prefixing)
+  // Database fixture scoped to worker (uses household-based isolation)
   db: async ({ workerCtx }, use) => {
     const dbFixture = createWorkerDbFixture(workerCtx);
 
-    // Reset database (clears only this worker's prefixed data) before each test
+    // Reset database (clears only this worker's household data) before each test
+    // This uses household_id for reliable isolation instead of name patterns
     await dbFixture.resetDatabase();
 
-    // Ensure test user exists
+    // Ensure test user exists in worker's household
     await dbFixture.ensureTestUser();
 
     await use(dbFixture);

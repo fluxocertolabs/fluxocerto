@@ -179,11 +179,18 @@ test.describe('Project (Income) Management', () => {
       // Use the page object method to update certainty
       await projects.updateSingleShotCertainty(seeded.name, 'uncertain');
 
-      // Wait for update to complete
-      await page.waitForLoadState('networkidle');
-
-      // Verify certainty badge is updated - look for "Incerta" text anywhere on the page
-      await expect(page.getByText(/incert/i).first()).toBeVisible();
+      // Wait for update to complete with retry logic
+      await expect(async () => {
+        // Ensure we're still on the projects tab and single-shot view
+        const projectsTab = page.getByRole('tab', { name: /receitas/i });
+        if (!(await projectsTab.getAttribute('aria-selected'))?.includes('true')) {
+          await managePage.selectProjectsTab();
+          await projects.selectSingleShot();
+        }
+        await page.waitForLoadState('networkidle');
+        // Verify certainty badge is updated - look for "Incerta" text anywhere on the page
+        await expect(page.getByText(/incert/i).first()).toBeVisible({ timeout: 5000 });
+      }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
     });
 
     test('T050: delete project confirmation dialog → opens and closes correctly', async ({

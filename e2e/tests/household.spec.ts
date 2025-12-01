@@ -19,6 +19,7 @@ test.describe('Household Multi-Tenancy', () => {
       page,
       dashboardPage,
       db,
+      workerContext,
     }) => {
       // Seed some data to ensure we're not in empty state
       const seedData = createFullSeedData();
@@ -31,21 +32,24 @@ test.describe('Household Multi-Tenancy', () => {
 
       // FR-015: System MUST display the current household name visibly in the application header
       // The HouseholdBadge component shows household name with a Home icon
-      // Look for the household name text in the header
+      // Look for the household name text in the header (uses worker's household name)
       const header = page.locator('header');
-      await expect(header.getByText(/Fonseca Floriano/i).first()).toBeVisible({ timeout: 10000 });
+      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
+      await expect(header.getByText(householdNamePattern).first()).toBeVisible({ timeout: 10000 });
     });
 
     test('T081: household name displayed on manage page → badge visible in header', async ({
       page,
       managePage,
+      workerContext,
     }) => {
       await managePage.goto();
       await page.waitForLoadState('networkidle');
 
       // FR-015: Household name should be visible on any page (header is global)
       const header = page.locator('header');
-      await expect(header.getByText(/Fonseca Floriano/i).first()).toBeVisible({ timeout: 10000 });
+      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
+      await expect(header.getByText(householdNamePattern).first()).toBeVisible({ timeout: 10000 });
     });
 
     test('T082: view household members section → members list displayed with current user indicator', async ({
@@ -74,6 +78,7 @@ test.describe('Household Multi-Tenancy', () => {
     test('T083: household section shows household name in description', async ({
       page,
       managePage,
+      workerContext,
     }) => {
       await managePage.goto();
       await page.waitForLoadState('networkidle');
@@ -84,8 +89,9 @@ test.describe('Household Multi-Tenancy', () => {
       await household.waitForLoad();
 
       // The CardDescription should show "Membros da residência <name>"
-      // The household name should be visible in the description
-      await expect(page.getByText(/Fonseca Floriano/i).first()).toBeVisible();
+      // The household name should be visible in the description (uses worker's household name)
+      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
+      await expect(page.getByText(householdNamePattern).first()).toBeVisible();
     });
 
     test('T084: household members list shows at least one member', async ({
@@ -253,6 +259,7 @@ test.describe('Household Multi-Tenancy', () => {
     test('T091: dashboard shows household badge even with no financial data', async ({
       page,
       dashboardPage,
+      workerContext,
     }) => {
       // Navigate to dashboard without seeding any data
       await dashboardPage.goto();
@@ -261,10 +268,11 @@ test.describe('Household Multi-Tenancy', () => {
       // Household badge should still be visible in header
       // (household info is independent of financial data)
       const header = page.locator('header');
+      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
       
       // Badge should be visible (may take time to load household info)
       await expect(async () => {
-        await expect(header.getByText(/Fonseca Floriano/i).first()).toBeVisible({ timeout: 5000 });
+        await expect(header.getByText(householdNamePattern).first()).toBeVisible({ timeout: 5000 });
       }).toPass({ timeout: 20000 });
     });
 

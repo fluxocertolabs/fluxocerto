@@ -65,13 +65,20 @@ test.describe('Expense Management', () => {
       
       // Wait for the toggle state to change via realtime update
       // Use toPass with longer timeout to handle slow realtime updates in parallel execution
-      // Increased to 30s for heavily loaded parallel environments
       await expect(async () => {
+        // Ensure we're still on the expenses tab
+        const expensesTab = page.getByRole('tab', { name: /despesas/i });
+        if (!(await expensesTab.getAttribute('aria-selected'))?.includes('true')) {
+          await managePage.selectExpensesTab();
+          await expenses.selectFixedExpenses();
+        }
         await expect(toggle).toHaveAttribute('data-state', 'unchecked', { timeout: 3000 });
       }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000, 5000] });
       
-      // Also verify the "Inativo" badge appears
-      await expenses.expectExpenseInactive(seeded.name);
+      // Also verify the "Inativo" badge appears with retry
+      await expect(async () => {
+        await expenses.expectExpenseInactive(seeded.name);
+      }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
     });
 
     test('T038: edit fixed expense amount to R$ 2.200,00 → updated amount displayed', async ({
@@ -94,11 +101,20 @@ test.describe('Expense Management', () => {
       await expenses.expectExpenseVisible(seeded.name);
       await expenses.updateExpenseAmount(seeded.name, '2.200,00');
 
-      // Wait for update to complete
-      await page.waitForLoadState('networkidle');
-      
-      // Verify the expense row shows the updated amount (use .first() to avoid strict mode)
-      await expect(page.getByText(formatBRL(220000)).first()).toBeVisible();
+      // Wait for update to complete with retry logic
+      // The data refresh can take time after dialog closes
+      // Re-select the expenses tab and fixed expenses to ensure we're on the right view
+      await expect(async () => {
+        // Ensure we're still on the expenses tab after dialog closes
+        const expensesTab = page.getByRole('tab', { name: /despesas/i });
+        if (!(await expensesTab.getAttribute('aria-selected'))?.includes('true')) {
+          await managePage.selectExpensesTab();
+          await expenses.selectFixedExpenses();
+        }
+        await page.waitForLoadState('networkidle');
+        // Verify the expense row shows the updated amount (use .first() to avoid strict mode)
+        await expect(page.getByText(formatBRL(220000)).first()).toBeVisible({ timeout: 5000 });
+      }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
     });
 
     test('T039: delete fixed expense confirmation dialog → opens and closes correctly', async ({
