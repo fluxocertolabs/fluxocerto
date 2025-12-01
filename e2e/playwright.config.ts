@@ -71,6 +71,12 @@ export default defineConfig({
   timeout: process.env.CI ? 90000 : 45000, // 90s in CI, 45s locally
   expect: {
     timeout: 15000, // 15s for assertions to handle data loading delays in CI
+    toHaveScreenshot: {
+      threshold: 0.3, // 0.3% pixel tolerance for anti-aliasing differences
+      maxDiffPixelRatio: 0.02, // Max 2% of pixels can differ (accounts for font rendering)
+      animations: 'disabled', // Freeze CSS animations for consistent screenshots
+      caret: 'hide', // Hide text cursor to avoid flakiness
+    },
   },
 
   use: {
@@ -85,7 +91,13 @@ export default defineConfig({
     // Setup project - runs first, creates schemas and authenticates all workers
     {
       name: 'setup',
-      testMatch: /.*\.setup\.ts/,
+      testMatch: /auth\.setup\.ts/,
+      testDir: resolve(__dirname, 'fixtures'),
+    },
+    // Visual setup project - lighter setup that only authenticates 1 worker
+    {
+      name: 'visual-setup',
+      testMatch: /visual\.setup\.ts/,
       testDir: resolve(__dirname, 'fixtures'),
     },
     // Auth tests - run WITHOUT storage state (unauthenticated)
@@ -105,7 +117,7 @@ export default defineConfig({
     // Storage state is loaded dynamically per worker via the test fixture
     {
       name: 'chromium',
-      testIgnore: /auth\.spec\.ts/, // Skip auth tests in this project
+      testIgnore: [/auth\.spec\.ts/, /visual\//], // Skip auth and visual tests
       use: {
         ...devices['Desktop Chrome'],
         // Note: Storage state is NOT set here because it needs to be per-worker
@@ -113,6 +125,18 @@ export default defineConfig({
         // by using workerContext.authStatePath
       },
       dependencies: ['setup'],
+    },
+    // Visual regression tests - run separately with consistent viewport
+    // Uses single worker to minimize setup time and ensure consistent screenshots
+    {
+      name: 'visual',
+      testMatch: /visual\/.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 }, // Fixed viewport for consistent screenshots
+      },
+      dependencies: ['visual-setup'], // Use lighter visual-only setup
+      fullyParallel: false, // Run visual tests serially for consistency
     },
   ],
 

@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm test:unit && pnpm test:e2e",
+    "test": "pnpm test:unit && pnpm test:visual && pnpm test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest --watch",
     "test:unit:coverage": "vitest --coverage",
@@ -23,6 +23,9 @@
     "test:e2e:debug": "pnpm test:e2e:setup && playwright test --config e2e/playwright.config.ts --debug",
     "test:e2e:report": "playwright show-report",
     "test:e2e:setup": "npx supabase status > /dev/null 2>&1 || npx supabase start",
+    "test:visual": "pnpm test:e2e:setup && playwright test --config e2e/playwright.config.ts --project=visual",
+    "test:visual:update": "docker run --rm --network host -v $(pwd):/work -w /work -e CI=true mcr.microsoft.com/playwright:v1.57.0-jammy /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm test:visual --update-snapshots'",
+    "test:visual:report": "playwright show-report",
     "prepare": "husky"
   },
   "dependencies": {
