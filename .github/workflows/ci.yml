@@ -26,6 +26,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Permissions needed for downloading artifacts from other workflows
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   quality:
     name: Quality Checks
