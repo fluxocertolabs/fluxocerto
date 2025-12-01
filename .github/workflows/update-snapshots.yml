@@ -2,7 +2,10 @@
 # Purpose: Regenerate visual regression test snapshots in CI environment
 #
 # Usage: Run manually from GitHub Actions tab to update snapshots
-# The updated snapshots will be committed directly to the branch
+# The updated snapshots will be uploaded as artifacts for use by CI visual tests
+#
+# Snapshots are NOT committed to git - they are stored as workflow artifacts
+# and downloaded by the CI workflow when running visual regression tests.
 
 name: Update Visual Snapshots
 
@@ -10,13 +13,9 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to update snapshots on'
+        description: 'Branch to generate snapshots from'
         required: true
         default: 'main'
-
-# Grant write permissions to push commits
-permissions:
-  contents: write
 
 jobs:
   update-snapshots:
@@ -44,7 +43,7 @@ jobs:
           echo "anon_key=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_OUTPUT
           echo "service_role_key=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_OUTPUT
 
-      - name: Update Visual Snapshots in Docker
+      - name: Generate Visual Snapshots in Docker
         run: |
           docker run --rm \
             --network host \
@@ -64,14 +63,28 @@ jobs:
         run: |
           sudo chown -R $(id -u):$(id -g) e2e/tests/visual/ || true
 
-      - name: Commit updated snapshots
+      # Upload snapshots as artifacts - these will be downloaded by CI visual tests
+      # Using a long retention period since these are the baseline for visual regression
+      - name: Upload Visual Snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-snapshots
+          path: e2e/tests/visual/**/*-snapshots/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Summary
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add e2e/tests/visual/**/*.png
-          git diff --staged --quiet || git commit -m "chore: update visual regression snapshots from CI
-
-          Updated by GitHub Actions workflow.
-          Run ID: ${{ github.run_id }}"
-          git push
-
+          echo "## Visual Snapshots Updated 📸" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Snapshots have been generated and uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.event.inputs.branch }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Run ID:** \`${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generated Snapshots" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          find e2e/tests/visual -name "*.png" -type f | sort >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The CI workflow will automatically download these snapshots when running visual regression tests." >> $GITHUB_STEP_SUMMARY

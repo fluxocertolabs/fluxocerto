@@ -33,6 +33,11 @@ test-results/
 playwright-report/
 playwright/.cache/
 
+# Visual regression snapshots (generated in CI, downloaded as artifacts)
+# Run `pnpm test:visual:update` locally to generate for testing
+# Snapshots are stored as GitHub Actions artifacts, not in git
+e2e/tests/visual/**/*-snapshots/
+
 # Vite
 *.local
 

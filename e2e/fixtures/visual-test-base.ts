@@ -2,9 +2,12 @@
  * Visual Test Base Fixture
  * Extended Playwright test with helpers for visual regression testing
  * Based on test-base.ts but adds visual testing utilities
+ *
+ * Uses a fixed date (2025-01-15) for deterministic screenshots.
+ * All test data and chart projections will be consistent across runs.
  */
 
-import { test as base, expect, type Page, type Locator, type BrowserContext } from '@playwright/test';
+import { test as base, expect, type Page, type BrowserContext } from '@playwright/test';
 import { createWorkerDbFixture, type WorkerDatabaseFixture } from './db';
 import { AuthFixture, createWorkerAuthFixture } from './auth';
 import { getWorkerContext, type IWorkerContext } from './worker-context';
@@ -13,6 +16,12 @@ import { DashboardPage } from '../pages/dashboard-page';
 import { ManagePage } from '../pages/manage-page';
 import { QuickUpdatePage } from '../pages/quick-update-page';
 import { existsSync } from 'fs';
+
+/**
+ * Fixed date for visual tests - ensures deterministic screenshots
+ * Using January 15, 2025 at noon to avoid timezone edge cases
+ */
+export const VISUAL_TEST_FIXED_DATE = new Date('2025-01-15T12:00:00');
 
 /**
  * Theme modes supported by the app
@@ -24,11 +33,6 @@ type ThemeMode = 'light' | 'dark' | 'system';
  */
 export interface VisualTestHelpers {
   /**
-   * Get locators for dynamic content that should be masked in screenshots
-   */
-  getDynamicMasks(page: Page): Promise<Locator[]>;
-
-  /**
    * Wait for the UI to stabilize (animations complete, data loaded)
    */
   waitForStableUI(page: Page): Promise<void>;
@@ -39,13 +43,9 @@ export interface VisualTestHelpers {
   setTheme(page: Page, theme: ThemeMode): Promise<void>;
 
   /**
-   * Take a screenshot with standard masking applied
+   * Take a screenshot (no masking - all data is deterministic)
    */
-  takeScreenshot(
-    page: Page,
-    name: string,
-    options?: { fullPage?: boolean; additionalMasks?: Locator[] }
-  ): Promise<void>;
+  takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean }): Promise<void>;
 }
 
 /**
@@ -69,37 +69,6 @@ type WorkerFixtures = {
   workerCtx: IWorkerContext;
   workerBrowserContext: BrowserContext;
 };
-
-/**
- * Get locators for elements that contain dynamic content
- */
-async function getDynamicMasks(page: Page): Promise<Locator[]> {
-  const masks: Locator[] = [];
-
-  const addMaskIfExists = async (locator: Locator) => {
-    const count = await locator.count().catch(() => 0);
-    if (count > 0) {
-      masks.push(locator);
-    }
-  };
-
-  // Currency values
-  await addMaskIfExists(page.locator('[data-testid*="balance"], [data-testid*="amount"]'));
-
-  // Charts (data varies)
-  await addMaskIfExists(page.locator('.recharts-wrapper'));
-
-  // Worker-prefixed names [W{n}]
-  await addMaskIfExists(page.locator('text=/\\[W\\d+\\]/'));
-
-  // Timestamps and dates
-  await addMaskIfExists(page.locator('[data-testid*="date"], [data-testid*="timestamp"]'));
-
-  // Currency text R$ pattern
-  await addMaskIfExists(page.locator('text=/R\\$\\s*[\\d.,]+/'));
-
-  return masks;
-}
 
 /**
  * Disable all CSS animations for stable screenshots
@@ -170,25 +139,22 @@ export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
 }
 
 /**
- * Take a screenshot with standard masking
+ * Take a screenshot without masking (all data is deterministic with fixed date)
  */
-async function takeScreenshotWithMasks(
+async function takeScreenshot(
   page: Page,
   name: string,
-  options?: { fullPage?: boolean; additionalMasks?: Locator[] }
+  options?: { fullPage?: boolean }
 ): Promise<void> {
-  const masks = await getDynamicMasks(page);
-  const allMasks = options?.additionalMasks ? [...masks, ...options.additionalMasks] : masks;
-
   await expect(page).toHaveScreenshot(name, {
     fullPage: options?.fullPage ?? false,
-    mask: allMasks,
   });
 }
 
 /**
  * Extended test with visual testing fixtures
  * Uses the same auth pattern as test-base.ts
+ * Freezes time to VISUAL_TEST_FIXED_DATE for deterministic screenshots
  */
 export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
   // Worker-scoped context - same as test-base.ts
@@ -264,6 +230,17 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
     await use(workerBrowserContext);
   },
 
+  // Override page to install clock mock before any navigation
+  page: async ({ context }, use) => {
+    const page = await context.newPage();
+
+    // Install clock mock with fixed date for deterministic visual tests
+    await page.clock.install({ time: VISUAL_TEST_FIXED_DATE });
+
+    await use(page);
+    await page.close();
+  },
+
   // Test-scoped worker context
   workerContext: async ({ workerCtx }, use) => {
     await use(workerCtx);
@@ -303,10 +280,9 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
   // Visual test helpers
   visual: async ({}, use) => {
     await use({
-      getDynamicMasks,
       waitForStableUI,
       setTheme,
-      takeScreenshot: takeScreenshotWithMasks,
+      takeScreenshot,
     });
   },
 });

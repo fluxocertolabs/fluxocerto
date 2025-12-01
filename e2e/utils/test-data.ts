@@ -81,6 +81,7 @@ export function createExpense(overrides: Partial<TestExpense> = {}): TestExpense
 
 /**
  * Create test single-shot expense with defaults
+ * Default date is within 30 days of VISUAL_TEST_FIXED_DATE (2025-01-15)
  */
 export function createSingleShotExpense(
   overrides: Partial<TestSingleShotExpense> = {}
@@ -88,7 +89,7 @@ export function createSingleShotExpense(
   return {
     name: 'Compra de Móveis',
     amount: 500000, // R$ 5.000,00
-    date: '2025-12-15',
+    date: '2025-01-25', // 10 days after visual test fixed date
     ...overrides,
   };
 }
@@ -130,6 +131,7 @@ export function createProject(overrides: Partial<TestProject> = {}): TestProject
 
 /**
  * Create test single-shot income with defaults
+ * Default date is within 30 days of VISUAL_TEST_FIXED_DATE (2025-01-15)
  */
 export function createSingleShotIncome(
   overrides: Partial<TestSingleShotIncome> = {}
@@ -137,7 +139,7 @@ export function createSingleShotIncome(
   return {
     name: 'Bônus Anual',
     amount: 1000000, // R$ 10.000,00
-    date: '2025-12-20',
+    date: '2025-02-01', // ~17 days after visual test fixed date
     certainty: 'guaranteed',
     ...overrides,
   };
@@ -187,7 +189,7 @@ export function createFullSeedData() {
       createExpense({ name: 'Energia', amount: 25000, due_day: 20 }),
     ],
     singleShotExpenses: [
-      createSingleShotExpense({ name: 'Compra de Móveis', amount: 500000, date: '2025-12-15' }),
+      createSingleShotExpense({ name: 'Compra de Móveis', amount: 500000, date: '2025-01-25' }),
     ],
     projects: [
       createProject({ name: 'Salário', amount: 800000 }),
@@ -200,7 +202,7 @@ export function createFullSeedData() {
       }),
     ],
     singleShotIncome: [
-      createSingleShotIncome({ name: 'Bônus Anual', amount: 1000000, date: '2025-12-20' }),
+      createSingleShotIncome({ name: 'Bônus Anual', amount: 1000000, date: '2025-02-01' }),
     ],
     creditCards: [
       createCreditCard({ name: 'Nubank Platinum', statement_balance: 300000, due_day: 15 }),
