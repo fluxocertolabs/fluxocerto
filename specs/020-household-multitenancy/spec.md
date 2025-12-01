@@ -60,7 +60,7 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 ### Edge Cases
 
 - What happens when a user tries to access data after their household is deleted? System should gracefully handle orphaned users by blocking access and displaying appropriate message.
-- What happens when the last member of a household is removed? (Admin-only scenario in v1) The household should remain with its data intact; household deletion is admin-only via direct database access.
+- What happens when the last member of a household is removed? (Admin-only scenario in v1) The household should remain with its data intact; household deletion is admin-only via direct database access. System must not break or throw errors when querying an empty household.
 - What happens when an invite is sent to an email that's already pending invite to another household? System should reject the invite with clear error message.
 - What happens when two users from different households try to invite the same new email simultaneously? First invite to complete wins; second receives "user already belongs to a household" error.
 - What happens to shared data during the migration if relationships exist across what would become different households? Not applicable - current system has single-tenant data, migration assigns ALL existing data to single default household.
@@ -75,7 +75,7 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 - **FR-003**: System MUST prevent users from belonging to multiple households simultaneously
 
 **Data Association**
-- **FR-004**: System MUST associate all financial entities (accounts, projects, expenses, single_shot_expenses, single_shot_income, credit_cards, user_preferences) with a household
+- **FR-004**: System MUST associate all financial entities (accounts, projects, expenses, credit_cards, user_preferences) with a household. Note: Single-shot expenses are stored in the `expenses` table with `type='single_shot'`; single-shot income is stored in the `projects` table with `type='single_shot'` - both are covered by their parent table's household association.
 - **FR-005**: System MUST enforce that all new financial data created by a user is automatically assigned to the user's household
 
 **Data Isolation (RLS)**
@@ -86,7 +86,7 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 **Migration**
 - **FR-009**: System MUST create a default household named "Fonseca Floriano" during migration
 - **FR-010**: System MUST assign all existing profiles and their associated data to the default household during migration
-- **FR-011**: System MUST complete migration without data loss or service interruption
+- **FR-011**: System MUST complete migration without data loss: 100% of existing records retain original values and relationships, all pre-migration row counts match post-migration counts, and no foreign key references are broken. Migration is additive (new columns with defaults) and does not require downtime; existing queries continue to work during migration execution.
 
 **Invite Flow**
 - **FR-012**: System MUST assign new invited users to the inviting user's household automatically
@@ -108,7 +108,7 @@ Como membro de uma residência, preciso visualizar informações sobre minha res
 
 - **Household**: Represents a family/group that shares financial data. Contains: unique identifier, display name, creation timestamp, update timestamp. One household has many profiles and all associated financial entities.
 - **Profile**: Extended to include household association. Each profile belongs to exactly one household. The household_id determines data access scope.
-- **Financial Entities** (accounts, projects, expenses, single_shot_expenses, single_shot_income, credit_cards, user_preferences): All extended with household association to enable data isolation filtering.
+- **Financial Entities** (accounts, projects, expenses, credit_cards, user_preferences): All extended with household association to enable data isolation filtering. Note: Single-shot expenses and income are stored as type variants within `expenses` and `projects` tables respectively, not as separate entities.
 
 ## Success Criteria *(mandatory)*
 
