@@ -17,45 +17,35 @@ import {
 // =============================================================================
 
 describe('getSystemTheme', () => {
-  const originalWindow = global.window
-
   afterEach(() => {
-    global.window = originalWindow
-    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('returns "light" when window is undefined (SSR)', () => {
-    // @ts-expect-error - Testing SSR scenario
-    global.window = undefined
+    vi.stubGlobal('window', undefined)
     expect(getSystemTheme()).toBe('light')
   })
 
   it('returns "dark" when system prefers dark mode', () => {
-    global.window = {
-      ...originalWindow,
+    vi.stubGlobal('window', {
       matchMedia: vi.fn().mockReturnValue({ matches: true }),
-    } as unknown as Window & typeof globalThis
-
+    })
     expect(getSystemTheme()).toBe('dark')
   })
 
   it('returns "light" when system prefers light mode', () => {
-    global.window = {
-      ...originalWindow,
+    vi.stubGlobal('window', {
       matchMedia: vi.fn().mockReturnValue({ matches: false }),
-    } as unknown as Window & typeof globalThis
-
+    })
     expect(getSystemTheme()).toBe('light')
   })
 
   it('returns "light" when matchMedia throws an error', () => {
-    global.window = {
-      ...originalWindow,
+    vi.stubGlobal('window', {
       matchMedia: vi.fn().mockImplementation(() => {
         throw new Error('matchMedia not supported')
       }),
-    } as unknown as Window & typeof globalThis
-
+    })
     expect(getSystemTheme()).toBe('light')
   })
 })
@@ -65,19 +55,15 @@ describe('getSystemTheme', () => {
 // =============================================================================
 
 describe('resolveTheme', () => {
-  const originalWindow = global.window
-
   beforeEach(() => {
-    // Default mock for system theme
-    global.window = {
-      ...originalWindow,
-      matchMedia: vi.fn().mockReturnValue({ matches: false }), // Light mode
-    } as unknown as Window & typeof globalThis
+    // Default mock for system theme (light mode)
+    vi.stubGlobal('window', {
+      matchMedia: vi.fn().mockReturnValue({ matches: false }),
+    })
   })
 
   afterEach(() => {
-    global.window = originalWindow
-    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('returns "light" for light theme value', () => {
@@ -89,20 +75,16 @@ describe('resolveTheme', () => {
   })
 
   it('returns system theme for "system" value when system prefers light', () => {
-    global.window = {
-      ...originalWindow,
+    vi.stubGlobal('window', {
       matchMedia: vi.fn().mockReturnValue({ matches: false }),
-    } as unknown as Window & typeof globalThis
-
+    })
     expect(resolveTheme('system')).toBe('light')
   })
 
   it('returns system theme for "system" value when system prefers dark', () => {
-    global.window = {
-      ...originalWindow,
+    vi.stubGlobal('window', {
       matchMedia: vi.fn().mockReturnValue({ matches: true }),
-    } as unknown as Window & typeof globalThis
-
+    })
     expect(resolveTheme('system')).toBe('dark')
   })
 })
@@ -112,16 +94,12 @@ describe('resolveTheme', () => {
 // =============================================================================
 
 describe('applyThemeToDocument', () => {
-  const originalDocument = global.document
-
   afterEach(() => {
-    global.document = originalDocument
-    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('does nothing when document is undefined (SSR)', () => {
-    // @ts-expect-error - Testing SSR scenario
-    global.document = undefined
+    vi.stubGlobal('document', undefined)
     expect(() => applyThemeToDocument('dark')).not.toThrow()
   })
 
@@ -130,9 +108,9 @@ describe('applyThemeToDocument', () => {
       remove: vi.fn(),
       add: vi.fn(),
     }
-    global.document = {
+    vi.stubGlobal('document', {
       documentElement: { classList },
-    } as unknown as Document
+    })
 
     applyThemeToDocument('dark')
 
@@ -145,9 +123,9 @@ describe('applyThemeToDocument', () => {
       remove: vi.fn(),
       add: vi.fn(),
     }
-    global.document = {
+    vi.stubGlobal('document', {
       documentElement: { classList },
-    } as unknown as Document
+    })
 
     applyThemeToDocument('light')
 
@@ -161,93 +139,77 @@ describe('applyThemeToDocument', () => {
 // =============================================================================
 
 describe('getStoredTheme', () => {
-  const originalWindow = global.window
-  const originalLocalStorage = global.localStorage
-
   afterEach(() => {
-    global.window = originalWindow
-    global.localStorage = originalLocalStorage
-    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('returns null when window is undefined (SSR)', () => {
-    // @ts-expect-error - Testing SSR scenario
-    global.window = undefined
+    vi.stubGlobal('window', undefined)
     expect(getStoredTheme()).toBe(null)
   })
 
   it('returns null when no theme is stored', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(null),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe(null)
   })
 
   it('returns "light" for valid light theme in storage', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(JSON.stringify({ state: { theme: 'light' } })),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe('light')
   })
 
   it('returns "dark" for valid dark theme in storage', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(JSON.stringify({ state: { theme: 'dark' } })),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe('dark')
   })
 
   it('returns "system" for valid system theme in storage', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(JSON.stringify({ state: { theme: 'system' } })),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe('system')
   })
 
   it('returns null for invalid theme value', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(JSON.stringify({ state: { theme: 'invalid' } })),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe(null)
   })
 
   it('returns null for malformed JSON', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue('not-valid-json'),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe(null)
   })
 
   it('returns null when localStorage throws', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockImplementation(() => {
         throw new Error('localStorage not available')
       }),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe(null)
   })
 
   it('returns null for empty state object', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(JSON.stringify({ state: {} })),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe(null)
   })
 
   it('returns null for missing state key', () => {
-    global.localStorage = {
+    vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(JSON.stringify({})),
-    } as unknown as Storage
-
+    })
     expect(getStoredTheme()).toBe(null)
   })
 })
-

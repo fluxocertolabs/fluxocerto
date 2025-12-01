@@ -235,7 +235,7 @@ describe('AUTH_ERROR_MESSAGES', () => {
   })
 
   it('has non-empty messages', () => {
-    for (const [key, value] of Object.entries(AUTH_ERROR_MESSAGES)) {
+    for (const value of Object.values(AUTH_ERROR_MESSAGES)) {
       expect(value.length).toBeGreaterThan(0)
     }
   })
