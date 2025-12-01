@@ -3,10 +3,10 @@ import '@playwright/test'
 import './auth'
 import './db'
 import './worker-context'
+import './worker-count'
 import 'fs'
 import 'path'
 import 'url'
-import 'os'
 </file>
 
 <file path="e2e/fixtures/auth.ts">
@@ -88,6 +88,7 @@ export const test
 import 'path'
 import 'url'
 import 'path'
+import './worker-count'
 
 export interface IWorkerContext {
     property workerIndex: number
@@ -96,7 +97,6 @@ export interface IWorkerContext {
     property dataPrefix: string
     property schemaName: string
 }
-export const MAX_WORKERS
 export const AUTH_MAX_RETRIES
 export const AUTH_RETRY_DELAYS
 export const ALL_WORKERS_PATTERN
@@ -105,6 +105,12 @@ export function getWorkerSchemaName(workerIndex: number)
 export function addWorkerPrefix(name: string, workerIndex: number)
 export function stripWorkerPrefix(name: string)
 export function getWorkerPrefixPattern(workerIndex: number)
+</file>
+
+<file path="e2e/fixtures/worker-count.ts">
+import 'os'
+export const MAX_WORKERS
+export function getWorkerCount()
 </file>
 
 <file path="e2e/pages/accounts-section.ts">
@@ -321,8 +327,7 @@ import '@playwright/test'
 import 'child_process'
 import 'url'
 import 'path'
-import 'os'
-import './fixtures/worker-context'
+import './fixtures/worker-count'
 </file>
 
 <file path="e2e/tests/accounts.spec.ts">
@@ -373,6 +378,7 @@ import '../utils/test-data'
 <file path="e2e/tests/theme.spec.ts">
 import '../fixtures/test-base'
 import '../utils/test-data'
+import '@playwright/test'
 </file>
 
 <file path="e2e/utils/format.ts">
