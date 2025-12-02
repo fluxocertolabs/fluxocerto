@@ -5,6 +5,19 @@
 **Status**: Draft  
 **Input**: User description: "Build a 'Future Credit Card Statements' feature for the Family Finance application that allows users to pre-define credit card statement balances (valor da fatura) for upcoming months, beyond just the current month."
 
+## Clarifications
+
+### Session 2025-12-02
+
+- Q: What specific user action triggers the month progression check? → A: App launch/login only (once per session)
+- Q: How should the 12-month limit be calculated? → A: Rolling 12 months from current date
+- Q: Should the system allow a zero (R$ 0,00) statement amount? → A: Allow zero (valid scenario for months with no charges)
+- Q: What should display when a credit card has no future statements? → A: Collapsed/minimal placeholder with CTA "Adicionar próxima fatura"
+- Q: For months without a defined future statement, what value should cashflow display? → A: Show zero (R$ 0,00) for undefined months
+- User requirement: All changes must include unit tests, visual regression tests, and e2e tests
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Add Future Statement to Credit Card (Priority: P1)
@@ -18,6 +31,8 @@ A user knows their upcoming credit card bills from installment purchases (compra
 **Acceptance Scenarios**:
 
 1. **Given** a user has a credit card "Nubank" with current statement R$ 2.500, **When** they add a future statement for "Janeiro/2025" with R$ 3.200, **Then** the future statement is saved and displayed in a "Próximas Faturas" section below the current statement.
+
+1a. **Given** a user has a credit card with no future statements defined, **When** they view the card details, **Then** a collapsed/minimal "Próximas Faturas" placeholder is shown with a CTA "Adicionar próxima fatura" to guide feature discovery.
 
 2. **Given** a user is viewing their credit card details, **When** they click "Adicionar Próxima Fatura" (Add Next Statement), **Then** the system pre-fills the month/year field with the next logical month after the last scheduled statement.
 
@@ -37,7 +52,7 @@ A user's expected credit card bill changes (e.g., they paid off an installment e
 
 1. **Given** a user has a future statement for "Janeiro/2025" with R$ 3.200, **When** they edit the amount to R$ 2.800, **Then** the updated value is saved and reflected in the cashflow projection.
 
-2. **Given** a user has a future statement for "Fevereiro/2025", **When** they delete it, **Then** the statement is removed and the cashflow projection for that month reverts to using the closest preceding defined value (or current statement if none).
+2. **Given** a user has a future statement for "Fevereiro/2025", **When** they delete it, **Then** the statement is removed and the cashflow projection for that month displays R$ 0,00 (indicating no defined expense for that month).
 
 3. **Given** a user tries to edit a future statement for a month that has now passed, **When** they save changes, **Then** the system prevents the edit and displays an appropriate message.
 
@@ -91,6 +106,8 @@ A user wants to see at a glance all their upcoming credit card obligations acros
 
 - **What is the maximum planning horizon?** Users can add statements up to 12 months in advance. This provides reasonable planning without unlimited data growth.
 
+- **Can users enter a zero amount?** Yes, R$ 0,00 is a valid statement amount representing months where no charges are expected (e.g., card temporarily unused). Negative amounts are not allowed.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -100,13 +117,20 @@ A user wants to see at a glance all their upcoming credit card obligations acros
 - **FR-003**: System MUST allow users to edit the amount of any future statement that hasn't yet become current
 - **FR-004**: System MUST allow users to delete any future statement
 - **FR-005**: System MUST prevent adding more than one future statement per month/year combination per credit card
-- **FR-006**: System MUST use pre-defined future statement values in cashflow projections instead of repeating the current statement balance
+- **FR-006**: System MUST use pre-defined future statement values in cashflow projections; months without a defined future statement display as R$ 0,00 (zero) rather than repeating the current statement or carrying forward previous values
 - **FR-007**: System MUST automatically promote the appropriate future statement to "current" when a new billing cycle begins
 - **FR-008**: System MUST preserve the current statement value if no future statement is defined for the upcoming month
-- **FR-009**: System MUST limit future statements to 12 months ahead from current date
+- **FR-009**: System MUST limit future statements to a rolling 12-month window from the current date (e.g., if today is December 2024, users can add statements through December 2025; when January 2025 arrives, the limit extends to January 2026)
 - **FR-010**: System MUST delete all associated future statements when a credit card is deleted
 - **FR-011**: System MUST warn users when adding a future statement for the current month (which would overwrite the current balance)
 - **FR-012**: System MUST automatically clean up past-month entries during month progression (they become irrelevant after being promoted)
+
+### Testing Requirements
+
+- **TR-001**: All new or modified code MUST include unit tests covering business logic, validation rules, and edge cases
+- **TR-002**: All UI changes MUST include visual regression tests to prevent unintended styling regressions
+- **TR-003**: All user-facing features MUST include end-to-end (e2e) tests covering critical user journeys defined in acceptance scenarios
+- **TR-004**: Test coverage applies to additions, modifications, and deletions — any code change requires corresponding test updates
 
 ### Key Entities *(include if feature involves data)*
 
@@ -124,6 +148,7 @@ A user wants to see at a glance all their upcoming credit card obligations acros
 - **SC-004**: When a new month begins, the appropriate future statement value (if any) becomes the current statement within 24 hours of the user accessing the application
 - **SC-005**: Users can plan their credit card obligations for up to 12 months ahead
 - **SC-006**: 100% of future statement changes are immediately reflected in the cashflow chart upon save
+- **SC-007**: All implemented features have corresponding unit tests, visual regression tests, and e2e tests before merge
 
 ---
 
@@ -137,6 +162,6 @@ A user wants to see at a glance all their upcoming credit card obligations acros
 
 4. **Statement vs Payment**: "Fatura" (statement) represents the amount owed, not necessarily the amount the user will pay (minimum payment vs full payment). The system tracks the full statement amount.
 
-5. **User-Initiated Progression Check**: The automatic month progression check runs when the user accesses the application (not via background jobs). This is consistent with the existing app's offline-first, client-side architecture.
+5. **User-Initiated Progression Check**: The automatic month progression check runs once per session at app launch/login (not via background jobs or on every page load). This is consistent with the existing app's offline-first, client-side architecture and ensures predictable, testable behavior.
 
 6. **Delete Cascade**: Deleting a credit card deletes all its future statements - there's no orphan handling.
