@@ -1,14 +1,17 @@
 # GitHub Actions CI/CD Workflow
-# Purpose: Run quality gates (typecheck, lint, test, build, visual, e2e) and deploy to Vercel only if all checks pass
+# Purpose: Run quality gates (typecheck, lint, test, build, visual, e2e), apply database migrations, and deploy to Vercel
 #
 # Deployment Strategy:
 # - Preview deployments: On pull requests (after quality checks, visual regression, AND e2e tests pass)
-# - Production deployments: On push to main (after quality checks, visual regression, AND e2e tests pass)
+# - Production deployments: On push to main (after quality checks, visual regression, e2e tests, AND database migrations pass)
 #
 # Required Secrets:
 # - VERCEL_TOKEN: Vercel API token
 # - VERCEL_ORG_ID: Vercel organization ID
 # - VERCEL_PROJECT_ID: Vercel project ID
+# - SUPABASE_ACCESS_TOKEN: Supabase personal access token for CLI authentication
+# - SUPABASE_PROJECT_REF: Supabase project reference ID (e.g., abcdefghijklmnop)
+# - SUPABASE_DB_PASSWORD: Supabase database password for linking
 
 name: CI/CD
 
@@ -101,7 +104,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.62.10
 
       # Step 4: Start Supabase local environment
       - name: Start Supabase
@@ -173,7 +176,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.62.10
 
       # Step 5: Start Supabase local environment
       - name: Start Supabase
@@ -211,6 +214,65 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  migrate:
+    name: Database Migrations
+    runs-on: ubuntu-latest
+    needs: [quality, visual, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+    # Serialize migration runs to prevent race conditions when multiple PRs merge
+    concurrency:
+      group: supabase-migrate-production
+      cancel-in-progress: false
+    
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Install Supabase CLI
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.62.10
+
+      # Step 3: Link to production Supabase project
+      - name: Link Supabase project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # Step 4: Apply migrations with retry on failure
+      - name: Apply database migrations
+        id: migrate
+        run: |
+          set +e
+          supabase db push 2>&1 | tee migration-output.txt
+          exit_code=${PIPESTATUS[0]}
+          if [ $exit_code -ne 0 ]; then
+            echo "Migration failed, retrying in 30 seconds..."
+            sleep 30
+            supabase db push 2>&1 | tee migration-output.txt
+            exit_code=${PIPESTATUS[0]}
+          fi
+          exit $exit_code
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # Step 5: Report migration failure to step summary
+      - name: Report migration status
+        if: failure()
+        run: |
+          echo "## ❌ Database Migration Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The migration job failed. Deployment has been blocked." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Migration Output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat migration-output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   deploy-preview:
     name: Deploy Preview
@@ -274,7 +336,7 @@ jobs:
   deploy-production:
     name: Deploy Production
     runs-on: ubuntu-latest
-    needs: [quality, visual, e2e]
+    needs: [quality, visual, e2e, migrate]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
