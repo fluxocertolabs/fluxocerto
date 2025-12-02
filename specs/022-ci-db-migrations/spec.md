@@ -78,7 +78,7 @@ As a developer opening a pull request, migration syntax is validated locally via
 - What happens when the Supabase service is temporarily unavailable during migration? The job should fail with a clear error and block deployment.
 - What happens when a migration times out? The job enforces a hard 10-minute timeout. If exceeded, the job fails with a timeout error and blocks deployment.
 - What happens when credentials are missing or invalid? The job should fail early with a clear "authentication failed" or "missing credentials" error.
-- What happens when network connectivity to Supabase is interrupted mid-migration? The job should fail and report the partial state.
+- What happens when network connectivity to Supabase is interrupted mid-migration? The job should fail and report the partial state. Recovery: re-run the migrate job; `supabase db push` is idempotent and will skip already-applied migrations.
 - What happens when migration succeeds but deployment fails? No automatic rollback - migrations are forward-only. Manual intervention is required to either fix the deployment or write a compensating migration.
 - What happens when two PRs merge in quick succession with migrations? The workflow uses a GitHub Actions concurrency group to serialize migrate jobs, ensuring migrations execute in merge order without race conditions.
 
@@ -96,7 +96,7 @@ As a developer opening a pull request, migration syntax is validated locally via
 
 - **FR-005**: Pipeline MUST fail entirely if the migrate job fails, preventing deployment of incompatible code.
 
-- **FR-006**: Migrate job MUST use GitHub Secrets for Supabase authentication credentials (SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF).
+- **FR-006**: Migrate job MUST use GitHub Secrets for Supabase authentication credentials (SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF, and SUPABASE_DB_PASSWORD).
 
 - **FR-007**: Migrate job MUST NOT expose credentials in CI logs or outputs.
 
@@ -118,7 +118,7 @@ As a developer opening a pull request, migration syntax is validated locally via
 
 - **Migration File**: A SQL file in `supabase/migrations/` containing schema changes to be applied to the database. Each file has a timestamp-based name ensuring execution order.
 
-- **GitHub Secret**: Encrypted credentials stored in repository settings, referenced by name in workflow files. Used for SUPABASE_ACCESS_TOKEN (authentication) and SUPABASE_PROJECT_REF (target project identifier).
+- **GitHub Secret**: Encrypted credentials stored in repository settings, referenced by name in workflow files. Used for SUPABASE_ACCESS_TOKEN (authentication), SUPABASE_PROJECT_REF (target project identifier), and SUPABASE_DB_PASSWORD (database password for linking).
 
 - **Pipeline Job**: A unit of work in the CI/CD workflow with defined dependencies, conditions, and steps. Jobs can depend on other jobs and run conditionally.
 

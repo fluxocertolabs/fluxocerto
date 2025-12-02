@@ -35,8 +35,8 @@
 
 **⚠️ CRITICAL**: Version pinning must be complete before migrate job implementation
 
-- [ ] T003 [P] Pin Supabase CLI to v2.62.10 in visual job (line ~104) in .github/workflows/ci.yml
-- [ ] T004 [P] Pin Supabase CLI to v2.62.10 in e2e job (line ~177) in .github/workflows/ci.yml
+- [ ] T003 [P] Pin Supabase CLI to v2.62.10 in visual job (search: "supabase/setup-cli" in visual job section) in .github/workflows/ci.yml
+- [ ] T004 [P] Pin Supabase CLI to v2.62.10 in e2e job (search: "supabase/setup-cli" in e2e job section) in .github/workflows/ci.yml
 
 **Checkpoint**: All Supabase CLI usages now pinned to v2.62.10 - migrate job implementation can proceed
 
@@ -84,8 +84,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Verify SUPABASE_ACCESS_TOKEN is passed via env in migrate job (already implemented in T008/T009) in .github/workflows/ci.yml
-- [ ] T014 [US3] Verify SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD are passed via secrets.${{ }} syntax in .github/workflows/ci.yml
+- [ ] T013 [US3] [VERIFY ONLY] Confirm SUPABASE_ACCESS_TOKEN is passed via env in migrate job (implemented in T008/T009) in .github/workflows/ci.yml
+- [ ] T014 [US3] [VERIFY ONLY] Confirm SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD are passed via secrets.${{ }} syntax in .github/workflows/ci.yml
 
 **Checkpoint**: All credentials use GitHub Secrets - no hardcoded values
 
@@ -99,8 +99,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T015 [US4] Verify migrate job condition excludes pull_request events (condition: github.ref == 'refs/heads/main') - already satisfied by T010
-- [ ] T016 [US4] Verify existing e2e job continues to use local Supabase (no changes required) in .github/workflows/ci.yml
+- [ ] T015 [US4] [VERIFY ONLY] Confirm migrate job condition excludes pull_request events (condition: github.ref == 'refs/heads/main') - satisfied by T010
+- [ ] T016 [US4] [VERIFY ONLY] Confirm existing e2e job continues to use local Supabase (no changes required) in .github/workflows/ci.yml
 
 **Checkpoint**: PR validation behavior is unchanged - production migrations only on main
 
@@ -110,7 +110,16 @@
 
 **Purpose**: Final verification and documentation
 
-- [ ] T017 [P] Run quickstart.md verification checklist (migrate job appears, runs only on main, version pinned, no credentials visible, deployment waits for migrate, failures block deployment)
+- [ ] T017 [P] Run quickstart.md verification checklist:
+  - [ ] Migrate job appears in workflow
+  - [ ] Job runs only on main (not on PRs)
+  - [ ] Supabase CLI version pinned to v2.62.10
+  - [ ] No credentials visible in logs (SC-004)
+  - [ ] Deployment waits for migrate to complete
+  - [ ] Failures block deployment
+  - [ ] Idempotent: re-run migrate job twice; second run succeeds without errors (FR-010)
+  - [ ] Performance: typical migration completes within 5 minutes (SC-002)
+  - [ ] Traceability: can identify failing migration file within 30 seconds from logs (SC-005)
 - [ ] T018 Review complete workflow for consistency and proper job ordering
 
 ---
