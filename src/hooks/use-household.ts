@@ -109,7 +109,7 @@ export function useHousehold(): UseHouseholdReturn {
     return () => {
       mounted = false
     }
-  }, [isAuthenticated, user?.id, retryCount])
+  }, [isAuthenticated, user?.id, user?.email, retryCount])
 
   return { household, members, isLoading, error, refetch }
 }
