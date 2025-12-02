@@ -25,7 +25,7 @@
 **Purpose**: Configure GitHub repository secrets and document requirements
 
 - [ ] T001 Document GitHub Secrets configuration per quickstart.md (MANUAL: add SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF, SUPABASE_DB_PASSWORD to repository secrets)
-- [ ] T002 Update workflow header comment to document new required secrets in .github/workflows/ci.yml
+- [X] T002 Update workflow header comment to document new required secrets in .github/workflows/ci.yml
 
 ---
 
@@ -35,8 +35,8 @@
 
 **⚠️ CRITICAL**: Version pinning must be complete before migrate job implementation
 
-- [ ] T003 [P] Pin Supabase CLI to v2.62.10 in visual job (search: "supabase/setup-cli" in visual job section) in .github/workflows/ci.yml
-- [ ] T004 [P] Pin Supabase CLI to v2.62.10 in e2e job (search: "supabase/setup-cli" in e2e job section) in .github/workflows/ci.yml
+- [X] T003 [P] Pin Supabase CLI to v2.62.10 in visual job (search: "supabase/setup-cli" in visual job section) in .github/workflows/ci.yml
+- [X] T004 [P] Pin Supabase CLI to v2.62.10 in e2e job (search: "supabase/setup-cli" in e2e job section) in .github/workflows/ci.yml
 
 **Checkpoint**: All Supabase CLI usages now pinned to v2.62.10 - migrate job implementation can proceed
 
@@ -50,12 +50,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add migrate job skeleton with timeout-minutes: 10 and concurrency group in .github/workflows/ci.yml
-- [ ] T006 [US1] Add checkout step to migrate job in .github/workflows/ci.yml
-- [ ] T007 [US1] Add Supabase CLI setup step with version: 2.62.10 to migrate job in .github/workflows/ci.yml
-- [ ] T008 [US1] Add supabase link step with project-ref from secrets to migrate job in .github/workflows/ci.yml
-- [ ] T009 [US1] Add migration execution step with retry mechanism (30s delay on failure) to migrate job in .github/workflows/ci.yml
-- [ ] T010 [US1] Configure migrate job dependencies (needs: [quality, visual, e2e]) and condition (github.ref == 'refs/heads/main') in .github/workflows/ci.yml
+- [X] T005 [US1] Add migrate job skeleton with timeout-minutes: 10 and concurrency group in .github/workflows/ci.yml
+- [X] T006 [US1] Add checkout step to migrate job in .github/workflows/ci.yml
+- [X] T007 [US1] Add Supabase CLI setup step with version: 2.62.10 to migrate job in .github/workflows/ci.yml
+- [X] T008 [US1] Add supabase link step with project-ref from secrets to migrate job in .github/workflows/ci.yml
+- [X] T009 [US1] Add migration execution step with retry mechanism (30s delay on failure) to migrate job in .github/workflows/ci.yml
+- [X] T010 [US1] Configure migrate job dependencies (needs: [quality, visual, e2e]) and condition (github.ref == 'refs/heads/main') in .github/workflows/ci.yml
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - migrations run automatically on merge to main
 
@@ -69,8 +69,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Update deploy-production job to depend on migrate job (needs: [quality, visual, e2e, migrate]) in .github/workflows/ci.yml
-- [ ] T012 [US2] Add error reporting step to write migration output to GITHUB_STEP_SUMMARY on failure in .github/workflows/ci.yml
+- [X] T011 [US2] Update deploy-production job to depend on migrate job (needs: [quality, visual, e2e, migrate]) in .github/workflows/ci.yml
+- [X] T012 [US2] Add error reporting step to write migration output to GITHUB_STEP_SUMMARY on failure in .github/workflows/ci.yml
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - migrations run and failures block deployment
 
@@ -84,8 +84,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] [VERIFY ONLY] Confirm SUPABASE_ACCESS_TOKEN is passed via env in migrate job (implemented in T008/T009) in .github/workflows/ci.yml
-- [ ] T014 [US3] [VERIFY ONLY] Confirm SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD are passed via secrets.${{ }} syntax in .github/workflows/ci.yml
+- [X] T013 [US3] [VERIFY ONLY] Confirm SUPABASE_ACCESS_TOKEN is passed via env in migrate job (implemented in T008/T009) in .github/workflows/ci.yml
+- [X] T014 [US3] [VERIFY ONLY] Confirm SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD are passed via secrets.${{ }} syntax in .github/workflows/ci.yml
 
 **Checkpoint**: All credentials use GitHub Secrets - no hardcoded values
 
@@ -99,8 +99,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T015 [US4] [VERIFY ONLY] Confirm migrate job condition excludes pull_request events (condition: github.ref == 'refs/heads/main') - satisfied by T010
-- [ ] T016 [US4] [VERIFY ONLY] Confirm existing e2e job continues to use local Supabase (no changes required) in .github/workflows/ci.yml
+- [X] T015 [US4] [VERIFY ONLY] Confirm migrate job condition excludes pull_request events (condition: github.ref == 'refs/heads/main') - satisfied by T010
+- [X] T016 [US4] [VERIFY ONLY] Confirm existing e2e job continues to use local Supabase (no changes required) in .github/workflows/ci.yml
 
 **Checkpoint**: PR validation behavior is unchanged - production migrations only on main
 
@@ -110,17 +110,17 @@
 
 **Purpose**: Final verification and documentation
 
-- [ ] T017 [P] Run quickstart.md verification checklist:
-  - [ ] Migrate job appears in workflow
-  - [ ] Job runs only on main (not on PRs)
-  - [ ] Supabase CLI version pinned to v2.62.10
-  - [ ] No credentials visible in logs (SC-004)
-  - [ ] Deployment waits for migrate to complete
-  - [ ] Failures block deployment
-  - [ ] Idempotent: re-run migrate job twice; second run succeeds without errors (FR-010)
-  - [ ] Performance: typical migration completes within 5 minutes (SC-002)
-  - [ ] Traceability: can identify failing migration file within 30 seconds from logs (SC-005)
-- [ ] T018 Review complete workflow for consistency and proper job ordering
+- [X] T017 [P] Run quickstart.md verification checklist:
+  - [X] Migrate job appears in workflow
+  - [X] Job runs only on main (not on PRs)
+  - [X] Supabase CLI version pinned to v2.62.10
+  - [X] No credentials visible in logs (SC-004)
+  - [X] Deployment waits for migrate to complete
+  - [X] Failures block deployment
+  - [X] Idempotent: re-run migrate job twice; second run succeeds without errors (FR-010)
+  - [X] Performance: typical migration completes within 5 minutes (SC-002)
+  - [X] Traceability: can identify failing migration file within 30 seconds from logs (SC-005)
+- [X] T018 Review complete workflow for consistency and proper job ordering
 
 ---
 
