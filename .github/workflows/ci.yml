@@ -2,7 +2,6 @@
 # Purpose: Run quality gates (typecheck, lint, test, build, visual, e2e), apply database migrations, and deploy to Vercel
 #
 # Deployment Strategy:
-# - Preview deployments: On pull requests (after quality checks, visual regression, AND e2e tests pass)
 # - Production deployments: On push to main (after quality checks, visual regression, e2e tests, AND database migrations pass)
 #
 # Required Secrets:
@@ -273,65 +272,6 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           cat migration-output.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-
-  deploy-preview:
-    name: Deploy Preview
-    runs-on: ubuntu-latest
-    needs: [quality, visual, e2e]
-    if: github.event_name == 'pull_request'
-    environment:
-      name: preview
-      url: ${{ steps.deploy.outputs.url }}
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
-
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build Project Artifacts
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel (Preview)
-        id: deploy
-        run: |
-          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$url" >> $GITHUB_OUTPUT
-
-      - name: Comment PR with Preview URL
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '🚀 **Preview Deployment Ready!**\n\n' +
-                    '| Environment | URL |\n' +
-                    '|-------------|-----|\n' +
-                    '| Preview | ${{ steps.deploy.outputs.url }} |\n\n' +
-                    '✅ All checks passed:\n' +
-                    '- Quality checks (typecheck, lint, unit tests, build)\n' +
-                    '- Visual regression tests (Playwright)\n' +
-                    '- E2E tests (Playwright)\n\n' +
-                    '_Deployments only happen when all tests pass._'
-            })
 
   deploy-production:
     name: Deploy Production
