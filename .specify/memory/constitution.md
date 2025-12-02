@@ -2,7 +2,7 @@
 
 **Project-specific facts and implementation details**
 
-> **For universal collaboration protocols**, see `../AGENTS.md`
+> **For universal collaboration protocols**, see `../../AGENTS.md`
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Universal collaboration protocols for AI agents**
 
-> **Project-specific facts**: see `docs/CONSTITUTION.md`
+> **Project-specific facts**: see `.specify/memory/CONSTITUTION.md`
 
 ---
 
