@@ -274,7 +274,6 @@ describe('Project Actions - Validation', () => {
 
     it('validates frequency-schedule match for monthly', async () => {
       // Monthly frequency requires dayOfMonth schedule
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await useFinanceStore.getState().addProject({
         type: 'recurring',
         name: 'Salary',
@@ -283,6 +282,7 @@ describe('Project Actions - Validation', () => {
         paymentSchedule: { type: 'dayOfWeek', dayOfWeek: 1 },
         certainty: 'guaranteed',
         isActive: true,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
       expect(result.success).toBe(false)
@@ -307,7 +307,6 @@ describe('Project Actions - Validation', () => {
     })
 
     it('validates twice-monthly schedule requires different days', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await useFinanceStore.getState().addProject({
         type: 'recurring',
         name: 'Bi-monthly Income',
@@ -316,6 +315,7 @@ describe('Project Actions - Validation', () => {
         paymentSchedule: { type: 'twiceMonthly', firstDay: 15, secondDay: 15 },
         certainty: 'guaranteed',
         isActive: true,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
       expect(result.success).toBe(false)
