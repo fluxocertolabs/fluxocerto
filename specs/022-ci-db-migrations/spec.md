@@ -76,9 +76,11 @@ As a developer opening a pull request, migration syntax is validated locally via
 ### Edge Cases
 
 - What happens when the Supabase service is temporarily unavailable during migration? The job should fail with a clear error and block deployment.
-- What happens when a migration times out? The job should fail with a timeout error and block deployment.
+- What happens when a migration times out? The job enforces a hard 10-minute timeout. If exceeded, the job fails with a timeout error and blocks deployment.
 - What happens when credentials are missing or invalid? The job should fail early with a clear "authentication failed" or "missing credentials" error.
 - What happens when network connectivity to Supabase is interrupted mid-migration? The job should fail and report the partial state.
+- What happens when migration succeeds but deployment fails? No automatic rollback - migrations are forward-only. Manual intervention is required to either fix the deployment or write a compensating migration.
+- What happens when two PRs merge in quick succession with migrations? The workflow uses a GitHub Actions concurrency group to serialize migrate jobs, ensuring migrations execute in merge order without race conditions.
 
 ## Requirements *(mandatory)*
 
@@ -104,6 +106,14 @@ As a developer opening a pull request, migration syntax is validated locally via
 
 - **FR-010**: Migrate job MUST be idempotent - running the same migrations multiple times should not cause errors.
 
+- **FR-011**: Pipeline MUST use a GitHub Actions concurrency group to serialize migration jobs, preventing race conditions when multiple PRs merge in quick succession.
+
+- **FR-012**: Migrate job MUST automatically retry once with a 30-second delay on transient failures (network timeout, temporary service unavailability) before failing permanently.
+
+- **FR-013**: Workflow MUST pin the Supabase CLI to a specific version. Version updates should be explicit via pull request.
+
+- **FR-014**: Migrate job MUST enforce a hard timeout of 10 minutes. If exceeded, the job fails and blocks deployment.
+
 ### Key Entities
 
 - **Migration File**: A SQL file in `supabase/migrations/` containing schema changes to be applied to the database. Each file has a timestamp-based name ensuring execution order.
@@ -128,9 +138,20 @@ As a developer opening a pull request, migration syntax is validated locally via
 
 - **SC-006**: Existing PR validation workflow continues to work unchanged - no disruption to current development flow.
 
+## Clarifications
+
+### Session 2025-12-02
+
+- Q: What should happen if a migration succeeds but the subsequent production deployment fails? → A: No rollback - migrations are forward-only (manual intervention required)
+- Q: What should happen if two PRs merge to main in quick succession, both containing migrations? → A: Use GitHub Actions concurrency group to serialize migrate jobs
+- Q: Should the migrate job automatically retry on transient failures? → A: Single automatic retry with 30-second delay
+- Q: Should the Supabase CLI version be pinned in the workflow? → A: Pin to specific version, update explicitly via PR
+- Q: What should happen if a migration exceeds the 5-minute target? → A: Hard timeout at 10 minutes - fail if exceeded
+
 ## Assumptions
 
-- The Supabase CLI `supabase db push` command is the correct method for applying migrations to production (based on existing local development setup).
+- Migrations are forward-only; if a deployment fails after successful migration, manual intervention is required to resolve the schema/code mismatch. This design choice favors simplicity and aligns with backward-compatible migration practices.
+- The Supabase CLI `supabase db push` command is the correct method for applying migrations to production (based on existing local development setup). The CLI version will be pinned to ensure reproducible builds.
 - GitHub Actions secrets are the appropriate mechanism for storing production credentials in this project.
 - The existing e2e tests adequately validate migration syntax by running `supabase start` with local migrations.
 - Network connectivity between GitHub Actions runners and Supabase cloud is reliable.
