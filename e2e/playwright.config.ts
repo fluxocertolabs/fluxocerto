@@ -91,6 +91,8 @@ export default defineConfig({
         '--disable-gpu',
         '--disable-software-rasterizer',
         '--no-zygote', // Disable zygote process to avoid crashes in Docker
+        '--disable-dev-shm-usage', // Use /tmp instead of /dev/shm for shared memory
+        '--disable-features=AudioServiceOutOfProcess', // Prevent D-Bus audio service access
       ],
     },
   },
