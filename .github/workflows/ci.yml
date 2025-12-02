@@ -249,12 +249,12 @@ jobs:
         id: migrate
         run: |
           set +e
-          supabase db push 2>&1 | tee migration-output.txt
+          supabase db push --yes 2>&1 | tee migration-output.txt
           exit_code=${PIPESTATUS[0]}
           if [ $exit_code -ne 0 ]; then
             echo "Migration failed, retrying in 30 seconds..."
             sleep 30
-            supabase db push 2>&1 | tee migration-output.txt
+            supabase db push --yes 2>&1 | tee migration-output.txt
             exit_code=${PIPESTATUS[0]}
           fi
           exit $exit_code
