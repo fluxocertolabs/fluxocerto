@@ -226,6 +226,7 @@ describe('Project Actions - Validation', () => {
   describe('addProject validation', () => {
     it('returns validation error for empty name', async () => {
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: '',
         amount: 800000,
         frequency: 'monthly',
@@ -242,6 +243,7 @@ describe('Project Actions - Validation', () => {
 
     it('returns validation error for zero amount', async () => {
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Invalid Project',
         amount: 0,
         frequency: 'monthly',
@@ -258,6 +260,7 @@ describe('Project Actions - Validation', () => {
 
     it('returns validation error for negative amount', async () => {
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Invalid Project',
         amount: -100,
         frequency: 'monthly',
@@ -271,15 +274,16 @@ describe('Project Actions - Validation', () => {
 
     it('validates frequency-schedule match for monthly', async () => {
       // Monthly frequency requires dayOfMonth schedule
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Salary',
         amount: 800000,
         frequency: 'monthly',
-        // @ts-expect-error - Testing invalid schedule type for frequency
         paymentSchedule: { type: 'dayOfWeek', dayOfWeek: 1 },
         certainty: 'guaranteed',
         isActive: true,
-      })
+      } as any)
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -290,6 +294,7 @@ describe('Project Actions - Validation', () => {
     it('validates frequency-schedule match for weekly', async () => {
       // Weekly frequency requires dayOfWeek schedule
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Weekly Income',
         amount: 100000,
         frequency: 'weekly',
@@ -302,21 +307,23 @@ describe('Project Actions - Validation', () => {
     })
 
     it('validates twice-monthly schedule requires different days', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Bi-monthly Income',
         amount: 400000,
         frequency: 'twice-monthly',
-        // @ts-expect-error - Testing same days (invalid)
         paymentSchedule: { type: 'twiceMonthly', firstDay: 15, secondDay: 15 },
         certainty: 'guaranteed',
         isActive: true,
-      })
+      } as any)
 
       expect(result.success).toBe(false)
     })
 
     it('accepts valid twice-monthly schedule', async () => {
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Bi-monthly Income',
         amount: 400000,
         frequency: 'twice-monthly',
@@ -330,6 +337,7 @@ describe('Project Actions - Validation', () => {
 
     it('validates day of month range (1-31)', async () => {
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Invalid Day',
         amount: 100000,
         frequency: 'monthly',
@@ -343,6 +351,7 @@ describe('Project Actions - Validation', () => {
 
     it('validates day of week range (1-7)', async () => {
       const result = await useFinanceStore.getState().addProject({
+        type: 'recurring',
         name: 'Invalid Day',
         amount: 100000,
         frequency: 'weekly',
@@ -778,6 +787,7 @@ describe('Configuration Error Handling', () => {
     mockHouseholdId = null
 
     const result = await useFinanceStore.getState().addProject({
+      type: 'recurring',
       name: 'Salary',
       amount: 800000,
       frequency: 'monthly',
