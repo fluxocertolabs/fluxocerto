@@ -270,6 +270,66 @@ The app requires a modern browser with JavaScript enabled. Tested on:
 - Safari 14+
 - Edge 90+
 
+## CI/CD & Deployments
+
+The project uses GitHub Actions for CI/CD with Vercel for hosting and Supabase for the database.
+
+### Deployment Strategy
+
+| Trigger | Pipeline | Database | Environment |
+|---------|----------|----------|-------------|
+| **Pull Request** | quality → visual → e2e → migrate-staging → deploy-preview | Staging Supabase | Preview |
+| **Push to main** | quality → visual → e2e → migrate-production → deploy-production | Production Supabase | Production |
+
+### Setting Up Preview Deployments
+
+Preview deployments require a **staging Supabase project** to isolate test data from production.
+
+#### 1. Create Staging Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) (free tier allows 2 projects)
+2. Create a new project named `family-finance-staging`
+3. Note down:
+   - **Project Reference ID** (from Settings → General → Reference ID)
+   - **Database Password** (set during project creation)
+   - **Project URL** (from Settings → API)
+   - **Anon Key** (from Settings → API)
+
+#### 2. Configure GitHub Secrets
+
+Add these secrets to your GitHub repository (Settings → Secrets and variables → Actions):
+
+| Secret | Description |
+|--------|-------------|
+| `SUPABASE_ACCESS_TOKEN` | Your Supabase personal access token (shared for both environments) |
+| `SUPABASE_STAGING_PROJECT_REF` | Staging project reference ID |
+| `SUPABASE_STAGING_DB_PASSWORD` | Staging database password |
+| `SUPABASE_PROJECT_REF` | Production project reference ID |
+| `SUPABASE_DB_PASSWORD` | Production database password |
+| `VERCEL_TOKEN` | Vercel API token |
+| `VERCEL_ORG_ID` | Vercel organization ID |
+| `VERCEL_PROJECT_ID` | Vercel project ID |
+
+#### 3. Configure Vercel Environment Variables
+
+In your Vercel project settings (Settings → Environment Variables):
+
+**For Preview environment:**
+- `VITE_SUPABASE_URL` = `https://<staging-project-ref>.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = `<staging-anon-key>`
+
+**For Production environment:**
+- `VITE_SUPABASE_URL` = `https://<production-project-ref>.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = `<production-anon-key>`
+
+#### 4. How It Works
+
+1. **Open a PR** → CI runs quality checks, visual regression, and E2E tests
+2. **Tests pass** → Migrations are applied to the staging database
+3. **Migrations succeed** → Preview deployment is created on Vercel
+4. **PR gets a comment** with the preview URL
+5. **Merge to main** → Same pipeline runs, but deploys to production with production database
+
 ## Roadmap
 
 See [docs/USER_STORIES.md](docs/USER_STORIES.md) for the full feature roadmap.
