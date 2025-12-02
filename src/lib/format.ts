@@ -112,3 +112,37 @@ export function formatTooltipDate(date: Date): string {
   }).format(date)
 }
 
+/**
+ * Format a number string to Brazilian currency format (1.234,56).
+ * Used for input masking in currency fields.
+ *
+ * @param value - Raw string input (may contain non-digit characters)
+ * @returns Formatted BRL string without currency symbol (e.g., "1.234,56")
+ */
+export function formatToBRL(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+
+  const paddedDigits = digits.padStart(3, '0')
+  const cents = paddedDigits.slice(-2)
+  const reais = paddedDigits.slice(0, -2).replace(/^0+/, '') || '0'
+  const formattedReais = reais.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  return `${formattedReais},${cents}`
+}
+
+/**
+ * Parse a BRL formatted string back to cents.
+ * Handles various input formats including currency symbol prefix.
+ *
+ * @param formatted - BRL formatted string (e.g., "R$ 1.234,56" or "1.234,56")
+ * @returns Amount in cents as integer (e.g., 123456)
+ */
+export function parseBRLToCents(formatted: string): number {
+  const cleaned = formatted.replace(/R\$\s?/g, '').trim()
+  if (!cleaned) return 0
+
+  const normalized = cleaned.replace(/\./g, '').replace(',', '.')
+  const num = parseFloat(normalized)
+  return isNaN(num) ? 0 : Math.round(num * 100)
+}

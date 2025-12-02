@@ -11,6 +11,8 @@ import {
   formatCurrencyWithCents,
   formatChartDate,
   formatTooltipDate,
+  formatToBRL,
+  parseBRLToCents,
 } from './format'
 
 /**
@@ -256,6 +258,159 @@ describe('formatTooltipDate', () => {
     const result = formatTooltipDate(february)
     expect(result).toMatch(/14/)
     expect(result.toLowerCase()).toMatch(/fevereiro/)
+  })
+})
+
+// =============================================================================
+// formatToBRL TESTS
+// =============================================================================
+
+describe('formatToBRL', () => {
+  describe('basic formatting', () => {
+    it('returns empty string for empty input', () => {
+      expect(formatToBRL('')).toBe('')
+    })
+
+    it('returns empty string for non-digit input', () => {
+      expect(formatToBRL('abc')).toBe('')
+      expect(formatToBRL('!@#')).toBe('')
+    })
+
+    it('formats single digit as cents', () => {
+      expect(formatToBRL('1')).toBe('0,01')
+      expect(formatToBRL('5')).toBe('0,05')
+    })
+
+    it('formats two digits as cents', () => {
+      expect(formatToBRL('10')).toBe('0,10')
+      expect(formatToBRL('99')).toBe('0,99')
+    })
+
+    it('formats three digits correctly', () => {
+      expect(formatToBRL('100')).toBe('1,00')
+      expect(formatToBRL('123')).toBe('1,23')
+    })
+  })
+
+  describe('thousands formatting', () => {
+    it('formats thousands with dot separator', () => {
+      expect(formatToBRL('100000')).toBe('1.000,00')
+      expect(formatToBRL('1234567')).toBe('12.345,67')
+    })
+
+    it('formats millions correctly', () => {
+      expect(formatToBRL('100000000')).toBe('1.000.000,00')
+    })
+  })
+
+  describe('input cleaning', () => {
+    it('strips non-digit characters and re-formats', () => {
+      // formatToBRL extracts only digits and re-formats as BRL
+      // 'R$ 1.234,56' -> digits '123456' -> '1.234,56'
+      expect(formatToBRL('R$ 1.234,56')).toBe('1.234,56')
+      // '1,00' -> digits '100' -> '1,00'
+      expect(formatToBRL('1,00')).toBe('1,00')
+    })
+
+    it('handles mixed input', () => {
+      expect(formatToBRL('a1b2c3')).toBe('1,23')
+    })
+  })
+
+  describe('edge cases', () => {
+    it('handles leading zeros', () => {
+      expect(formatToBRL('00100')).toBe('1,00')
+      expect(formatToBRL('000001')).toBe('0,01')
+    })
+
+    it('handles very large numbers', () => {
+      expect(formatToBRL('99999999999')).toBe('999.999.999,99')
+    })
+  })
+})
+
+// =============================================================================
+// parseBRLToCents TESTS
+// =============================================================================
+
+describe('parseBRLToCents', () => {
+  describe('basic parsing', () => {
+    it('returns 0 for empty string', () => {
+      expect(parseBRLToCents('')).toBe(0)
+    })
+
+    it('returns 0 for whitespace only', () => {
+      expect(parseBRLToCents('   ')).toBe(0)
+    })
+
+    it('parses simple decimal values', () => {
+      expect(parseBRLToCents('1,00')).toBe(100)
+      expect(parseBRLToCents('10,50')).toBe(1050)
+      expect(parseBRLToCents('0,99')).toBe(99)
+    })
+  })
+
+  describe('currency symbol handling', () => {
+    it('strips R$ prefix', () => {
+      expect(parseBRLToCents('R$ 1,00')).toBe(100)
+      expect(parseBRLToCents('R$1,00')).toBe(100)
+    })
+
+    it('handles R$ with various spacing', () => {
+      expect(parseBRLToCents('R$  100,00')).toBe(10000)
+    })
+  })
+
+  describe('thousands separator handling', () => {
+    it('parses values with dot separators', () => {
+      expect(parseBRLToCents('1.000,00')).toBe(100000)
+      expect(parseBRLToCents('1.234,56')).toBe(123456)
+    })
+
+    it('parses millions correctly', () => {
+      expect(parseBRLToCents('1.000.000,00')).toBe(100000000)
+    })
+
+    it('parses complex formatted values', () => {
+      expect(parseBRLToCents('R$ 12.345,67')).toBe(1234567)
+    })
+  })
+
+  describe('edge cases', () => {
+    it('returns 0 for invalid input', () => {
+      expect(parseBRLToCents('abc')).toBe(0)
+      expect(parseBRLToCents('R$')).toBe(0)
+    })
+
+    it('handles partial cents by rounding', () => {
+      // '1,005' -> normalized '1.005' -> parseFloat 1.005 -> 1.005 * 100 = 100.5 -> Math.round = 100
+      expect(parseBRLToCents('1,005')).toBe(100)
+    })
+
+    it('handles negative values', () => {
+      // The function does not strip negative signs, so -1,00 parses as -100 cents
+      expect(parseBRLToCents('-1,00')).toBe(-100)
+    })
+  })
+
+  describe('roundtrip with formatToBRL', () => {
+    it('roundtrips simple values', () => {
+      const original = 12345 // 123.45 reais
+      const formatted = formatToBRL(original.toString())
+      expect(parseBRLToCents(formatted)).toBe(original)
+    })
+
+    it('roundtrips large values', () => {
+      const original = 123456789 // 1,234,567.89 reais
+      const formatted = formatToBRL(original.toString())
+      expect(parseBRLToCents(formatted)).toBe(original)
+    })
+
+    it('roundtrips small values', () => {
+      const original = 1 // 0.01 reais
+      const formatted = formatToBRL(original.toString())
+      expect(parseBRLToCents(formatted)).toBe(original)
+    })
   })
 })
 

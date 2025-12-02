@@ -46,14 +46,40 @@ import './worker-context'
 import './worker-context'
 import '../utils/test-data'
 export async function resetDatabase(workerIndex: number)
-export async function ensureTestUser(email: string, workerIndex: number)
+export async function getDefaultHouseholdId()
+export async function getHouseholdIdForUser(email: string)
+export function clearHouseholdCache()
+export async function getOrCreateWorkerHousehold(workerIndex: number, householdName: string)
+export async function resetHouseholdData(householdId: string)
+export async function ensureTestUser(email: string, workerIndex: number, householdId: string)
 export async function removeTestUser(email: string, workerIndex: number)
-export async function seedAccounts(accounts: TestAccount[], workerIndex: number)
-export async function seedExpenses(expenses: TestExpense[], workerIndex: number)
-export async function seedSingleShotExpenses(expenses: TestSingleShotExpense[], workerIndex: number)
-export async function seedProjects(projects: TestProject[], workerIndex: number)
-export async function seedSingleShotIncome(income: TestSingleShotIncome[], workerIndex: number)
-export async function seedCreditCards(cards: TestCreditCard[], workerIndex: number)
+export async function seedAccountsWithHousehold(accounts: TestAccount[], workerIndex: number, householdId: string)
+export async function seedAccounts(accounts: TestAccount[], workerIndex: number, userEmail: string)
+export async function seedExpensesWithHousehold(expenses: TestExpense[], workerIndex: number, householdId: string)
+export async function seedExpenses(expenses: TestExpense[], workerIndex: number, userEmail: string)
+export async function seedSingleShotExpensesWithHousehold(expenses: TestSingleShotExpense[], workerIndex: number, householdId: string)
+export async function seedSingleShotExpenses(expenses: TestSingleShotExpense[], workerIndex: number, userEmail: string)
+export async function seedProjectsWithHousehold(projects: TestProject[], workerIndex: number, householdId: string)
+export async function seedProjects(projects: TestProject[], workerIndex: number, userEmail: string)
+export async function seedSingleShotIncomeWithHousehold(income: TestSingleShotIncome[], workerIndex: number, householdId: string)
+export async function seedSingleShotIncome(income: TestSingleShotIncome[], workerIndex: number, userEmail: string)
+export async function seedCreditCardsWithHousehold(cards: TestCreditCard[], workerIndex: number, householdId: string)
+export async function seedCreditCards(cards: TestCreditCard[], workerIndex: number, userEmail: string)
+export async function seedHouseholds(households: TestHousehold[], workerIndex: number)
+export async function getHouseholdIdByEmail(email: string)
+export async function getHouseholdById(id: string)
+export async function getHouseholdMembers(householdId: string)
+export async function createProfileInHousehold(email: string, name: string, householdId: string)
+export async function profileExists(email: string)
+export async function deleteProfileByEmail(email: string)
+export async function seedFullScenarioWithHousehold(data: {
+    accounts?: TestAccount[];
+    expenses?: TestExpense[];
+    singleShotExpenses?: TestSingleShotExpense[];
+    projects?: TestProject[];
+    singleShotIncome?: TestSingleShotIncome[];
+    creditCards?: TestCreditCard[];
+  }, workerIndex: number, householdId: string)
 export async function seedFullScenario(data: {
     accounts?: TestAccount[];
     expenses?: TestExpense[];
@@ -61,7 +87,7 @@ export async function seedFullScenario(data: {
     projects?: TestProject[];
     singleShotIncome?: TestSingleShotIncome[];
     creditCards?: TestCreditCard[];
-  }, workerIndex: number)
+  }, workerIndex: number, userEmail: string)
 export async function expenseExists(name: string)
 export async function projectExists(name: string)
 export async function accountExists(name: string)
@@ -84,6 +110,29 @@ import 'fs'
 export const test
 </file>
 
+<file path="e2e/fixtures/visual-test-base.ts">
+import '@playwright/test'
+import './db'
+import './auth'
+import './worker-context'
+import '../pages/login-page'
+import '../pages/dashboard-page'
+import '../pages/manage-page'
+import '../pages/quick-update-page'
+import 'fs'
+export const VISUAL_TEST_FIXED_DATE
+
+export interface VisualTestHelpers {
+    method waitForStableUI(page: Page): Promise<void>
+    method setTheme(page: Page, theme: ThemeMode): Promise<void>
+    method takeScreenshot(page: Page, name: string, options: { fullPage?: boolean; mask?: Locator[] }): Promise<void>
+    method getWorkerSpecificMasks(page: Page): Locator[]
+}
+export async function waitForStableUI(page: Page)
+export async function setTheme(page: Page, theme: ThemeMode)
+export const visualTest
+</file>
+
 <file path="e2e/fixtures/worker-context.ts">
 import 'path'
 import 'url'
@@ -96,11 +145,13 @@ export interface IWorkerContext {
     property authStatePath: string
     property dataPrefix: string
     property schemaName: string
+    property householdName: string
 }
 export const AUTH_MAX_RETRIES
 export const AUTH_RETRY_DELAYS
 export const ALL_WORKERS_PATTERN
 export function getWorkerContext(workerIndex: number)
+export function getWorkerHouseholdName(workerIndex: number)
 export function getWorkerSchemaName(workerIndex: number)
 export function addWorkerPrefix(name: string, workerIndex: number)
 export function stripWorkerPrefix(name: string)
@@ -174,6 +225,7 @@ export class DashboardPage {
     public readonly emptyState: Locator
     public readonly chartErrorHeading: Locator
     public readonly chartRetryButton: Locator
+    public readonly householdBadge: Locator
     public constructor(page: Page)
     public async goto(): Promise<void>
     public async hasEmptyState(): Promise<boolean>
@@ -183,6 +235,9 @@ export class DashboardPage {
     public async getIncomeTotal(): Promise<string>
     public async getExpenseTotal(): Promise<string>
     public async hasStaleWarning(): Promise<boolean>
+    public async hasHouseholdBadge(): Promise<boolean>
+    public async getHouseholdName(): Promise<string | null>
+    public async expectHouseholdBadgeVisible(name: string): Promise<void>
 }
 </file>
 
@@ -218,6 +273,27 @@ export class ExpensesSection {
 }
 </file>
 
+<file path="e2e/pages/household-section.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class HouseholdSection {
+    public readonly page: Page
+    public readonly membersList: Locator
+    public readonly householdName: Locator
+    public constructor(page: Page)
+    public async waitForLoad(): Promise<void>
+    public async getHouseholdName(): Promise<string | null>
+    public async expectHouseholdNameVisible(name: string): Promise<void>
+    public async getMemberNames(): Promise<string[]>
+    public async expectMemberVisible(name: string): Promise<void>
+    public async expectCurrentUserIndicator(): Promise<void>
+    public async getMemberCount(): Promise<number>
+    public async hasError(): Promise<boolean>
+    public async getErrorMessage(): Promise<string | null>
+}
+</file>
+
 <file path="e2e/pages/login-page.ts">
 import '@playwright/test'
 import '@playwright/test'
@@ -242,6 +318,7 @@ import './accounts-section'
 import './expenses-section'
 import './projects-section'
 import './credit-cards-section'
+import './household-section'
 
 export class ManagePage {
     public readonly page: Page
@@ -249,16 +326,19 @@ export class ManagePage {
     public readonly creditCardsTab: Locator
     public readonly expensesTab: Locator
     public readonly projectsTab: Locator
+    public readonly householdTab: Locator
     public constructor(page: Page)
     public async goto(): Promise<void>
     public async selectAccountsTab(): Promise<void>
     public async selectCreditCardsTab(): Promise<void>
     public async selectExpensesTab(): Promise<void>
     public async selectProjectsTab(): Promise<void>
+    public async selectHouseholdTab(): Promise<void>
     public accounts(): AccountsSection
     public expenses(): ExpensesSection
     public projects(): ProjectsSection
     public creditCards(): CreditCardsSection
+    public household(): HouseholdSection
 }
 </file>
 
@@ -365,6 +445,11 @@ import '../utils/test-data'
 import '../utils/format'
 </file>
 
+<file path="e2e/tests/household.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+</file>
+
 <file path="e2e/tests/projects.spec.ts">
 import '../fixtures/test-base'
 import '../utils/test-data'
@@ -379,6 +464,26 @@ import '../utils/test-data'
 import '../fixtures/test-base'
 import '../utils/test-data'
 import '@playwright/test'
+</file>
+
+<file path="e2e/tests/visual/dashboard.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+import '../../utils/test-data'
+</file>
+
+<file path="e2e/tests/visual/login.visual.spec.ts">
+import '@playwright/test'
+import '../../fixtures/visual-test-base'
+</file>
+
+<file path="e2e/tests/visual/manage.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+import '../../utils/test-data'
+</file>
+
+<file path="e2e/tests/visual/quick-update.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+import '../../utils/test-data'
 </file>
 
 <file path="e2e/utils/format.ts">
@@ -552,12 +657,27 @@ export interface TestCreditCard {
     property statement_balance: number
     property due_day: number
 }
+
+export interface TestHousehold {
+    property id: string
+    property name: string
+    property created_at: string
+    property updated_at: string
+}
+
+export interface TestProfile {
+    property id: string
+    property name: string
+    property email: string
+    property household_id: string
+}
 export function createAccount(overrides: Partial<TestAccount>)
 export function createExpense(overrides: Partial<TestExpense>)
 export function createSingleShotExpense(overrides: Partial<TestSingleShotExpense>)
 export function createProject(overrides: Partial<TestProject>)
 export function createSingleShotIncome(overrides: Partial<TestSingleShotIncome>)
 export function createCreditCard(overrides: Partial<TestCreditCard>)
+export function createHousehold(overrides: Partial<TestHousehold>)
 export function createBasicSeedData()
 export function createFullSeedData()
 export function createLargeSeedData(count: number)
@@ -3429,13 +3549,26 @@ export interface SummaryStats {
 }
 </file>
 
+<file path="src/components/household/household-badge.tsx">
+import 'lucide-react'
+export function HouseholdBadge()
+</file>
+
+<file path="src/components/household/members-list.tsx">
+import 'lucide-react'
+import '@/hooks/use-household'
+export function MembersList()
+</file>
+
 <file path="src/components/layout/header.tsx">
 import 'react-router-dom'
 import '@/lib/utils'
 import '@/components/ui/button'
 import '@/components/theme'
+import '@/components/household'
 import '@/lib/supabase'
 import '@/hooks/use-auth'
+import '@/hooks/use-household'
 export function Header()
 </file>
 
@@ -4005,6 +4138,31 @@ export function getHealthMessage(status: HealthStatus, optimisticDangerDays: num
 export function useHealthIndicator(summaryStats: SummaryStats | null)
 </file>
 
+<file path="src/hooks/use-household.ts">
+import 'react'
+import '@/lib/supabase'
+import '@/hooks/use-auth'
+import '@/types'
+
+export interface HouseholdInfo {
+    property id: string
+    property name: string
+}
+
+export interface HouseholdMember extends Profile {
+    property isCurrentUser: boolean
+}
+
+export interface UseHouseholdReturn {
+    property household: HouseholdInfo | null
+    property members: HouseholdMember[]
+    property isLoading: boolean
+    property error: string | null
+    property refetch: () => void
+}
+export function useHousehold()
+</file>
+
 <file path="src/hooks/use-theme.ts">
 import 'react'
 import '@/stores/theme-store'
@@ -4199,10 +4357,18 @@ import './supabase'
 import '@supabase/supabase-js'
 import '@/stores/finance-store'
 
+export interface HouseholdRow {
+    property id: string
+    property name: string
+    property created_at: string
+    property updated_at: string
+}
+
 export interface ProfileRow {
     property id: string
     property name: string
     property email: string | null
+    property household_id: string
     property created_at: string
     property created_by: string | null
 }
@@ -4270,6 +4436,8 @@ export async function getCurrentUser()
 export async function signInWithMagicLink(email: string)
 export async function signOut()
 export function isOnline()
+export async function getHouseholdId()
+export async function inviteUser(email: string)
 export function handleSupabaseError<T>(error: unknown)
 </file>
 
@@ -4347,8 +4515,10 @@ export function LoginPage()
 import 'react'
 import '@/components/ui/tabs'
 import '@/components/ui/button'
+import '@/components/ui/card'
 import '@/components/ui/dialog'
 import '@/hooks/use-finance-data'
+import '@/hooks/use-household'
 import '@/hooks/use-coordinated-loading'
 import '@/stores/finance-store'
 import '@/components/manage/accounts/account-list'
@@ -4362,6 +4532,7 @@ import '@/components/manage/expenses/single-shot-expense-form'
 import '@/components/manage/credit-cards/credit-card-list'
 import '@/components/manage/credit-cards/credit-card-form'
 import '@/components/manage/shared/delete-confirmation'
+import '@/components/household'
 import '@/components/loading'
 import '@/lib/utils'
 import '@/types'
@@ -4422,6 +4593,8 @@ import './index'
 
 <file path="src/types/index.ts">
 import 'zod'
+export const HouseholdSchema
+type Household = z.infer<typeof HouseholdSchema>
 export const ProfileSchema
 type Profile = z.infer<typeof ProfileSchema>
 export const BankAccountInputSchema

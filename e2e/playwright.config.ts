@@ -85,6 +85,14 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    // Additional browser args for Docker stability
+    launchOptions: {
+      args: [
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--no-zygote', // Disable zygote process to avoid crashes in Docker
+      ],
+    },
   },
 
   projects: [
@@ -126,12 +134,23 @@ export default defineConfig({
     {
       name: 'visual',
       testMatch: /visual\/.*\.spec\.ts/,
+      testIgnore: /visual\/mobile\.visual\.spec\.ts/, // Mobile tests run in separate project
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }, // Fixed viewport for consistent screenshots
       },
       dependencies: ['setup'], // Use main setup which authenticates all workers
       fullyParallel: true, // Run visual tests in parallel - household isolation handles data separation
+    },
+    // Mobile visual regression tests - captures mobile-specific layouts
+    {
+      name: 'visual-mobile',
+      testMatch: /visual\/mobile\.visual\.spec\.ts/,
+      use: {
+        ...devices['Pixel 5'],
+      },
+      dependencies: ['setup'],
+      fullyParallel: true,
     },
   ],
 

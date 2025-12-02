@@ -85,7 +85,7 @@ type WorkerFixtures = {
 /**
  * Disable all CSS animations for stable screenshots
  */
-async function disableAnimations(page: Page): Promise<void> {
+export async function disableAnimations(page: Page): Promise<void> {
   await page.addStyleTag({
     content: `
       *, *::before, *::after {
@@ -103,13 +103,47 @@ async function disableAnimations(page: Page): Promise<void> {
 
 /**
  * Wait for UI to stabilize before taking screenshots
+ * Uses multiple stability checks to ensure consistent screenshots in parallel execution
  */
 export async function waitForStableUI(page: Page): Promise<void> {
+  // Wait for network to be idle (no pending requests)
   await page.waitForLoadState('networkidle');
+  
+  // Disable all CSS animations and transitions
   await disableAnimations(page);
+  
+  // Wait for initial render to complete
   await page.waitForTimeout(500);
+  
+  // Wait for web fonts to load (prevents font-swap flicker)
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(300);
+  
+  // Wait for any pending React state updates to flush
+  await page.waitForTimeout(500);
+  
+  // Final stability check - wait for no DOM mutations
+  await page.evaluate(() => {
+    return new Promise<void>((resolve) => {
+      let timeout: ReturnType<typeof setTimeout>;
+      const observer = new MutationObserver(() => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          observer.disconnect();
+          resolve();
+        }, 200);
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      });
+      // If no mutations occur within 300ms, consider stable
+      timeout = setTimeout(() => {
+        observer.disconnect();
+        resolve();
+      }, 300);
+    });
+  });
 }
 
 /**

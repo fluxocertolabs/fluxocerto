@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { formatToBRL, parseBRLToCents } from '@/lib/format'
 
 interface InlineEditInputProps {
   /** Value in cents */
@@ -11,33 +12,6 @@ interface InlineEditInputProps {
   formatDisplay: (value: number) => string
   min?: number
   className?: string
-}
-
-/**
- * Format a number string to Brazilian currency format (1.234,56)
- */
-function formatToBRL(value: string): string {
-  const digits = value.replace(/\D/g, '')
-  if (!digits) return ''
-  
-  const paddedDigits = digits.padStart(3, '0')
-  const cents = paddedDigits.slice(-2)
-  const reais = paddedDigits.slice(0, -2).replace(/^0+/, '') || '0'
-  const formattedReais = reais.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  
-  return `${formattedReais},${cents}`
-}
-
-/**
- * Parse a BRL formatted string back to cents
- */
-function parseBRLToCents(formatted: string): number {
-  const cleaned = formatted.replace(/R\$\s?/g, '').trim()
-  if (!cleaned) return 0
-  
-  const normalized = cleaned.replace(/\./g, '').replace(',', '.')
-  const num = parseFloat(normalized)
-  return isNaN(num) ? 0 : Math.round(num * 100)
 }
 
 export function InlineEditInput({

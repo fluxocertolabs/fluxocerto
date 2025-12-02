@@ -9,7 +9,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { waitForStableUI, setTheme } from '../../fixtures/visual-test-base';
+import { waitForStableUI, setTheme, disableAnimations } from '../../fixtures/visual-test-base';
 
 test.describe('Login Page Visual Regression @visual', () => {
   // Login tests run unauthenticated
@@ -18,6 +18,7 @@ test.describe('Login Page Visual Regression @visual', () => {
   test.describe('Light Theme', () => {
     test('login page - initial state', async ({ page }) => {
       await page.goto('/login');
+      await disableAnimations(page);
       await setTheme(page, 'light');
       await waitForStableUI(page);
 
@@ -30,6 +31,7 @@ test.describe('Login Page Visual Regression @visual', () => {
 
     test('login page - after magic link requested', async ({ page }) => {
       await page.goto('/login');
+      await disableAnimations(page);
       await setTheme(page, 'light');
       await waitForStableUI(page);
 
@@ -51,6 +53,7 @@ test.describe('Login Page Visual Regression @visual', () => {
   test.describe('Dark Theme', () => {
     test('login page - initial state (dark)', async ({ page }) => {
       await page.goto('/login');
+      await disableAnimations(page);
       await setTheme(page, 'dark');
       await waitForStableUI(page);
 
@@ -62,6 +65,7 @@ test.describe('Login Page Visual Regression @visual', () => {
 
     test('login page - after magic link requested (dark)', async ({ page }) => {
       await page.goto('/login');
+      await disableAnimations(page);
       await setTheme(page, 'dark');
       await waitForStableUI(page);
 
