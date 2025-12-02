@@ -66,7 +66,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 3, // 3 automatic retries per test for parallel execution stability
   workers: workerCount, // Auto-detect based on CPU cores
-  reporter: process.env.CI ? 'github' : 'list',
+  reporter: process.env.CI 
+    ? [['github', { title: process.env.PLAYWRIGHT_TITLE || '🎭 Playwright Run Summary' }]]
+    : 'list',
   // Increased timeout for CI environments which can be significantly slower
   timeout: process.env.CI ? 90000 : 45000, // 90s in CI, 45s locally
   expect: {

@@ -135,6 +135,7 @@ jobs:
             -e INBUCKET_URL=http://localhost:54324 \
             -e BASE_URL=http://localhost:5173 \
             -e TEST_USER_EMAIL=e2e-test@example.com \
+            -e PLAYWRIGHT_TITLE="🖼️ Visual Regression Tests" \
             mcr.microsoft.com/playwright:v1.57.0-jammy \
             /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && (pnpm dev:app &) && npx wait-on http://localhost:5173 -t 60000 && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual'
 
@@ -202,6 +203,7 @@ jobs:
         run: pnpm test:e2e
         env:
           CI: true
+          PLAYWRIGHT_TITLE: "🧪 E2E Tests"
 
       # Step 9: Upload test artifacts on failure
       - name: Upload Playwright report
