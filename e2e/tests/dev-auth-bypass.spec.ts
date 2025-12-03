@@ -19,11 +19,14 @@ test.describe('Dev Auth Bypass', () => {
     // The test will verify that after navigating to the app, the dashboard is shown
     // without needing to go through the login flow
     
+    // Navigate first to establish a valid origin, then clear session
+    await page.goto('/');
+    
     // Clear any existing session to ensure we're testing the bypass
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
     
-    // Navigate to the root - if dev auth bypass works, we should see dashboard
+    // Navigate again after clearing - if dev auth bypass works, we should see dashboard
     await page.goto('/');
     
     // Wait for the page to load and check what we see
@@ -57,6 +60,9 @@ test.describe('Dev Auth Bypass', () => {
     // This test verifies the login page remains functional and accessible
     // when the dev auth bypass is not in use (e.g., tokens not configured)
     
+    // Navigate first to establish a valid origin, then clear session
+    await page.goto('/login');
+    
     // Clear any existing session (cookies and localStorage where Supabase stores session)
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
@@ -82,6 +88,9 @@ test.describe('Dev Auth Bypass', () => {
     // The DEV mode guard is verified through:
     // 1. Code review (the check exists in injectDevSession)
     // 2. Manual testing with production builds
+    
+    // Navigate first to establish a valid origin, then clear session
+    await page.goto('/');
     
     // Clear all auth state (cookies and localStorage where Supabase stores session)
     await page.context().clearCookies();

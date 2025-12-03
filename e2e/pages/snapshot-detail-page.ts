@@ -8,6 +8,7 @@ import { expect } from '@playwright/test';
 export class SnapshotDetailPage {
   readonly page: Page;
   readonly historicalBanner: Locator;
+  readonly historicalBannerTitle: Locator;
   readonly backButton: Locator;
   readonly deleteButton: Locator;
   readonly cashflowChart: Locator;
@@ -16,7 +17,10 @@ export class SnapshotDetailPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.historicalBanner = page.locator('[class*="bg-muted"]').filter({ hasText: /snapshot histórico/i });
+    // The banner is a Card with bg-muted/50 containing the snapshot info
+    this.historicalBanner = page.locator('[data-testid="historical-banner"]');
+    // The title h1 contains "Snapshot Histórico: {name}"
+    this.historicalBannerTitle = this.historicalBanner.locator('h1');
     this.backButton = page.getByRole('button', { name: /voltar/i });
     this.deleteButton = page.getByRole('button', { name: /excluir/i }).first();
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
@@ -49,11 +53,11 @@ export class SnapshotDetailPage {
    * Get the snapshot name from the historical banner
    */
   async getSnapshotName(): Promise<string | null> {
-    const text = await this.historicalBanner.textContent();
+    const text = await this.historicalBannerTitle.textContent();
     if (!text) return null;
 
-    // Extract name from "Snapshot Histórico: <name> (Salvo em ...)" in a case-insensitive way
-    const match = text.match(/snapshot histórico:\s*([^(]+)/i);
+    // Extract name from "Snapshot Histórico: <name>" in a case-insensitive way
+    const match = text.match(/snapshot histórico:\s*(.+)/i);
     return match ? match[1].trim() : null;
   }
 
