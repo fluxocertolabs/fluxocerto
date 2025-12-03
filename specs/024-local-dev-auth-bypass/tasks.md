@@ -1,7 +1,7 @@
 # Tasks: Local Development Auth Bypass
 
 **Input**: Design documents from `/specs/024-local-dev-auth-bypass/`
-**Prerequisites**: plan.md ✓, spec.md ✓, research.md ✓, data-model.md ✓, quickstart.md ✓, contracts/ (N/A)
+**Prerequisites**: plan.md ✓, spec.md ✓, research.md ✓, data-model.md ✓, quickstart.md ✓, contracts/ (empty - no API contracts for this feature)
 
 **Tests**: Unit tests (Vitest), E2E tests (Playwright), Visual regression tests included.
 
@@ -19,8 +19,8 @@
 - **Structure**: Single project with `src/` at repository root
 - **Scripts**: `scripts/` directory at repository root
 - **Unit tests**: Co-located with source files (e.g., `src/lib/supabase.test.ts`)
-- **E2E tests**: `e2e/tests/` directory
-- **Visual tests**: `e2e/tests/visual/` directory
+- **E2E tests**: `tests/e2e/` directory
+- **Visual tests**: `tests/visual/` directory
 
 ---
 
@@ -29,7 +29,7 @@
 **Purpose**: Project initialization and script directory structure
 
 - [ ] T001 Create `scripts/` directory at repository root
-- [ ] T002 Add `tsx` as dev dependency to package.json for TypeScript script execution
+- [ ] T002 Add `tsx@4.21.0` as dev dependency to package.json for TypeScript script execution
 - [ ] T003 Add `gen:token` script to package.json scripts section: `"gen:token": "tsx scripts/generate-dev-token.ts"`
 
 ---
@@ -69,9 +69,9 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Add E2E test for dev auth bypass flow in e2e/tests/dev-auth-bypass.spec.ts - verify dashboard loads without login when tokens present
-- [ ] T012 [P] [US1] Add E2E test for fallback behavior in e2e/tests/dev-auth-bypass.spec.ts - verify login screen shows when tokens invalid/missing
-- [ ] T013 [P] [US1] Add E2E test for production mode guard in e2e/tests/dev-auth-bypass.spec.ts - verify bypass disabled in prod build
+- [ ] T011 [P] [US1] Add E2E test for dev auth bypass flow in tests/e2e/dev-auth-bypass.spec.ts - verify dashboard loads without login when tokens present
+- [ ] T012 [P] [US1] Add E2E test for fallback behavior in tests/e2e/dev-auth-bypass.spec.ts - verify login screen shows when tokens invalid/missing
+- [ ] T013 [P] [US1] Add E2E test for production mode guard in tests/e2e/dev-auth-bypass.spec.ts - verify bypass disabled in prod build
 
 ### Implementation for User Story 1
 
@@ -79,7 +79,7 @@
 - [ ] T015 [US1] Implement Supabase admin client initialization in scripts/generate-dev-token.ts using service role key from environment or `supabase status`
 - [ ] T016 [US1] Implement `findOrCreateDevUser()` function in scripts/generate-dev-token.ts that creates `dev@local` user with confirmed email via admin API
 - [ ] T017 [US1] Implement `generateTokens()` function in scripts/generate-dev-token.ts that signs in dev user and outputs VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN
-- [ ] T018 [US1] Add connection validation to scripts/generate-dev-token.ts - fail with clear error if Supabase not running at http://127.0.0.1:54321
+- [ ] T018 [US1] Add connection validation to scripts/generate-dev-token.ts - fail with clear error if Supabase not running at http://127.0.0.1:54321 or if Service Role Key is invalid/missing
 - [ ] T019 [US1] Format script output for copy-paste to .env.local with instructions
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - E2E tests pass, tokens generated and app auto-logs in
@@ -96,7 +96,7 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T020 [P] [US2] Add E2E test for idempotent user creation in e2e/tests/dev-auth-bypass.spec.ts - run script twice, verify single user exists
+- [ ] T020 [P] [US2] Add E2E test for idempotent user creation in tests/e2e/dev-auth-bypass.spec.ts - run script twice, verify single user exists
 
 ### Implementation for User Story 2
 
@@ -118,8 +118,8 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T024 [P] [US3] Add E2E test for seed data visibility in e2e/tests/dev-auth-bypass.spec.ts - verify Dev Checking account appears on dashboard after auto-login
-- [ ] T025 [P] [US3] Add E2E test for RLS enforcement in e2e/tests/dev-auth-bypass.spec.ts - verify only dev household data is accessible
+- [ ] T024 [P] [US3] Add E2E test for seed data visibility in tests/e2e/dev-auth-bypass.spec.ts - verify Dev Checking account appears on dashboard after auto-login
+- [ ] T025 [P] [US3] Add E2E test for RLS enforcement in tests/e2e/dev-auth-bypass.spec.ts - verify only dev household data is accessible
 
 ### Implementation for User Story 3
 
@@ -137,8 +137,8 @@
 
 **Purpose**: Ensure UI consistency and catch visual regressions
 
-- [ ] T031 [P] Add visual regression test for dev bypass login state in e2e/tests/visual/dev-auth-bypass.visual.spec.ts - capture dashboard immediately after dev auth bypass (should match existing dashboard snapshots)
-- [ ] T032 [P] Add visual regression test for bypass failure state in e2e/tests/visual/dev-auth-bypass.visual.spec.ts - capture error toast when bypass fails
+- [ ] T031 [P] Add visual regression test for dev bypass login state in tests/visual/dev-auth-bypass.visual.test.ts - capture dashboard immediately after dev auth bypass (should match existing dashboard snapshots)
+- [ ] T032 [P] Add visual regression test for bypass failure state in tests/visual/dev-auth-bypass.visual.test.ts - capture error toast when bypass fails
 
 ---
 
@@ -254,9 +254,9 @@ Recommended execution order for single developer:
 | `src/lib/supabase.ts` | Modify | T006, T007, T033 |
 | `src/vite-env.d.ts` | Modify | T008 |
 | `src/main.tsx` | Modify | T009, T010, T034 |
-| `e2e/tests/dev-auth-bypass.spec.ts` | Create | T011, T012, T013, T020, T024, T025 |
+| `tests/e2e/dev-auth-bypass.spec.ts` | Create | T011, T012, T013, T020, T024, T025 |
 | `scripts/generate-dev-token.ts` | Create | T014-T019, T021-T023, T026-T030 |
-| `e2e/tests/visual/dev-auth-bypass.visual.spec.ts` | Create | T031, T032 |
+| `tests/visual/dev-auth-bypass.visual.test.ts` | Create | T031, T032 |
 | `.env.example` | Modify | T035 |
 
 ---
@@ -266,8 +266,8 @@ Recommended execution order for single developer:
 | Test Type | File | Test Cases |
 |-----------|------|------------|
 | **Unit** | `src/lib/supabase.test.ts` | `injectDevSession()` success/failure, `hasDevTokens()` detection |
-| **E2E** | `e2e/tests/dev-auth-bypass.spec.ts` | Auto-login flow, fallback to login, prod mode guard, idempotency, seed data visibility, RLS enforcement |
-| **Visual** | `e2e/tests/visual/dev-auth-bypass.visual.spec.ts` | Dashboard after bypass, error toast on failure |
+| **E2E** | `tests/e2e/dev-auth-bypass.spec.ts` | Auto-login flow, fallback to login, prod mode guard, idempotency, seed data visibility, RLS enforcement |
+| **Visual** | `tests/visual/dev-auth-bypass.visual.test.ts` | Dashboard after bypass, error toast on failure |
 
 ---
 
@@ -282,3 +282,4 @@ Recommended execution order for single developer:
 - DEV mode check (`import.meta.env.DEV`) prevents production bypass
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
+- **Performance criteria** (SC-001: <5s dashboard load, SC-004: <10s token generation) are verified manually during E2E testing; no automated performance test required for this local dev feature

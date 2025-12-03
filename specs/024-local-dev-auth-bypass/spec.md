@@ -9,7 +9,7 @@
 
 ### Session 2025-12-03
 
-- Q: How should developers execute the token generation script? → A: `npm run gen:token` - Add script to package.json using `tsx` runner.
+- Q: How should developers execute the token generation script? → A: `pnpm run gen:token` - Add script to package.json using `tsx` runner.
 - Q: Should the script create seed data for RLS testing? → A: Yes, create minimal seed data (1 household, 1 account) for immediate RLS verification.
 - Q: What should happen if setSession() fails in dev mode? → A: Fall back to normal login form with error toast explaining bypass failure.
 - Q: What level of console output should the script provide? → A: Verbose step-by-step progress (e.g., "Creating user...", "Generating tokens...", "✓ Done").
@@ -82,7 +82,7 @@ The authenticated session created by the bypass must be a valid Supabase session
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a script (`scripts/generate-dev-token.ts`) that generates valid Supabase session tokens for local development, executable via `npm run gen:token` (using `tsx` runner).
+- **FR-001**: System MUST provide a script (`scripts/generate-dev-token.ts`) that generates valid Supabase session tokens for local development, executable via `pnpm run gen:token` (using `tsx` runner).
 - **FR-002**: Script MUST connect to local Supabase using the Service Role Key from environment or `supabase status` output.
 - **FR-003**: Script MUST ensure a `dev@local` user exists in the authentication system with email confirmed.
 - **FR-004**: Script MUST ensure `dev@local` is present in the `allowed_emails` database table.
@@ -106,7 +106,7 @@ The authenticated session created by the bypass must be a valid Supabase session
 
 ### Measurable Outcomes
 
-- **SC-001**: Developer can go from `npm run dev` to seeing authenticated dashboard in under 5 seconds (after initial setup).
+- **SC-001**: Developer can go from `pnpm dev` to seeing authenticated dashboard in under 5 seconds (after initial setup).
 - **SC-002**: AI agent can complete a full test cycle (view data, create record, verify persistence) without any manual authentication steps.
 - **SC-003**: 100% of database queries through bypassed session respect RLS policies identically to manual login sessions.
 - **SC-004**: Token generation script completes in under 10 seconds on first run (including user creation).
