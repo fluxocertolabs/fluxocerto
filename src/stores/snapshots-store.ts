@@ -11,6 +11,7 @@ import {
   isSupabaseConfigured,
 } from '@/lib/supabase'
 import { CURRENT_SCHEMA_VERSION } from '@/lib/snapshots'
+import type { Result } from './finance-store'
 import type {
   ProjectionSnapshot,
   SnapshotListItem,
@@ -18,11 +19,6 @@ import type {
   SnapshotData,
   CreateSnapshotInput,
 } from '@/types/snapshot'
-
-// Result type for explicit error handling
-type Result<T> =
-  | { success: true; data: T }
-  | { success: false; error: string }
 
 // Error-only result type for config checks
 type ErrorResult = { success: false; error: string }
@@ -98,7 +94,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
       if (error) {
         const errorResult = handleSupabaseError(error)
-        set({ error: errorResult.success ? null : errorResult.error, isLoading: false })
+        set({ error: errorResult.error, isLoading: false })
         return
       }
 
@@ -141,7 +137,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
           return null
         }
         const errorResult = handleSupabaseError(error)
-        set({ error: errorResult.success ? null : errorResult.error, isLoading: false })
+        set({ error: errorResult.error, isLoading: false })
         return null
       }
 

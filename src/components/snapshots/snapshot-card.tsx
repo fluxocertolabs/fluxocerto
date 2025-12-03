@@ -56,7 +56,7 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
       <Link to={`/history/${id}`}>
         <Card
           className={cn(
-            'p-4 hover:bg-muted/50 transition-colors cursor-pointer relative',
+            'p-4 hover:bg-muted/50 transition-colors cursor-pointer',
             'border-l-4',
             dangerDayCount > 0 ? 'border-l-destructive' : 'border-l-emerald-500'
           )}
@@ -67,51 +67,53 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
               <p className="text-sm text-muted-foreground mt-1">{formattedDate}</p>
             </div>
 
-            <div className="flex flex-col items-end gap-1 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Saldo inicial:</span>
-                <span className="font-medium">
-                  {formatCurrencyWithCents(startingBalance)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Saldo final:</span>
-                <span
-                  className={cn(
-                    'font-medium',
-                    isPositiveChange ? 'text-emerald-600' : 'text-destructive'
-                  )}
-                >
-                  {formatCurrencyWithCents(endBalanceOptimistic)}
-                </span>
-              </div>
-              {dangerDayCount > 0 && (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-destructive text-xs font-medium">
-                    {dangerDayCount} {dangerDayCount === 1 ? 'dia' : 'dias'} de risco
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end gap-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Saldo inicial:</span>
+                  <span className="font-medium">
+                    {formatCurrencyWithCents(startingBalance)}
                   </span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Saldo final:</span>
+                  <span
+                    className={cn(
+                      'font-medium',
+                      isPositiveChange ? 'text-emerald-600' : 'text-destructive'
+                    )}
+                  >
+                    {formatCurrencyWithCents(endBalanceOptimistic)}
+                  </span>
+                </div>
+                {dangerDayCount > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-destructive text-xs font-medium">
+                      {dangerDayCount} {dangerDayCount === 1 ? 'dia' : 'dias'} de risco
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Delete button */}
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowDeleteConfirm(true)
+                  }}
+                  disabled={isDeleting}
+                  className="h-8 w-8 p-0 text-muted-foreground transition-none hover:text-destructive hover:bg-destructive/10"
+                  aria-label="Excluir snapshot"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
               )}
             </div>
           </div>
-
-          {/* Delete button */}
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setShowDeleteConfirm(true)
-              }}
-              disabled={isDeleting}
-              className="absolute top-2 right-2 h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-              aria-label="Excluir snapshot"
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-          )}
         </Card>
       </Link>
 

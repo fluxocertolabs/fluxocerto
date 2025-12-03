@@ -143,7 +143,7 @@ export function SnapshotDetailPage() {
             variant="ghost"
             size="sm"
             onClick={() => setShowDeleteConfirm(true)}
-            className="text-muted-foreground hover:text-destructive transition-colors"
+            className="text-muted-foreground transition-none hover:text-destructive hover:bg-destructive/10"
           >
             <TrashIcon className="w-4 h-4" />
             Excluir
