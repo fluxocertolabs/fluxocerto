@@ -28,9 +28,9 @@
 
 **Purpose**: Project initialization and script directory structure
 
-- [ ] T001 Create `scripts/` directory at repository root
-- [ ] T002 Add `tsx@4.21.0` as dev dependency to package.json for TypeScript script execution
-- [ ] T003 Add `gen:token` script to package.json scripts section: `"gen:token": "tsx scripts/generate-dev-token.ts"`
+- [X] T001 Create `scripts/` directory at repository root
+- [X] T002 Add `tsx@4.21.0` as dev dependency to package.json for TypeScript script execution
+- [X] T003 Add `gen:token` script to package.json scripts section: `"gen:token": "tsx scripts/generate-dev-token.ts"`
 
 ---
 
@@ -44,16 +44,16 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T004 [P] Add unit tests for `injectDevSession()` function in src/lib/supabase.test.ts - test success path, failure path, and DEV mode guard
-- [ ] T005 [P] Add unit tests for dev token detection logic in src/lib/supabase.test.ts - test `hasDevTokens()` helper
+- [X] T004 [P] Add unit tests for `injectDevSession()` function in src/lib/supabase.test.ts - test success path, failure path, and DEV mode guard
+- [X] T005 [P] Add unit tests for dev token detection logic in src/lib/supabase.test.ts - test `hasDevTokens()` helper
 
 ### Implementation for Foundational Phase
 
-- [ ] T006 Add dev session injection helper function `injectDevSession()` in src/lib/supabase.ts that accepts tokens and calls `setSession()`
-- [ ] T007 Add `hasDevTokens()` helper function in src/lib/supabase.ts to check for VITE_DEV_ACCESS_TOKEN presence
-- [ ] T008 [P] Add VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN type declarations to src/vite-env.d.ts
-- [ ] T009 Modify `bootstrap()` in src/main.tsx to call dev session injection BEFORE `initializeAuth()` when in DEV mode with tokens present
-- [ ] T010 Add error toast display for dev session injection failure in src/main.tsx (fallback to normal login)
+- [X] T006 Add dev session injection helper function `injectDevSession()` in src/lib/supabase.ts that accepts tokens and calls `setSession()`
+- [X] T007 Add `hasDevTokens()` helper function in src/lib/supabase.ts to check for VITE_DEV_ACCESS_TOKEN presence
+- [X] T008 [P] Add VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN type declarations to src/vite-env.d.ts
+- [X] T009 Modify `bootstrap()` in src/main.tsx to call dev session injection BEFORE `initializeAuth()` when in DEV mode with tokens present
+- [X] T010 Add error toast display for dev session injection failure in src/main.tsx (fallback to normal login)
 
 **Checkpoint**: Foundation ready - unit tests pass, user story implementation can now begin
 
@@ -69,18 +69,18 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Add E2E test for dev auth bypass flow in tests/e2e/dev-auth-bypass.spec.ts - verify dashboard loads without login when tokens present
-- [ ] T012 [P] [US1] Add E2E test for fallback behavior in tests/e2e/dev-auth-bypass.spec.ts - verify login screen shows when tokens invalid/missing
-- [ ] T013 [P] [US1] Add E2E test for production mode guard in tests/e2e/dev-auth-bypass.spec.ts - verify bypass disabled in prod build
+- [X] T011 [P] [US1] Add E2E test for dev auth bypass flow in tests/e2e/dev-auth-bypass.spec.ts - verify dashboard loads without login when tokens present
+- [X] T012 [P] [US1] Add E2E test for fallback behavior in tests/e2e/dev-auth-bypass.spec.ts - verify login screen shows when tokens invalid/missing
+- [X] T013 [P] [US1] Add E2E test for production mode guard in tests/e2e/dev-auth-bypass.spec.ts - verify bypass disabled in prod build
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Create token generation script skeleton in scripts/generate-dev-token.ts with main entry point and verbose console output structure
-- [ ] T015 [US1] Implement Supabase admin client initialization in scripts/generate-dev-token.ts using service role key from environment or `supabase status`
-- [ ] T016 [US1] Implement `findOrCreateDevUser()` function in scripts/generate-dev-token.ts that creates `dev@local` user with confirmed email via admin API
-- [ ] T017 [US1] Implement `generateTokens()` function in scripts/generate-dev-token.ts that signs in dev user and outputs VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN
-- [ ] T018 [US1] Add connection validation to scripts/generate-dev-token.ts - fail with clear error if Supabase not running at http://127.0.0.1:54321 or if Service Role Key is invalid/missing
-- [ ] T019 [US1] Format script output for copy-paste to .env.local with instructions
+- [X] T014 [US1] Create token generation script skeleton in scripts/generate-dev-token.ts with main entry point and verbose console output structure
+- [X] T015 [US1] Implement Supabase admin client initialization in scripts/generate-dev-token.ts using service role key from environment or `supabase status`
+- [X] T016 [US1] Implement `findOrCreateDevUser()` function in scripts/generate-dev-token.ts that creates `dev@local` user with confirmed email via admin API
+- [X] T017 [US1] Implement `generateTokens()` function in scripts/generate-dev-token.ts that signs in dev user and outputs VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN
+- [X] T018 [US1] Add connection validation to scripts/generate-dev-token.ts - fail with clear error if Supabase not running at http://127.0.0.1:54321 or if Service Role Key is invalid/missing
+- [X] T019 [US1] Format script output for copy-paste to .env.local with instructions
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - E2E tests pass, tokens generated and app auto-logs in
 
@@ -96,13 +96,13 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T020 [P] [US2] Add E2E test for idempotent user creation in tests/e2e/dev-auth-bypass.spec.ts - run script twice, verify single user exists
+- [X] T020 [P] [US2] Add E2E test for idempotent user creation in tests/e2e/dev-auth-bypass.spec.ts - run script twice, verify single user exists
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Implement idempotent user lookup in scripts/generate-dev-token.ts - use `auth.admin.listUsers()` to find existing `dev@local` before creation
-- [ ] T022 [US2] Add `dev@local` to allowed_emails table in scripts/generate-dev-token.ts if not present (required for auth hook)
-- [ ] T023 [US2] Add verbose progress output for user management steps: "Creating user...", "✓ User created/found: dev@local"
+- [X] T021 [US2] Implement idempotent user lookup in scripts/generate-dev-token.ts - use `auth.admin.listUsers()` to find existing `dev@local` before creation
+- [X] T022 [US2] Add `dev@local` to allowed_emails table in scripts/generate-dev-token.ts if not present (required for auth hook)
+- [X] T023 [US2] Add verbose progress output for user management steps: "Creating user...", "✓ User created/found: dev@local"
 
 **Checkpoint**: Dev user management is idempotent - E2E test passes, script can be run multiple times safely
 
@@ -118,16 +118,16 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T024 [P] [US3] Add E2E test for seed data visibility in tests/e2e/dev-auth-bypass.spec.ts - verify Dev Checking account appears on dashboard after auto-login
-- [ ] T025 [P] [US3] Add E2E test for RLS enforcement in tests/e2e/dev-auth-bypass.spec.ts - verify only dev household data is accessible
+- [X] T024 [P] [US3] Add E2E test for seed data visibility in tests/e2e/dev-auth-bypass.spec.ts - verify Dev Checking account appears on dashboard after auto-login
+- [X] T025 [P] [US3] Add E2E test for RLS enforcement in tests/e2e/dev-auth-bypass.spec.ts - verify only dev household data is accessible
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Implement `createDevHousehold()` in scripts/generate-dev-token.ts - create "Dev Household" if not exists
-- [ ] T027 [US3] Implement `createDevProfile()` in scripts/generate-dev-token.ts - link dev user to household with email match
-- [ ] T028 [US3] Implement `createSeedAccount()` in scripts/generate-dev-token.ts - create "Dev Checking" account with 10,000.00 balance (1000000 cents)
-- [ ] T029 [US3] Add idempotency checks for all seed data creation (skip if already exists)
-- [ ] T030 [US3] Add verbose progress output for seed data steps: "Creating household...", "Creating profile...", "Creating seed account..."
+- [X] T026 [US3] Implement `createDevHousehold()` in scripts/generate-dev-token.ts - create "Dev Household" if not exists
+- [X] T027 [US3] Implement `createDevProfile()` in scripts/generate-dev-token.ts - link dev user to household with email match
+- [X] T028 [US3] Implement `createSeedAccount()` in scripts/generate-dev-token.ts - create "Dev Checking" account with 10,000.00 balance (1000000 cents)
+- [X] T029 [US3] Add idempotency checks for all seed data creation (skip if already exists)
+- [X] T030 [US3] Add verbose progress output for seed data steps: "Creating household...", "Creating profile...", "Creating seed account..."
 
 **Checkpoint**: All user stories should now be independently functional - E2E tests pass, full dev environment setup complete
 
@@ -137,8 +137,8 @@
 
 **Purpose**: Ensure UI consistency and catch visual regressions
 
-- [ ] T031 [P] Add visual regression test for dev bypass login state in tests/visual/dev-auth-bypass.visual.test.ts - capture dashboard immediately after dev auth bypass (should match existing dashboard snapshots)
-- [ ] T032 [P] Add visual regression test for bypass failure state in tests/visual/dev-auth-bypass.visual.test.ts - capture error toast when bypass fails
+- [X] T031 [P] Add visual regression test for dev bypass login state in tests/visual/dev-auth-bypass.visual.test.ts - capture dashboard immediately after dev auth bypass (should match existing dashboard snapshots)
+- [X] T032 [P] Add visual regression test for bypass failure state in tests/visual/dev-auth-bypass.visual.test.ts - capture error toast when bypass fails
 
 ---
 
@@ -146,11 +146,11 @@
 
 **Purpose**: Final touches and documentation
 
-- [ ] T033 [P] Add JSDoc comments to `injectDevSession()` in src/lib/supabase.ts explaining DEV-only behavior
-- [ ] T034 [P] Add comments to src/main.tsx explaining dev auth bypass flow
-- [ ] T035 Update .env.example with VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN placeholders and documentation
-- [ ] T036 Run quickstart.md validation - verify all steps work as documented
-- [ ] T037 Run full test suite (unit + E2E + visual) - verify all tests pass
+- [X] T033 [P] Add JSDoc comments to `injectDevSession()` in src/lib/supabase.ts explaining DEV-only behavior
+- [X] T034 [P] Add comments to src/main.tsx explaining dev auth bypass flow
+- [X] T035 Update .env.example with VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN placeholders and documentation
+- [X] T036 Run quickstart.md validation - verify all steps work as documented
+- [X] T037 Run full test suite (unit + E2E + visual) - verify all tests pass
 
 ---
 

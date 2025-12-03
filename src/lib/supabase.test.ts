@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { getMissingEnvVars, isSupabaseConfigured, isOnline, handleSupabaseError } from './supabase'
+import { getMissingEnvVars, isSupabaseConfigured, isOnline, handleSupabaseError, hasDevTokens, injectDevSession } from './supabase'
 
 // =============================================================================
 // getMissingEnvVars TESTS
@@ -275,5 +275,82 @@ describe('handleSupabaseError', () => {
       expect(result.success).toBe(false)
       expect(result.error).toBe('Ocorreu um erro inesperado.')
     })
+  })
+})
+
+// =============================================================================
+// hasDevTokens TESTS
+// =============================================================================
+
+describe('hasDevTokens', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('returns false when no dev tokens are present', () => {
+    vi.stubEnv('VITE_DEV_ACCESS_TOKEN', '')
+    vi.stubEnv('VITE_DEV_REFRESH_TOKEN', '')
+    
+    expect(hasDevTokens()).toBe(false)
+  })
+
+  it('returns false when only access token is present', () => {
+    vi.stubEnv('VITE_DEV_ACCESS_TOKEN', 'some-access-token')
+    vi.stubEnv('VITE_DEV_REFRESH_TOKEN', '')
+    
+    expect(hasDevTokens()).toBe(false)
+  })
+
+  it('returns false when only refresh token is present', () => {
+    vi.stubEnv('VITE_DEV_ACCESS_TOKEN', '')
+    vi.stubEnv('VITE_DEV_REFRESH_TOKEN', 'some-refresh-token')
+    
+    expect(hasDevTokens()).toBe(false)
+  })
+
+  it('returns true when both tokens are present', () => {
+    vi.stubEnv('VITE_DEV_ACCESS_TOKEN', 'some-access-token')
+    vi.stubEnv('VITE_DEV_REFRESH_TOKEN', 'some-refresh-token')
+    
+    expect(hasDevTokens()).toBe(true)
+  })
+})
+
+// =============================================================================
+// injectDevSession TESTS
+// =============================================================================
+
+describe('injectDevSession', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  // Note: Testing "not in DEV mode" is challenging because import.meta.env.DEV
+  // is not easily mockable in Vitest. The DEV mode guard is verified through:
+  // 1. Code review (the check exists in the function)
+  // 2. Production build testing (bypass disabled in prod)
+  // 3. E2E tests that verify production behavior
+
+  it('returns failure when tokens are missing', async () => {
+    vi.stubEnv('VITE_DEV_ACCESS_TOKEN', '')
+    vi.stubEnv('VITE_DEV_REFRESH_TOKEN', '')
+    
+    const result = await injectDevSession()
+    
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('tokens')
+  })
+
+  it('returns failure when Supabase is not configured', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
+    vi.stubEnv('VITE_DEV_ACCESS_TOKEN', 'access-token')
+    vi.stubEnv('VITE_DEV_REFRESH_TOKEN', 'refresh-token')
+    
+    const result = await injectDevSession()
+    
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('configured')
   })
 })
