@@ -184,7 +184,8 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await collapsibleTrigger.click();
       await visual.waitForStableUI(page);
 
-      const addButton = cardElement.getByRole('button', { name: /adicionar fatura/i });
+      const addButton = cardElement.getByRole('button', { name: /adicionar/i });
+      await expect(addButton).toBeVisible({ timeout: 10000 });
       await addButton.click();
 
       await visual.waitForStableUI(page);
@@ -214,7 +215,8 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await collapsibleTrigger.click();
       await visual.waitForStableUI(page);
 
-      const addButton = cardElement.getByRole('button', { name: /adicionar fatura/i });
+      const addButton = cardElement.getByRole('button', { name: /adicionar/i });
+      await expect(addButton).toBeVisible({ timeout: 10000 });
       await addButton.click();
 
       await visual.waitForStableUI(page);
