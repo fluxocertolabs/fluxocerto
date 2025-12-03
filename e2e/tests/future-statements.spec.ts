@@ -35,15 +35,15 @@ test.describe('Future Statement Management', () => {
     await collapsibleTrigger.click();
 
     // Click add button for future statement
-    const addButton = cardElement.getByRole('button', { name: /adicionar fatura/i });
+    const addButton = cardElement.getByRole('button', { name: /adicionar/i });
     await addButton.click();
 
     // Wait for dialog
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    // Fill the form - select month and enter amount
-    await dialog.getByLabel(/valor/i).fill('1500,00');
+    // Fill the form - select month and enter amount (use period for number input)
+    await dialog.getByLabel(/valor/i).fill('1500.00');
 
     // Submit
     await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
@@ -110,10 +110,10 @@ test.describe('Future Statement Management', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    // Update the amount
+    // Update the amount (use period for number input)
     const amountInput = dialog.getByLabel(/valor/i);
     await amountInput.clear();
-    await amountInput.fill('2000,00');
+    await amountInput.fill('2000.00');
 
     // Submit
     await dialog.getByRole('button', { name: /salvar|atualizar/i }).click();
@@ -270,12 +270,12 @@ test.describe('Future Statement Management', () => {
     await collapsibleTrigger.click();
 
     // Add a future statement
-    const addButton = cardElement.getByRole('button', { name: /adicionar fatura/i });
+    const addButton = cardElement.getByRole('button', { name: /adicionar/i });
     await addButton.click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
-    await dialog.getByLabel(/valor/i).fill('1000,00');
+    await dialog.getByLabel(/valor/i).fill('1000.00');
     await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
@@ -331,7 +331,7 @@ test.describe('Future Statement Validation', () => {
     await collapsibleTrigger.click();
 
     // Try to add another statement for the same month
-    const addButton = cardElement.getByRole('button', { name: /adicionar fatura/i });
+    const addButton = cardElement.getByRole('button', { name: /adicionar/i });
     await addButton.click();
 
     const dialog = page.getByRole('dialog');
@@ -340,7 +340,7 @@ test.describe('Future Statement Validation', () => {
     // The month selector filters out already-used months
     // Verify that the used month is not available in the dropdown
     // The form defaults to the first available month (which should be different from the seeded one)
-    await dialog.getByLabel(/valor/i).fill('2000,00');
+    await dialog.getByLabel(/valor/i).fill('2000.00');
     await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
 
     // The dialog should close successfully since it picks an available month
@@ -378,7 +378,7 @@ test.describe('Future Statement Validation', () => {
     await collapsibleTrigger.click();
 
     // Click add button
-    const addButton = cardElement.getByRole('button', { name: /adicionar fatura/i });
+    const addButton = cardElement.getByRole('button', { name: /adicionar/i });
     await addButton.click();
 
     const dialog = page.getByRole('dialog');
@@ -401,7 +401,7 @@ test.describe('Future Statement Validation', () => {
     // If current month is available, select it
     if (await monthOption.isVisible({ timeout: 2000 }).catch(() => false)) {
       await monthOption.click();
-      await dialog.getByLabel(/valor/i).fill('1500,00');
+      await dialog.getByLabel(/valor/i).fill('1500.00');
       await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
 
       // Warning dialog should appear for current month
