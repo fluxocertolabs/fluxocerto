@@ -13,6 +13,7 @@ import type {
   SingleShotExpense,
   SingleShotIncome,
   Project,
+  FutureStatement,
 } from '../../types'
 import { CashflowCalculationError, CashflowErrorCode } from './types'
 
@@ -112,6 +113,8 @@ export interface CashflowEngineInput {
   singleShotExpenses?: SingleShotExpense[]
   singleShotIncome?: SingleShotIncome[]
   creditCards: CreditCard[]
+  /** Future statements for credit cards - used to determine future month amounts */
+  futureStatements?: FutureStatement[]
   /** Shorthand for options.projectionDays (takes precedence) */
   projectionDays?: number
   options?: z.infer<typeof CashflowEngineOptionsSchema>
@@ -129,6 +132,7 @@ export interface ValidatedInput {
   singleShotExpenses: SingleShotExpense[]
   singleShotIncome: SingleShotIncome[]
   creditCards: CreditCard[]
+  futureStatements: FutureStatement[]
   options: ValidatedOptions
 }
 
@@ -231,6 +235,7 @@ export function validateAndFilterInput(input: CashflowEngineInput): ValidatedInp
     singleShotExpenses: input.singleShotExpenses ?? [],
     singleShotIncome: input.singleShotIncome ?? [],
     creditCards: input.creditCards,
+    futureStatements: input.futureStatements ?? [],
     options: optionsResult.data,
   }
 }

@@ -128,6 +128,7 @@ export interface VisualTestHelpers {
     method takeScreenshot(page: Page, name: string, options: { fullPage?: boolean; mask?: Locator[] }): Promise<void>
     method getWorkerSpecificMasks(page: Page): Locator[]
 }
+export async function disableAnimations(page: Page)
 export async function waitForStableUI(page: Page)
 export async function setTheme(page: Page, theme: ThemeMode)
 export const visualTest
@@ -439,6 +440,11 @@ import '../fixtures/test-base'
 import '../utils/test-data'
 </file>
 
+<file path="e2e/tests/error-handling.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+</file>
+
 <file path="e2e/tests/expenses.spec.ts">
 import '../fixtures/test-base'
 import '../utils/test-data'
@@ -477,6 +483,16 @@ import '../../fixtures/visual-test-base'
 </file>
 
 <file path="e2e/tests/visual/manage.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+import '../../utils/test-data'
+</file>
+
+<file path="e2e/tests/visual/mobile.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+import '../../utils/test-data'
+</file>
+
+<file path="e2e/tests/visual/modals.visual.spec.ts">
 import '../../fixtures/visual-test-base'
 import '../../utils/test-data'
 </file>
@@ -3844,10 +3860,19 @@ export function formatRelativeTime(date: Date | undefined)
 export function isStale(date: Date | undefined)
 </file>
 
+<file path="src/components/manage/shared/inline-edit-input.test.tsx">
+import 'vitest'
+import '@testing-library/react'
+import '@testing-library/user-event'
+import './inline-edit-input'
+import '@/lib/format'
+</file>
+
 <file path="src/components/manage/shared/inline-edit-input.tsx">
 import 'react'
 import '@/components/ui/input'
 import '@/lib/utils'
+import '@/lib/format'
 export function InlineEditInput()
 </file>
 
@@ -4335,6 +4360,8 @@ export function formatChartCurrency(reais: number)
 export function formatCurrencyWithCents(cents: number)
 export function formatChartDate(date: Date)
 export function formatTooltipDate(date: Date)
+export function formatToBRL(value: string)
+export function parseBRLToCents(formatted: string)
 </file>
 
 <file path="src/lib/staleness.test.ts">
@@ -4537,6 +4564,11 @@ import '@/components/loading'
 import '@/lib/utils'
 import '@/types'
 export function ManagePage()
+</file>
+
+<file path="src/stores/finance-store.test.ts">
+import 'vitest'
+import './finance-store'
 </file>
 
 <file path="src/stores/finance-store.ts">

@@ -14,6 +14,7 @@ import type {
   TestProject,
   TestSingleShotIncome,
   TestCreditCard,
+  TestFutureStatement,
   TestHousehold,
   TestProfile,
 } from '../utils/test-data';
@@ -28,6 +29,7 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
   // Delete in order to respect foreign key constraints
   const tables = [
     'user_preferences',
+    'future_statements',
     'credit_cards',
     'expenses',
     'projects',
@@ -210,6 +212,7 @@ export async function resetHouseholdData(householdId: string): Promise<void> {
   // Note: We don't delete profiles to preserve auth linkage
   const tables = [
     'user_preferences',
+    'future_statements',
     'credit_cards',
     'expenses',
     'projects',
@@ -667,6 +670,64 @@ export async function seedCreditCards(
 }
 
 /**
+ * Seed future statements with test data using explicit household ID
+ */
+export async function seedFutureStatementsWithHousehold(
+  statements: TestFutureStatement[],
+  householdId: string
+): Promise<TestFutureStatement[]> {
+  const client = getAdminClient();
+  
+  const records = statements.map((s) => ({
+    credit_card_id: s.credit_card_id,
+    target_month: s.target_month,
+    target_year: s.target_year,
+    amount: s.amount,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('future_statements').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed future statements: ${error.message}`);
+  }
+
+  return data as TestFutureStatement[];
+}
+
+/**
+ * Seed future statements with test data (legacy - uses email lookup)
+ * @deprecated Use seedFutureStatementsWithHousehold for better isolation
+ */
+export async function seedFutureStatements(
+  statements: TestFutureStatement[],
+  userEmail?: string
+): Promise<TestFutureStatement[]> {
+  const client = getAdminClient();
+  
+  // Get household ID for seeding - use user's household if email provided
+  const householdId = userEmail
+    ? await getHouseholdIdForUser(userEmail)
+    : await getDefaultHouseholdId();
+  
+  const records = statements.map((s) => ({
+    credit_card_id: s.credit_card_id,
+    target_month: s.target_month,
+    target_year: s.target_year,
+    amount: s.amount,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('future_statements').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed future statements: ${error.message}`);
+  }
+
+  return data as TestFutureStatement[];
+}
+
+/**
  * Seed households with test data
  * Used for multi-tenancy isolation tests
  */
@@ -956,6 +1017,10 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     seedCreditCards: async (cards: TestCreditCard[]) => {
       const householdId = await getWorkerHouseholdId();
       return seedCreditCardsWithHousehold(cards, workerIndex, householdId);
+    },
+    seedFutureStatements: async (statements: TestFutureStatement[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedFutureStatementsWithHousehold(statements, householdId);
     },
     seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
       const householdId = await getWorkerHouseholdId();

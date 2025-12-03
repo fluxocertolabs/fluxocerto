@@ -19,7 +19,10 @@ import type {
   CreditCard,
   Profile,
   PaymentSchedule,
+  FutureStatement,
+  FutureStatementRow,
 } from '@/types'
+import { transformFutureStatementRow } from '@/types'
 import { isFixedExpense, isSingleShotExpense } from '@/types'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
@@ -31,6 +34,7 @@ export interface UseFinanceDataReturn {
   fixedExpenses: FixedExpense[]
   singleShotExpenses: SingleShotExpense[]
   creditCards: CreditCard[]
+  futureStatements: FutureStatement[]
   profiles: Profile[]
   isLoading: boolean
   error: string | null
@@ -168,6 +172,7 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [singleShotIncome, setSingleShotIncome] = useState<SingleShotIncome[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
+  const [futureStatements, setFutureStatements] = useState<FutureStatement[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -197,7 +202,7 @@ export function useFinanceData(): UseFinanceDataReturn {
 
       const client = getSupabase()
       // Fetch all tables in parallel - no user_id filter needed (shared family data)
-      const [accountsResult, projectsResult, expensesResult, creditCardsResult, profilesResult] = await Promise.all([
+      const [accountsResult, projectsResult, expensesResult, creditCardsResult, futureStatementsResult, profilesResult] = await Promise.all([
         client.from('accounts').select(`
           id, name, type, balance, balance_updated_at, owner_id,
           owner:profiles!owner_id(id, name),
@@ -210,6 +215,9 @@ export function useFinanceData(): UseFinanceDataReturn {
           owner:profiles!owner_id(id, name),
           created_at, updated_at
         `),
+        client.from('future_statements').select('*')
+          .order('target_year', { ascending: true })
+          .order('target_month', { ascending: true }),
         client.from('profiles').select('id, name').order('name'),
       ])
 
@@ -218,6 +226,7 @@ export function useFinanceData(): UseFinanceDataReturn {
       if (projectsResult.error) throw projectsResult.error
       if (expensesResult.error) throw expensesResult.error
       if (creditCardsResult.error) throw creditCardsResult.error
+      if (futureStatementsResult.error) throw futureStatementsResult.error
       if (profilesResult.error) throw profilesResult.error
 
       // Map database rows to TypeScript types
@@ -233,6 +242,7 @@ export function useFinanceData(): UseFinanceDataReturn {
       
       setExpenses((expensesResult.data ?? []).map(mapExpenseFromDb))
       setCreditCards((creditCardsResult.data ?? []).map((row) => mapCreditCardFromDb(row as unknown as CreditCardRow)))
+      setFutureStatements((futureStatementsResult.data ?? []).map((row) => transformFutureStatementRow(row as FutureStatementRow)))
       setProfiles((profilesResult.data ?? []).map((row) => mapProfileFromDb(row as ProfileRow)))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao carregar dados'
@@ -376,6 +386,48 @@ export function useFinanceData(): UseFinanceDataReturn {
     }
   }, [])
 
+  // Handle realtime changes for future statements
+  const handleFutureStatementChange = useCallback((payload: RealtimePostgresChangesPayload<FutureStatementRow>) => {
+    const { eventType, new: newRecord, old: oldRecord } = payload
+
+    switch (eventType) {
+      case 'INSERT':
+        if (newRecord) {
+          setFutureStatements(prev => {
+            const newStatement = transformFutureStatementRow(newRecord as FutureStatementRow)
+            // Insert in sorted order (by year, then month)
+            const newList = [...prev, newStatement]
+            return newList.sort((a, b) => {
+              if (a.targetYear !== b.targetYear) return a.targetYear - b.targetYear
+              return a.targetMonth - b.targetMonth
+            })
+          })
+        }
+        break
+      case 'UPDATE':
+        if (newRecord) {
+          setFutureStatements(prev => {
+            const updated = prev.map(statement =>
+              statement.id === (newRecord as FutureStatementRow).id
+                ? transformFutureStatementRow(newRecord as FutureStatementRow)
+                : statement
+            )
+            // Re-sort in case date changed
+            return updated.sort((a, b) => {
+              if (a.targetYear !== b.targetYear) return a.targetYear - b.targetYear
+              return a.targetMonth - b.targetMonth
+            })
+          })
+        }
+        break
+      case 'DELETE':
+        if (oldRecord) {
+          setFutureStatements(prev => prev.filter(statement => statement.id !== (oldRecord as FutureStatementRow).id))
+        }
+        break
+    }
+  }, [])
+
   // Setup subscription and initial data fetch
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -440,6 +492,15 @@ export function useFinanceData(): UseFinanceDataReturn {
           },
           handleCreditCardChange
         )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'future_statements',
+          },
+          handleFutureStatementChange
+        )
         .subscribe((status, err) => {
           if (status === 'CHANNEL_ERROR') {
             console.error('Realtime channel error:', err)
@@ -459,7 +520,7 @@ export function useFinanceData(): UseFinanceDataReturn {
         channel.unsubscribe()
       }
     }
-  }, [isAuthenticated, fetchAllData, handleAccountChange, handleProjectChange, handleExpenseChange, handleCreditCardChange, retryCount])
+  }, [isAuthenticated, fetchAllData, handleAccountChange, handleProjectChange, handleExpenseChange, handleCreditCardChange, handleFutureStatementChange, retryCount])
 
   return {
     accounts,
@@ -469,6 +530,7 @@ export function useFinanceData(): UseFinanceDataReturn {
     fixedExpenses,
     singleShotExpenses,
     creditCards,
+    futureStatements,
     profiles,
     isLoading,
     error,

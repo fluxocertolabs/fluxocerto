@@ -835,3 +835,226 @@ describe('Configuration Error Handling', () => {
     }
   })
 })
+
+// =============================================================================
+// FUTURE STATEMENT VALIDATION TESTS
+// =============================================================================
+
+describe('Future Statement Actions - Validation', () => {
+  beforeEach(resetMocks)
+
+  // Valid UUID for tests
+  const validUUID = '550e8400-e29b-41d4-a716-446655440000'
+
+  describe('addFutureStatement validation', () => {
+    it('returns validation error for empty creditCardId', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: '',
+        targetMonth: 6,
+        targetYear: 2025,
+        amount: 100000,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('returns validation error for non-UUID creditCardId', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: 'card-123', // Not a valid UUID
+        targetMonth: 6,
+        targetYear: 2025,
+        amount: 100000,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('returns validation error for invalid month (0)', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 0,
+        targetYear: 2025,
+        amount: 100000,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('returns validation error for invalid month (13)', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 13,
+        targetYear: 2025,
+        amount: 100000,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('returns validation error for invalid year (below 2020)', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 6,
+        targetYear: 2019,
+        amount: 100000,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('returns validation error for negative amount', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 6,
+        targetYear: 2025,
+        amount: -100,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('accepts valid future statement', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 6,
+        targetYear: 2025,
+        amount: 150000,
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts zero amount', async () => {
+      const result = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 6,
+        targetYear: 2025,
+        amount: 0,
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts boundary month values (1 and 12)', async () => {
+      const result1 = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 1,
+        targetYear: 2025,
+        amount: 100000,
+      })
+
+      const result12 = await useFinanceStore.getState().addFutureStatement({
+        creditCardId: validUUID,
+        targetMonth: 12,
+        targetYear: 2025,
+        amount: 100000,
+      })
+
+      expect(result1.success).toBe(true)
+      expect(result12.success).toBe(true)
+    })
+  })
+
+  describe('updateFutureStatement validation', () => {
+    it('returns validation error for negative amount in update', async () => {
+      const result = await useFinanceStore.getState().updateFutureStatement('stmt-id', {
+        amount: -100,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('returns validation error for invalid month in update', async () => {
+      const result = await useFinanceStore.getState().updateFutureStatement('stmt-id', {
+        targetMonth: 15,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Validation failed')
+      }
+    })
+
+    it('accepts partial valid update with only amount', async () => {
+      const result = await useFinanceStore.getState().updateFutureStatement('stmt-id', {
+        amount: 200000,
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts partial valid update with only targetMonth', async () => {
+      const result = await useFinanceStore.getState().updateFutureStatement('stmt-id', {
+        targetMonth: 8,
+      })
+
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('deleteFutureStatement', () => {
+    it('succeeds with valid id', async () => {
+      const result = await useFinanceStore.getState().deleteFutureStatement('stmt-id')
+      expect(result.success).toBe(true)
+    })
+  })
+})
+
+describe('Future Statement Configuration Error Handling', () => {
+  beforeEach(resetMocks)
+
+  const validUUID = '550e8400-e29b-41d4-a716-446655440000'
+
+  it('returns error when Supabase is not configured for addFutureStatement', async () => {
+    mockIsConfigured = false
+
+    const result = await useFinanceStore.getState().addFutureStatement({
+      creditCardId: validUUID,
+      targetMonth: 6,
+      targetYear: 2025,
+      amount: 100000,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain('Supabase is not configured')
+    }
+  })
+
+  it('returns error when household cannot be determined for addFutureStatement', async () => {
+    mockHouseholdId = null
+
+    const result = await useFinanceStore.getState().addFutureStatement({
+      creditCardId: validUUID,
+      targetMonth: 6,
+      targetYear: 2025,
+      amount: 100000,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain('residência')
+    }
+  })
+})

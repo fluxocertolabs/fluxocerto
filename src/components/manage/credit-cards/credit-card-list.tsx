@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import type { CreditCard, Profile } from '@/types'
+import type { CreditCard, Profile, FutureStatement, FutureStatementInput } from '@/types'
 import { EntityEmptyState } from '@/components/manage/shared/entity-empty-state'
 import { CreditCardCard } from './credit-card-card'
 import {
@@ -12,20 +12,28 @@ import {
 
 interface CreditCardListProps {
   creditCards: CreditCard[]
+  futureStatements: FutureStatement[]
   profiles: Profile[]
   onAdd: () => void
   onEdit: (card: CreditCard) => void
   onDelete: (id: string) => void
   onUpdateBalance: (id: string, balance: number) => Promise<void>
+  onAddFutureStatement: (input: FutureStatementInput) => Promise<void>
+  onUpdateFutureStatement: (id: string, amount: number) => Promise<void>
+  onDeleteFutureStatement: (id: string) => Promise<void>
 }
 
 export function CreditCardList({
   creditCards,
+  futureStatements,
   profiles,
   onAdd,
   onEdit,
   onDelete,
   onUpdateBalance,
+  onAddFutureStatement,
+  onUpdateFutureStatement,
+  onDeleteFutureStatement,
 }: CreditCardListProps) {
   const [ownerFilter, setOwnerFilter] = useState<string | null>(null)
 
@@ -71,9 +79,13 @@ export function CreditCardList({
             <CreditCardCard
               key={card.id}
               card={card}
+              futureStatements={futureStatements}
               onEdit={() => onEdit(card)}
               onDelete={() => onDelete(card.id)}
               onUpdateBalance={async (balance) => onUpdateBalance(card.id, balance)}
+              onAddFutureStatement={onAddFutureStatement}
+              onUpdateFutureStatement={onUpdateFutureStatement}
+              onDeleteFutureStatement={onDeleteFutureStatement}
             />
           ))}
         </div>
