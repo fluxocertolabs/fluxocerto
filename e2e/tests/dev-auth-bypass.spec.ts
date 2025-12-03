@@ -57,9 +57,9 @@ test.describe('Dev Auth Bypass', () => {
     // This test verifies the login page remains functional and accessible
     // when the dev auth bypass is not in use (e.g., tokens not configured)
     
-    // Clear any existing session
+    // Clear any existing session (cookies and localStorage where Supabase stores session)
     await page.context().clearCookies();
-    await page.context().clearPermissions();
+    await page.evaluate(() => localStorage.clear());
     
     // Navigate to login page directly
     await page.goto('/login');
