@@ -69,28 +69,27 @@ export class ManagePage {
       throw new Error(`Expected to be on /manage page, but got: ${currentUrl}`);
     }
     
-    // First, wait for the PageLoadingWrapper to appear (role="status")
+    // Wait for the page to be ready - either:
+    // 1. PageLoadingWrapper finishes loading (aria-busy="false")
+    // 2. OR tabs are already visible (page loaded quickly)
     const loadingWrapper = this.page.locator('[role="status"][aria-live="polite"]').first();
-    try {
-      await loadingWrapper.waitFor({ state: 'visible', timeout: 10000 });
-    } catch (error) {
-      // Log page state for debugging
-      const pageContent = await this.page.textContent('body').catch(() => 'Unable to read page content');
-      console.error('Failed to find PageLoadingWrapper. Page content:', pageContent);
-      throw error;
-    }
+    const tabsVisible = this.page.getByRole('tab').first();
     
-    // Wait for loading to complete by checking aria-busy attribute becomes "false"
-    // The PageLoadingWrapper sets aria-busy=true during loading and false when done
     try {
-      await this.page.waitForFunction(
-        () => {
-          // Check if loading completed successfully
-          const wrapper = document.querySelector('[role="status"][aria-live="polite"]');
-          return wrapper && wrapper.getAttribute('aria-busy') === 'false';
-        },
-        { timeout: 60000 }
-      );
+      // Wait for either: loading wrapper to finish OR tabs to be visible
+      await Promise.race([
+        // Option 1: Wait for loading wrapper to finish
+        this.page.waitForFunction(
+          () => {
+            const wrapper = document.querySelector('[role="status"][aria-live="polite"]');
+            // Either wrapper doesn't exist (fast load) or it's done loading
+            return !wrapper || wrapper.getAttribute('aria-busy') === 'false';
+          },
+          { timeout: 60000 }
+        ),
+        // Option 2: Tabs are already visible (fast load, no skeleton)
+        tabsVisible.waitFor({ state: 'visible', timeout: 60000 }),
+      ]);
       
       // Wait for the opacity transition to complete (PageLoadingWrapper uses 250ms transition)
       // Add extra buffer for slower environments
@@ -98,9 +97,11 @@ export class ManagePage {
     } catch (error) {
       // Take screenshot and log state for debugging
       await this.page.screenshot({ path: 'debug-manage-page-timeout.png', fullPage: true }).catch(() => {});
-      const ariaBusy = await loadingWrapper.getAttribute('aria-busy');
+      const ariaBusy = await loadingWrapper.getAttribute('aria-busy').catch(() => 'N/A');
       const pageUrl = this.page.url();
+      const pageContent = await this.page.textContent('body').catch(() => 'Unable to read');
       console.error(`Loading timeout. URL: ${pageUrl}, aria-busy: ${ariaBusy}`);
+      console.error(`Page content: ${pageContent?.substring(0, 500)}`);
       throw error;
     }
     

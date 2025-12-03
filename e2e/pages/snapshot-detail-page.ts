@@ -14,6 +14,7 @@ export class SnapshotDetailPage {
   readonly cashflowChart: Locator;
   readonly summaryPanel: Locator;
   readonly notFoundMessage: Locator;
+  readonly loadingSkeleton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -26,6 +27,8 @@ export class SnapshotDetailPage {
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
     this.notFoundMessage = page.getByText(/snapshot não encontrado/i);
+    // Loading skeleton uses animate-pulse class
+    this.loadingSkeleton = page.locator('.animate-pulse').first();
   }
 
   /**
@@ -34,18 +37,23 @@ export class SnapshotDetailPage {
   async goto(snapshotId: string): Promise<void> {
     await this.page.goto(`/history/${snapshotId}`);
     
-    // Wait for either the historical banner or not found message
+    // Wait for loading to complete - either banner, not found, or error shows
     await expect(async () => {
+      const isLoading = await this.loadingSkeleton.isVisible().catch(() => false);
       const hasBanner = await this.historicalBanner.isVisible().catch(() => false);
       const hasNotFound = await this.notFoundMessage.isVisible().catch(() => false);
+      // Loading should be done AND we should see either banner or not found
+      expect(isLoading).toBe(false);
       expect(hasBanner || hasNotFound).toBe(true);
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
   }
 
   /**
    * Check if the historical banner is displayed
+   * Waits briefly for UI to stabilize
    */
   async hasHistoricalBanner(): Promise<boolean> {
+    await this.page.waitForTimeout(500);
     return this.historicalBanner.isVisible();
   }
 

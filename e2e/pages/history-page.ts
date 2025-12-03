@@ -27,17 +27,24 @@ export class HistoryPage {
     await this.page.goto('/history');
     await this.pageHeading.waitFor({ state: 'visible', timeout: 20000 });
     
-    // Wait for loading to complete
+    // Wait for loading to complete - either we see snapshots, empty state, or loading finishes
     await expect(async () => {
       const isLoading = await this.loadingIndicator.isVisible().catch(() => false);
+      const hasSnapshots = await this.snapshotCards.count() > 0;
+      const hasEmptyState = await this.emptyState.isVisible().catch(() => false);
+      // Content is loaded when not loading AND (has snapshots OR has empty state)
       expect(isLoading).toBe(false);
+      expect(hasSnapshots || hasEmptyState).toBe(true);
     }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
   }
 
   /**
    * Check if empty state is displayed
+   * Waits briefly for the state to stabilize
    */
   async hasEmptyState(): Promise<boolean> {
+    // Give UI a moment to settle after navigation
+    await this.page.waitForTimeout(500);
     return this.emptyState.isVisible();
   }
 
