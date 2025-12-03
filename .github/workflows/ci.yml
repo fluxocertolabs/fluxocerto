@@ -84,8 +84,10 @@ jobs:
     name: Visual Regression Tests
     runs-on: ubuntu-latest
     needs: [quality]
-    # Only run visual tests on push to main (not on PRs)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Run visual tests on push to main OR when triggered by workflow_run on main
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
     timeout-minutes: 20
     
     steps:
@@ -160,8 +162,10 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: [quality, visual]
-    # Only run E2E tests on push to main (not on PRs)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Run E2E tests on push to main OR when triggered by workflow_run on main
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
     timeout-minutes: 30
     
     steps:
@@ -364,7 +368,10 @@ jobs:
     name: Database Migrations
     runs-on: ubuntu-latest
     needs: [quality, visual, e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Run migrations on push to main OR when triggered by workflow_run on main
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
     timeout-minutes: 10
     # Serialize migration runs to prevent race conditions when multiple PRs merge
     concurrency:
@@ -423,7 +430,10 @@ jobs:
     name: Deploy Production
     runs-on: ubuntu-latest
     needs: [quality, visual, e2e, migrate]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Run production deploy on push to main OR when triggered by workflow_run on main
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
