@@ -24,10 +24,10 @@
 
 **Purpose**: Database schema and TypeScript type definitions
 
-- [ ] T001 Create database migration in `supabase/migrations/20251203000000_projection_snapshots.sql` with table, index, and RLS policies per data-model.md
-- [ ] T002 Apply migration to local Supabase (`pnpm db:reset` or `pnpm db:push`)
-- [ ] T003 [P] Create TypeScript types in `src/types/snapshot.ts` per data-model.md (ProjectionSnapshot, SnapshotInputState, SnapshotData, SnapshotListItem, SnapshotSummaryMetrics, SnapshotInputSchema)
-- [ ] T004 [P] Export snapshot types from `src/types/index.ts`
+- [X] T001 Create database migration in `supabase/migrations/20251203000000_projection_snapshots.sql` with table, index, and RLS policies per data-model.md
+- [X] T002 Apply migration to local Supabase (`pnpm db:reset` or `pnpm db:push`)
+- [X] T003 [P] Create TypeScript types in `src/types/snapshot.ts` per data-model.md (ProjectionSnapshot, SnapshotInputState, SnapshotData, SnapshotListItem, SnapshotSummaryMetrics, SnapshotInputSchema)
+- [X] T004 [P] Export snapshot types from `src/types/index.ts`
 
 ---
 
@@ -37,12 +37,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create schema version utility in `src/lib/snapshots/schema-version.ts` that re-exports `CURRENT_SCHEMA_VERSION` from `src/types/snapshot.ts` (constant defined there per data-model.md)
-- [ ] T005b [P] Write unit tests in `tests/unit/lib/snapshots/schema-version.test.ts` verifying CURRENT_SCHEMA_VERSION export and any version compatibility helpers
-- [ ] T006 [P] Create barrel export in `src/lib/snapshots/index.ts`
-- [ ] T007 Implement snapshots Zustand store in `src/stores/snapshots-store.ts` per contracts/snapshots-store.md (state: snapshots, currentSnapshot, isLoading, error; actions: fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot, clearError)
-- [ ] T007b [P] Write unit tests in `tests/unit/stores/snapshots-store.test.ts` covering fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot with mocked Supabase client
-- [ ] T008 Export helper functions from `src/hooks/use-cashflow-projection.ts`: transformToChartData, getDangerRanges, and add transformToSummaryStats export (verify function exists; create if missing)
+- [X] T005 Create schema version utility in `src/lib/snapshots/schema-version.ts` that re-exports `CURRENT_SCHEMA_VERSION` from `src/types/snapshot.ts` (constant defined there per data-model.md)
+- [X] T005b [P] Write unit tests in `src/lib/snapshots/schema-version.test.ts` verifying CURRENT_SCHEMA_VERSION export and any version compatibility helpers
+- [X] T006 [P] Create barrel export in `src/lib/snapshots/index.ts`
+- [X] T007 Implement snapshots Zustand store in `src/stores/snapshots-store.ts` per contracts/snapshots-store.md (state: snapshots, currentSnapshot, isLoading, error; actions: fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot, clearError)
+- [X] T007b [P] Write unit tests in `src/stores/snapshots-store.test.ts` covering fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot with mocked Supabase client
+- [X] T008 Export helper functions from `src/hooks/use-cashflow-projection.ts`: transformToChartData, getDangerRanges, and add transformToSummaryStats export (verify function exists; create if missing)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -56,10 +56,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Create snapshots component barrel export in `src/components/snapshots/index.ts`
-- [ ] T010 [US1] Create SaveSnapshotDialog component in `src/components/snapshots/save-snapshot-dialog.tsx` with name input (default: current date in Portuguese format), save/cancel buttons, loading state, and `SnapshotInputSchema` Zod validation from `src/types/snapshot.ts`
-- [ ] T011 [US1] Add "Salvar Snapshot" button to dashboard in `src/pages/dashboard.tsx` that opens SaveSnapshotDialog and passes current projection + finance data to createSnapshot
-- [ ] T012 [US1] Add toast notifications for save success/error in SaveSnapshotDialog
+- [X] T009 [P] [US1] Create snapshots component barrel export in `src/components/snapshots/index.ts`
+- [X] T010 [US1] Create SaveSnapshotDialog component in `src/components/snapshots/save-snapshot-dialog.tsx` with name input (default: current date in Portuguese format), save/cancel buttons, loading state, and `SnapshotInputSchema` Zod validation from `src/types/snapshot.ts`
+- [X] T011 [US1] Add "Salvar Snapshot" button to dashboard in `src/pages/dashboard.tsx` that opens SaveSnapshotDialog and passes current projection + finance data to createSnapshot
+- [X] T012 [US1] Add toast notifications for save success/error in SaveSnapshotDialog
 
 **Checkpoint**: User Story 1 complete - users can save snapshots from dashboard
 
@@ -73,12 +73,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [P] [US2] Create SnapshotCard component in `src/components/snapshots/snapshot-card.tsx` displaying name, createdAt, and summaryMetrics (startingBalance, endBalanceOptimistic, dangerDayCount)
-- [ ] T014 [P] [US2] Create SnapshotEmptyState component in `src/components/snapshots/snapshot-empty-state.tsx` explaining how to save snapshots
-- [ ] T015 [US2] Create SnapshotList component in `src/components/snapshots/snapshot-list.tsx` using SnapshotCard and SnapshotEmptyState
-- [ ] T016 [US2] Create History page in `src/pages/history.tsx` using SnapshotList and calling fetchSnapshots on mount
-- [ ] T017 [US2] Add routes for `/history` and `/history/:snapshotId` in `src/App.tsx` following existing protected route pattern from research.md
-- [ ] T018 [US2] Add "Histórico" navigation link to header in `src/components/layout/header.tsx`
+- [X] T013 [P] [US2] Create SnapshotCard component in `src/components/snapshots/snapshot-card.tsx` displaying name, createdAt, and summaryMetrics (startingBalance, endBalanceOptimistic, dangerDayCount)
+- [X] T014 [P] [US2] Create SnapshotEmptyState component in `src/components/snapshots/snapshot-empty-state.tsx` explaining how to save snapshots
+- [X] T015 [US2] Create SnapshotList component in `src/components/snapshots/snapshot-list.tsx` using SnapshotCard and SnapshotEmptyState
+- [X] T016 [US2] Create History page in `src/pages/history.tsx` using SnapshotList and calling fetchSnapshots on mount
+- [X] T017 [US2] Add routes for `/history` and `/history/:snapshotId` in `src/App.tsx` following existing protected route pattern from research.md
+- [X] T018 [US2] Add "Histórico" navigation link to header in `src/components/layout/header.tsx`
 
 **Checkpoint**: User Story 2 complete - users can browse snapshot history
 
@@ -92,11 +92,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Create useSnapshotProjection hook in `src/hooks/use-snapshot-projection.ts` that transforms frozen snapshot data using exported helpers (transformToChartData, getDangerRanges, transformToSummaryStats). Handle schema version checks per research.md: render current version directly, older versions with best-effort/defaults.
-- [ ] T020 [US3] Create SnapshotDetailPage in `src/pages/snapshot-detail.tsx` using useSnapshotProjection, CashflowChart, and SummaryPanel. Include "Snapshot Histórico" banner at page top with snapshot name and formatted createdAt date. Visual treatment: muted background color + info icon to clearly indicate read-only historical data.
-- [ ] T021 [US3] Add "Voltar" back navigation button to SnapshotDetailPage
-- [ ] T022 [US3] Handle Date serialization in useSnapshotProjection (JSON stores dates as strings, need parsing)
-- [ ] T022b [P] [US3] Write unit tests in `tests/unit/hooks/use-snapshot-projection.test.ts` covering: data transformation, date parsing, schema version handling, edge cases (empty projection, missing fields)
+- [X] T019 [US3] Create useSnapshotProjection hook in `src/hooks/use-snapshot-projection.ts` that transforms frozen snapshot data using exported helpers (transformToChartData, getDangerRanges, transformToSummaryStats). Handle schema version checks per research.md: render current version directly, older versions with best-effort/defaults.
+- [X] T020 [US3] Create SnapshotDetailPage in `src/pages/snapshot-detail.tsx` using useSnapshotProjection, CashflowChart, and SummaryPanel. Include "Snapshot Histórico" banner at page top with snapshot name and formatted createdAt date. Visual treatment: muted background color + info icon to clearly indicate read-only historical data.
+- [X] T021 [US3] Add "Voltar" back navigation button to SnapshotDetailPage
+- [X] T022 [US3] Handle Date serialization in useSnapshotProjection (JSON stores dates as strings, need parsing)
+- [X] T022b [P] [US3] Write unit tests in `src/hooks/use-snapshot-projection.test.ts` covering: data transformation, date parsing, schema version handling, edge cases (empty projection, missing fields)
 
 **Checkpoint**: User Story 3 complete - users can view full snapshot details with chart visualization
 
@@ -110,9 +110,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Add delete button with confirmation dialog to SnapshotCard in `src/components/snapshots/snapshot-card.tsx`
-- [ ] T024 [US4] Add delete button with confirmation dialog to SnapshotDetailPage in `src/pages/snapshot-detail.tsx`
-- [ ] T025 [US4] Add toast notifications for delete success/error
+- [X] T023 [US4] Add delete button with confirmation dialog to SnapshotCard in `src/components/snapshots/snapshot-card.tsx`
+- [X] T024 [US4] Add delete button with confirmation dialog to SnapshotDetailPage in `src/pages/snapshot-detail.tsx`
+- [X] T025 [US4] Add toast notifications for delete success/error
 
 **Checkpoint**: User Story 4 complete - users can manage their snapshot history
 
@@ -122,16 +122,16 @@
 
 **Purpose**: End-to-end testing and final validation
 
-- [ ] T026 [P] Create E2E test file in `tests/e2e/snapshots.spec.ts` testing: save snapshot from dashboard, view history list, open snapshot detail, delete snapshot
-- [ ] T026b [P] Add E2E test case for 365-day projection snapshot (save, load, verify data integrity) per SC-006
-- [ ] T026c [P] Add E2E test case for empty state: navigate to /history with no snapshots, verify empty state message and CTA displayed
+- [X] T026 [P] Create E2E test file in `e2e/tests/snapshots.spec.ts` testing: save snapshot from dashboard, view history list, open snapshot detail, delete snapshot
+- [X] T026b [P] Add E2E test case for 365-day projection snapshot (save, load, verify data integrity) per SC-006
+- [X] T026c [P] Add E2E test case for empty state: navigate to /history with no snapshots, verify empty state message and CTA displayed
 - [ ] T026d [P] Add E2E test case for error handling: simulate network failure on save, verify error toast with retry button appears per spec edge cases
-- [ ] T026e [P] Add E2E test case for navigation flow: dashboard → save → history → detail → back → history → dashboard, verify all transitions work
+- [X] T026e [P] Add E2E test case for navigation flow: dashboard → save → history → detail → back → history → dashboard, verify all transitions work
 - [ ] T027 Run all E2E tests and fix any failures
-- [ ] T028 Run quickstart.md verification checklist (migration, RLS, performance, navigation)
+- [X] T028 Run quickstart.md verification checklist (migration, RLS, performance, navigation)
 - [ ] T028b Performance validation per success criteria: measure save operation (<3s per SC-001), history page load with 50 snapshots (<2s per SC-002), detail view render (<2s per SC-003). Use browser DevTools or Playwright timing assertions.
 - [ ] T029 Manual testing of complete flow per quickstart.md
-- [ ] T030 [P] Create visual regression tests in `tests/visual/snapshots.test.ts` for:
+- [X] T030 [P] Create visual regression tests in `e2e/tests/visual/snapshots.visual.spec.ts` for:
   - SaveSnapshotDialog (open state with default name)
   - SnapshotCard (with sample metrics data)
   - SnapshotEmptyState

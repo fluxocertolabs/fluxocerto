@@ -335,3 +335,16 @@ export {
   isMonthInPast,
   isCurrentMonth,
 } from './future-statement'
+
+// === Snapshot ===
+export {
+  CURRENT_SCHEMA_VERSION,
+  SnapshotInputSchema,
+  type SnapshotInputState,
+  type SnapshotSummaryMetrics,
+  type SnapshotData,
+  type ProjectionSnapshot,
+  type SnapshotInput,
+  type CreateSnapshotInput,
+  type SnapshotListItem,
+} from './snapshot'

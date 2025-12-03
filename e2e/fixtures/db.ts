@@ -211,6 +211,7 @@ export async function resetHouseholdData(householdId: string): Promise<void> {
   // Delete in order to respect foreign key constraints
   // Note: We don't delete profiles to preserve auth linkage
   const tables = [
+    'projection_snapshots',
     'user_preferences',
     'future_statements',
     'credit_cards',
@@ -967,6 +968,74 @@ export async function accountExists(name: string): Promise<boolean> {
 }
 
 /**
+ * Seed projection snapshots with test data using explicit household ID
+ */
+export async function seedSnapshotsWithHousehold(
+  snapshots: { name: string; data: object }[],
+  householdId: string
+): Promise<{ id: string; name: string }[]> {
+  const client = getAdminClient();
+  
+  const records = snapshots.map((s) => ({
+    name: s.name,
+    schema_version: 1,
+    data: s.data,
+    household_id: householdId,
+  }));
+
+  const { data, error } = await client.from('projection_snapshots').insert(records).select('id, name');
+
+  if (error) {
+    throw new Error(`Failed to seed snapshots: ${error.message}`);
+  }
+
+  return data as { id: string; name: string }[];
+}
+
+/**
+ * Get all snapshots for a household
+ */
+export async function getSnapshotsForHousehold(householdId: string): Promise<{ id: string; name: string; created_at: string }[]> {
+  const client = getAdminClient();
+  
+  const { data, error } = await client
+    .from('projection_snapshots')
+    .select('id, name, created_at')
+    .eq('household_id', householdId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to get snapshots: ${error.message}`);
+  }
+
+  return data ?? [];
+}
+
+/**
+ * Check if a snapshot exists by ID
+ */
+export async function snapshotExists(id: string): Promise<boolean> {
+  const client = getAdminClient();
+  const { data, error } = await client.from('projection_snapshots').select('id').eq('id', id).maybeSingle();
+  if (error) {
+    console.warn(`Warning checking snapshot existence: ${error.message}`);
+    return false;
+  }
+  return data !== null;
+}
+
+/**
+ * Delete all snapshots for a household
+ */
+export async function deleteSnapshotsForHousehold(householdId: string): Promise<void> {
+  const client = getAdminClient();
+  const { error } = await client.from('projection_snapshots').delete().eq('household_id', householdId);
+  if (error) {
+    throw new Error(`Failed to delete snapshots: ${error.message}`);
+  }
+}
+
+/**
  * Create a worker-scoped database fixture
  * This returns a fixture object that prefixes all data with the worker identifier
  * and uses the worker's household for data isolation via RLS
@@ -1022,6 +1091,18 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
       const householdId = await getWorkerHouseholdId();
       return seedFutureStatementsWithHousehold(statements, householdId);
     },
+    seedSnapshots: async (snapshots: { name: string; data: object }[]) => {
+      const householdId = await getWorkerHouseholdId();
+      return seedSnapshotsWithHousehold(snapshots, householdId);
+    },
+    getSnapshots: async () => {
+      const householdId = await getWorkerHouseholdId();
+      return getSnapshotsForHousehold(householdId);
+    },
+    deleteSnapshots: async () => {
+      const householdId = await getWorkerHouseholdId();
+      return deleteSnapshotsForHousehold(householdId);
+    },
     seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
       const householdId = await getWorkerHouseholdId();
       return seedFullScenarioWithHousehold(data, workerIndex, householdId);
@@ -1030,6 +1111,7 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     expenseExists,
     projectExists,
     accountExists,
+    snapshotExists,
     profileExists,
     getHouseholdIdByEmail,
     getHouseholdById,

@@ -95,7 +95,7 @@ export function getDangerRanges(chartData: ChartDataPoint[]): DangerRange[] {
  * Transform projection to summary statistics.
  * Converts cents to dollars for display.
  */
-function transformToSummaryStats(projection: CashflowProjection): SummaryStats {
+export function transformToSummaryStats(projection: CashflowProjection): SummaryStats {
   const startingBalance = projection.startingBalance / 100
   const optimisticEndBalance = projection.optimistic.endBalance / 100
   const pessimisticEndBalance = projection.pessimistic.endBalance / 100

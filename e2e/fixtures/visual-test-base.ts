@@ -20,6 +20,8 @@ import { LoginPage } from '../pages/login-page';
 import { DashboardPage } from '../pages/dashboard-page';
 import { ManagePage } from '../pages/manage-page';
 import { QuickUpdatePage } from '../pages/quick-update-page';
+import { HistoryPage } from '../pages/history-page';
+import { SnapshotDetailPage } from '../pages/snapshot-detail-page';
 import { existsSync } from 'fs';
 
 /**
@@ -71,6 +73,8 @@ type VisualTestFixtures = {
   dashboardPage: DashboardPage;
   managePage: ManagePage;
   quickUpdatePage: QuickUpdatePage;
+  historyPage: HistoryPage;
+  snapshotDetailPage: SnapshotDetailPage;
   visual: VisualTestHelpers;
 };
 
@@ -353,6 +357,14 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
 
   quickUpdatePage: async ({ page }, use) => {
     await use(new QuickUpdatePage(page));
+  },
+
+  historyPage: async ({ page }, use) => {
+    await use(new HistoryPage(page));
+  },
+
+  snapshotDetailPage: async ({ page }, use) => {
+    await use(new SnapshotDetailPage(page));
   },
 
   // Visual test helpers
