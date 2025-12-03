@@ -13,11 +13,13 @@
  *   - Service Role Key is auto-detected from `supabase status`
  * 
  * Output:
- *   Prints VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN for .env.local
+ *   Prints VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN and writes them to .env
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 // ============================================================================
 // Configuration
@@ -49,11 +51,21 @@ function logError(message: string): void {
 }
 
 /**
- * Get Service Role Key from running Supabase instance
+ * Get Service Role Key from environment or running Supabase instance.
+ *
+ * Priority:
+ * 1. SUPABASE_SERVICE_ROLE_KEY env var (explicit override)
+ * 2. `supabase status -o json` via npx (global CLI)
  */
 function getServiceRoleKey(): string {
+  // 1) Prefer explicit env var if provided
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return process.env.SUPABASE_SERVICE_ROLE_KEY;
+  }
+
+  // 2) Fallback to querying local Supabase CLI status
   try {
-    const output = execSync('pnpm exec supabase status -o json', {
+    const output = execSync('npx supabase status -o json', {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -173,13 +185,27 @@ async function ensureAllowedEmail(client: SupabaseClient): Promise<void> {
     .eq('email', DEV_USER_EMAIL)
     .maybeSingle();
   
-  if (checkError && !checkError.message.includes('no rows')) {
+  if (checkError) {
+    const msg = checkError.message.toLowerCase();
+
+    // "no rows" just means the email isn't there yet
+    if (msg.includes('no rows')) {
+      // fall through to insert
+    } else if (
     // Table might not exist - that's OK, it's optional
-    if (checkError.message.includes('relation') && checkError.message.includes('does not exist')) {
+      msg.includes('relation') && msg.includes('does not exist')
+    ) {
       log('  (allowed_emails table not found - skipping)');
       return;
-    }
+    } else if (
+      // Newer error wording: "Could not find the table 'public.allowed_emails' in the schema cache"
+      msg.includes('could not find the table') && msg.includes('allowed_emails')
+    ) {
+      log('  (allowed_emails table not found in schema cache - skipping)');
+      return;
+    } else {
     throw new Error(`Failed to check allowed_emails: ${checkError.message}`);
+    }
   }
   
   if (existing) {
@@ -422,10 +448,34 @@ async function main(): Promise<void> {
     
     console.log('');
     console.log('─'.repeat(50));
-    console.log('\n📋 Add these to your .env.local:\n');
+    console.log('\n📋 Add these to your .env:\n');
     console.log(`VITE_DEV_ACCESS_TOKEN=${tokens.accessToken}`);
     console.log(`VITE_DEV_REFRESH_TOKEN=${tokens.refreshToken}`);
     console.log('\n' + '─'.repeat(50));
+  
+    // Also write/update .env on disk for convenience
+    const envPath = path.join(process.cwd(), '.env');
+    let existingEnv = '';
+
+    if (fs.existsSync(envPath)) {
+      existingEnv = fs.readFileSync(envPath, 'utf-8');
+    }
+
+    const lines = existingEnv
+      .split('\n')
+      .filter(
+        (line) =>
+          !line.startsWith('VITE_DEV_ACCESS_TOKEN=') &&
+          !line.startsWith('VITE_DEV_REFRESH_TOKEN=')
+      )
+      .filter((line, idx, arr) => !(line === '' && idx === arr.length - 1)); // trim trailing blank
+
+    lines.push(`VITE_DEV_ACCESS_TOKEN=${tokens.accessToken}`);
+    lines.push(`VITE_DEV_REFRESH_TOKEN=${tokens.refreshToken}`);
+
+    fs.writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');
+
+    console.log(`\n✅ .env updated at ${envPath}`);
     console.log('\n✨ Done! Restart your dev server to use the bypass.\n');
     
   } catch (error) {

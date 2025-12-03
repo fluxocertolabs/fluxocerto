@@ -152,7 +152,7 @@ This feature manages a one-time setup state:
                                       ▼
                                 ┌─────────────┐
                                 │  TOKENS IN  │
-                                │  .env.local │
+                                │    .env     │
                                 └─────────────┘
                                       │
                                       │ app starts in DEV

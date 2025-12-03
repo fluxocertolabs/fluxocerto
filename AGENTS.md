@@ -25,7 +25,7 @@
 ```bash
 pnpm db:start          # Start local Supabase
 pnpm run gen:token     # Generate session tokens + seed data
-# Copy output to .env.local:
+# Script writes tokens to .env:
 # VITE_DEV_ACCESS_TOKEN=<token>
 # VITE_DEV_REFRESH_TOKEN=<token>
 ```

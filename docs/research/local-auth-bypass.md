@@ -22,7 +22,7 @@ This approach involves generating a valid, long-lived session token for a specif
     -   Connects to the local Supabase instance using the `SERVICE_ROLE_KEY`.
     -   Ensures a `dev@local` user exists and is in the `allowed_emails` list.
     -   Programmatically generates a session (Access Token + Refresh Token) for this user.
-    -   Writes these tokens to `.env.local` or prints them for the user.
+    -   Writes these tokens to `.env` and prints them for the user.
 2.  **Frontend Integration**:
     -   Modify `src/main.tsx` or `src/App.tsx`.
     -   Check for a `VITE_DEV_AUTH_TOKEN` environment variable.

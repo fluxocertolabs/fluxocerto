@@ -85,9 +85,9 @@ The authenticated session created by the bypass must be a valid Supabase session
 - **FR-001**: System MUST provide a script (`scripts/generate-dev-token.ts`) that generates valid Supabase session tokens for local development, executable via `pnpm run gen:token` (using `tsx` runner).
 - **FR-002**: Script MUST connect to local Supabase using the Service Role Key from environment or `supabase status` output.
 - **FR-003**: Script MUST ensure a `dev@local` user exists in the authentication system with email confirmed.
-- **FR-004**: Script MUST ensure `dev@local` is present in the `allowed_emails` database table.
+- **FR-004**: Script MUST ensure `dev@local` is present in the `allowed_emails` database table (if the table exists).
 - **FR-004.1**: Script MUST create minimal seed data for the dev user if not present: one household linked to the user, and one sample account within that household, enabling immediate RLS verification.
-- **FR-005**: Script MUST output tokens in a format suitable for copying to `.env.local` (e.g., `VITE_DEV_ACCESS_TOKEN=xxx`).
+- **FR-005**: Script MUST output tokens in a format suitable for copying to `.env` (e.g., `VITE_DEV_ACCESS_TOKEN=xxx`) and update `.env` automatically.
 - **FR-005.1**: Script MUST provide verbose step-by-step console output indicating progress (e.g., "Creating user...", "Generating tokens...", "✓ Done").
 - **FR-006**: Frontend MUST detect DEV mode (`import.meta.env.DEV`) and presence of `VITE_DEV_ACCESS_TOKEN` environment variable.
 - **FR-007**: Frontend MUST call `supabase.auth.setSession()` with injected tokens BEFORE rendering the application.
@@ -110,7 +110,7 @@ The authenticated session created by the bypass must be a valid Supabase session
 - **SC-002**: AI agent can complete a full test cycle (view data, create record, verify persistence) without any manual authentication steps.
 - **SC-003**: 100% of database queries through bypassed session respect RLS policies identically to manual login sessions.
 - **SC-004**: Token generation script completes in under 10 seconds on first run (including user creation).
-- **SC-005**: Zero additional configuration required beyond running the setup script once and adding tokens to `.env.local`.
+- **SC-005**: Zero additional configuration required beyond running the setup script once (which writes tokens to `.env`).
 
 ## Assumptions
 

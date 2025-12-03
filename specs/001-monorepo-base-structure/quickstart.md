@@ -244,12 +244,7 @@ After verifying the base structure works:
 
 No environment variables required for the base structure.
 
-Future features may add:
-```bash
-# .env.local (not committed)
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...
-```
+Future features may add additional Vite-specific env files (e.g. `.env.local`), but the core setup uses `.env`.
 
 For now, the app is fully local—no external services needed.
 

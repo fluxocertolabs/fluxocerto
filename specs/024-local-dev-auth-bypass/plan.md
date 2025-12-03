@@ -63,7 +63,7 @@ src/
 └── ...
 
 .env.example                 # Modified: document dev token vars
-.env.local                   # User-managed: stores generated tokens
+.env                         # Stores generated dev tokens for local bypass
 ```
 
 **Structure Decision**: Minimal additions to existing structure. Script in `/scripts` (new directory), frontend changes in existing files.

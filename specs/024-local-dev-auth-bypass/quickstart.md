@@ -33,7 +33,7 @@ This script:
 - Creates a sample checking account
 - Generates and outputs session tokens
 
-**Expected Output:**
+**Expected Output (excerpt):**
 ```text
 Creating user...
 ✓ User created/found: dev@local
@@ -44,28 +44,19 @@ Creating profile...
 Creating seed account...
 ✓ Account created: Dev Checking
 Generating tokens...
-✓ Done
+✓ Tokens generated
 
-Add these to your .env.local:
+📋 Add these to your .env:
 VITE_DEV_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6...
 VITE_DEV_REFRESH_TOKEN=abc123...
+
+✅ .env updated at /path/to/project/.env
 ```
 
-### 3. Configure Environment
+The script automatically updates `.env` with the latest `VITE_DEV_ACCESS_TOKEN` and
+`VITE_DEV_REFRESH_TOKEN` values. You normally **don’t need to edit `.env` manually**.
 
-Copy the output tokens to `.env.local`:
-
-```bash
-# Create or edit .env.local
-cat >> .env.local << 'EOF'
-VITE_DEV_ACCESS_TOKEN=<paste access token>
-VITE_DEV_REFRESH_TOKEN=<paste refresh token>
-EOF
-```
-
-Or manually add to your existing `.env.local`.
-
-### 4. Start Development Server
+### 3. Start Development Server
 
 ```bash
 pnpm dev:app
@@ -89,8 +80,8 @@ Open http://localhost:5173 - you should see the dashboard immediately, without l
 **Fix**: Regenerate tokens:
 ```bash
 pnpm run gen:token
-# Copy new tokens to .env.local
-# Restart dev server
+# Script will update .env with new tokens
+# Restart dev server after it finishes
 ```
 
 ### "Supabase not running" error
@@ -107,13 +98,13 @@ pnpm run gen:token
 
 **Causes**:
 1. Running in production mode (not `pnpm dev`)
-2. Missing `VITE_DEV_ACCESS_TOKEN` in `.env.local`
+2. Missing `VITE_DEV_ACCESS_TOKEN` in `.env`
 3. Typo in environment variable name
 
 **Fix**: Verify dev mode and env vars:
 ```bash
-# Check mode
-cat .env.local | grep VITE_DEV
+# Check env vars
+cat .env | grep VITE_DEV
 
 # Must have both:
 # VITE_DEV_ACCESS_TOKEN=...
@@ -142,7 +133,7 @@ pnpm dev  # Starts Supabase + Vite
 If tokens expire (rare, ~1 week default):
 ```bash
 pnpm run gen:token
-# Update .env.local with new tokens
+# Script will update .env with new tokens
 # Restart dev server
 ```
 
@@ -151,7 +142,7 @@ pnpm run gen:token
 When automating tests:
 
 1. Ensure Supabase is running: `pnpm db:start`
-2. Tokens should be pre-configured in `.env.local`
+2. Tokens should be pre-configured in `.env` (via `pnpm run gen:token`)
 3. Start app: `pnpm dev:app`
 4. App will auto-authenticate - proceed with test scenarios
 5. All CRUD operations will persist to local Supabase

@@ -111,12 +111,9 @@ pnpm db:start
 
 # 2. Generate dev tokens (first time only)
 pnpm run gen:token
+#    Script will write VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN to .env
 
-# 3. Copy the output to .env.local:
-#    VITE_DEV_ACCESS_TOKEN=<generated-token>
-#    VITE_DEV_REFRESH_TOKEN=<generated-token>
-
-# 4. Start the dev server
+# 3. Start the dev server
 pnpm dev:app
 ```
 
@@ -128,8 +125,6 @@ The token generation script creates:
 - A "Dev Checking" account with $10,000 balance for testing
 
 > **Note:** This bypass only works in development mode. Production builds ignore these tokens entirely.
-
-> **Info:** `.env.local` takes precedence over `.env` automatically (Vite behavior). Use `pnpm dev:app` for the auth bypass; use `pnpm dev` for standard development without bypass.
 
 ### Start Development Server (Standard)
 

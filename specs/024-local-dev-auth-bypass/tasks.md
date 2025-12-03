@@ -63,7 +63,7 @@
 
 **Goal**: Enable AI agents and developers to immediately access authenticated application without manual login by generating and auto-injecting session tokens.
 
-**Independent Test**: Run `pnpm run gen:token`, copy tokens to `.env.local`, start app with `pnpm dev:app`, verify dashboard appears immediately without login screen.
+**Independent Test**: Run `pnpm run gen:token` (which writes tokens to `.env`), start app with `pnpm dev:app`, verify dashboard appears immediately without login screen.
 
 ### Tests for User Story 1
 
@@ -80,7 +80,7 @@
 - [X] T016 [US1] Implement `findOrCreateDevUser()` function in scripts/generate-dev-token.ts that creates `dev@local` user with confirmed email via admin API
 - [X] T017 [US1] Implement `generateTokens()` function in scripts/generate-dev-token.ts that signs in dev user and outputs VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN
 - [X] T018 [US1] Add connection validation to scripts/generate-dev-token.ts - fail with clear error if Supabase not running at http://127.0.0.1:54321 or if Service Role Key is invalid/missing
-- [X] T019 [US1] Format script output for copy-paste to .env.local with instructions
+- [X] T019 [US1] Format script output and write tokens to .env with instructions
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - E2E tests pass, tokens generated and app auto-logs in
 

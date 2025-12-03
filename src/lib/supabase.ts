@@ -197,7 +197,7 @@ export function hasDevTokens(): boolean {
  * 
  * Usage flow:
  * 1. Run `pnpm run gen:token` to generate tokens
- * 2. Copy tokens to .env.local
+ * 2. Script writes tokens to .env
  * 3. Start dev server with `pnpm dev:app`
  * 4. App auto-authenticates without login screen
  * 

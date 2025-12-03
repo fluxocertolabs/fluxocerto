@@ -15,7 +15,7 @@ test.describe('Dev Auth Bypass', () => {
 
   test('T011: dashboard loads without login when valid dev tokens are present', async ({ page }) => {
     // This test assumes the dev server is running with VITE_DEV_ACCESS_TOKEN 
-    // and VITE_DEV_REFRESH_TOKEN set in .env.local
+    // and VITE_DEV_REFRESH_TOKEN configured (e.g., via .env written by the generator script)
     // The test will verify that after navigating to the app, the dashboard is shown
     // without needing to go through the login flow
     

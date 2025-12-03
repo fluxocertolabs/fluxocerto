@@ -65,7 +65,7 @@ function showDevAuthError(message: string): void {
  * 
  * DEV AUTH BYPASS FLOW:
  * In development mode, if VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN
- * are present in .env.local, the app will attempt to inject these tokens
+ * are present (e.g., written to .env by the token generator), the app will attempt to inject these tokens
  * into the Supabase client BEFORE normal auth initialization. This allows
  * developers and AI agents to skip the login flow entirely.
  * 
@@ -79,9 +79,8 @@ function showDevAuthError(message: string): void {
  * 
  * To set up dev auth bypass:
  * 1. Start Supabase: pnpm db:start
- * 2. Generate tokens: pnpm run gen:token
- * 3. Copy tokens to .env.local
- * 4. Restart dev server: pnpm dev:app
+ * 2. Generate tokens: pnpm run gen:token (writes tokens to .env)
+ * 3. Restart dev server: pnpm dev:app
  * 
  * @see src/lib/supabase.ts for injectDevSession() and hasDevTokens()
  * @see scripts/generate-dev-token.ts for token generation script

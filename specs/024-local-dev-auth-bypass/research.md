@@ -132,7 +132,7 @@ The application uses Supabase Authentication with Row Level Security (RLS) polic
 | User Creation | Supabase Admin API | Standard approach, well-documented |
 | Script Runner | tsx | Zero-config, fast, ESM support |
 | Household Strategy | Dedicated Dev Household | Clean isolation, no data conflicts |
-| Token Storage | VITE_* env vars | Standard Vite pattern, .env.local security |
+| Token Storage | VITE_* env vars | Standard Vite pattern, stored in .env for local dev |
 | Failure Mode | Fallback to login + toast | Graceful degradation |
 
 ---

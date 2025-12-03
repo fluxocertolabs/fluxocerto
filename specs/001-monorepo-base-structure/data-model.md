@@ -259,8 +259,7 @@ Thumbs.db
 
 # Environment
 .env
-.env.local
-.env.*.local
+.env.*.local (optional, machine-specific overrides)
 
 # Logs
 *.log
