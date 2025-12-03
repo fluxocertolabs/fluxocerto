@@ -17,6 +17,37 @@
 
 ---
 
+## LOCAL DEVELOPMENT AUTH BYPASS
+
+**Skip manual login for local development.** This project has a dev auth bypass that auto-authenticates AI agents and developers.
+
+### First-Time Setup (Once)
+```bash
+pnpm db:start          # Start local Supabase
+pnpm run gen:token     # Generate session tokens + seed data
+# Copy output to .env.local:
+# VITE_DEV_ACCESS_TOKEN=<token>
+# VITE_DEV_REFRESH_TOKEN=<token>
+```
+
+### Every Session
+```bash
+pnpm db:start          # Start local Supabase
+pnpm dev:app           # Dashboard loads immediately - no login!
+```
+
+### What It Creates
+- `dev@local` user with confirmed email
+- "Dev Household" with "Dev Checking" account ($10,000)
+- Valid Supabase session tokens
+
+### Security
+- ✅ Only works in DEV mode (`import.meta.env.DEV`)
+- ✅ Disabled in production builds
+- ✅ Full RLS policies remain active
+
+---
+
 ## EXECUTION SEQUENCE
 
 ### 1. SEARCH FIRST

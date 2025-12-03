@@ -101,7 +101,35 @@ cp .env.example .env
 
 See `specs/008-supabase-migration/quickstart.md` for detailed setup instructions.
 
-### Start Development Server
+### Local Development (with Auth Bypass)
+
+For local development, you can skip the login flow entirely using the dev auth bypass:
+
+```bash
+# 1. Start local Supabase
+pnpm db:start
+
+# 2. Generate dev tokens (first time only)
+pnpm run gen:token
+
+# 3. Copy the output to .env.local:
+#    VITE_DEV_ACCESS_TOKEN=<generated-token>
+#    VITE_DEV_REFRESH_TOKEN=<generated-token>
+
+# 4. Start the dev server
+pnpm dev:app
+```
+
+**The dashboard loads immediately—no login required!**
+
+The token generation script creates:
+- A `dev@local` user with confirmed email
+- A "Dev Household" with your user profile
+- A "Dev Checking" account with $10,000 balance for testing
+
+> **Note:** This bypass only works in development mode. Production builds ignore these tokens entirely.
+
+### Start Development Server (Standard)
 
 ```bash
 pnpm dev
