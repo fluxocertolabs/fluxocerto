@@ -13,12 +13,16 @@ import {
   CreditCardInputSchema,
   SingleShotExpenseInputSchema,
   SingleShotIncomeInputSchema,
+  FutureStatementInputSchema,
+  FutureStatementUpdateSchema,
   type BankAccountInput,
   type ProjectInput,
   type FixedExpenseInput,
   type CreditCardInput,
   type SingleShotExpenseInput,
   type SingleShotIncomeInput,
+  type FutureStatementInput,
+  type FutureStatementUpdate,
 } from '../types'
 
 // Result type for explicit error handling
@@ -77,6 +81,14 @@ interface FinanceStore {
     input: Partial<CreditCardInput>
   ) => Promise<Result<void>>
   deleteCreditCard: (id: string) => Promise<Result<void>>
+
+  // Future Statement Actions
+  addFutureStatement: (input: FutureStatementInput) => Promise<Result<string>>
+  updateFutureStatement: (
+    id: string,
+    input: FutureStatementUpdate
+  ) => Promise<Result<void>>
+  deleteFutureStatement: (id: string) => Promise<Result<void>>
 
   // Balance Update Actions (for Quick Balance Update feature)
   updateAccountBalance: (id: string, balance: number) => Promise<Result<void>>
@@ -739,6 +751,106 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
 
       if (count === 0) {
         return { success: false, error: 'Credit card not found' }
+      }
+
+      return { success: true, data: undefined }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  // === Future Statement Actions ===
+  addFutureStatement: async (input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
+    try {
+      const validated = FutureStatementInputSchema.parse(input)
+      
+      // Get current user's household_id
+      const householdId = await getHouseholdId()
+      if (!householdId) {
+        return { success: false, error: 'Não foi possível identificar sua residência' }
+      }
+
+      const { data, error } = await getSupabase()
+        .from('future_statements')
+        .insert({
+          credit_card_id: validated.creditCardId,
+          household_id: householdId,
+          target_month: validated.targetMonth,
+          target_year: validated.targetYear,
+          amount: validated.amount,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        // Handle unique constraint violation
+        if (error.code === '23505') {
+          return { success: false, error: 'Já existe uma fatura definida para este mês' }
+        }
+        return handleSupabaseError(error)
+      }
+
+      return { success: true, data: data.id }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  updateFutureStatement: async (id, input) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
+    try {
+      const validated = FutureStatementUpdateSchema.parse(input)
+      
+      // Build update object with snake_case keys
+      const updateData: Record<string, unknown> = {}
+      if (validated.amount !== undefined) updateData.amount = validated.amount
+      if (validated.targetMonth !== undefined) updateData.target_month = validated.targetMonth
+      if (validated.targetYear !== undefined) updateData.target_year = validated.targetYear
+
+      const { error, count } = await getSupabase()
+        .from('future_statements')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        // Handle unique constraint violation
+        if (error.code === '23505') {
+          return { success: false, error: 'Já existe uma fatura definida para este mês' }
+        }
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
+        return { success: false, error: 'Fatura futura não encontrada' }
+      }
+
+      return { success: true, data: undefined }
+    } catch (error) {
+      return handleDatabaseError(error)
+    }
+  },
+
+  deleteFutureStatement: async (id) => {
+    const configError = checkSupabaseConfigured()
+    if (configError) return configError
+
+    try {
+      const { error, count } = await getSupabase()
+        .from('future_statements')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        return handleSupabaseError(error)
+      }
+
+      if (count === 0) {
+        return { success: false, error: 'Fatura futura não encontrada' }
       }
 
       return { success: true, data: undefined }

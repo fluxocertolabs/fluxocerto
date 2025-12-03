@@ -315,3 +315,24 @@ export type ProjectionDays = z.infer<typeof ProjectionDaysSchema>
 export interface UserPreferences {
   projectionDays: ProjectionDays
 }
+
+// === Future Statement ===
+export {
+  FutureStatementInputSchema,
+  FutureStatementSchema,
+  FutureStatementInputWithValidationSchema,
+  FutureStatementUpdateSchema,
+  type FutureStatementInput,
+  type FutureStatement,
+  type FutureStatementUpdate,
+  type FormattedFutureStatement,
+  type FutureStatementLookupKey,
+  type FutureStatementMap,
+  type FutureStatementRow,
+  createFutureStatementKey,
+  transformFutureStatementRow,
+  getAvailableMonthOptions,
+  formatMonthYear,
+  isMonthInPast,
+  isCurrentMonth,
+} from './future-statement'

@@ -1,16 +1,33 @@
-import { useState } from 'react'
-import { MoreHorizontal, Pencil, Trash2, CreditCard as CreditCardIcon } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { MoreHorizontal, Pencil, Trash2, CreditCard as CreditCardIcon, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { InlineEditInput } from '@/components/manage/shared/inline-edit-input'
 import { formatCurrency, formatRelativeTime, isStale } from '@/components/manage/shared/format-utils'
 import { cn } from '@/lib/utils'
-import type { CreditCard } from '@/types'
+import type { CreditCard, FutureStatement, FutureStatementInput } from '@/types'
+import { FutureStatementList } from './future-statement-list'
+import { FutureStatementForm } from './future-statement-form'
 
 interface CreditCardCardProps {
   card: CreditCard
+  futureStatements: FutureStatement[]
   onEdit: () => void
   onDelete: () => void
   onUpdateBalance: (balance: number) => Promise<void>
+  onAddFutureStatement: (input: FutureStatementInput) => Promise<void>
+  onUpdateFutureStatement: (id: string, amount: number) => Promise<void>
+  onDeleteFutureStatement: (id: string) => Promise<void>
 }
 
 function getDueDayStatus(dueDay: number): { label: string; isUrgent: boolean } {
@@ -27,13 +44,56 @@ function getDueDayStatus(dueDay: number): { label: string; isUrgent: boolean } {
 
 export function CreditCardCard({
   card,
+  futureStatements,
   onEdit,
   onDelete,
   onUpdateBalance,
+  onAddFutureStatement,
+  onUpdateFutureStatement,
+  onDeleteFutureStatement,
 }: CreditCardCardProps) {
   const [showActions, setShowActions] = useState(false)
+  const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editingStatement, setEditingStatement] = useState<FutureStatement | null>(null)
+  
   const stale = isStale(card.balanceUpdatedAt)
   const dueStatus = getDueDayStatus(card.dueDay)
+
+  // Filter future statements for this card and sort by date
+  const cardFutureStatements = useMemo(() => {
+    return futureStatements
+      .filter((s) => s.creditCardId === card.id)
+      .sort((a, b) => {
+        if (a.targetYear !== b.targetYear) return a.targetYear - b.targetYear
+        return a.targetMonth - b.targetMonth
+      })
+  }, [futureStatements, card.id])
+
+  const handleAddClick = () => {
+    setEditingStatement(null)
+    setShowForm(true)
+  }
+
+  const handleEditClick = (statement: FutureStatement) => {
+    setEditingStatement(statement)
+    setShowForm(true)
+  }
+
+  const handleFormSubmit = async (input: FutureStatementInput) => {
+    if (editingStatement) {
+      await onUpdateFutureStatement(editingStatement.id, input.amount)
+    } else {
+      await onAddFutureStatement(input)
+    }
+    setShowForm(false)
+    setEditingStatement(null)
+  }
+
+  const handleFormCancel = () => {
+    setShowForm(false)
+    setEditingStatement(null)
+  }
 
   return (
     <div
@@ -116,6 +176,44 @@ export function CreditCardCard({
         />
       </div>
 
+      {/* Future Statements Section */}
+      <Collapsible
+        open={isCollapsibleOpen}
+        onOpenChange={setIsCollapsibleOpen}
+        className="mt-4 pt-3 border-t border-border/50"
+      >
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-between px-0 hover:bg-transparent"
+          >
+            <span className="text-xs text-muted-foreground">
+              Próximas Faturas
+              {cardFutureStatements.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-medium">
+                  {cardFutureStatements.length}
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-muted-foreground transition-transform',
+                isCollapsibleOpen && 'rotate-180'
+              )}
+            />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <FutureStatementList
+            statements={cardFutureStatements}
+            onAdd={handleAddClick}
+            onEdit={handleEditClick}
+            onDelete={onDeleteFutureStatement}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Footer - Due Date & Update Status */}
       <div className="mt-4 pt-3 border-t border-border/50 space-y-2">
         <div className="flex items-center justify-between text-xs">
@@ -139,7 +237,24 @@ export function CreditCardCard({
           </span>
         </div>
       </div>
+
+      {/* Add/Edit Future Statement Dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingStatement ? 'Editar Fatura Futura' : 'Adicionar Fatura Futura'}
+            </DialogTitle>
+          </DialogHeader>
+          <FutureStatementForm
+            creditCardId={card.id}
+            existingStatements={cardFutureStatements}
+            editingStatement={editingStatement ?? undefined}
+            onSubmit={handleFormSubmit}
+            onCancel={handleFormCancel}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

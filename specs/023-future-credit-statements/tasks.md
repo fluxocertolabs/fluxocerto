@@ -19,8 +19,8 @@
 
 **Purpose**: Project initialization - minimal setup required as this extends an existing codebase
 
-- [ ] T001 Create feature branch `023-future-credit-statements` from main
-- [ ] T002 [P] Copy type contract from `specs/023-future-credit-statements/contracts/future-statement.schema.ts` to `src/types/future-statement.ts`
+- [X] T001 Create feature branch `023-future-credit-statements` from main
+- [X] T002 [P] Copy type contract from `specs/023-future-credit-statements/contracts/future-statement.schema.ts` to `src/types/future-statement.ts`
 
 ---
 
@@ -30,15 +30,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create database migration in `supabase/migrations/20251202000000_future_statements.sql` with table, indexes, RLS policies, Realtime, and ON DELETE CASCADE for credit_card_id FK (FR-010) per data-model.md
+- [X] T003 Create database migration in `supabase/migrations/20251202000000_future_statements.sql` with table, indexes, RLS policies, Realtime, and ON DELETE CASCADE for credit_card_id FK (FR-010) per data-model.md
 - [ ] T004 Run migration locally and verify table exists in Supabase dashboard
-- [ ] T005 [P] Add FutureStatement type exports to `src/types/index.ts` by importing from `src/types/future-statement.ts`
-- [ ] T006 [P] Add `futureStatements` state and setter to finance store interface in `src/stores/finance-store.ts`
-- [ ] T007 Implement `addFutureStatement` store action in `src/stores/finance-store.ts` following existing CRUD patterns
-- [ ] T008 Implement `updateFutureStatement` store action in `src/stores/finance-store.ts`
-- [ ] T009 Implement `deleteFutureStatement` store action in `src/stores/finance-store.ts`
-- [ ] T010 Add future statements query to `src/hooks/use-finance-data.ts` with Supabase subscription
-- [ ] T011 Add Realtime subscription for `future_statements` table in `src/hooks/use-finance-data.ts`
+- [X] T005 [P] Add FutureStatement type exports to `src/types/index.ts` by importing from `src/types/future-statement.ts`
+- [X] T006 [P] Add `futureStatements` state and setter to finance store interface in `src/stores/finance-store.ts`
+- [X] T007 Implement `addFutureStatement` store action in `src/stores/finance-store.ts` following existing CRUD patterns
+- [X] T008 Implement `updateFutureStatement` store action in `src/stores/finance-store.ts`
+- [X] T009 Implement `deleteFutureStatement` store action in `src/stores/finance-store.ts`
+- [X] T010 Add future statements query to `src/hooks/use-finance-data.ts` with Supabase subscription
+- [X] T011 Add Realtime subscription for `future_statements` table in `src/hooks/use-finance-data.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -63,15 +63,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Modify `CashflowEngineInput` interface to accept `futureStatements` parameter in `src/lib/cashflow/calculate.ts`
-- [ ] T019 [US1] Implement `getCreditCardAmountForDate` helper function in `src/lib/cashflow/calculate.ts` per research.md logic
-- [ ] T020 [US1] Modify `createCreditCardEvents` to use future statement lookup (return 0 if not defined per FR-006) in `src/lib/cashflow/calculate.ts`
-- [ ] T021 [US1] Update `useCashflowProjection` hook to pass `futureStatements` to calculation in `src/hooks/use-cashflow-projection.ts`
-- [ ] T022 [P] [US1] Create `FutureStatementForm` component with month/year selector and amount input in `src/components/manage/credit-cards/future-statement-form.tsx`
-- [ ] T023 [P] [US1] Create `FutureStatementList` component with empty state CTA in `src/components/manage/credit-cards/future-statement-list.tsx`
-- [ ] T024 [US1] Add collapsible "Próximas Faturas" section to `src/components/manage/credit-cards/credit-card-card.tsx`
-- [ ] T025 [US1] Implement pre-fill logic for next logical month in `FutureStatementForm` component
-- [ ] T026 [US1] Add current month warning dialog (FR-011) to `FutureStatementForm` in `src/components/manage/credit-cards/future-statement-form.tsx`
+- [X] T018 [US1] Modify `CashflowEngineInput` interface to accept `futureStatements` parameter in `src/lib/cashflow/calculate.ts`
+- [X] T019 [US1] Implement `getCreditCardAmountForDate` helper function in `src/lib/cashflow/calculate.ts` per research.md logic
+- [X] T020 [US1] Modify `createCreditCardEvents` to use future statement lookup (return 0 if not defined per FR-006) in `src/lib/cashflow/calculate.ts`
+- [X] T021 [US1] Update `useCashflowProjection` hook to pass `futureStatements` to calculation in `src/hooks/use-cashflow-projection.ts`
+- [X] T022 [P] [US1] Create `FutureStatementForm` component with month/year selector and amount input in `src/components/manage/credit-cards/future-statement-form.tsx`
+- [X] T023 [P] [US1] Create `FutureStatementList` component with empty state CTA in `src/components/manage/credit-cards/future-statement-list.tsx`
+- [X] T024 [US1] Add collapsible "Próximas Faturas" section to `src/components/manage/credit-cards/credit-card-card.tsx`
+- [X] T025 [US1] Implement pre-fill logic for next logical month in `FutureStatementForm` component
+- [X] T026 [US1] Add current month warning dialog (FR-011) to `FutureStatementForm` in `src/components/manage/credit-cards/future-statement-form.tsx`
 - [ ] T027 [P] [US1] Create visual regression test for credit card card with future statements section in `tests/visual/credit-card-future-statements.test.ts`
 - [ ] T028 [P] [US1] Create visual regression test for empty state CTA in `tests/visual/credit-card-future-statements.test.ts`
 
@@ -97,11 +97,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T034 [US2] Add edit mode to `FutureStatementForm` component in `src/components/manage/credit-cards/future-statement-form.tsx`
-- [ ] T035 [US2] Add edit button to each statement item in `FutureStatementList` in `src/components/manage/credit-cards/future-statement-list.tsx`
-- [ ] T036 [US2] Add delete button with confirmation dialog to each statement item in `FutureStatementList`
-- [ ] T037 [US2] Implement `isEditable` check based on month/year in `FutureStatementList` to disable edit for past months
-- [ ] T038 [US2] Wire edit/delete handlers in `credit-card-card.tsx` to store actions
+- [X] T034 [US2] Add edit mode to `FutureStatementForm` component in `src/components/manage/credit-cards/future-statement-form.tsx`
+- [X] T035 [US2] Add edit button to each statement item in `FutureStatementList` in `src/components/manage/credit-cards/future-statement-list.tsx`
+- [X] T036 [US2] Add delete button with confirmation dialog to each statement item in `FutureStatementList`
+- [X] T037 [US2] Implement `isEditable` check based on month/year in `FutureStatementList` to disable edit for past months
+- [X] T038 [US2] Wire edit/delete handlers in `credit-card-card.tsx` to store actions
 - [ ] T039 [P] [US2] Create visual regression test for edit mode in `tests/visual/credit-card-future-statements.test.ts`
 - [ ] T040 [P] [US2] Create visual regression test for delete confirmation dialog in `tests/visual/credit-card-future-statements.test.ts`
 
@@ -128,12 +128,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T047 [US3] Create `performMonthProgression` function in `src/lib/cashflow/month-progression.ts` (must handle multi-month catch-up when user hasn't logged in for multiple months)
-- [ ] T048 [US3] Implement `checkAndProgressMonth` function with `last_progression_check` preference check in `src/lib/cashflow/month-progression.ts`
-- [ ] T049 [US3] Create `useMonthProgression` hook in `src/hooks/use-month-progression.ts`
-- [ ] T050 [US3] Add `getUserPreference` and `setUserPreference` helpers for `last_progression_check` in `src/stores/finance-store.ts`
-- [ ] T051 [US3] Integrate `useMonthProgression` hook at app launch in appropriate component (e.g., `src/App.tsx` or dashboard)
-- [ ] T052 [US3] Implement cleanup of past-month future statements during progression (FR-012)
+- [X] T047 [US3] Create `performMonthProgression` function in `src/lib/cashflow/month-progression.ts` (must handle multi-month catch-up when user hasn't logged in for multiple months)
+- [X] T048 [US3] Implement `checkAndProgressMonth` function with `last_progression_check` preference check in `src/lib/cashflow/month-progression.ts`
+- [X] T049 [US3] Create `useMonthProgression` hook in `src/hooks/use-month-progression.ts`
+- [X] T050 [US3] Add `getUserPreference` and `setUserPreference` helpers for `last_progression_check` in `src/stores/finance-store.ts`
+- [X] T051 [US3] Integrate `useMonthProgression` hook at app launch in appropriate component (e.g., `src/App.tsx` or dashboard)
+- [X] T052 [US3] Implement cleanup of past-month future statements during progression (FR-012)
 
 **Checkpoint**: User Story 3 complete - automatic month progression working
 
@@ -154,9 +154,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T055 [US4] Ensure future statements are sorted by target_year, target_month (nearest first) in `src/hooks/use-finance-data.ts`
-- [ ] T056 [US4] Add statement count badge to collapsible trigger in `src/components/manage/credit-cards/credit-card-card.tsx`
-- [ ] T057 [US4] Add month/year labels with proper formatting (e.g., "Janeiro/2025") to `FutureStatementList` items
+- [X] T055 [US4] Ensure future statements are sorted by target_year, target_month (nearest first) in `src/hooks/use-finance-data.ts`
+- [X] T056 [US4] Add statement count badge to collapsible trigger in `src/components/manage/credit-cards/credit-card-card.tsx`
+- [X] T057 [US4] Add month/year labels with proper formatting (e.g., "Janeiro/2025") to `FutureStatementList` items
 - [ ] T058 [P] [US4] Create visual regression test for multi-statement display in `tests/visual/credit-card-future-statements.test.ts`
 
 **Checkpoint**: User Story 4 complete - all user stories implemented
@@ -170,8 +170,8 @@
 - [ ] T059 Run all unit tests with `pnpm test` and fix any failures
 - [ ] T060 Run all E2E tests with `pnpm test:e2e` and fix any failures
 - [ ] T061 Run visual regression tests and update baselines if needed
-- [ ] T062 [P] Verify all lint checks pass with `pnpm lint`
-- [ ] T063 [P] Verify TypeScript compilation with `pnpm typecheck`
+- [X] T062 [P] Verify all lint checks pass with `pnpm lint`
+- [X] T063 [P] Verify TypeScript compilation with `pnpm typecheck`
 - [ ] T064 Run quickstart.md validation checklist manually
 - [ ] T065 Run CodeRabbit review with `coderabbit --prompt-only -t uncommitted`
 - [ ] T066 Fix any CodeRabbit findings and re-run (max 3 iterations)

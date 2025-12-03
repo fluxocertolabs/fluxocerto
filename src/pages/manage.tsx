@@ -37,6 +37,7 @@ import type {
   SingleShotIncome,
   CreditCard,
   CreditCardInput,
+  FutureStatementInput,
 } from '@/types'
 
 type TabValue = 'accounts' | 'projects' | 'expenses' | 'cards' | 'household'
@@ -80,7 +81,7 @@ export function ManagePage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, profiles, isLoading, error: fetchError, retry } = useFinanceData()
+  const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, futureStatements, profiles, isLoading, error: fetchError, retry } = useFinanceData()
   const { household, members, isLoading: householdLoading, error: householdError } = useHousehold()
   const store = useFinanceStore()
 
@@ -476,6 +477,28 @@ export function ManagePage() {
     }
   }
 
+  // Future statement handlers
+  const handleAddFutureStatement = async (data: FutureStatementInput) => {
+    const result = await store.addFutureStatement(data)
+    if (!result.success) {
+      console.error('Failed to add future statement:', result.error)
+    }
+  }
+
+  const handleUpdateFutureStatement = async (id: string, amount: number) => {
+    const result = await store.updateFutureStatement(id, { amount })
+    if (!result.success) {
+      console.error('Failed to update future statement:', result.error)
+    }
+  }
+
+  const handleDeleteFutureStatement = async (id: string) => {
+    const result = await store.deleteFutureStatement(id)
+    if (!result.success) {
+      console.error('Failed to delete future statement:', result.error)
+    }
+  }
+
   // Delete confirmation handler
   const handleDeleteConfirm = async () => {
     switch (deleteState.type) {
@@ -609,6 +632,7 @@ export function ManagePage() {
           <TabsContent value="cards">
             <CreditCardList
               creditCards={creditCards}
+              futureStatements={futureStatements}
               profiles={profiles}
               onAdd={() => setDialogState({ type: 'add-card' })}
               onEdit={(card) => setDialogState({ type: 'edit-card', card })}
@@ -619,6 +643,9 @@ export function ManagePage() {
                 }
               }}
               onUpdateBalance={handleUpdateCreditCardBalance}
+              onAddFutureStatement={handleAddFutureStatement}
+              onUpdateFutureStatement={handleUpdateFutureStatement}
+              onDeleteFutureStatement={handleDeleteFutureStatement}
             />
           </TabsContent>
 

@@ -6,7 +6,7 @@
  */
 
 import { addDays, startOfDay } from 'date-fns'
-import type { BankAccount, CreditCard, FixedExpense, SingleShotExpense, SingleShotIncome, Project } from '../../types'
+import type { BankAccount, CreditCard, FixedExpense, SingleShotExpense, SingleShotIncome, Project, FutureStatement } from '../../types'
 import { isSameDay } from 'date-fns'
 import {
   isMonthlyPaymentDue,
@@ -207,18 +207,67 @@ function createSingleShotExpenseEvents(date: Date, expenses: SingleShotExpense[]
 }
 
 /**
- * Create expense events for a specific day from credit cards.
+ * Get the credit card amount for a specific date.
+ * Uses future statement if defined for that month, otherwise returns 0 for future months.
+ * Current and past months use the card's statementBalance.
+ * 
+ * @param card - The credit card
+ * @param futureStatements - Array of future statements for all cards
+ * @param date - The date to get the amount for
+ * @returns The amount in cents (0 if not defined for future months per FR-006)
  */
-function createCreditCardEvents(date: Date, creditCards: CreditCard[]): ExpenseEvent[] {
+export function getCreditCardAmountForDate(
+  card: CreditCard,
+  futureStatements: FutureStatement[],
+  date: Date
+): number {
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
+  const targetMonth = date.getMonth() + 1
+  const targetYear = date.getFullYear()
+
+  // Check if target date is in the future (after current month)
+  const isFutureMonth =
+    targetYear > currentYear ||
+    (targetYear === currentYear && targetMonth > currentMonth)
+
+  // Current or past month: use statementBalance
+  if (!isFutureMonth) {
+    return card.statementBalance
+  }
+
+  // Future month: lookup future statement
+  const statement = futureStatements.find(
+    (s) =>
+      s.creditCardId === card.id &&
+      s.targetMonth === targetMonth &&
+      s.targetYear === targetYear
+  )
+
+  // Return amount or 0 if not defined (FR-006)
+  return statement?.amount ?? 0
+}
+
+/**
+ * Create expense events for a specific day from credit cards.
+ * Uses future statements for future months, current balance for current month.
+ */
+function createCreditCardEvents(
+  date: Date,
+  creditCards: CreditCard[],
+  futureStatements: FutureStatement[]
+): ExpenseEvent[] {
   const events: ExpenseEvent[] = []
 
   for (const card of creditCards) {
     if (isMonthlyPaymentDue(date, card.dueDay)) {
+      const amount = getCreditCardAmountForDate(card, futureStatements, date)
       events.push({
         sourceId: card.id,
         sourceName: card.name,
         sourceType: 'credit_card',
-        amount: card.statementBalance,
+        amount,
       })
     }
   }
@@ -401,7 +450,7 @@ export function calculateCashflow(input: CashflowEngineInput): CashflowProjectio
     // Create expense events (same for both scenarios)
     const fixedExpenseEvents = createFixedExpenseEvents(date, validated.activeExpenses)
     const singleShotExpenseEvents = createSingleShotExpenseEvents(date, validated.singleShotExpenses)
-    const creditCardEvents = createCreditCardEvents(date, validated.creditCards)
+    const creditCardEvents = createCreditCardEvents(date, validated.creditCards, validated.futureStatements)
     const expenseEvents = [...fixedExpenseEvents, ...singleShotExpenseEvents, ...creditCardEvents]
 
     // Calculate daily totals

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
+import { useMonthProgression } from '@/hooks/use-month-progression'
 import { Header } from '@/components/layout/header'
 import { SetupRequired } from '@/components/setup-required'
 import { Dashboard } from '@/pages/dashboard'
@@ -41,6 +42,10 @@ function LoadingSpinner() {
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth()
+  
+  // Run month progression check at app launch (for authenticated users)
+  // This promotes future statements to current balance when month changes
+  useMonthProgression()
 
   if (isLoading) {
     return <LoadingSpinner />

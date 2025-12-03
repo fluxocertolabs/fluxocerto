@@ -172,6 +172,7 @@ export function useCashflowProjection(
     fixedExpenses,
     singleShotExpenses,
     creditCards,
+    futureStatements,
     isLoading,
     error: fetchError,
   } = useFinanceData()
@@ -194,7 +195,8 @@ export function useCashflowProjection(
     singleShotIncome.length > 0 ||
     fixedExpenses.length > 0 ||
     singleShotExpenses.length > 0 ||
-    creditCards.length > 0
+    creditCards.length > 0 ||
+    futureStatements.length > 0
   )
 
   // Calculate projection (memoized, pure computation)
@@ -212,6 +214,7 @@ export function useCashflowProjection(
         singleShotExpenses,
         singleShotIncome,
         creditCards,
+        futureStatements,
         projectionDays,
       })
       return { success: true, projection }
@@ -221,7 +224,7 @@ export function useCashflowProjection(
         error: err instanceof Error ? err : new Error('Falha ao calcular projeção'),
       }
     }
-  }, [isLoading, accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, projectionDays, _retryTrigger])
+  }, [isLoading, accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, futureStatements, projectionDays, _retryTrigger])
 
   // Extract projection and error from result
   const projection = calculationResult?.success ? calculationResult.projection : null
