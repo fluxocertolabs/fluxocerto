@@ -93,6 +93,10 @@ export async function seedFullScenario(data: {
 export async function expenseExists(name: string)
 export async function projectExists(name: string)
 export async function accountExists(name: string)
+export async function seedSnapshotsWithHousehold(snapshots: { name: string; data: object }[], householdId: string)
+export async function getSnapshotsForHousehold(householdId: string)
+export async function snapshotExists(id: string)
+export async function deleteSnapshotsForHousehold(householdId: string)
 export function createWorkerDbFixture(workerContext: IWorkerContext)
 export const dbFixture
 type DatabaseFixture = typeof dbFixture
@@ -108,6 +112,8 @@ import '../pages/login-page'
 import '../pages/dashboard-page'
 import '../pages/manage-page'
 import '../pages/quick-update-page'
+import '../pages/history-page'
+import '../pages/snapshot-detail-page'
 import 'fs'
 export const test
 </file>
@@ -121,6 +127,8 @@ import '../pages/login-page'
 import '../pages/dashboard-page'
 import '../pages/manage-page'
 import '../pages/quick-update-page'
+import '../pages/history-page'
+import '../pages/snapshot-detail-page'
 import 'fs'
 export const VISUAL_TEST_FIXED_DATE
 
@@ -276,6 +284,27 @@ export class ExpensesSection {
 }
 </file>
 
+<file path="e2e/pages/history-page.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class HistoryPage {
+    public readonly page: Page
+    public readonly pageHeading: Locator
+    public readonly emptyState: Locator
+    public readonly snapshotCards: Locator
+    public readonly loadingIndicator: Locator
+    public constructor(page: Page)
+    public async goto(): Promise<void>
+    public async hasEmptyState(): Promise<boolean>
+    public async getSnapshotCount(): Promise<number>
+    public async clickSnapshot(name: string): Promise<void>
+    public async deleteSnapshot(name: string): Promise<void>
+    public async expectSnapshotVisible(name: string): Promise<void>
+    public async expectSnapshotNotVisible(name: string): Promise<void>
+}
+</file>
+
 <file path="e2e/pages/household-section.ts">
 import '@playwright/test'
 import '@playwright/test'
@@ -405,6 +434,30 @@ export class QuickUpdatePage {
 }
 </file>
 
+<file path="e2e/pages/snapshot-detail-page.ts">
+import '@playwright/test'
+import '@playwright/test'
+
+export class SnapshotDetailPage {
+    public readonly page: Page
+    public readonly historicalBanner: Locator
+    public readonly backButton: Locator
+    public readonly deleteButton: Locator
+    public readonly cashflowChart: Locator
+    public readonly summaryPanel: Locator
+    public readonly notFoundMessage: Locator
+    public constructor(page: Page)
+    public async goto(snapshotId: string): Promise<void>
+    public async hasHistoricalBanner(): Promise<boolean>
+    public async getSnapshotName(): Promise<string | null>
+    public async goBack(): Promise<void>
+    public async deleteSnapshot(): Promise<void>
+    public async expectChartRendered(): Promise<void>
+    public async expectSummaryRendered(): Promise<void>
+    public async expectNotFound(): Promise<void>
+}
+</file>
+
 <file path="e2e/playwright.config.ts">
 import '@playwright/test'
 import 'child_process'
@@ -478,6 +531,11 @@ import '../fixtures/test-base'
 import '../utils/test-data'
 </file>
 
+<file path="e2e/tests/snapshots.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+</file>
+
 <file path="e2e/tests/theme.spec.ts">
 import '../fixtures/test-base'
 import '../utils/test-data'
@@ -519,6 +577,11 @@ import '../../utils/test-data'
 </file>
 
 <file path="e2e/tests/visual/quick-update.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+import '../../utils/test-data'
+</file>
+
+<file path="e2e/tests/visual/snapshots.visual.spec.ts">
 import '../../fixtures/visual-test-base'
 import '../../utils/test-data'
 </file>
@@ -3465,6 +3528,8 @@ import '@/components/layout/header'
 import '@/components/setup-required'
 import '@/pages/dashboard'
 import '@/pages/manage'
+import '@/pages/history'
+import '@/pages/snapshot-detail'
 import '@/pages/login'
 import '@/pages/auth-callback'
 </file>
@@ -4018,6 +4083,48 @@ import '@/lib/supabase'
 export function SetupRequired()
 </file>
 
+<file path="src/components/snapshots/save-snapshot-dialog.tsx">
+import 'react'
+import 'date-fns'
+import 'date-fns/locale'
+import '@/components/ui/dialog'
+import '@/components/ui/button'
+import '@/components/ui/input'
+import '@/components/ui/label'
+import '@/types/snapshot'
+export function SaveSnapshotDialog()
+</file>
+
+<file path="src/components/snapshots/snapshot-card.tsx">
+import 'react'
+import 'react-router-dom'
+import 'date-fns'
+import 'date-fns/locale'
+import '@/components/ui/card'
+import '@/components/ui/button'
+import '@/components/ui/alert-dialog'
+import '@/lib/utils'
+import '@/lib/format'
+import '@radix-ui/react-icons'
+import '@/types/snapshot'
+export function SnapshotCard()
+</file>
+
+<file path="src/components/snapshots/snapshot-empty-state.tsx">
+import 'react-router-dom'
+import '@/components/ui/card'
+import '@/components/ui/button'
+import '@radix-ui/react-icons'
+export function SnapshotEmptyState()
+</file>
+
+<file path="src/components/snapshots/snapshot-list.tsx">
+import './snapshot-card'
+import './snapshot-empty-state'
+import '@/types/snapshot'
+export function SnapshotList()
+</file>
+
 <file path="src/components/theme/theme-toggle.tsx">
 import 'lucide-react'
 import '@/components/ui/button'
@@ -4110,6 +4217,16 @@ import '@radix-ui/react-tabs'
 import '@/lib/utils'
 </file>
 
+<file path="src/components/ui/toast.tsx">
+import 'react'
+import '@/components/ui/card'
+import '@/components/ui/button'
+import '@/lib/utils'
+import '@radix-ui/react-icons'
+type ToastType = 'success' | 'error'
+export function Toast()
+</file>
+
 <file path="src/hooks/use-auth.ts">
 import 'react'
 import '@supabase/supabase-js'
@@ -4136,6 +4253,7 @@ import '@/components/cashflow/types'
 import '@/types'
 export function transformToChartData(days: DailySnapshot[], investmentTotal: number)
 export function getDangerRanges(chartData: ChartDataPoint[])
+export function transformToSummaryStats(projection: CashflowProjection)
 
 export interface UseCashflowProjectionOptions {
     property projectionDays: ProjectionDays
@@ -4275,6 +4393,24 @@ export interface UseMonthProgressionResult {
 export function useMonthProgression()
 </file>
 
+<file path="src/hooks/use-snapshot-projection.test.ts">
+import 'vitest'
+import '@testing-library/react'
+import './use-snapshot-projection'
+import '@/types/snapshot'
+import '@/lib/cashflow/types'
+</file>
+
+<file path="src/hooks/use-snapshot-projection.ts">
+import 'react'
+import '@/hooks/use-cashflow-projection'
+import '@/lib/snapshots'
+import '@/types/snapshot'
+import '@/components/cashflow/types'
+import '@/lib/cashflow/types'
+export function useSnapshotProjection(snapshot: ProjectionSnapshot | null)
+</file>
+
 <file path="src/hooks/use-theme.ts">
 import 'react'
 import '@/stores/theme-store'
@@ -4282,6 +4418,12 @@ import '@/lib/theme-service'
 import '@/hooks/use-auth'
 import '@/types/theme'
 export function useTheme()
+</file>
+
+<file path="src/hooks/use-toast.ts">
+import 'react'
+import '@/components/ui/toast'
+export function useToast()
 </file>
 
 <file path="src/lib/auth-errors.test.ts">
@@ -4477,6 +4619,16 @@ export function formatToBRL(value: string)
 export function parseBRLToCents(formatted: string)
 </file>
 
+<file path="src/lib/snapshots/schema-version.test.ts">
+import 'vitest'
+import './schema-version'
+</file>
+
+<file path="src/lib/snapshots/schema-version.ts">
+import '@/types/snapshot'
+export function isSchemaVersionCompatible(version: number)
+</file>
+
 <file path="src/lib/staleness.test.ts">
 import 'vitest'
 import './staleness'
@@ -4634,7 +4786,9 @@ import 'react'
 import '@/hooks/use-cashflow-projection'
 import '@/hooks/use-coordinated-loading'
 import '@/hooks/use-health-indicator'
+import '@/hooks/use-finance-data'
 import '@/stores/preferences-store'
+import '@/stores/snapshots-store'
 import '@/components/cashflow/cashflow-chart'
 import '@/components/cashflow/summary-panel'
 import '@/components/cashflow/health-indicator'
@@ -4642,9 +4796,23 @@ import '@/components/cashflow/projection-selector'
 import '@/components/cashflow/empty-state'
 import '@/components/loading'
 import '@/components/quick-update'
+import '@/components/snapshots'
 import '@/components/ui/button'
+import '@/components/ui/toast'
+import '@/hooks/use-toast'
 import '@/lib/utils'
+import '@/types'
 export function Dashboard()
+</file>
+
+<file path="src/pages/history.tsx">
+import 'react'
+import '@/stores/snapshots-store'
+import '@/components/snapshots/snapshot-list'
+import '@/components/ui/toast'
+import '@/hooks/use-toast'
+import '@/lib/utils'
+export function HistoryPage()
 </file>
 
 <file path="src/pages/login.tsx">
@@ -4681,6 +4849,25 @@ import '@/types'
 export function ManagePage()
 </file>
 
+<file path="src/pages/snapshot-detail.tsx">
+import 'react'
+import 'react-router-dom'
+import 'date-fns'
+import 'date-fns/locale'
+import '@/stores/snapshots-store'
+import '@/hooks/use-snapshot-projection'
+import '@/components/cashflow/cashflow-chart'
+import '@/components/cashflow/summary-panel'
+import '@/components/ui/button'
+import '@/components/ui/card'
+import '@/components/ui/alert-dialog'
+import '@/components/ui/toast'
+import '@/hooks/use-toast'
+import '@/lib/utils'
+import '@radix-ui/react-icons'
+export function SnapshotDetailPage()
+</file>
+
 <file path="src/stores/finance-store.test.ts">
 import 'vitest'
 import './finance-store'
@@ -4701,6 +4888,21 @@ import 'zustand'
 import 'zustand/middleware'
 import '@/types'
 export const usePreferencesStore
+</file>
+
+<file path="src/stores/snapshots-store.test.ts">
+import 'vitest'
+import './snapshots-store'
+import '@/lib/cashflow/types'
+</file>
+
+<file path="src/stores/snapshots-store.ts">
+import 'zustand'
+import '@/lib/supabase'
+import '@/lib/snapshots'
+import './finance-store'
+import '@/types/snapshot'
+export const useSnapshotsStore
 </file>
 
 <file path="src/stores/theme-store.ts">
@@ -4906,6 +5108,60 @@ export interface LoadingErrorState {
     property originalError: Error
 }
 export const ERROR_MESSAGES
+</file>
+
+<file path="src/types/snapshot.ts">
+import 'zod'
+import '@/lib/cashflow/types'
+import '@/types'
+export const CURRENT_SCHEMA_VERSION
+
+export interface SnapshotInputState {
+    property accounts: BankAccount[]
+    property projects: RecurringProject[]
+    property singleShotIncome: SingleShotIncome[]
+    property fixedExpenses: FixedExpense[]
+    property singleShotExpenses: SingleShotExpense[]
+    property creditCards: CreditCard[]
+    property futureStatements: FutureStatement[]
+    property projectionDays: ProjectionDays
+}
+
+export interface SnapshotSummaryMetrics {
+    property startingBalance: number
+    property endBalanceOptimistic: number
+    property dangerDayCount: number
+}
+
+export interface SnapshotData {
+    property inputs: SnapshotInputState
+    property projection: CashflowProjection
+    property summaryMetrics: SnapshotSummaryMetrics
+}
+
+export interface ProjectionSnapshot {
+    property id: string
+    property householdId: string
+    property name: string
+    property schemaVersion: number
+    property data: SnapshotData
+    property createdAt: Date
+}
+export const SnapshotInputSchema
+type SnapshotInput = z.infer<typeof SnapshotInputSchema>
+
+export interface CreateSnapshotInput {
+    property name: string
+    property inputs: SnapshotInputState
+    property projection: CashflowProjection
+}
+
+export interface SnapshotListItem {
+    property id: string
+    property name: string
+    property createdAt: Date
+    property summaryMetrics: SnapshotSummaryMetrics
+}
 </file>
 
 <file path="src/types/theme.ts">

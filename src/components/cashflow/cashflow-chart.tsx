@@ -71,7 +71,7 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
   const xAxisInterval = chartData.length > 15 ? Math.floor(chartData.length / 7) : 0
 
   return (
-    <div className={cn('rounded-xl border border-border bg-card p-4')}>
+    <div data-testid="cashflow-chart" className={cn('rounded-xl border border-border bg-card p-4')}>
       <h2 className="text-lg font-semibold text-foreground mb-4">
         Projeção de Fluxo de Caixa
       </h2>

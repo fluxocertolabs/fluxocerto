@@ -55,6 +55,7 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
     <>
       <Link to={`/history/${id}`}>
         <Card
+          data-testid="snapshot-card"
           className={cn(
             'p-4 hover:bg-muted/50 transition-colors cursor-pointer',
             'border-l-4',
