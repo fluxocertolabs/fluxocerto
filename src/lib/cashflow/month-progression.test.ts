@@ -80,9 +80,9 @@ describe('Month Progression Logic', () => {
     })
 
     it('should not progress when last check was in current month', () => {
-      // Use actual current date for this test to match real behavior
-      const now = new Date()
-      const lastCheck = new Date() // Same month
+      // Use specific dates for deterministic testing
+      const now = new Date('2025-06-15')
+      const lastCheck = new Date('2025-06-10') // Same month
 
       const currentMonth = now.getMonth() + 1
       const currentYear = now.getFullYear()
@@ -126,11 +126,6 @@ describe('Month Progression Logic', () => {
       targetMonth: number
       targetYear: number
       amount: number
-    }
-
-    interface MockCreditCard {
-      id: string
-      statementBalance: number
     }
 
     function findCurrentMonthStatement(
@@ -216,7 +211,6 @@ describe('Month Progression Logic', () => {
 
   describe('card update calculation', () => {
     it('calculates correct new balance from future statement', () => {
-      const currentBalance = 50000
       const futureStatementAmount = 100000
 
       // When progression happens, the new balance is the future statement amount

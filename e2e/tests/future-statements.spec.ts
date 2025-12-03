@@ -337,15 +337,19 @@ test.describe('Future Statement Validation', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    // The month selector should not show the already-used month, or show an error
-    // This depends on implementation - either the month is disabled or an error is shown on submit
+    // The month selector filters out already-used months
+    // Verify that the used month is not available in the dropdown
+    // The form defaults to the first available month (which should be different from the seeded one)
     await dialog.getByLabel(/valor/i).fill('2000,00');
     await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
 
-    // Should either show error or prevent submission
-    // Check for error message or that dialog is still visible
-    await page.waitForTimeout(1000);
-    // The exact behavior depends on implementation
+    // The dialog should close successfully since it picks an available month
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+    // Verify we now have 2 future statements (badge shows count)
+    await expect(async () => {
+      await expect(collapsibleTrigger).toContainText('2');
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   });
 
   test('T-FS-007: current month warning dialog appears', async ({
@@ -380,10 +384,36 @@ test.describe('Future Statement Validation', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    // Select current month (if the selector allows it)
-    // The form should pre-fill with next month, so we need to change it to current month
-    // This test verifies FR-011 - current month warning
-    // The exact interaction depends on the month selector implementation
+    // The month selector shows current month as the first option
+    // Select it and fill amount to trigger the warning
+    const monthSelect = dialog.locator('button[role="combobox"]').first();
+    await monthSelect.click();
+
+    // Get current month name in Portuguese
+    const currentMonthName = new Date().toLocaleString('pt-BR', { month: 'long' });
+    const currentYear = new Date().getFullYear();
+
+    // Click the current month option
+    const monthOption = page.getByRole('option', {
+      name: new RegExp(`${currentMonthName}.*${currentYear}`, 'i'),
+    });
+    
+    // If current month is available, select it
+    if (await monthOption.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await monthOption.click();
+      await dialog.getByLabel(/valor/i).fill('1500,00');
+      await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
+
+      // Warning dialog should appear for current month
+      const warningDialog = page.getByRole('alertdialog');
+      await expect(warningDialog).toBeVisible({ timeout: 5000 });
+      await expect(warningDialog.getByText(/mês atual|sobrescrever/i)).toBeVisible();
+    } else {
+      // Current month not available (already has a statement or past due date)
+      // Close the dropdown and dialog
+      await page.keyboard.press('Escape');
+      await dialog.getByRole('button', { name: /cancelar/i }).click();
+    }
   });
 });
 
