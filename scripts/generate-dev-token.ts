@@ -53,7 +53,7 @@ function logError(message: string): void {
  */
 function getServiceRoleKey(): string {
   try {
-    const output = execSync('npx supabase status -o json', {
+    const output = execSync('pnpm exec supabase status -o json', {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });

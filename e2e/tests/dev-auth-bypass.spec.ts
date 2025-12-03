@@ -21,6 +21,7 @@ test.describe('Dev Auth Bypass', () => {
     
     // Clear any existing session to ensure we're testing the bypass
     await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
     
     // Navigate to the root - if dev auth bypass works, we should see dashboard
     await page.goto('/');
@@ -28,11 +29,6 @@ test.describe('Dev Auth Bypass', () => {
     // Wait for the page to load and check what we see
     // If bypass is working, we should NOT see the login page
     // Instead we should see dashboard content
-    
-    // Check that we're NOT on the login page (bypass worked)
-    // The login page has specific elements we can check for absence
-    const loginButton = page.locator('button:has-text("Entrar"), button:has-text("Login")');
-    const emailInput = page.locator('input[type="email"]');
     
     // Wait for navigation to settle - either dashboard or login
     await page.waitForURL(/\/(dashboard|login)?$/, { timeout: 10000 });
