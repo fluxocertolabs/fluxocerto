@@ -320,7 +320,6 @@ export interface UserPreferences {
 export {
   FutureStatementInputSchema,
   FutureStatementSchema,
-  FutureStatementInputWithValidationSchema,
   FutureStatementUpdateSchema,
   type FutureStatementInput,
   type FutureStatement,

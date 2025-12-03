@@ -67,9 +67,11 @@ export async function performMonthProgression(): Promise<ProgressionResult> {
     const currentYear = now.getFullYear()
 
     // Fetch all credit cards and future statements for this household
+    // Note: RLS policies enforce household isolation, but we add explicit filters
+    // as defense-in-depth for data isolation
     const [cardsResult, statementsResult] = await Promise.all([
-      supabase.from('credit_cards').select('id, statement_balance'),
-      supabase.from('future_statements').select('*'),
+      supabase.from('credit_cards').select('id, statement_balance').eq('household_id', householdId),
+      supabase.from('future_statements').select('*').eq('household_id', householdId),
     ])
 
     if (cardsResult.error) {

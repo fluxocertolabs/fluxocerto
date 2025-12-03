@@ -481,6 +481,7 @@ export function ManagePage() {
   const handleAddFutureStatement = async (data: FutureStatementInput) => {
     const result = await store.addFutureStatement(data)
     if (!result.success) {
+      setError(result.error)
       console.error('Failed to add future statement:', result.error)
     }
   }
@@ -488,6 +489,7 @@ export function ManagePage() {
   const handleUpdateFutureStatement = async (id: string, amount: number) => {
     const result = await store.updateFutureStatement(id, { amount })
     if (!result.success) {
+      setError(result.error)
       console.error('Failed to update future statement:', result.error)
     }
   }
@@ -495,6 +497,7 @@ export function ManagePage() {
   const handleDeleteFutureStatement = async (id: string) => {
     const result = await store.deleteFutureStatement(id)
     if (!result.success) {
+      setError(result.error)
       console.error('Failed to delete future statement:', result.error)
     }
   }

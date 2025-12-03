@@ -49,26 +49,6 @@ export const FutureStatementSchema = FutureStatementInputSchema.extend({
   updatedAt: z.date(),
 })
 
-// =============================================================================
-// VALIDATION REFINEMENTS
-// =============================================================================
-
-/**
- * Schema with 12-month rolling window validation.
- * Use this for form submission to enforce business rules.
- */
-export const FutureStatementInputWithValidationSchema = FutureStatementInputSchema.refine(
-  (data) => {
-    const targetDate = new Date(data.targetYear, data.targetMonth - 1)
-    const maxDate = addMonths(startOfMonth(new Date()), 12)
-    return targetDate <= maxDate
-  },
-  {
-    message: 'A fatura deve estar dentro dos próximos 12 meses',
-    path: ['targetYear'], // Show error on year field
-  }
-)
-
 /**
  * Schema for updating an existing future statement.
  * Allows partial updates (only amount typically changes).
@@ -171,6 +151,14 @@ export function transformFutureStatementRow(row: FutureStatementRow): FutureStat
 // =============================================================================
 
 /**
+ * Portuguese month names for localized display.
+ */
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+] as const
+
+/**
  * Generates month options for select dropdown.
  * Returns next 12 months from current date.
  */
@@ -180,11 +168,6 @@ export function getAvailableMonthOptions(): Array<{
 }> {
   const options: Array<{ value: { month: number; year: number }; label: string }> = []
   const today = new Date()
-  
-  const monthNames = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-  ]
 
   for (let i = 0; i < 12; i++) {
     const targetDate = addMonths(startOfMonth(today), i)
@@ -193,7 +176,7 @@ export function getAvailableMonthOptions(): Array<{
     
     options.push({
       value: { month, year },
-      label: `${monthNames[month - 1]}/${year}`,
+      label: `${MONTH_NAMES[month - 1]}/${year}`,
     })
   }
 
@@ -204,11 +187,7 @@ export function getAvailableMonthOptions(): Array<{
  * Formats a month/year pair into a localized label.
  */
 export function formatMonthYear(month: number, year: number): string {
-  const monthNames = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-  ]
-  return `${monthNames[month - 1]}/${year}`
+  return `${MONTH_NAMES[month - 1]}/${year}`
 }
 
 /**

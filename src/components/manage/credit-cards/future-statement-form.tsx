@@ -99,7 +99,9 @@ export function FutureStatementForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const amountInCents = Math.round(parseFloat(amount) * 100)
+    // Normalize Brazilian decimal separator (comma) to dot for parsing
+    const normalizedAmount = amount.replace(',', '.')
+    const amountInCents = Math.round(parseFloat(normalizedAmount) * 100)
     if (isNaN(amountInCents) || amountInCents < 0) {
       return
     }
@@ -129,11 +131,17 @@ export function FutureStatementForm({
 
   const handleConfirmCurrentMonth = async () => {
     setShowCurrentMonthWarning(false)
-    const amountInCents = Math.round(parseFloat(amount) * 100)
+    // Normalize Brazilian decimal separator (comma) to dot for parsing
+    const normalizedAmount = amount.replace(',', '.')
+    const amountInCents = Math.round(parseFloat(normalizedAmount) * 100)
+    if (isNaN(amountInCents) || amountInCents < 0) {
+      return
+    }
     await submitForm(amountInCents)
   }
 
-  const amountValue = parseFloat(amount)
+  const normalizedAmountForValidation = amount.replace(',', '.')
+  const amountValue = parseFloat(normalizedAmountForValidation)
   const isValidAmount = !isNaN(amountValue) && amountValue >= 0
 
   return (
