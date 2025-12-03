@@ -228,14 +228,14 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
     try {
       const { error, count } = await getSupabase()
         .from('projection_snapshots')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', id)
 
       if (error) {
         return handleSupabaseError(error)
       }
 
-      if (count === 0) {
+      if ((count ?? 0) === 0) {
         return { success: false, error: 'Snapshot não encontrado' }
       }
 

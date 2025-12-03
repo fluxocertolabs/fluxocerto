@@ -16,9 +16,9 @@ export class SnapshotDetailPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.historicalBanner = page.locator('[class*="bg-blue"]').filter({ hasText: /snapshot histórico/i });
+    this.historicalBanner = page.locator('[class*="bg-muted"]').filter({ hasText: /snapshot histórico/i });
     this.backButton = page.getByRole('button', { name: /voltar/i });
-    this.deleteButton = page.getByRole('button', { name: /excluir snapshot/i });
+    this.deleteButton = page.getByRole('button', { name: /excluir/i }).first();
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
     this.notFoundMessage = page.getByText(/snapshot não encontrado/i);

@@ -305,12 +305,12 @@ test.describe('Historical Projection Snapshots', () => {
       // Note: The app may not support 365 days, so we test with the max available
       try {
         await dashboardPage.selectProjectionDays(90);
-      } catch {
+      } catch (e) {
         // If 90 days isn't available, continue with default
+        console.log('90-day projection option not available, using default:', e);
       }
 
       // Wait for chart to update
-      await page.waitForTimeout(1000);
       await dashboardPage.expectChartRendered();
 
       // Save the snapshot

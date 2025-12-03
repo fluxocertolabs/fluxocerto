@@ -63,14 +63,17 @@ export function SaveSnapshotDialog({
     setIsSaving(true)
     setError(null)
 
-    const saveResult = await onSave(name.trim())
-
-    setIsSaving(false)
-
-    if (saveResult.success) {
-      onOpenChange(false)
-    } else {
-      setError(saveResult.error ?? 'Erro ao salvar snapshot')
+    try {
+      const saveResult = await onSave(name.trim())
+      if (saveResult.success) {
+        onOpenChange(false)
+      } else {
+        setError(saveResult.error ?? 'Erro ao salvar snapshot')
+      }
+    } catch {
+      setError('Erro inesperado ao salvar snapshot')
+    } finally {
+      setIsSaving(false)
     }
   }
 
