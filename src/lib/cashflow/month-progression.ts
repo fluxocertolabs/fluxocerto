@@ -101,6 +101,9 @@ export async function performMonthProgression(): Promise<ProgressionResult> {
       )
 
       if (currentMonthStatement) {
+        // Store original balance for potential rollback
+        const originalBalance = card.statement_balance
+
         // Update card's statement balance
         const { error: updateError } = await supabase
           .from('credit_cards')
@@ -120,6 +123,14 @@ export async function performMonthProgression(): Promise<ProgressionResult> {
 
         if (deleteError) {
           console.error(`Failed to delete statement ${currentMonthStatement.id}:`, deleteError)
+          // Rollback: restore original balance to maintain consistency
+          const { error: rollbackError } = await supabase
+            .from('credit_cards')
+            .update({ statement_balance: originalBalance })
+            .eq('id', card.id)
+          if (rollbackError) {
+            console.error(`Failed to rollback card ${card.id}:`, rollbackError)
+          }
           continue
         }
 
@@ -129,9 +140,12 @@ export async function performMonthProgression(): Promise<ProgressionResult> {
 
     // Clean up past-month statements (FR-012)
     // Delete any future_statements where targetMonth/targetYear < current month
+    // Note: RLS policies enforce household isolation, but we add explicit filter
+    // as defense-in-depth for data isolation
     const { data: deletedStatements, error: cleanupError } = await supabase
       .from('future_statements')
       .delete()
+      .eq('household_id', householdId)
       .or(
         `target_year.lt.${currentYear},and(target_year.eq.${currentYear},target_month.lt.${currentMonth})`
       )
