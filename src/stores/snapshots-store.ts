@@ -121,7 +121,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
   fetchSnapshot: async (id: string) => {
     const configError = getSupabaseConfigError()
     if (configError) {
-      set({ error: configError.error })
+      set({ error: configError.error, isLoading: false })
       return null
     }
 
