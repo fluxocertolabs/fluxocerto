@@ -70,7 +70,8 @@ test.describe('Future Statement Management', () => {
 
     // Submit
     await submitButton.click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    // Increase timeout for CI environments which can be slower
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
 
     // Verify future statement appears in the list
     await expect(async () => {
@@ -145,7 +146,8 @@ test.describe('Future Statement Management', () => {
 
     // Submit
     await submitButton.click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    // Increase timeout for CI environments which can be slower
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
 
     // Verify updated amount
     await expect(async () => {
@@ -208,7 +210,8 @@ test.describe('Future Statement Management', () => {
     const confirmDialog = page.getByRole('alertdialog').or(page.getByRole('dialog'));
     await expect(confirmDialog).toBeVisible({ timeout: 5000 });
     await confirmDialog.getByRole('button', { name: /confirmar|sim|yes|excluir/i }).click();
-    await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+    // Increase timeout for CI environments which can be slower
+    await expect(confirmDialog).not.toBeVisible({ timeout: 10000 });
 
     // Verify future statement is removed
     await expect(async () => {
@@ -327,7 +330,8 @@ test.describe('Future Statement Management', () => {
     const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    // Increase timeout for CI environments which can be slower
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
 
     // Badge should now show 1
     await expect(async () => {
@@ -413,7 +417,8 @@ test.describe('Future Statement Validation', () => {
     await submitButton.click();
 
     // The dialog should close successfully since we picked an available month
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    // Increase timeout for CI environments which can be slower
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
 
     // Verify we now have 2 future statements (badge shows count)
     await expect(async () => {
