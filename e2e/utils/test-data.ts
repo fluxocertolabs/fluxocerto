@@ -54,6 +54,14 @@ export interface TestCreditCard {
   due_day: number; // 1-31
 }
 
+export interface TestFutureStatement {
+  id?: string;
+  credit_card_id: string;
+  target_month: number; // 1-12
+  target_year: number;
+  amount: number; // in cents
+}
+
 export interface TestHousehold {
   id?: string;
   name: string;
@@ -169,6 +177,22 @@ export function createCreditCard(
     name: 'Nubank Platinum',
     statement_balance: 300000, // R$ 3.000,00
     due_day: 15,
+    ...overrides,
+  };
+}
+
+/**
+ * Create test future statement with defaults
+ * Default target is next month from VISUAL_TEST_FIXED_DATE (2025-01-15)
+ */
+export function createFutureStatement(
+  overrides: Partial<TestFutureStatement> = {}
+): TestFutureStatement {
+  return {
+    credit_card_id: overrides.credit_card_id ?? '', // Must be provided
+    target_month: 2, // February (next month from visual test date)
+    target_year: 2025,
+    amount: 150000, // R$ 1.500,00
     ...overrides,
   };
 }
