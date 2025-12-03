@@ -65,6 +65,8 @@ export async function seedSingleShotIncomeWithHousehold(income: TestSingleShotIn
 export async function seedSingleShotIncome(income: TestSingleShotIncome[], workerIndex: number, userEmail: string)
 export async function seedCreditCardsWithHousehold(cards: TestCreditCard[], workerIndex: number, householdId: string)
 export async function seedCreditCards(cards: TestCreditCard[], workerIndex: number, userEmail: string)
+export async function seedFutureStatementsWithHousehold(statements: TestFutureStatement[], householdId: string)
+export async function seedFutureStatements(statements: TestFutureStatement[], userEmail: string)
 export async function seedHouseholds(households: TestHousehold[], workerIndex: number)
 export async function getHouseholdIdByEmail(email: string)
 export async function getHouseholdById(id: string)
@@ -435,6 +437,10 @@ import '../fixtures/test-base'
 import '../utils/test-data'
 </file>
 
+<file path="e2e/tests/dev-auth-bypass.spec.ts">
+import '@playwright/test'
+</file>
+
 <file path="e2e/tests/edge-cases.spec.ts">
 import '../fixtures/test-base'
 import '../utils/test-data'
@@ -446,6 +452,12 @@ import '../utils/test-data'
 </file>
 
 <file path="e2e/tests/expenses.spec.ts">
+import '../fixtures/test-base'
+import '../utils/test-data'
+import '../utils/format'
+</file>
+
+<file path="e2e/tests/future-statements.spec.ts">
 import '../fixtures/test-base'
 import '../utils/test-data'
 import '../utils/format'
@@ -473,6 +485,15 @@ import '@playwright/test'
 </file>
 
 <file path="e2e/tests/visual/dashboard.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+import '../../utils/test-data'
+</file>
+
+<file path="e2e/tests/visual/dev-auth-bypass.visual.spec.ts">
+import '../../fixtures/visual-test-base'
+</file>
+
+<file path="e2e/tests/visual/future-statements.visual.spec.ts">
 import '../../fixtures/visual-test-base'
 import '../../utils/test-data'
 </file>
@@ -674,6 +695,14 @@ export interface TestCreditCard {
     property due_day: number
 }
 
+export interface TestFutureStatement {
+    property id: string
+    property credit_card_id: string
+    property target_month: number
+    property target_year: number
+    property amount: number
+}
+
 export interface TestHousehold {
     property id: string
     property name: string
@@ -693,6 +722,7 @@ export function createSingleShotExpense(overrides: Partial<TestSingleShotExpense
 export function createProject(overrides: Partial<TestProject>)
 export function createSingleShotIncome(overrides: Partial<TestSingleShotIncome>)
 export function createCreditCard(overrides: Partial<TestCreditCard>)
+export function createFutureStatement(overrides: Partial<TestFutureStatement>)
 export function createHousehold(overrides: Partial<TestHousehold>)
 export function createBasicSeedData()
 export function createFullSeedData()
@@ -2951,6 +2981,13 @@ const bt = navigator.platform==="MacIntel"
 const Te = ({})
 </file>
 
+<file path="scripts/generate-dev-token.ts">
+import '@supabase/supabase-js'
+import 'child_process'
+import 'fs'
+import 'path'
+</file>
+
 <file path="specs/003-cashflow-engine/contracts/cashflow-engine.ts">
 import 'zod'
 
@@ -3423,6 +3460,7 @@ import 'react-router-dom'
 import '@/lib/utils'
 import '@/lib/supabase'
 import '@/hooks/use-auth'
+import '@/hooks/use-month-progression'
 import '@/components/layout/header'
 import '@/components/setup-required'
 import '@/pages/dashboard'
@@ -3674,10 +3712,14 @@ export function AccountList()
 import 'react'
 import 'lucide-react'
 import '@/components/ui/button'
+import '@/components/ui/collapsible'
+import '@/components/ui/dialog'
 import '@/components/manage/shared/inline-edit-input'
 import '@/components/manage/shared/format-utils'
 import '@/lib/utils'
 import '@/types'
+import './future-statement-list'
+import './future-statement-form'
 export function CreditCardCard()
 </file>
 
@@ -3708,6 +3750,29 @@ import '@/components/manage/shared/entity-empty-state'
 import './credit-card-card'
 import '@/components/ui/select'
 export function CreditCardList()
+</file>
+
+<file path="src/components/manage/credit-cards/future-statement-form.tsx">
+import 'react'
+import '@/components/ui/button'
+import '@/components/ui/input'
+import '@/components/ui/label'
+import '@/components/ui/select'
+import '@/components/ui/alert-dialog'
+import 'lucide-react'
+import '@/types'
+import '@/types'
+export function FutureStatementForm()
+</file>
+
+<file path="src/components/manage/credit-cards/future-statement-list.tsx">
+import 'lucide-react'
+import '@/components/ui/button'
+import '@/components/ui/alert-dialog'
+import '@/lib/utils'
+import '@/types'
+import '@/types'
+export function FutureStatementList()
 </file>
 
 <file path="src/components/manage/expenses/expense-form.tsx">
@@ -3990,6 +4055,11 @@ import 'react'
 import '@/lib/utils'
 </file>
 
+<file path="src/components/ui/collapsible.tsx">
+import 'react'
+import '@/lib/utils'
+</file>
+
 <file path="src/components/ui/currency-input.tsx">
 import 'react'
 import '@/components/ui/input'
@@ -4104,6 +4174,7 @@ import '@/lib/supabase'
 import '@/hooks/use-auth'
 import '@/types'
 import '@/types'
+import '@/types'
 import '@supabase/supabase-js'
 
 export interface UseFinanceDataReturn {
@@ -4114,6 +4185,7 @@ export interface UseFinanceDataReturn {
     property fixedExpenses: FixedExpense[]
     property singleShotExpenses: SingleShotExpense[]
     property creditCards: CreditCard[]
+    property futureStatements: FutureStatement[]
     property profiles: Profile[]
     property isLoading: boolean
     property error: string | null
@@ -4188,6 +4260,21 @@ export interface UseHouseholdReturn {
 export function useHousehold()
 </file>
 
+<file path="src/hooks/use-month-progression.ts">
+import 'react'
+import '@/stores/preferences-store'
+import '@/lib/cashflow/month-progression'
+import '@/hooks/use-auth'
+
+export interface UseMonthProgressionResult {
+    property isChecking: boolean
+    property result: ProgressionResult | null
+    property error: string | null
+    property checkProgression: () => Promise<void>
+}
+export function useMonthProgression()
+</file>
+
 <file path="src/hooks/use-theme.ts">
 import 'react'
 import '@/stores/theme-store'
@@ -4228,6 +4315,7 @@ import 'date-fns'
 import './types'
 import './validators'
 export function calculateStartingBalance(accounts: BankAccount[])
+export function getCreditCardAmountForDate(card: CreditCard, futureStatements: FutureStatement[], date: Date)
 export function calculateCashflow(input: CashflowEngineInput)
 </file>
 
@@ -4244,6 +4332,29 @@ export function isBiweeklyPaymentDue(date: Date, dayOffset: number, paymentDay: 
 export function isWeeklyPaymentDue(date: Date, dayOffset: number, paymentDay: number, sourceId: string, firstOccurrences: Map<string, number>)
 export function isDayOfWeekPaymentDue(date: Date, dayOfWeek: number)
 export function isTwiceMonthlyPaymentDue(date: Date, firstDay: number, secondDay: number)
+</file>
+
+<file path="src/lib/cashflow/future-statements.test.ts">
+import 'vitest'
+import './calculate'
+import './validators'
+import '../../types'
+</file>
+
+<file path="src/lib/cashflow/month-progression.test.ts">
+import 'vitest'
+import './month-progression'
+</file>
+
+<file path="src/lib/cashflow/month-progression.ts">
+import 'date-fns'
+import '@/lib/supabase'
+import '@/types'
+type ProgressionResult = | { success: true; progressedCards: number; cleanedStatements: number }
+  | { success: false; error: string }
+export async function checkAndProgressMonth(lastProgressionCheck: string | null)
+export async function performMonthProgression()
+export function getMonthsDiff(fromDate: Date, toDate: Date)
 </file>
 
 <file path="src/lib/cashflow/types.ts">
@@ -4332,6 +4443,7 @@ export interface CashflowEngineInput {
     property singleShotExpenses: SingleShotExpense[]
     property singleShotIncome: SingleShotIncome[]
     property creditCards: CreditCard[]
+    property futureStatements: FutureStatement[]
     property projectionDays: number
     property options: z.infer<typeof CashflowEngineOptionsSchema>
 }
@@ -4344,6 +4456,7 @@ export interface ValidatedInput {
     property singleShotExpenses: SingleShotExpense[]
     property singleShotIncome: SingleShotIncome[]
     property creditCards: CreditCard[]
+    property futureStatements: FutureStatement[]
     property options: ValidatedOptions
 }
 export function validateAndFilterInput(input: CashflowEngineInput)
@@ -4457,6 +4570,8 @@ type Database = {
 export function getMissingEnvVars()
 export function isSupabaseConfigured()
 export function getSupabase()
+export function hasDevTokens()
+export async function injectDevSession()
 export async function initializeAuth()
 export async function getCurrentUserId()
 export async function getCurrentUser()
@@ -4615,6 +4730,58 @@ export interface LoginFormData {
 export interface AuthError {
     property code: string
     property message: string
+}
+</file>
+
+<file path="src/types/future-statement.test.ts">
+import 'vitest'
+import './future-statement'
+</file>
+
+<file path="src/types/future-statement.ts">
+import 'zod'
+import 'date-fns'
+export const FutureStatementInputSchema
+export const FutureStatementSchema
+export const FutureStatementUpdateSchema
+type FutureStatementInput = z.infer<typeof FutureStatementInputSchema>
+type FutureStatement = z.infer<typeof FutureStatementSchema>
+type FutureStatementUpdate = z.infer<typeof FutureStatementUpdateSchema>
+
+export interface FormattedFutureStatement extends FutureStatement {
+    property monthLabel: string
+    property isEditable: boolean
+    property isCurrentMonth: boolean
+}
+type FutureStatementLookupKey = `${string}-${number}-${number}`
+type FutureStatementMap = Map<FutureStatementLookupKey, FutureStatement>
+export function createFutureStatementKey(creditCardId: string, targetYear: number, targetMonth: number)
+
+export interface FutureStatementRow {
+    property id: string
+    property credit_card_id: string
+    property household_id: string
+    property target_month: number
+    property target_year: number
+    property amount: number
+    property created_at: string
+    property updated_at: string
+}
+export function transformFutureStatementRow(row: FutureStatementRow)
+export function getAvailableMonthOptions()
+export function formatMonthYear(month: number, year: number)
+export function isMonthInPast(month: number, year: number)
+export function isCurrentMonth(month: number, year: number)
+type FutureStatementResult<T> = | { success: true; data: T }
+  | { success: false; error: string; details?: unknown }
+
+export interface FutureStatementStoreActions {
+    property addFutureStatement: (input: FutureStatementInput) => Promise<FutureStatementResult<string>>
+    property updateFutureStatement: (
+    id: string,
+    input: FutureStatementUpdate
+  ) => Promise<FutureStatementResult<void>>
+    property deleteFutureStatement: (id: string) => Promise<FutureStatementResult<void>>
 }
 </file>
 
