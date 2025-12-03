@@ -48,17 +48,6 @@ export function Header() {
             Painel
           </NavLink>
           <NavLink
-            to="/manage"
-            className={({ isActive }) =>
-              cn(
-                'text-sm font-medium transition-colors hover:text-foreground cursor-pointer',
-                isActive ? 'text-foreground' : 'text-muted-foreground'
-              )
-            }
-          >
-            Gerenciar
-          </NavLink>
-          <NavLink
             to="/history"
             className={({ isActive }) =>
               cn(
@@ -68,6 +57,17 @@ export function Header() {
             }
           >
             Histórico
+          </NavLink>
+          <NavLink
+            to="/manage"
+            className={({ isActive }) =>
+              cn(
+                'text-sm font-medium transition-colors hover:text-foreground cursor-pointer',
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              )
+            }
+          >
+            Gerenciar
           </NavLink>
           <ThemeToggle />
           {isAuthenticated && (

@@ -143,9 +143,9 @@ export function SnapshotDetailPage() {
             variant="ghost"
             size="sm"
             onClick={() => setShowDeleteConfirm(true)}
-            className="text-muted-foreground hover:text-destructive"
+            className="text-muted-foreground hover:text-destructive transition-colors"
           >
-            <TrashIcon className="w-4 h-4 mr-2" />
+            <TrashIcon className="w-4 h-4" />
             Excluir
           </Button>
         </div>
