@@ -112,7 +112,11 @@ async function findOrCreateDevUser(
   log('Creating user...');
   
   // Check if user already exists
-  const { data: listData, error: listError } = await client.auth.admin.listUsers();
+  // Limit page size for performance in shared dev environments
+  const { data: listData, error: listError } = await client.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
   
   if (listError) {
     throw new Error(`Failed to list users: ${listError.message}`);

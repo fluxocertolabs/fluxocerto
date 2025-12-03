@@ -14,7 +14,7 @@
 ### 1. Start Local Supabase
 
 ```bash
-cd /home/delucca/Workspaces/src/sandbox/family-finance
+# Run from repository root
 pnpm db:start
 ```
 
@@ -34,7 +34,7 @@ This script:
 - Generates and outputs session tokens
 
 **Expected Output:**
-```
+```text
 Creating user...
 ✓ User created/found: dev@local
 Creating household...

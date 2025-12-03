@@ -8,8 +8,14 @@ import './index.css'
  * Display a dev auth bypass error toast.
  * Creates a temporary DOM element to show the error since React hasn't mounted yet.
  * Auto-dismisses after 5 seconds.
+ * Uses DOM APIs instead of innerHTML to prevent XSS.
  */
 function showDevAuthError(message: string): void {
+  // Create style element for animation
+  const style = document.createElement('style')
+  style.textContent = '@keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }'
+  
+  // Create toast container
   const toast = document.createElement('div')
   toast.style.cssText = `
     position: fixed;
@@ -27,12 +33,27 @@ function showDevAuthError(message: string): void {
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     animation: slideIn 0.3s ease-out;
   `
-  toast.innerHTML = `
-    <style>@keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }</style>
-    <strong style="display: block; margin-bottom: 4px;">Dev Auth Bypass Failed</strong>
-    <span>${message}</span>
-    <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; cursor: pointer; color: #dc2626; font-size: 16px;">×</button>
-  `
+  
+  // Create title
+  const title = document.createElement('strong')
+  title.style.cssText = 'display: block; margin-bottom: 4px;'
+  title.textContent = 'Dev Auth Bypass Failed'
+  
+  // Create message span (using textContent to prevent XSS)
+  const messageSpan = document.createElement('span')
+  messageSpan.textContent = message
+  
+  // Create close button
+  const closeButton = document.createElement('button')
+  closeButton.style.cssText = 'position: absolute; top: 8px; right: 8px; background: none; border: none; cursor: pointer; color: #dc2626; font-size: 16px;'
+  closeButton.textContent = '×'
+  closeButton.addEventListener('click', () => toast.remove())
+  
+  // Assemble toast
+  toast.appendChild(style)
+  toast.appendChild(title)
+  toast.appendChild(messageSpan)
+  toast.appendChild(closeButton)
   document.body.appendChild(toast)
   
   // Auto-dismiss after 5 seconds

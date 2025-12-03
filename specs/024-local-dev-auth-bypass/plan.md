@@ -11,7 +11,7 @@ Implement a local development authentication bypass mechanism that generates val
 
 **Language/Version**: TypeScript 5.9.3  
 **Primary Dependencies**: @supabase/supabase-js 2.86.0, tsx (script runner)  
-**Storage**: Supabase PostgreSQL (local instance at http://127.0.0.1:54321)  
+**Storage**: Supabase PostgreSQL (local instance at <http://127.0.0.1:54321>)  
 **Testing**: Vitest 4.0.14 (unit), Playwright 1.57.0 (E2E)  
 **Target Platform**: Web (Vite dev server on localhost:5173)  
 **Project Type**: Web application (SPA with Supabase backend)  

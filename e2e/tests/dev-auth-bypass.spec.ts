@@ -10,9 +10,6 @@
 
 import { test, expect } from '@playwright/test';
 
-// Dev user email created by the token generation script
-const DEV_USER_EMAIL = 'dev@local';
-
 test.describe('Dev Auth Bypass', () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -37,8 +34,8 @@ test.describe('Dev Auth Bypass', () => {
     const loginButton = page.locator('button:has-text("Entrar"), button:has-text("Login")');
     const emailInput = page.locator('input[type="email"]');
     
-    // Wait a moment for auth state to settle
-    await page.waitForTimeout(2000);
+    // Wait for navigation to settle - either dashboard or login
+    await page.waitForURL(/\/(dashboard|login)?$/, { timeout: 10000 });
     
     // If dev auth bypass is working, we should be on dashboard, not login
     // This test will pass when dev tokens are properly configured
@@ -90,13 +87,14 @@ test.describe('Dev Auth Bypass', () => {
     // 1. Code review (the check exists in injectDevSession)
     // 2. Manual testing with production builds
     
-    // Clear all auth state
+    // Clear all auth state (cookies and localStorage where Supabase stores session)
     await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
     
     // Try to access a protected route directly
     await page.goto('/manage');
     
-    // Should be redirected to login (since we cleared cookies)
+    // Should be redirected to login (since we cleared auth state)
     await expect(page).toHaveURL(/\/login/);
   });
 });
@@ -120,8 +118,8 @@ test.describe('Dev Auth Bypass - Seed Data', () => {
     
     await page.goto('/');
     
-    // Wait for auth state to settle
-    await page.waitForTimeout(2000);
+    // Wait for navigation to settle - either dashboard or login
+    await page.waitForURL(/\/(dashboard|login)?$/, { timeout: 10000 });
     
     const currentUrl = page.url();
     if (currentUrl.includes('/login')) {
@@ -156,8 +154,8 @@ test.describe('Dev Auth Bypass - Seed Data', () => {
     
     await page.goto('/');
     
-    // Wait for auth state to settle
-    await page.waitForTimeout(2000);
+    // Wait for navigation to settle - either dashboard or login
+    await page.waitForURL(/\/(dashboard|login)?$/, { timeout: 10000 });
     
     const currentUrl = page.url();
     if (currentUrl.includes('/login')) {

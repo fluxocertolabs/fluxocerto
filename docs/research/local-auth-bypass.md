@@ -107,11 +107,11 @@ import { getSupabase } from '@/lib/supabase'
 
 // ...
 
-if (import.meta.env.DEV && import.meta.env.VITE_DEV_ACCESS_TOKEN) {
+if (import.meta.env.DEV && import.meta.env.VITE_DEV_ACCESS_TOKEN && import.meta.env.VITE_DEV_REFRESH_TOKEN) {
   const supabase = getSupabase()
   await supabase.auth.setSession({
-    access_token: import.meta.env.VITE_DEV_ACCESS_TOKEN,
-    refresh_token: import.meta.env.VITE_DEV_REFRESH_TOKEN,
+    access_token: import.meta.env.VITE_DEV_ACCESS_TOKEN!,
+    refresh_token: import.meta.env.VITE_DEV_REFRESH_TOKEN!,
   })
 }
 
