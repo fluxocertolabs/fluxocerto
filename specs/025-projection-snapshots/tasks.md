@@ -3,7 +3,7 @@
 **Input**: Design documents from `/specs/025-projection-snapshots/`  
 **Prerequisites**: plan.md ✓, spec.md ✓, research.md ✓, data-model.md ✓, contracts/ ✓, quickstart.md ✓
 
-**Tests**: E2E tests included in Polish phase (per plan.md testing requirements).
+**Tests**: Unit tests colocated with implementation phases; E2E and visual regression tests in Polish phase.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -38,6 +38,7 @@
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
 - [ ] T005 Create schema version utility in `src/lib/snapshots/schema-version.ts` that re-exports `CURRENT_SCHEMA_VERSION` from `src/types/snapshot.ts` (constant defined there per data-model.md)
+- [ ] T005b [P] Write unit tests in `tests/unit/lib/snapshots/schema-version.test.ts` verifying CURRENT_SCHEMA_VERSION export and any version compatibility helpers
 - [ ] T006 [P] Create barrel export in `src/lib/snapshots/index.ts`
 - [ ] T007 Implement snapshots Zustand store in `src/stores/snapshots-store.ts` per contracts/snapshots-store.md (state: snapshots, currentSnapshot, isLoading, error; actions: fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot, clearError)
 - [ ] T007b [P] Write unit tests in `tests/unit/stores/snapshots-store.test.ts` covering fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot with mocked Supabase client
@@ -95,6 +96,7 @@
 - [ ] T020 [US3] Create SnapshotDetailPage in `src/pages/snapshot-detail.tsx` using useSnapshotProjection, CashflowChart, and SummaryPanel. Include "Snapshot Histórico" banner at page top with snapshot name and formatted createdAt date. Visual treatment: muted background color + info icon to clearly indicate read-only historical data.
 - [ ] T021 [US3] Add "Voltar" back navigation button to SnapshotDetailPage
 - [ ] T022 [US3] Handle Date serialization in useSnapshotProjection (JSON stores dates as strings, need parsing)
+- [ ] T022b [P] [US3] Write unit tests in `tests/unit/hooks/use-snapshot-projection.test.ts` covering: data transformation, date parsing, schema version handling, edge cases (empty projection, missing fields)
 
 **Checkpoint**: User Story 3 complete - users can view full snapshot details with chart visualization
 
@@ -122,10 +124,20 @@
 
 - [ ] T026 [P] Create E2E test file in `tests/e2e/snapshots.spec.ts` testing: save snapshot from dashboard, view history list, open snapshot detail, delete snapshot
 - [ ] T026b [P] Add E2E test case for 365-day projection snapshot (save, load, verify data integrity) per SC-006
+- [ ] T026c [P] Add E2E test case for empty state: navigate to /history with no snapshots, verify empty state message and CTA displayed
+- [ ] T026d [P] Add E2E test case for error handling: simulate network failure on save, verify error toast with retry button appears per spec edge cases
+- [ ] T026e [P] Add E2E test case for navigation flow: dashboard → save → history → detail → back → history → dashboard, verify all transitions work
 - [ ] T027 Run all E2E tests and fix any failures
 - [ ] T028 Run quickstart.md verification checklist (migration, RLS, performance, navigation)
 - [ ] T028b Performance validation per success criteria: measure save operation (<3s per SC-001), history page load with 50 snapshots (<2s per SC-002), detail view render (<2s per SC-003). Use browser DevTools or Playwright timing assertions.
 - [ ] T029 Manual testing of complete flow per quickstart.md
+- [ ] T030 [P] Create visual regression tests in `tests/visual/snapshots.test.ts` for:
+  - SaveSnapshotDialog (open state with default name)
+  - SnapshotCard (with sample metrics data)
+  - SnapshotEmptyState
+  - History page (with 3+ snapshots)
+  - SnapshotDetailPage (with historical banner and chart)
+- [ ] T031 Run visual regression tests and update baseline snapshots if needed
 
 ---
 
@@ -158,13 +170,15 @@
 ### Parallel Opportunities
 
 - T003, T004 can run in parallel (different type files)
-- T005, T006 can run in parallel (different lib files)
+- T005, T005b, T006 can run in parallel (different lib files + tests)
 - T007, T007b can run in parallel (store implementation + tests)
 - T009, T010 can run in parallel with setup
 - T013, T014 can run in parallel (different components)
+- T022, T022b can run in parallel (hook implementation + tests)
 - T023, T024 can run in parallel (different files for delete)
-- T026, T026b can run in parallel (different E2E test scenarios)
+- T026, T026b, T026c, T026d, T026e can run in parallel (different E2E test scenarios)
 - T028, T028b can run in parallel (different verification types)
+- T030, T031 run after all UI implementation complete
 
 ---
 
