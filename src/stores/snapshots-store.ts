@@ -24,6 +24,9 @@ type Result<T> =
   | { success: true; data: T }
   | { success: false; error: string }
 
+// Error-only result type for config checks
+type ErrorResult = { success: false; error: string }
+
 // Database row type for projection_snapshots
 interface SnapshotRow {
   id: string
@@ -63,7 +66,7 @@ interface SnapshotsStore {
 const SUPABASE_NOT_CONFIGURED_ERROR = 'Supabase não está configurado.'
 
 // Helper to check if Supabase is configured and return error result
-function getSupabaseConfigError(): Result<never> | null {
+function getSupabaseConfigError(): ErrorResult | null {
   if (!isSupabaseConfigured()) {
     return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
   }
