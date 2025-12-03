@@ -15,6 +15,8 @@ import { LoginPage } from '../pages/login-page';
 import { DashboardPage } from '../pages/dashboard-page';
 import { ManagePage } from '../pages/manage-page';
 import { QuickUpdatePage } from '../pages/quick-update-page';
+import { HistoryPage } from '../pages/history-page';
+import { SnapshotDetailPage } from '../pages/snapshot-detail-page';
 import { existsSync } from 'fs';
 
 /**
@@ -35,6 +37,10 @@ type TestFixtures = {
   managePage: ManagePage;
   /** Quick update page object */
   quickUpdatePage: QuickUpdatePage;
+  /** History page object */
+  historyPage: HistoryPage;
+  /** Snapshot detail page object */
+  snapshotDetailPage: SnapshotDetailPage;
 };
 
 /**
@@ -171,6 +177,16 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   quickUpdatePage: async ({ page }, use) => {
     const quickUpdatePage = new QuickUpdatePage(page);
     await use(quickUpdatePage);
+  },
+
+  historyPage: async ({ page }, use) => {
+    const historyPage = new HistoryPage(page);
+    await use(historyPage);
+  },
+
+  snapshotDetailPage: async ({ page }, use) => {
+    const snapshotDetailPage = new SnapshotDetailPage(page);
+    await use(snapshotDetailPage);
   },
 });
 

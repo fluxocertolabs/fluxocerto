@@ -7,6 +7,8 @@ import { Header } from '@/components/layout/header'
 import { SetupRequired } from '@/components/setup-required'
 import { Dashboard } from '@/pages/dashboard'
 import { ManagePage } from '@/pages/manage'
+import { HistoryPage } from '@/pages/history'
+import { SnapshotDetailPage } from '@/pages/snapshot-detail'
 import { LoginPage } from '@/pages/login'
 import { AuthCallbackPage } from '@/pages/auth-callback'
 
@@ -81,6 +83,32 @@ function AppRoutes() {
             <div className={cn('min-h-screen bg-background text-foreground')}>
               <Header />
               <ManagePage />
+            </div>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      <Route
+        path="/history"
+        element={
+          isAuthenticated ? (
+            <div className={cn('min-h-screen bg-background text-foreground')}>
+              <Header />
+              <HistoryPage />
+            </div>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      <Route
+        path="/history/:snapshotId"
+        element={
+          isAuthenticated ? (
+            <div className={cn('min-h-screen bg-background text-foreground')}>
+              <Header />
+              <SnapshotDetailPage />
             </div>
           ) : (
             <Navigate to="/login" replace />

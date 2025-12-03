@@ -48,6 +48,17 @@ export function Header() {
             Painel
           </NavLink>
           <NavLink
+            to="/history"
+            className={({ isActive }) =>
+              cn(
+                'text-sm font-medium transition-colors hover:text-foreground cursor-pointer',
+                isActive ? 'text-foreground' : 'text-muted-foreground'
+              )
+            }
+          >
+            Histórico
+          </NavLink>
+          <NavLink
             to="/manage"
             className={({ isActive }) =>
               cn(
