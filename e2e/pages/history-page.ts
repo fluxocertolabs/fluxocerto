@@ -67,9 +67,15 @@ export class HistoryPage {
     const deleteButton = card.getByRole('button', { name: /excluir|delete/i });
     await deleteButton.click();
     
-    // Confirm the deletion in the dialog
-    const confirmButton = this.page.getByRole('button', { name: /excluir/i }).last();
+    // Confirm the deletion in the dialog (scoped to the alert dialog)
+    const dialog = this.page.getByRole('alertdialog');
+    const confirmButton = dialog.getByRole('button', { name: /excluir/i });
     await confirmButton.click();
+
+    // Wait until the card is removed from the DOM
+    await expect(
+      this.page.locator('[data-testid="snapshot-card"]', { hasText: name })
+    ).toHaveCount(0, { timeout: 10000 });
   }
 
   /**
@@ -81,11 +87,11 @@ export class HistoryPage {
   }
 
   /**
-   * Verify snapshot card is NOT visible
+   * Verify snapshot card is NOT visible (checks DOM count for reliability)
    */
   async expectSnapshotNotVisible(name: string): Promise<void> {
-    const snapshotLink = this.page.locator('a', { hasText: name });
-    await expect(snapshotLink).not.toBeVisible({ timeout: 10000 });
+    const snapshotCard = this.page.locator('[data-testid="snapshot-card"]', { hasText: name });
+    await expect(snapshotCard).toHaveCount(0, { timeout: 10000 });
   }
 }
 

@@ -59,13 +59,13 @@ interface SnapshotsStore {
   clearError: () => void
 }
 
-// Helper to check if Supabase is configured
-function checkSupabaseConfigured(): Result<never> | null {
+// Error message for unconfigured Supabase
+const SUPABASE_NOT_CONFIGURED_ERROR = 'Supabase não está configurado.'
+
+// Helper to check if Supabase is configured and return error result
+function getSupabaseConfigError(): Result<never> | null {
   if (!isSupabaseConfigured()) {
-    return {
-      success: false,
-      error: 'Supabase não está configurado.',
-    }
+    return { success: false, error: SUPABASE_NOT_CONFIGURED_ERROR }
   }
   return null
 }
@@ -79,8 +79,8 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
   // Fetch all snapshots for current household (list view)
   fetchSnapshots: async () => {
-    const configError = checkSupabaseConfigured()
-    if (configError && !configError.success) {
+    const configError = getSupabaseConfigError()
+    if (configError) {
       set({ error: configError.error, isLoading: false })
       return
     }
@@ -116,8 +116,8 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
   // Fetch a single snapshot with full data (detail view)
   fetchSnapshot: async (id: string) => {
-    const configError = checkSupabaseConfigured()
-    if (configError && !configError.success) {
+    const configError = getSupabaseConfigError()
+    if (configError) {
       set({ error: configError.error })
       return null
     }
@@ -165,7 +165,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
   // Create a new snapshot from current projection state
   createSnapshot: async (input: CreateSnapshotInput) => {
-    const configError = checkSupabaseConfigured()
+    const configError = getSupabaseConfigError()
     if (configError) return configError
 
     try {
@@ -222,7 +222,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
   // Delete a snapshot
   deleteSnapshot: async (id: string) => {
-    const configError = checkSupabaseConfigured()
+    const configError = getSupabaseConfigError()
     if (configError) return configError
 
     try {

@@ -50,8 +50,10 @@ export class SnapshotDetailPage {
    */
   async getSnapshotName(): Promise<string | null> {
     const text = await this.historicalBanner.textContent();
-    // Extract name from "Snapshot Histórico: <name> (Salvo em ...)"
-    const match = text?.match(/Snapshot Histórico:\s*([^(]+)/);
+    if (!text) return null;
+
+    // Extract name from "Snapshot Histórico: <name> (Salvo em ...)" in a case-insensitive way
+    const match = text.match(/snapshot histórico:\s*([^(]+)/i);
     return match ? match[1].trim() : null;
   }
 
@@ -69,8 +71,9 @@ export class SnapshotDetailPage {
   async deleteSnapshot(): Promise<void> {
     await this.deleteButton.click();
     
-    // Confirm the deletion in the dialog
-    const confirmButton = this.page.getByRole('button', { name: /excluir/i }).last();
+    // Confirm the deletion in the dialog (scoped to the alert dialog)
+    const dialog = this.page.getByRole('alertdialog');
+    const confirmButton = dialog.getByRole('button', { name: /excluir/i });
     await confirmButton.click();
     
     // Wait for redirect to history page
