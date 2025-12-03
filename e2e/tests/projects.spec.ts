@@ -124,11 +124,14 @@ test.describe('Project (Income) Management', () => {
       await projects.expectProjectVisible(seeded.name);
       await projects.updateProjectCertainty(seeded.name, 'probable');
 
-      // Wait for update to complete
-      await page.waitForLoadState('networkidle');
-
-      // Verify certainty badge is updated - look for "Provável" text anywhere on the page
-      await expect(page.getByText(/provável/i).first()).toBeVisible();
+      // Wait for update to complete with retry logic
+      await expect(async () => {
+        await page.waitForLoadState('networkidle');
+        // Find the project row and check for "Provável" badge within it
+        const projectRow = page.getByText(seeded.name, { exact: true }).first()
+          .locator('xpath=ancestor::div[contains(@class, "rounded-lg")]');
+        await expect(projectRow.getByText(/provável/i)).toBeVisible({ timeout: 3000 });
+      }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
     });
   });
 

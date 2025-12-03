@@ -42,11 +42,34 @@ test.describe('Future Statement Management', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    // Fill the form - select month and enter amount (use period for number input)
-    await dialog.getByLabel(/valor/i).fill('1500.00');
+    // Select a future month (not current month) to avoid warning dialog
+    // The month selector defaults to current month, so we need to change it
+    const monthSelect = dialog.locator('button[role="combobox"]').first();
+    await monthSelect.click();
+    
+    // Get next month name in Portuguese
+    const nextMonthDate = new Date();
+    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+    const nextMonthName = nextMonthDate.toLocaleString('pt-BR', { month: 'long' });
+    const nextYear = nextMonthDate.getFullYear();
+    
+    // Select next month option
+    const monthOption = page.getByRole('option', {
+      name: new RegExp(`${nextMonthName}.*${nextYear}`, 'i'),
+    });
+    await monthOption.click();
+
+    // Fill the form - clear first then type to ensure onChange fires
+    const amountInput = dialog.getByLabel(/valor/i);
+    await amountInput.click();
+    await amountInput.fill('1500');
+    
+    // Wait for the submit button to be enabled (form validation passes)
+    const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
 
     // Submit
-    await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
+    await submitButton.click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
     // Verify future statement appears in the list
@@ -110,13 +133,18 @@ test.describe('Future Statement Management', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    // Update the amount (use period for number input)
+    // Update the amount - clear and fill to ensure onChange fires
     const amountInput = dialog.getByLabel(/valor/i);
+    await amountInput.click();
     await amountInput.clear();
-    await amountInput.fill('2000.00');
+    await amountInput.fill('2000');
+
+    // Wait for the submit button to be enabled
+    const submitButton = dialog.getByRole('button', { name: /salvar|atualizar/i });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
 
     // Submit
-    await dialog.getByRole('button', { name: /salvar|atualizar/i }).click();
+    await submitButton.click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
     // Verify updated amount
@@ -275,8 +303,30 @@ test.describe('Future Statement Management', () => {
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
-    await dialog.getByLabel(/valor/i).fill('1000.00');
-    await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
+    
+    // Select a future month (not current month) to avoid warning dialog
+    const monthSelect = dialog.locator('button[role="combobox"]').first();
+    await monthSelect.click();
+    
+    // Get next month name in Portuguese
+    const nextMonthDate = new Date();
+    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+    const nextMonthName = nextMonthDate.toLocaleString('pt-BR', { month: 'long' });
+    const nextYear = nextMonthDate.getFullYear();
+    
+    // Select next month option
+    const monthOption = page.getByRole('option', {
+      name: new RegExp(`${nextMonthName}.*${nextYear}`, 'i'),
+    });
+    await monthOption.click();
+    
+    const amountInput = dialog.getByLabel(/valor/i);
+    await amountInput.click();
+    await amountInput.fill('1000');
+    
+    const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    await submitButton.click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
     // Badge should now show 1
@@ -330,7 +380,7 @@ test.describe('Future Statement Validation', () => {
     const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
     await collapsibleTrigger.click();
 
-    // Try to add another statement for the same month
+    // Try to add another statement
     const addButton = cardElement.getByRole('button', { name: /adicionar/i });
     await addButton.click();
 
@@ -338,12 +388,31 @@ test.describe('Future Statement Validation', () => {
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
     // The month selector filters out already-used months
-    // Verify that the used month is not available in the dropdown
-    // The form defaults to the first available month (which should be different from the seeded one)
-    await dialog.getByLabel(/valor/i).fill('2000.00');
-    await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
+    // Select a month different from both current and the seeded one
+    const monthSelect = dialog.locator('button[role="combobox"]').first();
+    await monthSelect.click();
+    
+    // Get a future month (3 months ahead to avoid both current and seeded month)
+    const futureDate = new Date();
+    futureDate.setMonth(futureDate.getMonth() + 3);
+    const futureMonthName = futureDate.toLocaleString('pt-BR', { month: 'long' });
+    const futureYear = futureDate.getFullYear();
+    
+    // Select the future month option
+    const monthOption = page.getByRole('option', {
+      name: new RegExp(`${futureMonthName}.*${futureYear}`, 'i'),
+    });
+    await monthOption.click();
 
-    // The dialog should close successfully since it picks an available month
+    const amountInput = dialog.getByLabel(/valor/i);
+    await amountInput.click();
+    await amountInput.fill('2000');
+    
+    const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    await submitButton.click();
+
+    // The dialog should close successfully since we picked an available month
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
     // Verify we now have 2 future statements (badge shows count)
@@ -401,8 +470,13 @@ test.describe('Future Statement Validation', () => {
     // If current month is available, select it
     if (await monthOption.isVisible({ timeout: 2000 }).catch(() => false)) {
       await monthOption.click();
-      await dialog.getByLabel(/valor/i).fill('1500.00');
-      await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
+      const amountInput = dialog.getByLabel(/valor/i);
+      await amountInput.click();
+      await amountInput.fill('1500');
+      
+      const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
+      await expect(submitButton).toBeEnabled({ timeout: 5000 });
+      await submitButton.click();
 
       // Warning dialog should appear for current month
       const warningDialog = page.getByRole('alertdialog');
