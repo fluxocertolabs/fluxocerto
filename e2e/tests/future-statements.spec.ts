@@ -407,7 +407,8 @@ test.describe('Future Statement Validation', () => {
       // Warning dialog should appear for current month
       const warningDialog = page.getByRole('alertdialog');
       await expect(warningDialog).toBeVisible({ timeout: 5000 });
-      await expect(warningDialog.getByText(/mês atual|sobrescrever/i)).toBeVisible();
+      // Use heading to verify dialog content - more specific than regex matching multiple elements
+      await expect(warningDialog.getByRole('heading', { name: /sobrescrever/i })).toBeVisible();
     } else {
       // Current month not available (already has a statement or past due date)
       // Close the dropdown and dialog

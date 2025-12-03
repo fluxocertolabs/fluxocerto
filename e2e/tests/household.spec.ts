@@ -156,6 +156,9 @@ test.describe('Household Multi-Tenancy', () => {
       const expenses = managePage.expenses();
       await expenses.selectFixedExpenses();
 
+      // Wait for network to settle after tab switch
+      await page.waitForLoadState('networkidle');
+
       // User should see their own expense
       await expenses.expectExpenseVisible(seeded.name);
     });
