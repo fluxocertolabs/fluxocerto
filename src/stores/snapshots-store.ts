@@ -94,7 +94,9 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
       if (error) {
         const errorResult = handleSupabaseError(error)
-        set({ error: errorResult.error, isLoading: false })
+        if (!errorResult.success) {
+          set({ error: errorResult.error, isLoading: false })
+        }
         return
       }
 
@@ -137,7 +139,9 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
           return null
         }
         const errorResult = handleSupabaseError(error)
-        set({ error: errorResult.error, isLoading: false })
+        if (!errorResult.success) {
+          set({ error: errorResult.error, isLoading: false })
+        }
         return null
       }
 
