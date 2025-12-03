@@ -167,6 +167,82 @@ export function getSupabase(): SupabaseClient {
 }
 
 /**
+ * Check if dev authentication tokens are present in environment.
+ * Used to determine if dev auth bypass should be attempted.
+ * 
+ * DEV MODE ONLY: This function is part of the local development auth bypass system.
+ * It checks for pre-generated session tokens that allow skipping the login flow.
+ * 
+ * @returns true if both VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN are set
+ * @see injectDevSession for the token injection logic
+ * @see scripts/generate-dev-token.ts for token generation
+ */
+export function hasDevTokens(): boolean {
+  const accessToken = import.meta.env.VITE_DEV_ACCESS_TOKEN
+  const refreshToken = import.meta.env.VITE_DEV_REFRESH_TOKEN
+  return Boolean(accessToken && refreshToken)
+}
+
+/**
+ * Inject dev session tokens into Supabase client.
+ * DEV MODE ONLY - This function bypasses normal authentication for local development.
+ * 
+ * Allows AI agents and developers to immediately access authenticated views
+ * without manual login by using pre-generated session tokens.
+ * 
+ * Security guards:
+ * - Only works when import.meta.env.DEV is true (Vite dev mode)
+ * - Requires both access and refresh tokens to be present
+ * - Falls back to normal login if injection fails
+ * 
+ * Usage flow:
+ * 1. Run `pnpm run gen:token` to generate tokens
+ * 2. Copy tokens to .env.local
+ * 3. Start dev server with `pnpm dev:app`
+ * 4. App auto-authenticates without login screen
+ * 
+ * @returns Result indicating success or failure with error message
+ * @see hasDevTokens for token detection
+ * @see scripts/generate-dev-token.ts for token generation
+ */
+export async function injectDevSession(): Promise<{ success: boolean; error?: string }> {
+  // Guard: Only works in DEV mode
+  if (!import.meta.env.DEV) {
+    return { success: false, error: 'Dev session injection only works in DEV mode' }
+  }
+
+  // Guard: Require both tokens
+  if (!hasDevTokens()) {
+    return { success: false, error: 'Dev tokens not present in environment' }
+  }
+
+  // Guard: Supabase must be configured
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase is not configured' }
+  }
+
+  const accessToken = import.meta.env.VITE_DEV_ACCESS_TOKEN!
+  const refreshToken = import.meta.env.VITE_DEV_REFRESH_TOKEN!
+
+  try {
+    const client = getSupabase()
+    const { error } = await client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    })
+
+    if (error) {
+      return { success: false, error: `setSession failed: ${error.message}` }
+    }
+
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: `Dev session injection failed: ${message}` }
+  }
+}
+
+/**
  * Initialize authentication state.
  * For Magic Link auth, we just check if there's an existing session.
  * No automatic sign-in - users must authenticate via Magic Link.
