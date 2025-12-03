@@ -91,7 +91,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await db.deleteSnapshots();
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -107,7 +107,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await db.deleteSnapshots();
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
@@ -127,7 +127,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       ]);
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -147,7 +147,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       ]);
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
