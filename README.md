@@ -129,6 +129,8 @@ The token generation script creates:
 
 > **Note:** This bypass only works in development mode. Production builds ignore these tokens entirely.
 
+> **Info:** `.env.local` takes precedence over `.env` automatically (Vite behavior). Use `pnpm dev:app` for the auth bypass; use `pnpm dev` for standard development without bypass.
+
 ### Start Development Server (Standard)
 
 ```bash

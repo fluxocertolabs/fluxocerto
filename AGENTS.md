@@ -46,6 +46,11 @@ pnpm dev:app           # Dashboard loads immediately - no login!
 - ✅ Disabled in production builds
 - ✅ Full RLS policies remain active
 
+### Notes
+- Dev data persists between sessions in your local Supabase instance
+- Tokens expire after ~1 hour; re-run `pnpm run gen:token` if auth fails
+- Supabase auto-refreshes tokens during active sessions
+
 ---
 
 ## EXECUTION SEQUENCE
