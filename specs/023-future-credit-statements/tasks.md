@@ -30,7 +30,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create database migration in `supabase/migrations/20251202000000_future_statements.sql` with table, indexes, RLS policies, and Realtime per data-model.md
+- [ ] T003 Create database migration in `supabase/migrations/20251202000000_future_statements.sql` with table, indexes, RLS policies, Realtime, and ON DELETE CASCADE for credit_card_id FK (FR-010) per data-model.md
 - [ ] T004 Run migration locally and verify table exists in Supabase dashboard
 - [ ] T005 [P] Add FutureStatement type exports to `src/types/index.ts` by importing from `src/types/future-statement.ts`
 - [ ] T006 [P] Add `futureStatements` state and setter to finance store interface in `src/stores/finance-store.ts`
@@ -128,7 +128,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T047 [US3] Create `performMonthProgression` function in `src/lib/cashflow/month-progression.ts`
+- [ ] T047 [US3] Create `performMonthProgression` function in `src/lib/cashflow/month-progression.ts` (must handle multi-month catch-up when user hasn't logged in for multiple months)
 - [ ] T048 [US3] Implement `checkAndProgressMonth` function with `last_progression_check` preference check in `src/lib/cashflow/month-progression.ts`
 - [ ] T049 [US3] Create `useMonthProgression` hook in `src/hooks/use-month-progression.ts`
 - [ ] T050 [US3] Add `getUserPreference` and `setUserPreference` helpers for `last_progression_check` in `src/stores/finance-store.ts`

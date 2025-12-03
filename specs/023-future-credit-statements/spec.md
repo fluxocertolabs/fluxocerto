@@ -145,7 +145,7 @@ A user wants to see at a glance all their upcoming credit card obligations acros
 - **SC-001**: Users can add a future statement for any month within the next 12 months in under 30 seconds
 - **SC-002**: Users can view all their scheduled future statements (across all cards) in a single screen view
 - **SC-003**: Cashflow projections accurately reflect pre-defined future statement values for their respective months
-- **SC-004**: When a new month begins, the appropriate future statement value (if any) becomes the current statement within 24 hours of the user accessing the application
+- **SC-004**: When a new month begins, the appropriate future statement value (if any) becomes the current statement on the user's next session (app launch/login triggers a one-time progression check per session)
 - **SC-005**: Users can plan their credit card obligations for up to 12 months ahead
 - **SC-006**: 100% of future statement changes are immediately reflected in the cashflow chart upon save
 - **SC-007**: All implemented features have corresponding unit tests, visual regression tests, and e2e tests before merge

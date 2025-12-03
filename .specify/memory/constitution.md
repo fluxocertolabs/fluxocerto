@@ -198,8 +198,11 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 
 ### Test Discovery
 ```bash
-Test files:     src/**/*.test.ts, src/**/*.test.tsx
-Test config:    vitest.config.ts
+Unit tests:         src/**/*.test.ts, src/**/*.test.tsx, tests/unit/**/*.test.ts
+Integration tests:  tests/integration/**/*.test.ts
+E2E tests:          tests/e2e/**/*.spec.ts
+Visual tests:       tests/visual/**/*.test.ts
+Test config:        vitest.config.ts (unit/integration), playwright.config.ts (E2E)
 ```
 
 ### Test Execution
@@ -212,6 +215,9 @@ pnpm test:watch
 
 # Run tests with coverage
 pnpm test:coverage
+
+# Run E2E tests (Playwright)
+pnpm test:e2e
 
 # Run specific test file
 pnpm test src/lib/cashflow.test.ts
