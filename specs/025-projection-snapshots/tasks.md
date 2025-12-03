@@ -37,10 +37,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create schema version utility in `src/lib/snapshots/schema-version.ts` with CURRENT_SCHEMA_VERSION constant
+- [ ] T005 Create schema version utility in `src/lib/snapshots/schema-version.ts` that re-exports `CURRENT_SCHEMA_VERSION` from `src/types/snapshot.ts` (constant defined there per data-model.md)
 - [ ] T006 [P] Create barrel export in `src/lib/snapshots/index.ts`
 - [ ] T007 Implement snapshots Zustand store in `src/stores/snapshots-store.ts` per contracts/snapshots-store.md (state: snapshots, currentSnapshot, isLoading, error; actions: fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot, clearError)
-- [ ] T008 Export helper functions from `src/hooks/use-cashflow-projection.ts`: transformToChartData, getDangerRanges, and add transformToSummaryStats export
+- [ ] T007b [P] Write unit tests in `tests/unit/stores/snapshots-store.test.ts` covering fetchSnapshots, fetchSnapshot, createSnapshot, deleteSnapshot with mocked Supabase client
+- [ ] T008 Export helper functions from `src/hooks/use-cashflow-projection.ts`: transformToChartData, getDangerRanges, and add transformToSummaryStats export (verify function exists; create if missing)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -55,7 +56,7 @@
 ### Implementation for User Story 1
 
 - [ ] T009 [P] [US1] Create snapshots component barrel export in `src/components/snapshots/index.ts`
-- [ ] T010 [US1] Create SaveSnapshotDialog component in `src/components/snapshots/save-snapshot-dialog.tsx` with name input (default: current date), save/cancel buttons, loading state, and Zod validation
+- [ ] T010 [US1] Create SaveSnapshotDialog component in `src/components/snapshots/save-snapshot-dialog.tsx` with name input (default: current date in Portuguese format), save/cancel buttons, loading state, and `SnapshotInputSchema` Zod validation from `src/types/snapshot.ts`
 - [ ] T011 [US1] Add "Salvar Snapshot" button to dashboard in `src/pages/dashboard.tsx` that opens SaveSnapshotDialog and passes current projection + finance data to createSnapshot
 - [ ] T012 [US1] Add toast notifications for save success/error in SaveSnapshotDialog
 
@@ -90,8 +91,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Create useSnapshotProjection hook in `src/hooks/use-snapshot-projection.ts` that transforms frozen snapshot data using exported helpers (transformToChartData, getDangerRanges, transformToSummaryStats)
-- [ ] T020 [US3] Create SnapshotDetailPage in `src/pages/snapshot-detail.tsx` using useSnapshotProjection, CashflowChart, and SummaryPanel with read-only indicator
+- [ ] T019 [US3] Create useSnapshotProjection hook in `src/hooks/use-snapshot-projection.ts` that transforms frozen snapshot data using exported helpers (transformToChartData, getDangerRanges, transformToSummaryStats). Handle schema version checks per research.md: render current version directly, older versions with best-effort/defaults.
+- [ ] T020 [US3] Create SnapshotDetailPage in `src/pages/snapshot-detail.tsx` using useSnapshotProjection, CashflowChart, and SummaryPanel. Include "Snapshot Histórico" banner at page top with snapshot name and formatted createdAt date. Visual treatment: muted background color + info icon to clearly indicate read-only historical data.
 - [ ] T021 [US3] Add "Voltar" back navigation button to SnapshotDetailPage
 - [ ] T022 [US3] Handle Date serialization in useSnapshotProjection (JSON stores dates as strings, need parsing)
 
@@ -120,8 +121,10 @@
 **Purpose**: End-to-end testing and final validation
 
 - [ ] T026 [P] Create E2E test file in `tests/e2e/snapshots.spec.ts` testing: save snapshot from dashboard, view history list, open snapshot detail, delete snapshot
+- [ ] T026b [P] Add E2E test case for 365-day projection snapshot (save, load, verify data integrity) per SC-006
 - [ ] T027 Run all E2E tests and fix any failures
 - [ ] T028 Run quickstart.md verification checklist (migration, RLS, performance, navigation)
+- [ ] T028b Performance validation per success criteria: measure save operation (<3s per SC-001), history page load with 50 snapshots (<2s per SC-002), detail view render (<2s per SC-003). Use browser DevTools or Playwright timing assertions.
 - [ ] T029 Manual testing of complete flow per quickstart.md
 
 ---
@@ -156,9 +159,12 @@
 
 - T003, T004 can run in parallel (different type files)
 - T005, T006 can run in parallel (different lib files)
+- T007, T007b can run in parallel (store implementation + tests)
 - T009, T010 can run in parallel with setup
 - T013, T014 can run in parallel (different components)
 - T023, T024 can run in parallel (different files for delete)
+- T026, T026b can run in parallel (different E2E test scenarios)
+- T028, T028b can run in parallel (different verification types)
 
 ---
 

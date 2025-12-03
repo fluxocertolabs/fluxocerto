@@ -139,6 +139,16 @@ export const SnapshotInputSchema = z.object({
 export type SnapshotInput = z.infer<typeof SnapshotInputSchema>
 
 /**
+ * Input for creating a new snapshot via store action.
+ * Used by SaveSnapshotDialog to pass data to createSnapshot().
+ */
+export interface CreateSnapshotInput {
+  name: string
+  inputs: SnapshotInputState
+  projection: CashflowProjection
+}
+
+/**
  * Snapshot list item (subset of fields for list display).
  */
 export interface SnapshotListItem {

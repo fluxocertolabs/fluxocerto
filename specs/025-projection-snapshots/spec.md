@@ -108,7 +108,7 @@ As a user managing my financial history, I want to delete snapshots I no longer 
 - **FR-006**: System MUST provide a dedicated History page listing all saved snapshots for the current household.
 - **FR-007**: System MUST display snapshot summary metrics in the history list: creation date, starting balance, projected end balance (optimistic), and danger day count.
 - **FR-008**: System MUST allow users to open any snapshot and view the complete projection visualization (chart and summary cards).
-- **FR-009**: System MUST render the snapshot detail view as read-only with a clear "Historical Snapshot" indicator.
+- **FR-009**: System MUST render the snapshot detail view as read-only with a clear "Historical Snapshot" indicator. The indicator MUST be a banner at the top of the page displaying "Snapshot Histórico - {snapshot name}" with the creation date, using a muted/informational visual treatment (e.g., info icon, subdued background color).
 - **FR-010**: System MUST reuse existing chart and summary panel components for the snapshot detail view, passing frozen data instead of live data.
 - **FR-011**: System MUST allow users to delete snapshots with a confirmation step.
 - **FR-012**: Snapshot data MUST be isolated per household (respecting existing RLS patterns).
