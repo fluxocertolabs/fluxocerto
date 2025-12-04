@@ -49,7 +49,17 @@ export class DashboardPage {
     // Wait for the dashboard heading to be visible - this ALWAYS renders
     // regardless of loading/empty/error state, proving React has mounted
     const dashboardHeading = this.page.getByRole('heading', { name: /painel de fluxo de caixa/i });
-    await dashboardHeading.waitFor({ state: 'visible', timeout: 20000 });
+    
+    // Handle potential login redirect or slow load
+    try {
+        await dashboardHeading.waitFor({ state: 'visible', timeout: 30000 });
+    } catch (e) {
+        // Check if we were redirected to login
+        if (this.page.url().includes('/login')) {
+            throw new Error('Redirected to login page during navigation to /');
+        }
+        throw e;
+    }
     
     // Wait for either content OR empty state to be rendered
     // Handle transient realtime errors by clicking retry when they appear
