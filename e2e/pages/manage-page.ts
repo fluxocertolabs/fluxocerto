@@ -38,6 +38,14 @@ export class ManagePage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/manage');
+    await this.waitForReady();
+  }
+
+  /**
+   * Wait for the manage page to be fully ready after navigation or reload.
+   * Can be called after page.reload() to ensure the page is ready for interaction.
+   */
+  async waitForReady(): Promise<void> {
     await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     
     // Verify we're actually on the manage page (not redirected to login)

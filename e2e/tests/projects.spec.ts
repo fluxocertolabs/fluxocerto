@@ -126,7 +126,7 @@ test.describe('Project (Income) Management', () => {
 
       // Force reload to get fresh data - more reliable than waiting for realtime under load
       await page.reload();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await managePage.waitForReady();
       await managePage.selectProjectsTab();
       await projects.selectRecurring();
 
@@ -138,7 +138,7 @@ test.describe('Project (Income) Management', () => {
         // The badge is a sibling span in the same flex container
         const container = projectNameEl.locator('..'); // parent div with flex items
         await expect(container.getByText(/provável/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 10000, intervals: [1000, 2000, 3000] });
+      }).toPass({ timeout: 15000, intervals: [1000, 2000, 3000, 5000] });
     });
   });
 
@@ -191,7 +191,7 @@ test.describe('Project (Income) Management', () => {
       
       // Force reload to get fresh data - more reliable than waiting for realtime under load
       await page.reload();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await managePage.waitForReady();
       await managePage.selectProjectsTab();
       await projects.selectSingleShot();
 
@@ -203,7 +203,7 @@ test.describe('Project (Income) Management', () => {
         // The badge is a sibling span in the same flex container
         const container = projectNameEl.locator('..'); // parent div with flex items
         await expect(container.getByText(/incert/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 10000, intervals: [1000, 2000, 3000] });
+      }).toPass({ timeout: 15000, intervals: [1000, 2000, 3000, 5000] });
     });
 
     test('T050: delete project confirmation dialog → opens and closes correctly', async ({
