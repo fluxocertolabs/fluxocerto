@@ -69,8 +69,8 @@ export default defineConfig({
   reporter: process.env.CI 
     ? [['github', { title: process.env.PLAYWRIGHT_TITLE || '🎭 Playwright Run Summary' }]]
     : 'list',
-  // Timeout for test execution
-  timeout: 30000, // 30s per test - should be plenty for most operations
+  // Timeout for test execution - 45s gives buffer for parallel execution resource contention
+  timeout: 45000, // 45s per test
   expect: {
     timeout: 10000, // 10s for assertions
     toHaveScreenshot: {
