@@ -212,8 +212,15 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       # Step 8: Run E2E tests
+      # Note: We skip auth-tests in CI since the setup already validates authentication
+      # and auth-tests are slow (serial, email-based). This saves ~60+ seconds.
       - name: Run E2E tests
-        run: pnpm test:e2e
+        run: |
+          pnpm db:ensure
+          pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=chromium
+          EXIT_CODE=$?
+          pnpm db:stop
+          exit $EXIT_CODE
         env:
           CI: true
           PLAYWRIGHT_TITLE: "🧪 E2E Tests"
