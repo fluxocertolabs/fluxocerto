@@ -172,7 +172,11 @@ export class AuthFixture {
     await page.waitForURL(/\/(dashboard)?#?$/, { timeout: 30000 });
 
     // Wait for the page to be fully loaded and auth state established
-    await page.waitForLoadState('networkidle');
+    // Use a short timeout for networkidle since Supabase realtime keeps connections open
+    await Promise.race([
+      page.waitForLoadState('networkidle'),
+      page.waitForTimeout(5000), // Max 5 seconds for network to settle
+    ]);
     
     // Wait for Supabase auth state to be fully established
     // We need to verify that the session is actually saved in browser storage

@@ -110,8 +110,11 @@ export async function disableAnimations(page: Page): Promise<void> {
  * Uses multiple stability checks to ensure consistent screenshots in parallel execution
  */
 export async function waitForStableUI(page: Page): Promise<void> {
-  // Wait for network to be idle (no pending requests)
-  await page.waitForLoadState('networkidle');
+  // Wait for network to settle (with timeout since Supabase realtime keeps connections open)
+  await Promise.race([
+    page.waitForLoadState('networkidle'),
+    page.waitForTimeout(5000), // Max 5 seconds
+  ]);
   
   // Disable all CSS animations and transitions
   await disableAnimations(page);
