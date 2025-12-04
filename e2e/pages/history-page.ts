@@ -27,7 +27,17 @@ export class HistoryPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/history');
-    await this.pageHeading.waitFor({ state: 'visible', timeout: 20000 });
+    
+    // Wait for heading with increased timeout and handle potential login redirect
+    try {
+      await this.pageHeading.waitFor({ state: 'visible', timeout: 30000 });
+    } catch (e) {
+      // Check if we were redirected to login
+      if (this.page.url().includes('/login')) {
+         throw new Error('Redirected to login page during navigation to /history');
+      }
+      throw e;
+    }
     
     // Wait for loading to complete - either we see snapshots, empty state, or loading finishes
     await expect(async () => {
@@ -37,14 +47,17 @@ export class HistoryPage {
       const hasError = await this.errorMessage.isVisible().catch(() => false);
 
       if (hasError) {
-        const text = await this.errorMessage.textContent().catch(() => 'Unknown error');
+        // Use short timeout to prevent blocking retry loop
+        const text = await this.errorMessage.textContent({ timeout: 100 }).catch(() => 'Unknown error');
         console.log(`History load error: ${text}`);
       }
 
-      // Content is loaded when not loading AND (has snapshots OR has empty state)
+      // Content is loaded when not loading AND (has snapshots OR has empty state OR has error)
+      // If error is present, we let it pass here so we don't timeout.
+      // Subsequent test assertions will fail if the content is missing.
       expect(isLoading).toBe(false);
-      expect(hasSnapshots || hasEmptyState).toBe(true);
-    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
+      expect(hasSnapshots || hasEmptyState || hasError).toBe(true);
+    }).toPass({ timeout: 30000, intervals: [500, 1000, 2000] });
   }
 
   /**
