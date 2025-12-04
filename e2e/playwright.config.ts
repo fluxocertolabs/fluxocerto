@@ -161,10 +161,14 @@ export default defineConfig({
   // Web server configuration - starts the app before tests
   // In Docker/CI, we start the server inside the container
   // Locally, we can reuse an existing server
+  //
+  // IMPORTANT: We unset VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN to disable
+  // the dev auth bypass during E2E tests. This ensures tests use the proper
+  // magic link authentication flow instead of auto-login.
   webServer: {
-    command: `pnpm dev:app --port ${port}`,
+    command: `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port}`,
     url: process.env.BASE_URL,
-    reuseExistingServer: true, // Always try to reuse - Docker starts its own, local dev can use existing
+    reuseExistingServer: !process.env.CI, // Only reuse in local dev, not in CI
     timeout: 120000, // 2 minutes to start
     cwd: resolve(__dirname, '..'),
   },

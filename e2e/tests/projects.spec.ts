@@ -181,19 +181,30 @@ test.describe('Project (Income) Management', () => {
       
       // Use the page object method to update certainty
       await projects.updateSingleShotCertainty(seeded.name, 'uncertain');
+      
+      // Wait for the dialog to close and data to refresh
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
 
       // Wait for update to complete with retry logic
       await expect(async () => {
         // Ensure we're still on the projects tab and single-shot view
         const projectsTab = page.getByRole('tab', { name: /receitas/i });
-        if (!(await projectsTab.getAttribute('aria-selected'))?.includes('true')) {
+        const isSelected = await projectsTab.getAttribute('aria-selected');
+        if (!isSelected?.includes('true')) {
           await managePage.selectProjectsTab();
           await projects.selectSingleShot();
+          await page.waitForLoadState('networkidle');
         }
-        await page.waitForLoadState('networkidle');
-        // Verify certainty badge is updated - look for "Incerta" text anywhere on the page
-        await expect(page.getByText(/incert/i).first()).toBeVisible({ timeout: 5000 });
-      }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
+        
+        // Find the specific project row and check for the certainty badge
+        const projectRow = page.getByText(seeded.name, { exact: true }).first()
+          .locator('xpath=ancestor::div[contains(@class, "rounded-lg")]');
+        
+        // Look for "Incerta" badge within the project row
+        const badge = projectRow.getByText(/incert/i);
+        await expect(badge).toBeVisible({ timeout: 5000 });
+      }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000, 5000] });
     });
 
     test('T050: delete project confirmation dialog → opens and closes correctly', async ({

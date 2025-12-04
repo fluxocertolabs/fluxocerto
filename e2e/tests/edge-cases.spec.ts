@@ -148,12 +148,23 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Perform a single update
     await accounts.updateAccountBalance(seeded.name, '4.000,00');
+    
+    // Wait for the update to process
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
 
     // Wait for update to complete via realtime subscription
     // Use toPass to retry until realtime update propagates
+    // Look for the balance in the specific account card to avoid matching other elements
     await expect(async () => {
-      await expect(page.getByText(/4\.000|4000/).first()).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+      // Find the account card
+      const accountCard = page.locator('div.group.relative').filter({ 
+        has: page.getByRole('heading', { name: seeded.name, level: 3 }) 
+      }).first();
+      
+      // Check that the card contains the new balance (R$ 4.000,00 format)
+      await expect(accountCard.getByText(/4\.000|4000/).first()).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('T068: network latency simulation → loading states displayed', async ({

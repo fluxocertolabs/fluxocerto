@@ -49,10 +49,39 @@ export class AuthFixture {
   }
 
   /**
+   * Clear any existing authentication session.
+   * This is important when dev auth bypass is active - we need to clear
+   * the dev session before authenticating with test user credentials.
+   */
+  async clearExistingSession(page: Page): Promise<void> {
+    // Navigate to establish origin first
+    await page.goto('/');
+    
+    // Clear all browser storage to remove any existing session
+    await page.context().clearCookies();
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    
+    // Small delay to ensure storage is cleared
+    await page.waitForTimeout(100);
+  }
+
+  /**
    * Request a magic link for the given email address
    */
   async requestMagicLink(email: string, page: Page): Promise<void> {
+    // Clear any existing session first (handles dev auth bypass case)
+    await this.clearExistingSession(page);
+    
+    // Now navigate to login - should not redirect since session is cleared
     await page.goto('/login');
+    
+    // Wait for the login form to be visible
+    await page.waitForURL(/\/login/, { timeout: 10000 });
+    
+    // Fill and submit the form
     await page.getByLabel(/e-?mail/i).fill(email);
     await page.getByRole('button', { name: /enviar|entrar|sign in/i }).click();
     // Wait for success message

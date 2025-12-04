@@ -289,23 +289,29 @@ test.describe('Future Statement Management', () => {
     await page.waitForLoadState('networkidle');
     await managePage.selectCreditCardsTab();
 
-    // Find the credit card
-    const cardElement = page.locator('div.group.relative').filter({
+    // Find the credit card with retry logic
+    let cardElement = page.locator('div.group.relative').filter({
       has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
     }).first();
 
-    await expect(cardElement).toBeVisible({ timeout: 10000 });
+    await expect(async () => {
+      await expect(cardElement).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
 
     // Initially should show 0 or no badge
     const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
     await collapsibleTrigger.click();
+    
+    // Wait for the collapsible content to be visible
+    await page.waitForTimeout(500);
 
     // Add a future statement
     const addButton = cardElement.getByRole('button', { name: /adicionar/i });
+    await expect(addButton).toBeVisible({ timeout: 5000 });
     await addButton.click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
     
     // Select a future month (not current month) to avoid warning dialog
     const monthSelect = dialog.locator('button[role="combobox"]').first();
@@ -321,6 +327,7 @@ test.describe('Future Statement Management', () => {
     const monthOption = page.getByRole('option', {
       name: new RegExp(`${nextMonthName}.*${nextYear}`, 'i'),
     });
+    await expect(monthOption).toBeVisible({ timeout: 5000 });
     await monthOption.click();
     
     const amountInput = dialog.getByLabel(/valor/i);
@@ -330,13 +337,26 @@ test.describe('Future Statement Management', () => {
     const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
-    // Increase timeout for CI environments which can be slower
-    await expect(dialog).not.toBeVisible({ timeout: 10000 });
+    
+    // Wait for dialog to close with longer timeout for CI environments
+    await expect(dialog).not.toBeVisible({ timeout: 15000 });
+    
+    // Wait for the data to refresh
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
-    // Badge should now show 1
+    // Badge should now show 1 - use longer timeout and more intervals
+    // Re-locate the card element in case DOM changed
+    cardElement = page.locator('div.group.relative').filter({
+      has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
+    }).first();
+    
+    const updatedTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
+    
     await expect(async () => {
-      await expect(collapsibleTrigger).toContainText('1');
-    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+      const text = await updatedTrigger.textContent();
+      expect(text).toContain('1');
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 });
 
@@ -374,22 +394,28 @@ test.describe('Future Statement Validation', () => {
     await page.waitForLoadState('networkidle');
     await managePage.selectCreditCardsTab();
 
-    // Find the credit card and expand future statements section
-    const cardElement = page.locator('div.group.relative').filter({
+    // Find the credit card and expand future statements section with retry
+    let cardElement = page.locator('div.group.relative').filter({
       has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
     }).first();
 
-    await expect(cardElement).toBeVisible({ timeout: 10000 });
+    await expect(async () => {
+      await expect(cardElement).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
 
     const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
     await collapsibleTrigger.click();
+    
+    // Wait for collapsible content to be visible
+    await page.waitForTimeout(500);
 
     // Try to add another statement
     const addButton = cardElement.getByRole('button', { name: /adicionar/i });
+    await expect(addButton).toBeVisible({ timeout: 5000 });
     await addButton.click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
 
     // The month selector filters out already-used months
     // Select a month different from both current and the seeded one
@@ -406,6 +432,7 @@ test.describe('Future Statement Validation', () => {
     const monthOption = page.getByRole('option', {
       name: new RegExp(`${futureMonthName}.*${futureYear}`, 'i'),
     });
+    await expect(monthOption).toBeVisible({ timeout: 5000 });
     await monthOption.click();
 
     const amountInput = dialog.getByLabel(/valor/i);
@@ -417,13 +444,24 @@ test.describe('Future Statement Validation', () => {
     await submitButton.click();
 
     // The dialog should close successfully since we picked an available month
-    // Increase timeout for CI environments which can be slower
-    await expect(dialog).not.toBeVisible({ timeout: 10000 });
+    await expect(dialog).not.toBeVisible({ timeout: 15000 });
+    
+    // Wait for data to refresh
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Re-locate the card element in case DOM changed
+    cardElement = page.locator('div.group.relative').filter({
+      has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
+    }).first();
+    
+    const updatedTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
 
     // Verify we now have 2 future statements (badge shows count)
     await expect(async () => {
-      await expect(collapsibleTrigger).toContainText('2');
-    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+      const text = await updatedTrigger.textContent();
+      expect(text).toContain('2');
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('T-FS-007: current month warning dialog appears', async ({

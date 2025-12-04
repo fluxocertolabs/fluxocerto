@@ -71,29 +71,48 @@ export class ExpensesSection {
   }): Promise<void> {
     await this.selectFixedExpenses();
     
+    // Wait for the page to be stable before clicking
+    await this.page.waitForLoadState('networkidle');
+    
     // Click the add button - could be "Adicionar Despesa Fixa" or "Adicionar Despesa" (empty state)
     const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa fixa/i });
     const addButtonEmpty = this.page.getByRole('button', { name: /^adicionar despesa$/i });
     
-    // Try the full button first, then the empty state button
-    if (await addButtonFull.isVisible()) {
-      await addButtonFull.click();
-    } else {
-      await addButtonEmpty.click();
-    }
+    // Use toPass to handle race conditions where button may not be immediately visible
+    await expect(async () => {
+      if (await addButtonFull.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await addButtonFull.click();
+      } else {
+        await addButtonEmpty.click();
+      }
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
 
     // Wait for dialog
     const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
 
-    // Fill form
-    await dialog.getByLabel(/nome/i).fill(data.name);
-    await dialog.getByLabel(/valor/i).fill(data.amount);
-    await dialog.getByLabel(/dia.*vencimento/i).fill(data.dueDay);
+    // Fill form - wait for each field to be ready
+    const nameInput = dialog.getByLabel(/nome/i);
+    await expect(nameInput).toBeVisible({ timeout: 5000 });
+    await nameInput.fill(data.name);
+    
+    const amountInput = dialog.getByLabel(/valor/i);
+    await amountInput.fill(data.amount);
+    
+    const dueDayInput = dialog.getByLabel(/dia.*vencimento/i);
+    await dueDayInput.fill(data.dueDay);
 
-    // Submit
-    await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    // Submit and wait for dialog to close
+    const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    await submitButton.click();
+    
+    // Wait for dialog to close with longer timeout for CI
+    await expect(dialog).not.toBeVisible({ timeout: 15000 });
+    
+    // Wait for the list to refresh after creation
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -106,32 +125,49 @@ export class ExpensesSection {
   }): Promise<void> {
     await this.selectSingleShot();
     
+    // Wait for the page to be stable before clicking
+    await this.page.waitForLoadState('networkidle');
+    
     // Click the add button - could be "Adicionar Despesa Pontual" or "Adicionar Despesa" (empty state)
     const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa pontual/i });
     const addButtonEmpty = this.page.getByRole('button', { name: /^adicionar despesa$/i });
     
-    // Try the full button first, then the empty state button
-    if (await addButtonFull.isVisible()) {
-      await addButtonFull.click();
-    } else {
-      await addButtonEmpty.click();
-    }
+    // Use toPass to handle race conditions where button may not be immediately visible
+    await expect(async () => {
+      if (await addButtonFull.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await addButtonFull.click();
+      } else {
+        await addButtonEmpty.click();
+      }
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
 
     // Wait for dialog
     const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
 
-    // Fill form
-    await dialog.getByLabel(/nome/i).fill(data.name);
-    await dialog.getByLabel(/valor/i).fill(data.amount);
+    // Fill form - wait for each field to be ready
+    const nameInput = dialog.getByLabel(/nome/i);
+    await expect(nameInput).toBeVisible({ timeout: 5000 });
+    await nameInput.fill(data.name);
+    
+    const amountInput = dialog.getByLabel(/valor/i);
+    await amountInput.fill(data.amount);
     
     // Handle date input - look for the date picker button or input
     const dateInput = dialog.locator('input[type="date"]').or(dialog.getByLabel(/data/i));
     await dateInput.fill(data.date);
 
-    // Submit
-    await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    // Submit and wait for dialog to close
+    const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    await submitButton.click();
+    
+    // Wait for dialog to close with longer timeout for CI
+    await expect(dialog).not.toBeVisible({ timeout: 15000 });
+    
+    // Wait for the list to refresh after creation
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(500);
   }
 
   /**

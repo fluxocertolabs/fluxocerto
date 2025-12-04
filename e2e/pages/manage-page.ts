@@ -69,6 +69,21 @@ export class ManagePage {
       throw new Error(`Expected to be on /manage page, but got: ${currentUrl}`);
     }
     
+    // First, wait for the page heading to be visible - this always renders regardless of loading state
+    const pageHeading = this.page.getByRole('heading', { name: /gerenciar dados financeiros/i });
+    try {
+      await pageHeading.waitFor({ state: 'visible', timeout: 30000 });
+    } catch (error) {
+      // Take screenshot for debugging
+      const timestamp = Date.now();
+      await this.page.screenshot({ path: `debug-manage-heading-timeout-${timestamp}.png`, fullPage: true }).catch(() => {});
+      const pageUrl = this.page.url();
+      const pageContent = await this.page.textContent('body').catch(() => 'Unable to read');
+      console.error(`❌ Manage page heading not found. URL: ${pageUrl}`);
+      console.error(`   Page content: ${pageContent?.substring(0, 500)}`);
+      throw error;
+    }
+    
     // Wait for the page to be ready - either:
     // 1. PageLoadingWrapper finishes loading (aria-busy="false")
     // 2. OR tabs are already visible (page loaded quickly)

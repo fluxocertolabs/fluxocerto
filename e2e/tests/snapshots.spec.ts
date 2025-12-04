@@ -7,8 +7,26 @@ import { test, expect } from '../fixtures/test-base';
 import { createFullSeedData } from '../utils/test-data';
 
 // Helper to create mock snapshot data for seeding
+// Creates 30 days of projection data for proper chart rendering
 function createMockSnapshotData() {
   const now = new Date();
+  const days = [];
+  
+  // Create 30 days of data for proper chart rendering
+  for (let i = 0; i < 30; i++) {
+    const dayDate = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
+    days.push({
+      date: dayDate.toISOString(),
+      dayOffset: i,
+      optimisticBalance: 100000 + i * 1000, // Gradual increase
+      pessimisticBalance: 90000 + i * 500,
+      incomeEvents: [],
+      expenseEvents: [],
+      isOptimisticDanger: false,
+      isPessimisticDanger: false,
+    });
+  }
+  
   return {
     inputs: {
       accounts: [{ id: 'acc-1', name: 'Test Account', type: 'checking', balance: 100000 }],
@@ -24,36 +42,25 @@ function createMockSnapshotData() {
       startDate: now.toISOString(),
       endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       startingBalance: 100000,
-      days: [
-        {
-          date: now.toISOString(),
-          dayOffset: 0,
-          optimisticBalance: 100000,
-          pessimisticBalance: 90000,
-          incomeEvents: [],
-          expenseEvents: [],
-          isOptimisticDanger: false,
-          isPessimisticDanger: false,
-        },
-      ],
+      days,
       optimistic: {
         totalIncome: 50000,
         totalExpenses: 30000,
-        endBalance: 120000,
+        endBalance: 129000,
         dangerDays: [],
         dangerDayCount: 0,
       },
       pessimistic: {
         totalIncome: 40000,
         totalExpenses: 30000,
-        endBalance: 110000,
+        endBalance: 104500,
         dangerDays: [],
         dangerDayCount: 0,
       },
     },
     summaryMetrics: {
       startingBalance: 100000,
-      endBalanceOptimistic: 120000,
+      endBalanceOptimistic: 129000,
       dangerDayCount: 0,
     },
   };
