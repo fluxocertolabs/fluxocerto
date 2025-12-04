@@ -130,6 +130,7 @@ jobs:
       # This ensures snapshots generated locally match CI exactly
       # Note: pnpm install runs inside Docker to match local behavior - permission issues
       # don't matter in CI since the workspace is ephemeral
+      # Playwright's webServer config handles starting the dev server automatically
       - name: Run Visual Regression tests
         run: |
           docker run --rm \
@@ -145,7 +146,7 @@ jobs:
             -e TEST_USER_EMAIL=e2e-test@example.com \
             -e PLAYWRIGHT_TITLE="🖼️ Visual Regression Tests" \
             mcr.microsoft.com/playwright:v1.57.0-jammy \
-            /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && (pnpm dev:app &) && npx wait-on http://localhost:5173 -t 60000 && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual'
+            /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual --project=visual-mobile'
 
       # Step 7: Upload visual diff artifacts on failure
       - name: Upload Visual Regression report

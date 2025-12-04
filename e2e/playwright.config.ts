@@ -64,15 +64,15 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: true, // Enable parallel execution - each worker has isolated schema
   forbidOnly: !!process.env.CI,
-  retries: 3, // 3 automatic retries per test for parallel execution stability
+  retries: process.env.CI ? 2 : 0, // 2 retries in CI for flakiness, none locally for fast feedback
   workers: workerCount, // Auto-detect based on CPU cores
   reporter: process.env.CI 
     ? [['github', { title: process.env.PLAYWRIGHT_TITLE || '🎭 Playwright Run Summary' }]]
     : 'list',
-  // Increased timeout for CI environments which can be significantly slower
-  timeout: process.env.CI ? 90000 : 45000, // 90s in CI, 45s locally
+  // Timeout for test execution
+  timeout: 30000, // 30s per test - should be plenty for most operations
   expect: {
-    timeout: 15000, // 15s for assertions to handle data loading delays in CI
+    timeout: 10000, // 10s for assertions
     toHaveScreenshot: {
       threshold: 0.3, // 0.3% pixel tolerance for anti-aliasing differences
       maxDiffPixelRatio: 0.05, // Max 5% of pixels can differ (accounts for font rendering and worker names)
@@ -159,8 +159,8 @@ export default defineConfig({
   ],
 
   // Web server configuration - starts the app before tests
-  // In Docker/CI, we start the server inside the container
-  // Locally, we can reuse an existing server
+  // - In CI: Always start fresh server (no existing server to reuse)
+  // - Locally: Reuse existing server if running (for faster iteration)
   //
   // IMPORTANT: We unset VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN to disable
   // the dev auth bypass during E2E tests. This ensures tests use the proper
@@ -168,7 +168,7 @@ export default defineConfig({
   webServer: {
     command: `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port}`,
     url: process.env.BASE_URL,
-    reuseExistingServer: true, // Always reuse if server is already running (CI Docker starts it manually)
+    reuseExistingServer: !process.env.CI, // In CI: start fresh; locally: reuse if available
     timeout: 120000, // 2 minutes to start
     cwd: resolve(__dirname, '..'),
   },
