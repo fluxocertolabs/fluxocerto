@@ -45,7 +45,7 @@ test.describe('Expense Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
@@ -92,7 +92,7 @@ test.describe('Expense Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
@@ -111,7 +111,7 @@ test.describe('Expense Management', () => {
           await managePage.selectExpensesTab();
           await expenses.selectFixedExpenses();
         }
-        await page.waitForLoadState('networkidle');
+        await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
         // Verify the expense row shows the updated amount (use .first() to avoid strict mode)
         await expect(page.getByText(formatBRL(220000)).first()).toBeVisible({ timeout: 5000 });
       }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
@@ -128,7 +128,7 @@ test.describe('Expense Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
@@ -189,7 +189,7 @@ test.describe('Expense Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
@@ -202,7 +202,7 @@ test.describe('Expense Management', () => {
       await expenses.updateSingleShotDate(seeded.name, '2025-12-20');
 
       // Wait for update to complete
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Verify the expense is still visible after update (date change was successful)
       await expenses.expectExpenseVisible(seeded.name);
@@ -221,7 +221,7 @@ test.describe('Expense Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();

@@ -5,6 +5,7 @@
  */
 
 import type { Page } from '@playwright/test';
+import { waitForNetworkSettled } from '../utils/wait-helpers';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { InbucketClient } from '../utils/inbucket';

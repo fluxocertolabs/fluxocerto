@@ -13,6 +13,7 @@
  */
 
 import { test as base, expect, type Page, type BrowserContext, type Locator } from '@playwright/test';
+import { waitForNetworkSettled } from '../utils/wait-helpers';
 import { createWorkerDbFixture, type WorkerDatabaseFixture } from './db';
 import { AuthFixture, createWorkerAuthFixture } from './auth';
 import { getWorkerContext, type IWorkerContext } from './worker-context';

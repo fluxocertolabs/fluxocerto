@@ -44,7 +44,7 @@ test.describe('Account Management', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -62,7 +62,7 @@ test.describe('Account Management', () => {
       if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectAccountsTab();
       }
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       // Check for the new name
       await expect(page.getByText(newName).first()).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
@@ -82,7 +82,7 @@ test.describe('Account Management', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -100,7 +100,7 @@ test.describe('Account Management', () => {
       if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectAccountsTab();
       }
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await expect(page.getByText(formatBRL(250000)).first()).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
@@ -116,7 +116,7 @@ test.describe('Account Management', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -134,7 +134,7 @@ test.describe('Account Management', () => {
       if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectAccountsTab();
       }
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       // Verify account is no longer visible
       await expect(page.getByText(seeded.name)).not.toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
@@ -155,7 +155,7 @@ test.describe('Account Management', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -187,7 +187,7 @@ test.describe('Account Management', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();

@@ -72,7 +72,7 @@ export class ExpensesSection {
     await this.selectFixedExpenses();
     
     // Wait for the page to be stable before clicking
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     
     // Click the add button - could be "Adicionar Despesa Fixa" or "Adicionar Despesa" (empty state)
     const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa fixa/i });
@@ -111,7 +111,7 @@ export class ExpensesSection {
     await expect(dialog).not.toBeVisible({ timeout: 15000 });
     
     // Wait for the list to refresh after creation
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     await this.page.waitForTimeout(500);
   }
 
@@ -126,7 +126,7 @@ export class ExpensesSection {
     await this.selectSingleShot();
     
     // Wait for the page to be stable before clicking
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     
     // Click the add button - could be "Adicionar Despesa Pontual" or "Adicionar Despesa" (empty state)
     const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa pontual/i });
@@ -166,7 +166,7 @@ export class ExpensesSection {
     await expect(dialog).not.toBeVisible({ timeout: 15000 });
     
     // Wait for the list to refresh after creation
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     await this.page.waitForTimeout(500);
   }
 
@@ -239,7 +239,7 @@ export class ExpensesSection {
    */
   async deleteExpense(name: string): Promise<void> {
     // Wait for any pending updates to settle
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     await this.page.waitForTimeout(300);
     
     // First ensure the name is visible
@@ -270,7 +270,7 @@ export class ExpensesSection {
     
     // Wait for UI to update after deletion
     await this.page.waitForTimeout(2000);
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
   }
 
   /**

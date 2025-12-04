@@ -46,7 +46,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -75,7 +75,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -115,7 +115,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -126,7 +126,7 @@ test.describe('Project (Income) Management', () => {
 
       // Wait for update to complete with retry logic
       await expect(async () => {
-        await page.waitForLoadState('networkidle');
+        await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
         // Find the project row and check for "Provável" badge within it
         const projectRow = page.getByText(seeded.name, { exact: true }).first()
           .locator('xpath=ancestor::div[contains(@class, "rounded-lg")]');
@@ -171,7 +171,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -183,7 +183,7 @@ test.describe('Project (Income) Management', () => {
       await projects.updateSingleShotCertainty(seeded.name, 'uncertain');
       
       // Wait for the dialog to close and data to refresh
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await page.waitForTimeout(1000);
 
       // Wait for update to complete with retry logic
@@ -194,7 +194,7 @@ test.describe('Project (Income) Management', () => {
         if (!isSelected?.includes('true')) {
           await managePage.selectProjectsTab();
           await projects.selectSingleShot();
-          await page.waitForLoadState('networkidle');
+          await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
         }
         
         // Find the specific project row and check for the certainty badge
@@ -218,7 +218,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();

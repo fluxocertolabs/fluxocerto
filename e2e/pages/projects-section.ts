@@ -184,7 +184,7 @@ export class ProjectsSection {
    */
   private async editProject(name: string): Promise<void> {
     // Wait for any pending updates to settle
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     await this.page.waitForTimeout(300);
     
     // First ensure the name is visible
@@ -292,7 +292,7 @@ export class ProjectsSection {
    */
   async deleteProject(name: string): Promise<void> {
     // Wait for any pending updates to settle
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     await this.page.waitForTimeout(300);
     
     // First ensure the name is visible
@@ -322,7 +322,7 @@ export class ProjectsSection {
     await this.page.waitForTimeout(2000);
     
     // Also wait for network to settle
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
   }
 
   /**

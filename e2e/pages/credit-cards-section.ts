@@ -139,7 +139,7 @@ export class CreditCardsSection {
     
     // Wait for UI to update
     await this.page.waitForTimeout(500);
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
   }
 
   /**

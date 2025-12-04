@@ -51,7 +51,7 @@ rawTest.describe('Dev Auth Bypass - Mechanism', () => {
     
     // Wait for navigation to settle - either dashboard or login
     // The app will redirect to /login if not authenticated
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     
     // Check if we ended up on login page (bypass not active)
     const currentUrl = page.url();

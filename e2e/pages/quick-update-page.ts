@@ -35,7 +35,7 @@ export class QuickUpdatePage {
     // Wait for the "Concluir" button which indicates the view is loaded
     await expect(this.completeButton).toBeVisible({ timeout: 10000 });
     // Also wait for the content to load (either balance items or empty state)
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     
     // Wait for loading state to complete (aria-busy becomes false)
     await this.page.waitForFunction(() => {

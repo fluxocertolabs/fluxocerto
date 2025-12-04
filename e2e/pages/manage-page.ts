@@ -38,7 +38,7 @@ export class ManagePage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/manage');
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     
     // Verify we're actually on the manage page (not redirected to login)
     const currentUrl = this.page.url();

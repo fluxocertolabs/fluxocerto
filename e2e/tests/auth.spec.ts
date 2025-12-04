@@ -158,7 +158,7 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 10000 });
 
     // Wait for the page to fully load and sign out button to appear
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     
     // Click sign out - the button text is "Sair" in Portuguese
     const signOutButton = page.getByRole('button', { name: /sair/i });

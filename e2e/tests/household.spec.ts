@@ -28,7 +28,7 @@ test.describe('Household Multi-Tenancy', () => {
       await dashboardPage.goto();
 
       // Wait for page to fully load
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // FR-015: System MUST display the current household name visibly in the application header
       // The HouseholdBadge component shows household name with a Home icon
@@ -44,7 +44,7 @@ test.describe('Household Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // FR-015: Household name should be visible on any page (header is global)
       const header = page.locator('header');
@@ -58,7 +58,7 @@ test.describe('Household Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Navigate to household tab
       await managePage.selectHouseholdTab();
@@ -81,7 +81,7 @@ test.describe('Household Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       await managePage.selectHouseholdTab();
 
@@ -99,7 +99,7 @@ test.describe('Household Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       await managePage.selectHouseholdTab();
 
@@ -129,7 +129,7 @@ test.describe('Household Multi-Tenancy', () => {
       ]);
 
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectAccountsTab();
 
       const accounts = managePage.accounts();
@@ -150,14 +150,14 @@ test.describe('Household Multi-Tenancy', () => {
       ]);
 
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
       await expenses.selectFixedExpenses();
 
       // Wait for network to settle after tab switch
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // User should see their own expense
       await expenses.expectExpenseVisible(seeded.name);
@@ -174,7 +174,7 @@ test.describe('Household Multi-Tenancy', () => {
       ]);
 
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -190,7 +190,7 @@ test.describe('Household Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectAccountsTab();
 
       const accounts = managePage.accounts();
@@ -208,7 +208,7 @@ test.describe('Household Multi-Tenancy', () => {
 
       // Refresh the page and verify it persists
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectAccountsTab();
       await accounts.waitForLoad();
       
@@ -226,7 +226,7 @@ test.describe('Household Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Verify household tab exists and is clickable
       await expect(managePage.householdTab).toBeVisible();
@@ -243,7 +243,7 @@ test.describe('Household Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       await managePage.selectHouseholdTab();
 
@@ -266,7 +266,7 @@ test.describe('Household Multi-Tenancy', () => {
     }) => {
       // Navigate to dashboard without seeding any data
       await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Household badge should still be visible in header
       // (household info is independent of financial data)
@@ -284,7 +284,7 @@ test.describe('Household Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Navigate through all tabs
       await managePage.selectAccountsTab();

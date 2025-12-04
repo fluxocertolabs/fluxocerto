@@ -36,7 +36,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -64,7 +64,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     
     // Select credit cards tab
     await managePage.selectCreditCardsTab();
@@ -93,7 +93,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectExpensesTab();
 
     const expenses = managePage.expenses();
@@ -114,7 +114,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -139,7 +139,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -150,7 +150,7 @@ test.describe('Edge Cases & Error Handling', () => {
     await accounts.updateAccountBalance(seeded.name, '4.000,00');
     
     // Wait for the update to process
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await page.waitForTimeout(500);
 
     // Wait for update to complete via realtime subscription
@@ -182,7 +182,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // The page should load successfully even with data
     // Loading states would be visible during the load
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
     // Verify content eventually loads
     await expect(page.locator('body')).toBeVisible();
@@ -201,7 +201,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectExpensesTab();
 
     const expenses = managePage.expenses();
@@ -222,7 +222,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();

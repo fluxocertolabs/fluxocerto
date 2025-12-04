@@ -41,7 +41,7 @@ test.describe('Credit Card Management', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
@@ -57,7 +57,7 @@ test.describe('Credit Card Management', () => {
       if (!(await cardsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectCreditCardsTab();
       }
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await expect(page.getByText(formatBRL(75000)).first()).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
@@ -74,7 +74,7 @@ test.describe('Credit Card Management', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();
@@ -90,7 +90,7 @@ test.describe('Credit Card Management', () => {
       if (!(await cardsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectCreditCardsTab();
       }
-      await page.waitForLoadState('networkidle');
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       // Verify card is no longer visible
       await expect(page.getByText(seeded.name)).not.toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
@@ -110,7 +110,7 @@ test.describe('Credit Card Management', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     const creditCards = managePage.creditCards();

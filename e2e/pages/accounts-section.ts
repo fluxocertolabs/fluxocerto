@@ -186,7 +186,7 @@ export class AccountsSection {
     await expect(async () => {
       // Try to wait for load first (but don't fail if it sees empty state)
       await this.waitForLoad();
-      await this.page.waitForLoadState('networkidle');
+      await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
       const account = this.page.getByText(name).first();
       await expect(account).toBeVisible({ timeout: 10000 });
     }).toPass({ timeout: 30000 });

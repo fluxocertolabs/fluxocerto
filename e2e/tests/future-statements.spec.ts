@@ -20,7 +20,7 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -109,7 +109,7 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -185,7 +185,7 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -253,7 +253,7 @@ test.describe('Future Statement Management', () => {
     await db.seedFutureStatements(statements);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -286,7 +286,7 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card with retry logic
@@ -342,7 +342,7 @@ test.describe('Future Statement Management', () => {
     await expect(dialog).not.toBeVisible({ timeout: 15000 });
     
     // Wait for the data to refresh
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await page.waitForTimeout(1000);
 
     // Badge should now show 1 - use longer timeout and more intervals
@@ -391,7 +391,7 @@ test.describe('Future Statement Validation', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section with retry
@@ -447,7 +447,7 @@ test.describe('Future Statement Validation', () => {
     await expect(dialog).not.toBeVisible({ timeout: 15000 });
     
     // Wait for data to refresh
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await page.waitForTimeout(1000);
 
     // Re-locate the card element in case DOM changed
@@ -476,7 +476,7 @@ test.describe('Future Statement Validation', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -548,7 +548,7 @@ test.describe('Future Statement Empty State', () => {
     ]);
 
     await managePage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section

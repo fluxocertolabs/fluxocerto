@@ -97,7 +97,7 @@ export class DashboardPage {
    */
   async openQuickUpdate(): Promise<void> {
     // Wait for page to be fully loaded first
-    await this.page.waitForLoadState('networkidle');
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
     
     // Use retry logic to handle race conditions where button may not be immediately visible
     await expect(async () => {

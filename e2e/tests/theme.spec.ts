@@ -31,7 +31,7 @@ test.describe('Theme Switching', () => {
     dashboardPage,
   }) => {
     await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
     // Find theme toggle button
     const themeToggle = page.getByRole('button', { name: /tema atual/i });
@@ -74,7 +74,7 @@ test.describe('Theme Switching', () => {
     });
 
     await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await themeBootstrap;
 
     // Find theme toggle and get initial state
@@ -123,7 +123,7 @@ test.describe('Theme Switching', () => {
 
     // Refresh the page
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await page.waitForTimeout(1000); // Give time for useTheme hook to fetch and apply
 
     // Verify theme persisted (class should match post-toggle state, not initial)
@@ -166,7 +166,7 @@ test.describe('Theme Switching', () => {
     });
 
     await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await themeBootstrap;
 
     // Find theme toggle
