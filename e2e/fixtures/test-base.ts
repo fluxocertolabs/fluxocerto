@@ -142,12 +142,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   db: async ({ workerCtx }, use) => {
     const dbFixture = createWorkerDbFixture(workerCtx);
 
+    console.log(`[Fixture] Setting up DB for worker ${workerCtx.workerIndex}...`);
     // Reset database (clears only this worker's household data) before each test
     // This uses household_id for reliable isolation instead of name patterns
     await dbFixture.resetDatabase();
 
     // Ensure test user exists in worker's household
     await dbFixture.ensureTestUser();
+    console.log(`[Fixture] DB setup complete for worker ${workerCtx.workerIndex}`);
 
     await use(dbFixture);
   },

@@ -207,6 +207,7 @@ export async function getOrCreateWorkerHousehold(workerIndex: number, householdN
  */
 export async function resetHouseholdData(householdId: string): Promise<void> {
   const client = getAdminClient();
+  console.log(`[DB] Resetting data for household ${householdId}...`);
 
   // Delete in order to respect foreign key constraints
   // Note: We don't delete profiles to preserve auth linkage
@@ -222,7 +223,13 @@ export async function resetHouseholdData(householdId: string): Promise<void> {
 
   for (const table of tables) {
     try {
+      const start = Date.now();
       const { error } = await client.from(table).delete().eq('household_id', householdId);
+      const duration = Date.now() - start;
+      if (duration > 1000) {
+        console.warn(`[DB] Slow delete on ${table} for household ${householdId}: ${duration}ms`);
+      }
+      
       if (error && !error.message.includes('does not exist')) {
         console.warn(`Warning: Failed to reset ${table} for household ${householdId}: ${error.message}`);
       }
@@ -230,6 +237,7 @@ export async function resetHouseholdData(householdId: string): Promise<void> {
       console.warn(`Warning: Exception resetting ${table}:`, err);
     }
   }
+  console.log(`[DB] Reset complete for household ${householdId}`);
 }
 
 /**
