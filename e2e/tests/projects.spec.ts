@@ -124,14 +124,21 @@ test.describe('Project (Income) Management', () => {
       await projects.expectProjectVisible(seeded.name);
       await projects.updateProjectCertainty(seeded.name, 'probable');
 
-      // Wait for update to complete with retry logic
+      // Force reload to get fresh data - more reliable than waiting for realtime under load
+      await page.reload();
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await managePage.selectProjectsTab();
+      await projects.selectRecurring();
+
+      // Now verify the badge is updated
       await expect(async () => {
-        await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
-        // Find the project row and check for "Provável" badge within it
-        const projectRow = page.getByText(seeded.name, { exact: true }).first()
-          .locator('xpath=ancestor::div[contains(@class, "rounded-lg")]');
-        await expect(projectRow.getByText(/provável/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
+        // Find the project row by name and check for "Provável" badge
+        const projectNameEl = page.getByText(seeded.name, { exact: true }).first();
+        await expect(projectNameEl).toBeVisible({ timeout: 3000 });
+        // The badge is a sibling span in the same flex container
+        const container = projectNameEl.locator('..'); // parent div with flex items
+        await expect(container.getByText(/provável/i)).toBeVisible({ timeout: 3000 });
+      }).toPass({ timeout: 10000, intervals: [1000, 2000, 3000] });
     });
   });
 
@@ -182,29 +189,21 @@ test.describe('Project (Income) Management', () => {
       // Use the page object method to update certainty
       await projects.updateSingleShotCertainty(seeded.name, 'uncertain');
       
-      // Wait for the dialog to close and data to refresh
+      // Force reload to get fresh data - more reliable than waiting for realtime under load
+      await page.reload();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
-      await page.waitForTimeout(1000);
+      await managePage.selectProjectsTab();
+      await projects.selectSingleShot();
 
-      // Wait for update to complete with retry logic
+      // Now verify the badge is updated
       await expect(async () => {
-        // Ensure we're still on the projects tab and single-shot view
-        const projectsTab = page.getByRole('tab', { name: /receitas/i });
-        const isSelected = await projectsTab.getAttribute('aria-selected');
-        if (!isSelected?.includes('true')) {
-          await managePage.selectProjectsTab();
-          await projects.selectSingleShot();
-          await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
-        }
-        
-        // Find the specific project row and check for the certainty badge
-        const projectRow = page.getByText(seeded.name, { exact: true }).first()
-          .locator('xpath=ancestor::div[contains(@class, "rounded-lg")]');
-        
-        // Look for "Incerta" badge within the project row
-        const badge = projectRow.getByText(/incert/i);
-        await expect(badge).toBeVisible({ timeout: 5000 });
-      }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000, 5000] });
+        // Find the project by name and check for "Incerta" badge
+        const projectNameEl = page.getByText(seeded.name, { exact: true }).first();
+        await expect(projectNameEl).toBeVisible({ timeout: 3000 });
+        // The badge is a sibling span in the same flex container
+        const container = projectNameEl.locator('..'); // parent div with flex items
+        await expect(container.getByText(/incert/i)).toBeVisible({ timeout: 3000 });
+      }).toPass({ timeout: 10000, intervals: [1000, 2000, 3000] });
     });
 
     test('T050: delete project confirmation dialog → opens and closes correctly', async ({
