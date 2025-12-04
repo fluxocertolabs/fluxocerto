@@ -168,7 +168,7 @@ export default defineConfig({
   webServer: {
     command: `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port}`,
     url: process.env.BASE_URL,
-    reuseExistingServer: !process.env.CI, // Only reuse in local dev, not in CI
+    reuseExistingServer: true, // Always reuse if server is already running (CI Docker starts it manually)
     timeout: 120000, // 2 minutes to start
     cwd: resolve(__dirname, '..'),
   },

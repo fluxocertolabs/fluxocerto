@@ -94,11 +94,9 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
   });
 
   visualTest.describe('Manage Lists Mobile', () => {
-    // TODO: Investigate why these specific tests timeout on mobile viewport
-    // The page URL is correct (/manage) but the page content fails to load
-    // Other mobile manage page tests (expenses, projects, credit cards) work fine
-    // Skipping for now to maintain test suite reliability
-    visualTest.skip('accounts list - mobile light', async ({ page, managePage, db, visual }) => {
+    // Even though accounts is the default tab, explicitly selecting it ensures
+    // the tab content is fully loaded before taking screenshots
+    visualTest('accounts list - mobile light', async ({ page, managePage, db, visual }) => {
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú Poupança', type: 'savings', balance: 200000 }),
@@ -110,13 +108,10 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      const accounts = managePage.accounts();
-      await accounts.waitForLoad();
-
       await visual.takeScreenshot(page, 'manage-accounts-mobile-light.png');
     });
 
-    visualTest.skip('accounts list - mobile dark', async ({ page, managePage, db, visual }) => {
+    visualTest('accounts list - mobile dark', async ({ page, managePage, db, visual }) => {
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú Poupança', type: 'savings', balance: 200000 }),
@@ -127,9 +122,6 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await managePage.selectAccountsTab();
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
-
-      const accounts = managePage.accounts();
-      await accounts.waitForLoad();
 
       await visual.takeScreenshot(page, 'manage-accounts-mobile-dark.png');
     });

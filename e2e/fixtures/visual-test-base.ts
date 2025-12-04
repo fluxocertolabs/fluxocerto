@@ -313,11 +313,13 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
   },
 
   // Override page to install clock mock before any navigation
+  // Note: Clock mock is installed AFTER page creation to avoid conflicts with mobile emulation
   page: async ({ context }, use) => {
     const page = await context.newPage();
 
     // Install clock mock with fixed date for deterministic visual tests
-    await page.clock.install({ time: VISUAL_TEST_FIXED_DATE });
+    // Use pauseAt instead of install to avoid interfering with page load timers
+    await page.clock.setFixedTime(VISUAL_TEST_FIXED_DATE);
 
     await use(page);
     await page.close();
