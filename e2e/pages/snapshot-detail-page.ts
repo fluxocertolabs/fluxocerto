@@ -37,11 +37,29 @@ export class SnapshotDetailPage {
   async goto(snapshotId: string): Promise<void> {
     await this.page.goto(`/history/${snapshotId}`);
     
-    // Wait for loading to complete - either banner, not found, or error shows
+    // Wait for page to be in a stable state:
+    // 1. First, wait for either loading to appear OR content to appear
+    //    (handles race where content loads before we can observe loading state)
+    // 2. Then wait for loading to complete and content to be visible
     await expect(async () => {
       const isLoading = await this.loadingSkeleton.isVisible().catch(() => false);
       const hasBanner = await this.historicalBanner.isVisible().catch(() => false);
       const hasNotFound = await this.notFoundMessage.isVisible().catch(() => false);
+      
+      // Page must be in one of these states:
+      // - Loading (data fetch in progress)
+      // - Banner visible (snapshot loaded successfully)
+      // - Not found visible (snapshot doesn't exist)
+      const isInValidState = isLoading || hasBanner || hasNotFound;
+      expect(isInValidState).toBe(true);
+    }).toPass({ timeout: 10000, intervals: [100, 200, 500] });
+    
+    // Now wait for loading to complete and final state to be visible
+    await expect(async () => {
+      const isLoading = await this.loadingSkeleton.isVisible().catch(() => false);
+      const hasBanner = await this.historicalBanner.isVisible().catch(() => false);
+      const hasNotFound = await this.notFoundMessage.isVisible().catch(() => false);
+      
       // Loading should be done AND we should see either banner or not found
       expect(isLoading).toBe(false);
       expect(hasBanner || hasNotFound).toBe(true);
