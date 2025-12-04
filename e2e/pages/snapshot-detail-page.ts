@@ -67,7 +67,8 @@ export class SnapshotDetailPage {
       const hasError = await this.errorMessage.isVisible().catch(() => false);
 
       if (hasError) {
-        const text = await this.errorMessage.textContent().catch(() => 'Unknown error');
+        // Use short timeout to avoid blocking the retry loop if element disappears
+        const text = await this.errorMessage.textContent({ timeout: 100 }).catch(() => 'Unknown error');
         console.log(`Snapshot load error: ${text}`);
       }
       
