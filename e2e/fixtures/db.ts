@@ -67,6 +67,9 @@ let cachedDefaultHouseholdId: string | null = null;
 const cachedUserHouseholdIds: Map<string, string> = new Map();
 const cachedWorkerHouseholdIds: Map<number, string> = new Map();
 
+// Mutex to prevent race conditions during worker household creation/lookup
+const workerHouseholdMutex = new Map<number, Promise<string>>();
+
 /**
  * Get or create the default test household
  * Returns the household ID for the "Fonseca Floriano" household created by migration
@@ -166,37 +169,54 @@ export async function getOrCreateWorkerHousehold(workerIndex: number, householdN
     return cached;
   }
 
-  const client = getAdminClient();
-
-  // Try to find existing household
-  const { data: existing, error: selectError } = await client
-    .from('households')
-    .select('id')
-    .eq('name', householdName)
-    .maybeSingle();
-
-  if (selectError) {
-    throw new Error(`Failed to query worker household: ${selectError.message}`);
+  // Check if there is a pending operation for this worker
+  const pending = workerHouseholdMutex.get(workerIndex);
+  if (pending) {
+    return pending;
   }
 
-  if (existing) {
-    cachedWorkerHouseholdIds.set(workerIndex, existing.id);
-    return existing.id;
-  }
+  // Start new operation and store in mutex
+  const promise = (async () => {
+    try {
+      const client = getAdminClient();
 
-  // Create new household for this worker
-  const { data: newHousehold, error: insertError } = await client
-    .from('households')
-    .insert({ name: householdName })
-    .select('id')
-    .single();
+      // Try to find existing household
+      const { data: existing, error: selectError } = await client
+        .from('households')
+        .select('id')
+        .eq('name', householdName)
+        .maybeSingle();
 
-  if (insertError) {
-    throw new Error(`Failed to create worker household: ${insertError.message}`);
-  }
+      if (selectError) {
+        throw new Error(`Failed to query worker household: ${selectError.message}`);
+      }
 
-  cachedWorkerHouseholdIds.set(workerIndex, newHousehold.id);
-  return newHousehold.id;
+      if (existing) {
+        cachedWorkerHouseholdIds.set(workerIndex, existing.id);
+        return existing.id;
+      }
+
+      // Create new household for this worker
+      const { data: newHousehold, error: insertError } = await client
+        .from('households')
+        .insert({ name: householdName })
+        .select('id')
+        .single();
+
+      if (insertError) {
+        throw new Error(`Failed to create worker household: ${insertError.message}`);
+      }
+
+      cachedWorkerHouseholdIds.set(workerIndex, newHousehold.id);
+      return newHousehold.id;
+    } finally {
+      // Clean up mutex entry
+      workerHouseholdMutex.delete(workerIndex);
+    }
+  })();
+
+  workerHouseholdMutex.set(workerIndex, promise);
+  return promise;
 }
 
 /**
