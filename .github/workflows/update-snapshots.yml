@@ -57,7 +57,7 @@ jobs:
             -e BASE_URL=http://localhost:5173 \
             -e TEST_USER_EMAIL=e2e-test@example.com \
             mcr.microsoft.com/playwright:v1.57.0-jammy \
-            /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && (pnpm dev:app &) && npx wait-on http://localhost:5173 -t 60000 && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual --update-snapshots'
+            /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual --project=visual-mobile --update-snapshots'
 
       - name: Fix file permissions
         run: |
