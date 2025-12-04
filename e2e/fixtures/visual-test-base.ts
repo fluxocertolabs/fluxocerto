@@ -334,13 +334,19 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
     await use(workerCtx);
   },
 
-  // Database fixture scoped to worker
-  db: async ({ workerCtx }, use) => {
-    const dbFixture = createWorkerDbFixture(workerCtx);
-    await dbFixture.resetDatabase();
-    await dbFixture.ensureTestUser();
-    await use(dbFixture);
-  },
+  // Database fixture scoped to worker - resets once per worker, not per test
+  // Tests that need a fresh DB can call db.resetDatabase() explicitly
+  db: [
+    async ({ workerCtx }, use) => {
+      const dbFixture = createWorkerDbFixture(workerCtx);
+      console.log(`[Fixture] Setting up DB for visual worker ${workerCtx.workerIndex}...`);
+      await dbFixture.resetDatabase();
+      await dbFixture.ensureTestUser();
+      console.log(`[Fixture] DB setup complete for visual worker ${workerCtx.workerIndex}`);
+      await use(dbFixture);
+    },
+    { scope: 'worker' },
+  ],
 
   // Auth fixture scoped to worker
   auth: async ({ workerCtx }, use) => {
