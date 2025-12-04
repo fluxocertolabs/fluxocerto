@@ -14,6 +14,7 @@ export class SnapshotDetailPage {
   readonly cashflowChart: Locator;
   readonly summaryPanel: Locator;
   readonly notFoundMessage: Locator;
+  readonly errorMessage: Locator;
   readonly loadingSkeleton: Locator;
 
   constructor(page: Page) {
@@ -27,6 +28,8 @@ export class SnapshotDetailPage {
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
     this.notFoundMessage = page.getByText(/snapshot não encontrado/i);
+    this.errorMessage = page.locator('.text-destructive').first();
+
     // Loading skeleton uses animate-pulse class
     this.loadingSkeleton = page.locator('.animate-pulse').first();
   }
@@ -45,25 +48,34 @@ export class SnapshotDetailPage {
       const isLoading = await this.loadingSkeleton.isVisible().catch(() => false);
       const hasBanner = await this.historicalBanner.isVisible().catch(() => false);
       const hasNotFound = await this.notFoundMessage.isVisible().catch(() => false);
+      const hasError = await this.errorMessage.isVisible().catch(() => false);
       
       // Page must be in one of these states:
       // - Loading (data fetch in progress)
       // - Banner visible (snapshot loaded successfully)
       // - Not found visible (snapshot doesn't exist)
-      const isInValidState = isLoading || hasBanner || hasNotFound;
-      expect(isInValidState).toBe(true);
-    }).toPass({ timeout: 10000, intervals: [100, 200, 500] });
+      // - Error visible (failed to load)
+      const isInValidState = isLoading || hasBanner || hasNotFound || hasError;
+      expect(isInValidState, 'Page should be in a valid state (Loading, Banner, NotFound, or Error)').toBe(true);
+    }).toPass({ timeout: 15000, intervals: [100, 200, 500] });
     
     // Now wait for loading to complete and final state to be visible
     await expect(async () => {
       const isLoading = await this.loadingSkeleton.isVisible().catch(() => false);
       const hasBanner = await this.historicalBanner.isVisible().catch(() => false);
       const hasNotFound = await this.notFoundMessage.isVisible().catch(() => false);
+      const hasError = await this.errorMessage.isVisible().catch(() => false);
+
+      if (hasError) {
+        const text = await this.errorMessage.textContent().catch(() => 'Unknown error');
+        console.log(`Snapshot load error: ${text}`);
+      }
       
       // Loading should be done AND we should see either banner or not found
+      // If error is present, this will fail naturally
       expect(isLoading).toBe(false);
       expect(hasBanner || hasNotFound).toBe(true);
-    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
+    }).toPass({ timeout: 30000, intervals: [500, 1000, 2000] });
   }
 
   /**

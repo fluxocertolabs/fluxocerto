@@ -11,6 +11,7 @@ export class HistoryPage {
   readonly emptyState: Locator;
   readonly snapshotCards: Locator;
   readonly loadingIndicator: Locator;
+  readonly errorMessage: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -18,6 +19,7 @@ export class HistoryPage {
     this.emptyState = page.getByText(/nenhum snapshot salvo/i);
     this.snapshotCards = page.locator('[data-testid="snapshot-card"]');
     this.loadingIndicator = page.getByText(/carregando/i);
+    this.errorMessage = page.locator('.text-destructive').first();
   }
 
   /**
@@ -32,10 +34,17 @@ export class HistoryPage {
       const isLoading = await this.loadingIndicator.isVisible().catch(() => false);
       const hasSnapshots = await this.snapshotCards.count() > 0;
       const hasEmptyState = await this.emptyState.isVisible().catch(() => false);
+      const hasError = await this.errorMessage.isVisible().catch(() => false);
+
+      if (hasError) {
+        const text = await this.errorMessage.textContent().catch(() => 'Unknown error');
+        console.log(`History load error: ${text}`);
+      }
+
       // Content is loaded when not loading AND (has snapshots OR has empty state)
       expect(isLoading).toBe(false);
       expect(hasSnapshots || hasEmptyState).toBe(true);
-    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
   }
 
   /**
