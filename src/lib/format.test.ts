@@ -13,6 +13,8 @@ import {
   formatTooltipDate,
   formatToBRL,
   parseBRLToCents,
+  parseDecimal,
+  formatDecimalBR,
 } from './format'
 
 /**
@@ -410,6 +412,158 @@ describe('parseBRLToCents', () => {
       const original = 1 // 0.01 reais
       const formatted = formatToBRL(original.toString())
       expect(parseBRLToCents(formatted)).toBe(original)
+    })
+  })
+})
+
+// =============================================================================
+// parseDecimal TESTS
+// =============================================================================
+
+describe('parseDecimal', () => {
+  describe('Brazilian format (comma as decimal separator)', () => {
+    it('parses simple comma-separated values', () => {
+      expect(parseDecimal('120,50')).toBe(120.5)
+      expect(parseDecimal('1,00')).toBe(1)
+      expect(parseDecimal('0,99')).toBe(0.99)
+    })
+
+    it('parses values with only integer part', () => {
+      expect(parseDecimal('120')).toBe(120)
+      expect(parseDecimal('1000')).toBe(1000)
+    })
+
+    it('parses values with single decimal digit', () => {
+      expect(parseDecimal('120,5')).toBe(120.5)
+      expect(parseDecimal('0,5')).toBe(0.5)
+    })
+
+    it('parses values with many decimal digits', () => {
+      expect(parseDecimal('120,567')).toBe(120.567)
+    })
+  })
+
+  describe('international format (period as decimal separator)', () => {
+    it('parses simple period-separated values', () => {
+      expect(parseDecimal('120.50')).toBe(120.5)
+      expect(parseDecimal('1.00')).toBe(1)
+      expect(parseDecimal('0.99')).toBe(0.99)
+    })
+
+    it('parses values with single decimal digit', () => {
+      expect(parseDecimal('120.5')).toBe(120.5)
+      expect(parseDecimal('0.5')).toBe(0.5)
+    })
+  })
+
+  describe('edge cases', () => {
+    it('returns 0 for empty string', () => {
+      expect(parseDecimal('')).toBe(0)
+    })
+
+    it('returns 0 for whitespace only', () => {
+      expect(parseDecimal('   ')).toBe(0)
+    })
+
+    it('returns 0 for invalid input', () => {
+      expect(parseDecimal('abc')).toBe(0)
+      expect(parseDecimal('!@#')).toBe(0)
+    })
+
+    it('returns 0 for null/undefined-like values', () => {
+      expect(parseDecimal(null as unknown as string)).toBe(0)
+      expect(parseDecimal(undefined as unknown as string)).toBe(0)
+    })
+
+    it('handles negative values', () => {
+      expect(parseDecimal('-120,50')).toBe(-120.5)
+      expect(parseDecimal('-120.50')).toBe(-120.5)
+    })
+
+    it('handles values with extra whitespace', () => {
+      expect(parseDecimal(' 120,50 ')).toBe(120.5)
+    })
+
+    it('handles values with currency symbols', () => {
+      // parseDecimal strips non-numeric chars except comma, period, minus
+      expect(parseDecimal('R$ 120,50')).toBe(120.5)
+    })
+  })
+
+  describe('practical use cases', () => {
+    it('handles typical Brazilian user input', () => {
+      expect(parseDecimal('1500,00')).toBe(1500)
+      expect(parseDecimal('2500,50')).toBe(2500.5)
+      expect(parseDecimal('99,99')).toBe(99.99)
+    })
+
+    it('converts correctly for cents calculation', () => {
+      // Simulating what balance-list-item does
+      const input = '1500,50'
+      const valueInCents = Math.round(parseDecimal(input) * 100)
+      expect(valueInCents).toBe(150050)
+    })
+  })
+})
+
+// =============================================================================
+// formatDecimalBR TESTS
+// =============================================================================
+
+describe('formatDecimalBR', () => {
+  describe('basic formatting', () => {
+    it('formats numbers with comma separator', () => {
+      expect(formatDecimalBR(120.5)).toBe('120,50')
+      expect(formatDecimalBR(1)).toBe('1,00')
+      expect(formatDecimalBR(0.99)).toBe('0,99')
+    })
+
+    it('formats zero correctly', () => {
+      expect(formatDecimalBR(0)).toBe('0,00')
+    })
+
+    it('formats whole numbers with .00', () => {
+      expect(formatDecimalBR(100)).toBe('100,00')
+      expect(formatDecimalBR(1000)).toBe('1000,00')
+    })
+  })
+
+  describe('decimal places', () => {
+    it('uses 2 decimal places by default', () => {
+      expect(formatDecimalBR(123.456)).toBe('123,46') // rounds
+      expect(formatDecimalBR(123.4)).toBe('123,40')
+    })
+
+    it('respects custom decimal places', () => {
+      expect(formatDecimalBR(123.456, 3)).toBe('123,456')
+      expect(formatDecimalBR(123.4, 1)).toBe('123,4')
+      expect(formatDecimalBR(123, 0)).toBe('123')
+    })
+  })
+
+  describe('negative values', () => {
+    it('formats negative numbers correctly', () => {
+      expect(formatDecimalBR(-120.5)).toBe('-120,50')
+      expect(formatDecimalBR(-0.99)).toBe('-0,99')
+    })
+  })
+
+  describe('roundtrip with parseDecimal', () => {
+    it('roundtrips simple values', () => {
+      const original = 120.5
+      const formatted = formatDecimalBR(original)
+      expect(parseDecimal(formatted)).toBe(original)
+    })
+
+    it('roundtrips values with many decimals (with rounding)', () => {
+      const original = 123.456
+      const formatted = formatDecimalBR(original) // "123,46"
+      expect(parseDecimal(formatted)).toBe(123.46) // rounded
+    })
+
+    it('roundtrips zero', () => {
+      const formatted = formatDecimalBR(0)
+      expect(parseDecimal(formatted)).toBe(0)
     })
   })
 })

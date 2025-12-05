@@ -146,3 +146,36 @@ export function parseBRLToCents(formatted: string): number {
   const num = parseFloat(normalized)
   return isNaN(num) ? 0 : Math.round(num * 100)
 }
+
+/**
+ * Parse a decimal string that may use comma or period as decimal separator.
+ * Handles Brazilian format (comma) and international format (period).
+ *
+ * @param value - Decimal string (e.g., "120,50" or "120.50")
+ * @returns Parsed number (e.g., 120.5), or 0 if invalid
+ */
+export function parseDecimal(value: string): number {
+  if (!value || typeof value !== 'string') return 0
+
+  // Remove any non-numeric characters except comma, period, and minus
+  const cleaned = value.replace(/[^\d.,-]/g, '')
+  if (!cleaned) return 0
+
+  // Replace comma with period for parsing
+  const normalized = cleaned.replace(',', '.')
+  const num = parseFloat(normalized)
+
+  return isNaN(num) ? 0 : num
+}
+
+/**
+ * Format a number to Brazilian decimal format (with comma).
+ * Used for displaying values in input fields.
+ *
+ * @param value - Number to format (e.g., 120.5)
+ * @param decimals - Number of decimal places (default: 2)
+ * @returns Formatted string with comma separator (e.g., "120,50")
+ */
+export function formatDecimalBR(value: number, decimals: number = 2): string {
+  return value.toFixed(decimals).replace('.', ',')
+}

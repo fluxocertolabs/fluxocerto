@@ -22,6 +22,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import type { FutureStatement, FutureStatementInput } from '@/types'
 import { getAvailableMonthOptions, isCurrentMonth } from '@/types'
+import { parseDecimal, formatDecimalBR } from '@/lib/format'
 
 interface FutureStatementFormProps {
   creditCardId: string
@@ -63,7 +64,7 @@ export function FutureStatementForm({
 
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth)
   const [amount, setAmount] = useState(
-    editingStatement ? (editingStatement.amount / 100).toFixed(2) : ''
+    editingStatement ? formatDecimalBR(editingStatement.amount / 100) : ''
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showCurrentMonthWarning, setShowCurrentMonthWarning] = useState(false)
@@ -99,10 +100,10 @@ export function FutureStatementForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Normalize Brazilian decimal separator (comma) to dot for parsing
-    const normalizedAmount = amount.replace(',', '.')
-    const amountInCents = Math.round(parseFloat(normalizedAmount) * 100)
-    if (isNaN(amountInCents) || amountInCents < 0) {
+    // Parse decimal value (supports both comma and period as separator)
+    const amountValue = parseDecimal(amount)
+    const amountInCents = Math.round(amountValue * 100)
+    if (amountInCents < 0) {
       return
     }
 
@@ -131,18 +132,17 @@ export function FutureStatementForm({
 
   const handleConfirmCurrentMonth = async () => {
     setShowCurrentMonthWarning(false)
-    // Normalize Brazilian decimal separator (comma) to dot for parsing
-    const normalizedAmount = amount.replace(',', '.')
-    const amountInCents = Math.round(parseFloat(normalizedAmount) * 100)
-    if (isNaN(amountInCents) || amountInCents < 0) {
+    // Parse decimal value (supports both comma and period as separator)
+    const amountValue = parseDecimal(amount)
+    const amountInCents = Math.round(amountValue * 100)
+    if (amountInCents < 0) {
       return
     }
     await submitForm(amountInCents)
   }
 
-  const normalizedAmountForValidation = amount.replace(',', '.')
-  const amountValue = parseFloat(normalizedAmountForValidation)
-  const isValidAmount = !isNaN(amountValue) && amountValue >= 0
+  const amountValue = parseDecimal(amount)
+  const isValidAmount = amountValue >= 0 && amount.trim() !== ''
 
   return (
     <>
@@ -178,9 +178,8 @@ export function FutureStatementForm({
             </span>
             <Input
               id="amount"
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0,00"

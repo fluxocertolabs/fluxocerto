@@ -213,4 +213,58 @@ test.describe('Quick Update Modal', () => {
     // Verify no "Não atribuído" text is shown (OwnerBadge hides by default when null)
     await expect(page.getByText('Não atribuído')).not.toBeVisible();
   });
+
+  test('T077: update balance with Brazilian decimal format (comma) → saves correctly', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    const uniqueId = Date.now();
+    const accountName = `Conta Comma ${uniqueId}`;
+    
+    // Seed account with initial balance of R$ 1.000,00 (100000 cents)
+    await db.seedAccounts([
+      createAccount({ 
+        name: accountName, 
+        balance: 100000,
+      }),
+    ]);
+
+    // Navigate and open Quick Update
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Find the balance input for our account
+    const balanceInput = page.getByLabel(new RegExp(`Saldo de.*${accountName}`, 'i')).last();
+    await expect(balanceInput).toBeVisible();
+
+    // Clear and type new balance using Brazilian format with comma: R$ 1.500,50
+    await balanceInput.clear();
+    await balanceInput.fill('1500,50');
+    
+    // Trigger blur to save (auto-save on blur)
+    await balanceInput.blur();
+    
+    // Wait for save to complete
+    await page.waitForTimeout(1000);
+
+    // Verify the value was saved correctly by checking the input still shows the value
+    // The input should display the Brazilian format
+    await expect(balanceInput).toHaveValue(/1500[,.]50/);
+
+    // Complete the quick update
+    await quickUpdatePage.complete();
+    await quickUpdatePage.expectModalClosed();
+
+    // Reopen Quick Update to verify the value persisted
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify the saved value is displayed (150050 cents = R$ 1.500,50)
+    const balanceInputAfterReload = page.getByLabel(new RegExp(`Saldo de.*${accountName}`, 'i')).last();
+    await expect(balanceInputAfterReload).toHaveValue(/1500[,.]50|1\.500[,.]50/);
+  });
 });

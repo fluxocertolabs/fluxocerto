@@ -567,3 +567,76 @@ test.describe('Future Statement Empty State', () => {
   });
 });
 
+test.describe('Future Statement Brazilian Decimal Format', () => {
+  test('T-FS-009: add future statement with comma decimal separator → saves correctly', async ({
+    page,
+    managePage,
+    db,
+  }) => {
+    // Seed a credit card
+    const uniqueId = Date.now();
+    const [seededCard] = await db.seedCreditCards([
+      createCreditCard({ name: `Cartão Comma ${uniqueId}`, statement_balance: 50000, due_day: 15 }),
+    ]);
+
+    await managePage.goto();
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.selectCreditCardsTab();
+
+    // Find the credit card and expand future statements section
+    const cardElement = page.locator('div.group.relative').filter({
+      has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
+    }).first();
+
+    await expect(cardElement).toBeVisible({ timeout: 10000 });
+
+    // Click on "Próximas Faturas" to expand
+    const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
+    await collapsibleTrigger.click();
+
+    // Click add button for future statement
+    const addButton = cardElement.getByRole('button', { name: /adicionar/i });
+    await addButton.click();
+
+    // Wait for dialog
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    // Select a future month (not current month) to avoid warning dialog
+    const monthSelect = dialog.locator('button[role="combobox"]').first();
+    await monthSelect.click();
+    
+    // Get next month name in Portuguese
+    const nextMonthDate = new Date();
+    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+    const nextMonthName = nextMonthDate.toLocaleString('pt-BR', { month: 'long' });
+    const nextYear = nextMonthDate.getFullYear();
+    
+    // Select next month option
+    const monthOption = page.getByRole('option', {
+      name: new RegExp(`${nextMonthName}.*${nextYear}`, 'i'),
+    });
+    await monthOption.click();
+
+    // Fill the form with Brazilian decimal format (comma as separator)
+    // R$ 1.234,56 = 123456 cents
+    const amountInput = dialog.getByLabel(/valor/i);
+    await amountInput.click();
+    await amountInput.fill('1234,56');
+    
+    // Wait for the submit button to be enabled (form validation passes)
+    const submitButton = dialog.getByRole('button', { name: /salvar|adicionar/i });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+
+    // Submit
+    await submitButton.click();
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
+
+    // Verify future statement appears in the list with correct formatted value
+    // R$ 1.234,56 should be displayed
+    await expect(async () => {
+      await expect(cardElement.getByText(formatBRL(123456))).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
+  });
+});
+

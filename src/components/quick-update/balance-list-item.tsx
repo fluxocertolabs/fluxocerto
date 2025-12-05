@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { OwnerBadge } from '@/components/ui/owner-badge'
 import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, parseDecimal, formatDecimalBR } from '@/lib/format'
 import type { BalanceItem } from './types'
 import { getBalanceFromItem, getNameFromItem, getOwnerFromItem } from './types'
 
@@ -30,8 +30,8 @@ export function BalanceListItem({
   const name = getNameFromItem(item)
   const owner = getOwnerFromItem(item)
 
-  // Convert cents to dollars for display/editing
-  const [editValue, setEditValue] = useState(() => (currentBalance / 100).toFixed(2))
+  // Convert cents to reais for display/editing (using Brazilian comma format)
+  const [editValue, setEditValue] = useState(() => formatDecimalBR(currentBalance / 100))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -44,16 +44,17 @@ export function BalanceListItem({
   useEffect(() => {
     if (!isSaving && currentBalance !== lastSyncedBalance) {
       setLastSyncedBalance(currentBalance)
-      setEditValue((currentBalance / 100).toFixed(2))
+      setEditValue(formatDecimalBR(currentBalance / 100))
     }
   }, [currentBalance, isSaving, lastSyncedBalance])
 
   const handleBlur = useCallback(async () => {
-    const numValue = parseFloat(editValue)
+    // Parse decimal value (supports both comma and period as separator)
+    const numValue = parseDecimal(editValue)
 
     // Validate input
-    if (isNaN(numValue) || numValue < 0) {
-      setEditValue((currentBalance / 100).toFixed(2))
+    if (numValue < 0) {
+      setEditValue(formatDecimalBR(currentBalance / 100))
       setError(null)
       return
     }
@@ -87,7 +88,7 @@ export function BalanceListItem({
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Reset to current value
-        setEditValue((currentBalance / 100).toFixed(2))
+        setEditValue(formatDecimalBR(currentBalance / 100))
         setError(null)
         inputRef.current?.blur()
       }
@@ -129,19 +130,19 @@ export function BalanceListItem({
           </span>
           <Input
             ref={inputRef}
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            min={0}
-            step={0.01}
             disabled={isSaving}
             className={cn(
               'w-32 pl-7 text-right',
               isSaving && 'opacity-50'
             )}
             aria-label={`Saldo de ${name}`}
+            placeholder="0,00"
           />
         </div>
 
