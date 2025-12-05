@@ -21,7 +21,7 @@ visualTest.describe('Dev Auth Bypass Visual Regression @visual', () => {
     'dev-bypass-dashboard - dashboard after dev auth should match normal dashboard',
     async ({ page, dashboardPage, db, visual }) => {
       // Reset database to ensure clean state
-      await db.resetDatabase();
+      await db.clear();
       
       // Navigate to dashboard (will use existing auth from test fixtures)
       await dashboardPage.goto();
@@ -37,7 +37,7 @@ visualTest.describe('Dev Auth Bypass Visual Regression @visual', () => {
   visualTest(
     'dev-bypass-dashboard-dark - dark theme dashboard after dev auth',
     async ({ page, dashboardPage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await dashboardPage.goto();
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);

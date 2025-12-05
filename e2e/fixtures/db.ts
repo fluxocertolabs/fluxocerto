@@ -1071,57 +1071,107 @@ export async function deleteSnapshotsForHousehold(householdId: string): Promise<
 export function createWorkerDbFixture(workerContext: IWorkerContext) {
   const { workerIndex, email, dataPrefix, householdName } = workerContext;
 
+  // Track whether this worker's database has been modified since last reset
+  // This allows optimizing away redundant resets (which are expensive network operations)
+  let isDirty = true; // Start dirty so first reset actually runs
+
   // Helper to get this worker's household ID (cached after first call)
   const getWorkerHouseholdId = async () => {
     return getOrCreateWorkerHousehold(workerIndex, householdName);
+  };
+
+  // Mark the database as dirty (data has been added)
+  const markDirty = () => {
+    isDirty = true;
   };
 
   return {
     /**
      * Reset database by clearing this worker's household data.
      * Uses household_id for reliable isolation instead of name patterns.
+     * This always resets regardless of dirty state - use clear() for optimized resets.
      */
     resetDatabase: async () => {
       const householdId = await getWorkerHouseholdId();
       await resetHouseholdData(householdId);
+      isDirty = false;
     },
+
+    /**
+     * Clear database only if data has been seeded since last clear/reset.
+     * This is an optimized version of resetDatabase() that skips the expensive
+     * DELETE operations if the database is already clean.
+     * 
+     * Use this in tests that need empty state - it's instant if no data was added.
+     */
+    clear: async () => {
+      if (!isDirty) {
+        // Database is already clean, skip expensive reset
+        return;
+      }
+      const householdId = await getWorkerHouseholdId();
+      await resetHouseholdData(householdId);
+      isDirty = false;
+    },
+
+    /**
+     * Check if database has been modified since last reset/clear
+     */
+    isDirty: () => isDirty,
     ensureTestUser: async (userEmail?: string) => {
       const householdId = await getWorkerHouseholdId();
       return ensureTestUser(userEmail ?? email, workerIndex, householdId);
     },
     removeTestUser: (userEmail?: string) => removeTestUser(userEmail ?? email, workerIndex),
     // CRITICAL: Pass household ID directly to avoid fallback to default household
+    // All seed methods mark the database as dirty
     seedAccounts: async (accounts: TestAccount[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedAccountsWithHousehold(accounts, workerIndex, householdId);
+      const result = await seedAccountsWithHousehold(accounts, workerIndex, householdId);
+      markDirty();
+      return result;
     },
     seedExpenses: async (expenses: TestExpense[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedExpensesWithHousehold(expenses, workerIndex, householdId);
+      const result = await seedExpensesWithHousehold(expenses, workerIndex, householdId);
+      markDirty();
+      return result;
     },
     seedSingleShotExpenses: async (expenses: TestSingleShotExpense[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedSingleShotExpensesWithHousehold(expenses, workerIndex, householdId);
+      const result = await seedSingleShotExpensesWithHousehold(expenses, workerIndex, householdId);
+      markDirty();
+      return result;
     },
     seedProjects: async (projects: TestProject[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedProjectsWithHousehold(projects, workerIndex, householdId);
+      const result = await seedProjectsWithHousehold(projects, workerIndex, householdId);
+      markDirty();
+      return result;
     },
     seedSingleShotIncome: async (income: TestSingleShotIncome[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedSingleShotIncomeWithHousehold(income, workerIndex, householdId);
+      const result = await seedSingleShotIncomeWithHousehold(income, workerIndex, householdId);
+      markDirty();
+      return result;
     },
     seedCreditCards: async (cards: TestCreditCard[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedCreditCardsWithHousehold(cards, workerIndex, householdId);
+      const result = await seedCreditCardsWithHousehold(cards, workerIndex, householdId);
+      markDirty();
+      return result;
     },
     seedFutureStatements: async (statements: TestFutureStatement[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedFutureStatementsWithHousehold(statements, householdId);
+      const result = await seedFutureStatementsWithHousehold(statements, householdId);
+      markDirty();
+      return result;
     },
     seedSnapshots: async (snapshots: { name: string; data: object }[]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedSnapshotsWithHousehold(snapshots, householdId);
+      const result = await seedSnapshotsWithHousehold(snapshots, householdId);
+      markDirty();
+      return result;
     },
     getSnapshots: async () => {
       const householdId = await getWorkerHouseholdId();
@@ -1133,9 +1183,14 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     },
     seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
       const householdId = await getWorkerHouseholdId();
-      return seedFullScenarioWithHousehold(data, workerIndex, householdId);
+      await seedFullScenarioWithHousehold(data, workerIndex, householdId);
+      markDirty();
     },
-    seedHouseholds: (households: TestHousehold[]) => seedHouseholds(households, workerIndex),
+    seedHouseholds: async (households: TestHousehold[]) => {
+      const result = await seedHouseholds(households, workerIndex);
+      markDirty();
+      return result;
+    },
     expenseExists,
     projectExists,
     accountExists,

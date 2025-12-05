@@ -22,7 +22,7 @@ import {
 visualTest.describe('Modal Visual Regression @visual', () => {
   visualTest.describe('Account Modals', () => {
     visualTest('add account modal - light', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectAccountsTab();
       await visual.setTheme(page, 'light');
@@ -43,7 +43,7 @@ visualTest.describe('Modal Visual Regression @visual', () => {
     });
 
     visualTest('add account modal - dark', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectAccountsTab();
       await visual.setTheme(page, 'dark');
@@ -112,7 +112,7 @@ visualTest.describe('Modal Visual Regression @visual', () => {
 
   visualTest.describe('Expense Modals', () => {
     visualTest('add expense modal - light', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectExpensesTab();
       await visual.setTheme(page, 'light');
@@ -131,7 +131,7 @@ visualTest.describe('Modal Visual Regression @visual', () => {
     });
 
     visualTest('add expense modal - dark', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectExpensesTab();
       await visual.setTheme(page, 'dark');
@@ -155,7 +155,7 @@ visualTest.describe('Modal Visual Regression @visual', () => {
 
   visualTest.describe('Project Modals', () => {
     visualTest('add project modal - light', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectProjectsTab();
       await visual.setTheme(page, 'light');
@@ -174,7 +174,7 @@ visualTest.describe('Modal Visual Regression @visual', () => {
     });
 
     visualTest('add project modal - dark', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectProjectsTab();
       await visual.setTheme(page, 'dark');
@@ -198,7 +198,7 @@ visualTest.describe('Modal Visual Regression @visual', () => {
 
   visualTest.describe('Credit Card Modals', () => {
     visualTest('add credit card modal - light', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectCreditCardsTab();
       await visual.setTheme(page, 'light');
@@ -217,7 +217,7 @@ visualTest.describe('Modal Visual Regression @visual', () => {
     });
 
     visualTest('add credit card modal - dark', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await managePage.goto();
       await managePage.selectCreditCardsTab();
       await visual.setTheme(page, 'dark');

@@ -31,7 +31,7 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
   visualTest(
     'dashboard - light empty',
     async ({ page, dashboardPage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await dashboardPage.goto();
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -43,7 +43,7 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
   visualTest(
     'dashboard - dark empty',
     async ({ page, dashboardPage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await dashboardPage.goto();
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);

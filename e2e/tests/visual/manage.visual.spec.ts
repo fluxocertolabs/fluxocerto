@@ -18,14 +18,14 @@ import {
 /**
  * Manage Page Visual Regression Tests
  * 
- * IMPORTANT: Each test explicitly resets the database to ensure isolation.
- * This is necessary because tests run in parallel and the page reload
- * in setTheme() could show stale data from previous tests.
+ * OPTIMIZATION: Tests use db.clear() which only resets if data was seeded.
+ * The worker fixture already resets on setup, so consecutive "empty state" tests
+ * skip the expensive reset operation. This dramatically reduces CI time.
  */
 visualTest.describe('Manage Page Visual Regression @visual', () => {
   visualTest.describe('Accounts Tab', () => {
     visualTest('accounts - light empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectAccountsTab();
       await visual.setTheme(page, 'light');
@@ -35,7 +35,7 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
     });
 
     visualTest('accounts - dark empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectAccountsTab();
       await visual.setTheme(page, 'dark');
@@ -83,7 +83,7 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
 
   visualTest.describe('Credit Cards Tab', () => {
     visualTest('credit cards - light empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectCreditCardsTab();
       await visual.setTheme(page, 'light');
@@ -93,7 +93,7 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
     });
 
     visualTest('credit cards - dark empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectCreditCardsTab();
       await visual.setTheme(page, 'dark');
@@ -139,7 +139,7 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
 
   visualTest.describe('Expenses Tab', () => {
     visualTest('expenses - light empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectExpensesTab();
       await visual.setTheme(page, 'light');
@@ -149,7 +149,7 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
     });
 
     visualTest('expenses - dark empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectExpensesTab();
       await visual.setTheme(page, 'dark');
@@ -199,7 +199,7 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
 
   visualTest.describe('Projects Tab', () => {
     visualTest('projects - light empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectProjectsTab();
       await visual.setTheme(page, 'light');
@@ -209,7 +209,7 @@ visualTest.describe('Manage Page Visual Regression @visual', () => {
     });
 
     visualTest('projects - dark empty', async ({ page, managePage, db, visual }) => {
-      await db.resetDatabase(); // Explicit reset for empty state
+      await db.clear(); // Smart clear - only resets if data was seeded
       await managePage.goto();
       await managePage.selectProjectsTab();
       await visual.setTheme(page, 'dark');

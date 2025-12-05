@@ -87,7 +87,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
   visualTest(
     'history - light empty',
     async ({ page, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await db.deleteSnapshots();
 
       await page.goto('/history');
@@ -103,7 +103,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
   visualTest(
     'history - dark empty',
     async ({ page, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await db.deleteSnapshots();
 
       await page.goto('/history');

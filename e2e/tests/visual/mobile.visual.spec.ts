@@ -22,7 +22,7 @@ import {
 visualTest.describe('Mobile Visual Regression @visual', () => {
   visualTest.describe('Dashboard Mobile', () => {
     visualTest('dashboard - mobile light empty', async ({ page, dashboardPage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await dashboardPage.goto();
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -31,7 +31,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('dashboard - mobile dark empty', async ({ page, dashboardPage, db, visual }) => {
-      await db.resetDatabase();
+      await db.clear();
       await dashboardPage.goto();
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
