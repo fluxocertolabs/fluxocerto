@@ -124,22 +124,15 @@ test.describe('Project (Income) Management', () => {
       await projects.expectProjectVisible(seeded.name);
       await projects.updateProjectCertainty(seeded.name, 'probable');
 
-      // Verify the badge is updated - use retry loop that includes reload
-      // This is more robust than reloading once and hoping the timing works
+      // Wait for the certainty badge to update via realtime subscription
+      // The badge is a sibling span in the same flex container as the project name
+      // Use toPass with aggressive retries - realtime updates can be delayed in CI
       await expect(async () => {
-        // Reload to get fresh data from database
-        await page.reload();
-        await managePage.waitForReady();
-        await managePage.selectProjectsTab();
-        await projects.selectRecurring();
-        
-        // Find the project row by name and check for "Provável" badge
+        // Re-query locators inside the retry to get fresh DOM state
         const projectNameEl = page.getByText(seeded.name, { exact: true }).first();
-        await expect(projectNameEl).toBeVisible({ timeout: 5000 });
-        // The badge is a sibling span in the same flex container
         const container = projectNameEl.locator('..'); // parent div with flex items
-        await expect(container.getByText(/provável/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 30000, intervals: [5000, 10000, 15000] });
+        await expect(container.getByText(/provável/i)).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 30000, intervals: [300, 500, 1000, 2000, 3000, 5000] });
     });
   });
 
@@ -190,22 +183,15 @@ test.describe('Project (Income) Management', () => {
       // Use the page object method to update certainty
       await projects.updateSingleShotCertainty(seeded.name, 'uncertain');
       
-      // Verify the badge is updated - use retry loop that includes reload
-      // This is more robust than reloading once and hoping the timing works
+      // Wait for the certainty badge to update via realtime subscription
+      // The badge is a sibling span in the same flex container as the project name
+      // Use toPass with aggressive retries - realtime updates can be delayed in CI
       await expect(async () => {
-        // Reload to get fresh data from database
-        await page.reload();
-        await managePage.waitForReady();
-        await managePage.selectProjectsTab();
-        await projects.selectSingleShot();
-
-        // Find the project by name and check for "Incerta" badge
+        // Re-query locators inside the retry to get fresh DOM state
         const projectNameEl = page.getByText(seeded.name, { exact: true }).first();
-        await expect(projectNameEl).toBeVisible({ timeout: 5000 });
-        // The badge is a sibling span in the same flex container
         const container = projectNameEl.locator('..'); // parent div with flex items
-        await expect(container.getByText(/incert/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 30000, intervals: [5000, 10000, 15000] });
+        await expect(container.getByText(/incert/i)).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 30000, intervals: [300, 500, 1000, 2000, 3000, 5000] });
     });
 
     test('T050: delete project confirmation dialog → opens and closes correctly', async ({
