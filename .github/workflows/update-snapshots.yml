@@ -32,7 +32,13 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.62.10
+
+      # Cache Supabase Docker images to avoid ~650MB download on each run
+      - name: Cache Supabase Docker images
+        uses: ScribeMD/docker-cache@0.5.0
+        with:
+          key: docker-supabase-${{ runner.os }}-${{ hashFiles('supabase/config.toml') }}
 
       - name: Start Supabase
         run: supabase start
@@ -42,6 +48,12 @@ jobs:
         run: |
           echo "anon_key=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_OUTPUT
           echo "service_role_key=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_OUTPUT
+
+      # Cache Playwright Docker image to avoid ~1.5GB download
+      - name: Cache Playwright Docker image
+        uses: ScribeMD/docker-cache@0.5.0
+        with:
+          key: docker-playwright-${{ runner.os }}-v1.57.0
 
       - name: Generate Visual Snapshots in Docker
         run: |
