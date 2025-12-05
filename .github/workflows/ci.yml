@@ -107,24 +107,17 @@ jobs:
           if_no_artifact_found: warn
           search_artifacts: true
 
-      # Step 3: Cache Docker images for Supabase
-      # This significantly speeds up subsequent runs by caching the ~3GB of images
-      - name: Cache Docker images
-        uses: ScribeMD/docker-cache@0.5.0
-        with:
-          key: docker-${{ runner.os }}-supabase-2.62.10
-
-      # Step 4: Install Supabase CLI
+      # Step 3: Install Supabase CLI
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: 2.62.10
 
-      # Step 5: Start Supabase local environment
+      # Step 4: Start Supabase local environment
       - name: Start Supabase
         run: supabase start
 
-      # Step 6: Get Supabase keys for Docker
+      # Step 5: Get Supabase keys for Docker
       # We need to capture these before running Docker since Supabase CLI isn't in the container
       - name: Get Supabase keys
         id: supabase
@@ -132,7 +125,7 @@ jobs:
           echo "anon_key=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_OUTPUT
           echo "service_role_key=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_OUTPUT
 
-      # Step 7: Run Visual Regression tests in Docker
+      # Step 6: Run Visual Regression tests in Docker
       # Uses the same Playwright Docker image and approach as local development for consistency
       # This ensures snapshots generated locally match CI exactly
       # Note: pnpm install runs inside Docker to match local behavior - permission issues
@@ -155,7 +148,7 @@ jobs:
             mcr.microsoft.com/playwright:v1.57.0-jammy \
             /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test --config e2e/playwright.config.ts --project=setup --project=visual --project=visual-mobile'
 
-      # Step 8: Upload visual diff artifacts on failure
+      # Step 7: Upload visual diff artifacts on failure
       - name: Upload Visual Regression report
         uses: actions/upload-artifact@v4
         if: failure()
@@ -192,20 +185,13 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      # Step 4: Cache Docker images for Supabase
-      # This significantly speeds up subsequent runs by caching the ~3GB of images
-      - name: Cache Docker images
-        uses: ScribeMD/docker-cache@0.5.0
-        with:
-          key: docker-${{ runner.os }}-supabase-2.62.10
-
-      # Step 5: Install Supabase CLI
+      # Step 4: Install Supabase CLI
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: 2.62.10
 
-      # Step 6: Start Supabase local environment
+      # Step 5: Start Supabase local environment
       - name: Start Supabase
         run: |
           supabase start
@@ -242,7 +228,7 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
 
-      # Step 10: Run E2E tests
+      # Step 8: Run E2E tests
       # Note: We skip auth-tests in CI since the setup already validates authentication
       # and auth-tests are slow (serial, email-based). This saves ~60+ seconds.
       - name: Run E2E tests
@@ -256,7 +242,7 @@ jobs:
           CI: true
           PLAYWRIGHT_TITLE: "🧪 E2E Tests"
 
-      # Step 11: Upload test artifacts on failure
+      # Step 9: Upload test artifacts on failure
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: failure()

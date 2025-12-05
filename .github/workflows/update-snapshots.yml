@@ -29,12 +29,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      # Cache Docker images for Supabase - saves ~10-15 minutes on subsequent runs
-      - name: Cache Docker images
-        uses: ScribeMD/docker-cache@0.5.0
-        with:
-          key: docker-${{ runner.os }}-supabase-2.62.10
-
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
