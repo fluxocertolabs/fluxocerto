@@ -54,3 +54,10 @@ export function getIdFromItem(item: BalanceItem): string {
   return item.entity.id
 }
 
+/**
+ * Get the owner from a balance item
+ */
+export function getOwnerFromItem(item: BalanceItem): { name: string } | null {
+  return item.entity.owner
+}
+

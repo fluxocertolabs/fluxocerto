@@ -654,6 +654,7 @@ export async function seedCreditCardsWithHousehold(
     name: addWorkerPrefix(c.name, workerIndex),
     statement_balance: c.statement_balance,
     due_day: c.due_day,
+    owner_id: c.owner_id ?? null,
     household_id: householdId,
   }));
 
@@ -686,6 +687,7 @@ export async function seedCreditCards(
     name: workerIndex !== undefined ? addWorkerPrefix(c.name, workerIndex) : c.name,
     statement_balance: c.statement_balance,
     due_day: c.due_day,
+    owner_id: c.owner_id ?? null,
     household_id: householdId,
   }));
 

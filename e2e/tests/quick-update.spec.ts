@@ -119,4 +119,98 @@ test.describe('Quick Update Modal', () => {
     const modalVisible = await quickUpdatePage.isModalVisible();
     expect(modalVisible).toBe(true);
   });
+
+  test('T075: accounts and cards with owners → owner badges displayed in Quick Update', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    const uniqueId = Date.now();
+    
+    // Get the worker's household ID and create profiles to use as owners
+    const householdId = await db.getWorkerHouseholdId();
+    const accountOwner = await db.createProfileInHousehold(
+      `account-owner-${uniqueId}@test.local`,
+      'João Silva',
+      householdId
+    );
+    const cardOwner = await db.createProfileInHousehold(
+      `card-owner-${uniqueId}@test.local`,
+      'Maria Santos',
+      householdId
+    );
+
+    // Seed account and card with owners assigned
+    const [seededAccount] = await db.seedAccounts([
+      createAccount({ 
+        name: `Conta Owned ${uniqueId}`, 
+        balance: 100000,
+        owner_id: accountOwner.id,
+      }),
+    ]);
+    const [seededCard] = await db.seedCreditCards([
+      createCreditCard({ 
+        name: `Cartão Owned ${uniqueId}`, 
+        statement_balance: 50000, 
+        due_day: 15,
+        owner_id: cardOwner.id,
+      }),
+    ]);
+
+    // Navigate and open Quick Update
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify the account is listed with its owner badge
+    await expect(page.getByText(seededAccount.name, { exact: false })).toBeVisible();
+    await expect(page.getByText('João Silva')).toBeVisible();
+
+    // Verify the card is listed with its owner badge
+    await expect(page.getByText(seededCard.name, { exact: false })).toBeVisible();
+    await expect(page.getByText('Maria Santos')).toBeVisible();
+
+    // Clean up the test profiles
+    await db.deleteProfileByEmail(`account-owner-${uniqueId}@test.local`);
+    await db.deleteProfileByEmail(`card-owner-${uniqueId}@test.local`);
+  });
+
+  test('T076: items without owners → no owner badge displayed in Quick Update', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    const uniqueId = Date.now();
+
+    // Seed account and card WITHOUT owner assigned
+    const [seededAccount] = await db.seedAccounts([
+      createAccount({ 
+        name: `Conta No Owner ${uniqueId}`, 
+        balance: 100000,
+      }),
+    ]);
+    const [seededCard] = await db.seedCreditCards([
+      createCreditCard({ 
+        name: `Cartão No Owner ${uniqueId}`, 
+        statement_balance: 50000, 
+        due_day: 15,
+      }),
+    ]);
+
+    // Navigate and open Quick Update
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify items are listed
+    await expect(page.getByText(seededAccount.name, { exact: false })).toBeVisible();
+    await expect(page.getByText(seededCard.name, { exact: false })).toBeVisible();
+
+    // Verify no "Não atribuído" text is shown (OwnerBadge hides by default when null)
+    await expect(page.getByText('Não atribuído')).not.toBeVisible();
+  });
 });

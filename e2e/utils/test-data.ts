@@ -52,6 +52,7 @@ export interface TestCreditCard {
   name: string;
   statement_balance: number; // in cents
   due_day: number; // 1-31
+  owner_id?: string | null;
 }
 
 export interface TestFutureStatement {

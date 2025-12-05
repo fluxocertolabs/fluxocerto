@@ -6,10 +6,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { OwnerBadge } from '@/components/ui/owner-badge'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import type { BalanceItem } from './types'
-import { getBalanceFromItem, getNameFromItem } from './types'
+import { getBalanceFromItem, getNameFromItem, getOwnerFromItem } from './types'
 
 interface BalanceListItemProps {
   /** The balance item to display */
@@ -27,6 +28,7 @@ export function BalanceListItem({
 }: BalanceListItemProps) {
   const currentBalance = getBalanceFromItem(item)
   const name = getNameFromItem(item)
+  const owner = getOwnerFromItem(item)
 
   // Convert cents to dollars for display/editing
   const [editValue, setEditValue] = useState(() => (currentBalance / 100).toFixed(2))
@@ -108,9 +110,12 @@ export function BalanceListItem({
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
 
-      {/* Name and previous balance */}
+      {/* Name, owner, and previous balance */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-foreground truncate">{name}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-medium text-foreground truncate">{name}</p>
+          <OwnerBadge owner={owner} />
+        </div>
         <p className="text-sm text-muted-foreground">
           Anterior: {formatCurrency(previousBalance)}
         </p>
