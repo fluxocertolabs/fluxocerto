@@ -46,7 +46,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -75,7 +75,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -115,7 +115,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -124,21 +124,22 @@ test.describe('Project (Income) Management', () => {
       await projects.expectProjectVisible(seeded.name);
       await projects.updateProjectCertainty(seeded.name, 'probable');
 
-      // Force reload to get fresh data - more reliable than waiting for realtime under load
-      await page.reload();
-      await managePage.waitForReady();
-      await managePage.selectProjectsTab();
-      await projects.selectRecurring();
-
-      // Now verify the badge is updated
+      // Verify the badge is updated - use retry loop that includes reload
+      // This is more robust than reloading once and hoping the timing works
       await expect(async () => {
+        // Reload to get fresh data from database
+        await page.reload();
+        await managePage.waitForReady();
+        await managePage.selectProjectsTab();
+        await projects.selectRecurring();
+        
         // Find the project row by name and check for "Provável" badge
         const projectNameEl = page.getByText(seeded.name, { exact: true }).first();
-        await expect(projectNameEl).toBeVisible({ timeout: 3000 });
+        await expect(projectNameEl).toBeVisible({ timeout: 5000 });
         // The badge is a sibling span in the same flex container
         const container = projectNameEl.locator('..'); // parent div with flex items
         await expect(container.getByText(/provável/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 15000, intervals: [1000, 2000, 3000, 5000] });
+      }).toPass({ timeout: 30000, intervals: [5000, 10000, 15000] });
     });
   });
 
@@ -178,7 +179,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -189,21 +190,22 @@ test.describe('Project (Income) Management', () => {
       // Use the page object method to update certainty
       await projects.updateSingleShotCertainty(seeded.name, 'uncertain');
       
-      // Force reload to get fresh data - more reliable than waiting for realtime under load
-      await page.reload();
-      await managePage.waitForReady();
-      await managePage.selectProjectsTab();
-      await projects.selectSingleShot();
-
-      // Now verify the badge is updated
+      // Verify the badge is updated - use retry loop that includes reload
+      // This is more robust than reloading once and hoping the timing works
       await expect(async () => {
+        // Reload to get fresh data from database
+        await page.reload();
+        await managePage.waitForReady();
+        await managePage.selectProjectsTab();
+        await projects.selectSingleShot();
+
         // Find the project by name and check for "Incerta" badge
         const projectNameEl = page.getByText(seeded.name, { exact: true }).first();
-        await expect(projectNameEl).toBeVisible({ timeout: 3000 });
+        await expect(projectNameEl).toBeVisible({ timeout: 5000 });
         // The badge is a sibling span in the same flex container
         const container = projectNameEl.locator('..'); // parent div with flex items
         await expect(container.getByText(/incert/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 15000, intervals: [1000, 2000, 3000, 5000] });
+      }).toPass({ timeout: 30000, intervals: [5000, 10000, 15000] });
     });
 
     test('T050: delete project confirmation dialog → opens and closes correctly', async ({
@@ -217,7 +219,7 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();

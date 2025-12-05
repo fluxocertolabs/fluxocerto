@@ -44,9 +44,12 @@ export class ManagePage {
   /**
    * Wait for the manage page to be fully ready after navigation or reload.
    * Can be called after page.reload() to ensure the page is ready for interaction.
+   * 
+   * Note: Internal timeouts are kept under 30s to fit within 45s test timeout.
    */
   async waitForReady(): Promise<void> {
-    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
+    // Use shorter timeout for networkidle - it may never reach idle in busy environments
+    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(3000)]);
     
     // Verify we're actually on the manage page (not redirected to login)
     const currentUrl = this.page.url();
@@ -80,7 +83,7 @@ export class ManagePage {
     // First, wait for the page heading to be visible - this always renders regardless of loading state
     const pageHeading = this.page.getByRole('heading', { name: /gerenciar dados financeiros/i });
     try {
-      await pageHeading.waitFor({ state: 'visible', timeout: 30000 });
+      await pageHeading.waitFor({ state: 'visible', timeout: 15000 });
     } catch (error) {
       // Take screenshot for debugging
       const timestamp = Date.now();
@@ -100,6 +103,7 @@ export class ManagePage {
     
     try {
       // Wait for either: loading wrapper to finish OR tabs to be visible
+      // Use 20s timeout to fit within 45s test timeout (leaving room for assertions)
       await Promise.race([
         // Option 1: Wait for loading wrapper to finish
         this.page.waitForFunction(
@@ -108,10 +112,10 @@ export class ManagePage {
             // Either wrapper doesn't exist (fast load) or it's done loading
             return !wrapper || wrapper.getAttribute('aria-busy') === 'false';
           },
-          { timeout: 60000 }
+          { timeout: 20000 }
         ),
         // Option 2: Tabs are already visible (fast load, no skeleton)
-        tabsVisible.waitFor({ state: 'visible', timeout: 60000 }),
+        tabsVisible.waitFor({ state: 'visible', timeout: 20000 }),
       ]);
       
       // Wait for the opacity transition to complete (PageLoadingWrapper uses 250ms transition)
