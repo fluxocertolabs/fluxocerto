@@ -267,4 +267,237 @@ test.describe('Quick Update Modal', () => {
     const balanceInputAfterReload = page.getByLabel(new RegExp(`Saldo de.*${accountName}`, 'i')).last();
     await expect(balanceInputAfterReload).toHaveValue(/1500[,.]50|1\.500[,.]50/);
   });
+
+  test('T078: account type badges → checking accounts show "Corrente" badge', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    const uniqueId = Date.now();
+    
+    // Seed a checking account (using unique name without "Corrente" to avoid confusion)
+    await db.seedAccounts([
+      createAccount({ 
+        name: `Nubank Check ${uniqueId}`, 
+        type: 'checking',
+        balance: 100000,
+      }),
+    ]);
+
+    // Navigate and open Quick Update
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify the account is listed with its type badge
+    await expect(page.getByText(`Nubank Check ${uniqueId}`, { exact: false })).toBeVisible();
+    // Use the badge with emoji to be more specific
+    await expect(page.getByText('🏦').first()).toBeVisible();
+    await expect(page.locator('span').filter({ hasText: /^🏦Corrente$/ }).first()).toBeVisible();
+  });
+
+  test('T079: account type badges → savings accounts show "Poupança" badge', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    const uniqueId = Date.now();
+    
+    // Seed a savings account (using unique name without "Poupança" to avoid confusion)
+    await db.seedAccounts([
+      createAccount({ 
+        name: `Reserva ${uniqueId}`, 
+        type: 'savings',
+        balance: 200000,
+      }),
+    ]);
+
+    // Navigate and open Quick Update
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify the account is listed with its type badge
+    await expect(page.getByText(`Reserva ${uniqueId}`, { exact: false })).toBeVisible();
+    // Use the badge with emoji to be more specific
+    await expect(page.getByText('💰').first()).toBeVisible();
+    await expect(page.locator('span').filter({ hasText: /^💰Poupança$/ }).first()).toBeVisible();
+  });
+
+  test('T080: account type badges → investment accounts show "Investimento" badge', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    const uniqueId = Date.now();
+    
+    // Seed an investment account (using unique name without "Investimento" to avoid confusion)
+    await db.seedAccounts([
+      createAccount({ 
+        name: `XP Renda ${uniqueId}`, 
+        type: 'investment',
+        balance: 500000,
+      }),
+    ]);
+
+    // Navigate and open Quick Update
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify the account is listed with its type badge
+    await expect(page.getByText(`XP Renda ${uniqueId}`, { exact: false })).toBeVisible();
+    // Use the badge with emoji to be more specific
+    await expect(page.getByText('📈').first()).toBeVisible();
+    await expect(page.locator('span').filter({ hasText: /^📈Investimento$/ }).first()).toBeVisible();
+  });
+
+  test('T081: account type badges → multiple accounts with same name distinguished by type', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    // Reset database to ensure clean state - this test relies on specific badge counts
+    await db.resetDatabase();
+    await db.ensureTestUser();
+    
+    const uniqueId = Date.now();
+    const accountName = `Multi ${uniqueId}`;
+    
+    // Seed multiple accounts with the same name but different types
+    await db.seedAccounts([
+      createAccount({ 
+        name: accountName, 
+        type: 'checking',
+        balance: 100000,
+      }),
+      createAccount({ 
+        name: accountName, 
+        type: 'investment',
+        balance: 500000,
+      }),
+    ]);
+
+    // Navigate AFTER seeding
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify both accounts are listed (same name appears twice)
+    const accountNameElements = page.getByText(accountName, { exact: false });
+    await expect(accountNameElements).toHaveCount(2);
+
+    // Verify both type badges are present for these specific accounts
+    // Use the account row containers to scope the badge search
+    const accountRows = page.locator('div.rounded-lg.border').filter({ hasText: accountName });
+    await expect(accountRows).toHaveCount(2);
+    
+    // Within these rows, verify we have one of each type
+    await expect(accountRows.locator('span').filter({ hasText: /^🏦Corrente$/ })).toHaveCount(1);
+    await expect(accountRows.locator('span').filter({ hasText: /^📈Investimento$/ })).toHaveCount(1);
+  });
+
+  test('T082: credit cards section → cards listed without account type badges', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    const uniqueId = Date.now();
+    
+    // Seed a credit card
+    await db.seedCreditCards([
+      createCreditCard({ 
+        name: `Cartão Teste ${uniqueId}`, 
+        statement_balance: 150000,
+        due_day: 15,
+      }),
+    ]);
+
+    // Navigate and open Quick Update
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Verify the modal is open (Concluir button visible)
+    await expect(quickUpdatePage.completeButton).toBeVisible();
+
+    // Verify the card is listed
+    await expect(page.getByText(`Cartão Teste ${uniqueId}`, { exact: false })).toBeVisible();
+
+    // Find the card row specifically and verify it doesn't have type badges
+    // The card row contains the card name
+    const cardRow = page.locator('div.rounded-lg.border').filter({ 
+      hasText: `Cartão Teste ${uniqueId}` 
+    });
+    await expect(cardRow).toBeVisible();
+    
+    // Within this specific card row, there should be no type badge
+    await expect(cardRow.locator('span').filter({ hasText: /^🏦Corrente$/ })).toHaveCount(0);
+    await expect(cardRow.locator('span').filter({ hasText: /^💰Poupança$/ })).toHaveCount(0);
+    await expect(cardRow.locator('span').filter({ hasText: /^📈Investimento$/ })).toHaveCount(0);
+  });
+
+  test('T083: account with both owner and type → shows both badges', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    // Reset database to ensure clean state - this test relies on specific badge presence
+    await db.resetDatabase();
+    await db.ensureTestUser();
+    
+    const uniqueId = Date.now();
+    
+    // Create a profile to use as owner
+    const householdId = await db.getWorkerHouseholdId();
+    const owner = await db.createProfileInHousehold(
+      `type-owner-${uniqueId}@test.local`,
+      'Daniel',
+      householdId
+    );
+
+    // Seed an investment account with owner (using unique name without "Investimento")
+    const accountName = `XP Owned ${uniqueId}`;
+    await db.seedAccounts([
+      createAccount({ 
+        name: accountName, 
+        type: 'investment',
+        balance: 1000000,
+        owner_id: owner.id,
+      }),
+    ]);
+
+    // Navigate AFTER seeding
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    // Find the specific account row
+    const accountRow = page.locator('div.rounded-lg.border').filter({ hasText: accountName });
+    await expect(accountRow).toBeVisible();
+    
+    // Verify the account is listed
+    await expect(page.getByText(accountName, { exact: false })).toBeVisible();
+    
+    // Verify owner badge is shown within the account row
+    await expect(accountRow.getByText('Daniel')).toBeVisible();
+    
+    // Verify type badge is shown within the account row
+    await expect(accountRow.locator('span').filter({ hasText: /^📈Investimento$/ })).toBeVisible();
+
+    // Clean up
+    await db.deleteProfileByEmail(`type-owner-${uniqueId}@test.local`);
+  });
 });

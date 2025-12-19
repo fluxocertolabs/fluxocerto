@@ -985,6 +985,33 @@ export async function projectExists(name: string): Promise<boolean> {
 }
 
 /**
+ * Get project by ID (uses admin client to bypass RLS)
+ */
+export async function getProjectById(id: string): Promise<{ id: string; name: string; certainty: string; type: string } | null> {
+  const client = getAdminClient();
+  const { data, error } = await client.from('projects').select('id, name, certainty, type').eq('id', id).maybeSingle();
+  if (error) {
+    console.warn(`Warning getting project by ID: ${error.message}`);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * Update project certainty using admin client (bypasses RLS)
+ * Use for testing when browser RLS may not be properly configured
+ */
+export async function updateProjectCertainty(id: string, certainty: 'guaranteed' | 'probable' | 'uncertain'): Promise<boolean> {
+  const client = getAdminClient();
+  const { error } = await client.from('projects').update({ certainty }).eq('id', id);
+  if (error) {
+    console.warn(`Warning updating project certainty: ${error.message}`);
+    return false;
+  }
+  return true;
+}
+
+/**
  * Check if an account exists in the database by name
  */
 export async function accountExists(name: string): Promise<boolean> {
@@ -1195,6 +1222,8 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     },
     expenseExists,
     projectExists,
+    getProjectById,
+    updateProjectCertainty,
     accountExists,
     snapshotExists,
     profileExists,

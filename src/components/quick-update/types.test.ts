@@ -8,6 +8,7 @@ import {
   getNameFromItem,
   getIdFromItem,
   getOwnerFromItem,
+  getAccountTypeFromItem,
   type BalanceItem,
 } from './types'
 import type { BankAccount, CreditCard } from '@/types'
@@ -127,6 +128,40 @@ describe('Quick Update Types', () => {
         entity: createMockCreditCard({ owner }),
       }
       expect(getOwnerFromItem(item)).toEqual(owner)
+    })
+  })
+
+  describe('getAccountTypeFromItem', () => {
+    it('returns checking type for checking account', () => {
+      const item: BalanceItem = {
+        type: 'account',
+        entity: createMockBankAccount({ type: 'checking' }),
+      }
+      expect(getAccountTypeFromItem(item)).toBe('checking')
+    })
+
+    it('returns savings type for savings account', () => {
+      const item: BalanceItem = {
+        type: 'account',
+        entity: createMockBankAccount({ type: 'savings' }),
+      }
+      expect(getAccountTypeFromItem(item)).toBe('savings')
+    })
+
+    it('returns investment type for investment account', () => {
+      const item: BalanceItem = {
+        type: 'account',
+        entity: createMockBankAccount({ type: 'investment' }),
+      }
+      expect(getAccountTypeFromItem(item)).toBe('investment')
+    })
+
+    it('returns null for credit card items', () => {
+      const item: BalanceItem = {
+        type: 'card',
+        entity: createMockCreditCard(),
+      }
+      expect(getAccountTypeFromItem(item)).toBeNull()
     })
   })
 })
