@@ -11,6 +11,7 @@ import 'url'
 
 <file path="e2e/fixtures/auth.ts">
 import '@playwright/test'
+import '../utils/wait-helpers'
 import 'url'
 import 'path'
 import '../utils/inbucket'
@@ -29,6 +30,7 @@ export class AuthFixture {
     public readonly storageStatePath: string
     public readonly workerIndex: number
     public constructor(options: AuthFixtureOptions)
+    public async clearExistingSession(page: Page): Promise<void>
     public async requestMagicLink(email: string, page: Page): Promise<void>
     public async getMagicLinkUrl(email: string, previousUrl: string): Promise<string>
     public async waitForMagicLinkEmail(email: string, previousUrl: string, maxRetries: number, intervalMs: number): Promise<string>
@@ -120,6 +122,7 @@ export const test
 
 <file path="e2e/fixtures/visual-test-base.ts">
 import '@playwright/test'
+import '../utils/wait-helpers'
 import './db'
 import './auth'
 import './worker-context'
@@ -294,6 +297,7 @@ export class HistoryPage {
     public readonly emptyState: Locator
     public readonly snapshotCards: Locator
     public readonly loadingIndicator: Locator
+    public readonly errorMessage: Locator
     public constructor(page: Page)
     public async goto(): Promise<void>
     public async hasEmptyState(): Promise<boolean>
@@ -361,6 +365,7 @@ export class ManagePage {
     public readonly householdTab: Locator
     public constructor(page: Page)
     public async goto(): Promise<void>
+    public async waitForReady(): Promise<void>
     public async selectAccountsTab(): Promise<void>
     public async selectCreditCardsTab(): Promise<void>
     public async selectExpensesTab(): Promise<void>
@@ -441,11 +446,14 @@ import '@playwright/test'
 export class SnapshotDetailPage {
     public readonly page: Page
     public readonly historicalBanner: Locator
+    public readonly historicalBannerTitle: Locator
     public readonly backButton: Locator
     public readonly deleteButton: Locator
     public readonly cashflowChart: Locator
     public readonly summaryPanel: Locator
     public readonly notFoundMessage: Locator
+    public readonly errorMessage: Locator
+    public readonly loadingSkeleton: Locator
     public constructor(page: Page)
     public async goto(snapshotId: string): Promise<void>
     public async hasHistoricalBanner(): Promise<boolean>
@@ -492,6 +500,7 @@ import '../utils/test-data'
 
 <file path="e2e/tests/dev-auth-bypass.spec.ts">
 import '@playwright/test'
+import '../fixtures/test-base'
 </file>
 
 <file path="e2e/tests/edge-cases.spec.ts">
@@ -756,6 +765,7 @@ export interface TestCreditCard {
     property name: string
     property statement_balance: number
     property due_day: number
+    property owner_id: string | null
 }
 
 export interface TestFutureStatement {
@@ -3827,6 +3837,7 @@ import '@/components/ui/alert-dialog'
 import 'lucide-react'
 import '@/types'
 import '@/types'
+import '@/lib/format'
 export function FutureStatementForm()
 </file>
 
@@ -4017,6 +4028,7 @@ export function StorageErrorToast()
 import 'react'
 import '@/components/ui/input'
 import '@/components/ui/button'
+import '@/components/ui/owner-badge'
 import '@/lib/utils'
 import '@/lib/format'
 import './types'
@@ -4054,6 +4066,12 @@ import '@/types/loading'
 export function QuickUpdateView()
 </file>
 
+<file path="src/components/quick-update/types.test.ts">
+import 'vitest'
+import './types'
+import '@/types'
+</file>
+
 <file path="src/components/quick-update/types.ts">
 import '@/types'
 type BalanceItem = | {
@@ -4075,6 +4093,7 @@ export interface BalanceFieldState {
 export function getBalanceFromItem(item: BalanceItem)
 export function getNameFromItem(item: BalanceItem)
 export function getIdFromItem(item: BalanceItem)
+export function getOwnerFromItem(item: BalanceItem)
 </file>
 
 <file path="src/components/setup-required.tsx">
@@ -4617,6 +4636,8 @@ export function formatChartDate(date: Date)
 export function formatTooltipDate(date: Date)
 export function formatToBRL(value: string)
 export function parseBRLToCents(formatted: string)
+export function parseDecimal(value: string)
+export function formatDecimalBR(value: number, decimals: number)
 </file>
 
 <file path="src/lib/snapshots/schema-version.test.ts">
