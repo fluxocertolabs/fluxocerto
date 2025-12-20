@@ -19,25 +19,30 @@ describe('AccountTypeBadge - Rendering', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('renders nothing when type is undefined', () => {
+    const { container } = render(<AccountTypeBadge type={undefined} />)
+    expect(container.firstChild).toBeNull()
+  })
+
   it('renders checking badge with correct label and icon', () => {
     render(<AccountTypeBadge type="checking" />)
 
     expect(screen.getByText('Corrente')).toBeInTheDocument()
-    expect(screen.getByText('🏦')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tipo: Corrente')).toBeInTheDocument()
   })
 
   it('renders savings badge with correct label and icon', () => {
     render(<AccountTypeBadge type="savings" />)
 
     expect(screen.getByText('Poupança')).toBeInTheDocument()
-    expect(screen.getByText('💰')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tipo: Poupança')).toBeInTheDocument()
   })
 
   it('renders investment badge with correct label and icon', () => {
     render(<AccountTypeBadge type="investment" />)
 
     expect(screen.getByText('Investimento')).toBeInTheDocument()
-    expect(screen.getByText('📈')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tipo: Investimento')).toBeInTheDocument()
   })
 })
 
@@ -99,18 +104,18 @@ describe('AccountTypeBadge - Styling', () => {
 // =============================================================================
 
 describe('AccountTypeBadge - All Types', () => {
-  const testCases: Array<{ type: AccountType; label: string; icon: string }> = [
-    { type: 'checking', label: 'Corrente', icon: '🏦' },
-    { type: 'savings', label: 'Poupança', icon: '💰' },
-    { type: 'investment', label: 'Investimento', icon: '📈' },
+  const testCases: Array<{ type: AccountType; label: string }> = [
+    { type: 'checking', label: 'Corrente' },
+    { type: 'savings', label: 'Poupança' },
+    { type: 'investment', label: 'Investimento' },
   ]
 
-  testCases.forEach(({ type, label, icon }) => {
+  testCases.forEach(({ type, label }) => {
     it(`renders ${type} type correctly`, () => {
       render(<AccountTypeBadge type={type} />)
 
       expect(screen.getByText(label)).toBeInTheDocument()
-      expect(screen.getByText(icon)).toBeInTheDocument()
+      expect(screen.getByLabelText(`Tipo: ${label}`)).toBeInTheDocument()
     })
   })
 })

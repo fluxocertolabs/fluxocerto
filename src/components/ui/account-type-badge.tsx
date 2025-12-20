@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils'
+import type { AccountType } from '@/components/quick-update/types'
 
-export type AccountType = 'checking' | 'savings' | 'investment'
+export type { AccountType }
 
 interface AccountTypeBadgeProps {
-  type: AccountType | null
+  type: AccountType | undefined | null
   className?: string
 }
 
@@ -37,8 +38,9 @@ export function AccountTypeBadge({ type, className }: AccountTypeBadgeProps) {
         config.colors,
         className
       )}
+      aria-label={`Tipo: ${config.label}`}
     >
-      <span className="text-[10px]">{config.icon}</span>
+      <span className="text-[10px]" aria-hidden="true">{config.icon}</span>
       {config.label}
     </span>
   )

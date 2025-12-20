@@ -175,4 +175,4 @@ Query latest via: Context7 → BrightData → web_search
 ---
 
 > **AGENTS.md**: Universal "how to work" protocols
-> **CONSTITUTION.md**: Project-specific "what it is" facts
+> **constitution.md**: Project-specific "what it is" facts

@@ -69,7 +69,7 @@ interface ContaBancaria { ... }
 
 ## Tech Stack
 
-- **Frontend**: React 18 + TypeScript + Vite
+- **Frontend**: React 19 + TypeScript + Vite
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **State**: Zustand
 - **Backend**: Supabase (PostgreSQL + Auth + Realtime)
@@ -95,7 +95,7 @@ interface ContaBancaria { ... }
 
 ## Key Directories
 
-```
+```text
 src/
 ├── components/     # React components
 ├── hooks/          # Custom React hooks

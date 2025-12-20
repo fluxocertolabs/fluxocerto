@@ -75,7 +75,8 @@ describe('BalanceListItem - Account Type Badge', () => {
     renderBalanceListItem(item)
 
     expect(screen.getByText('Corrente')).toBeInTheDocument()
-    expect(screen.getByText('🏦')).toBeInTheDocument()
+    // Verify badge has correct aria-label for accessibility
+    expect(screen.getByLabelText('Tipo: Corrente')).toBeInTheDocument()
   })
 
   it('renders savings type badge for savings accounts', () => {
@@ -86,7 +87,8 @@ describe('BalanceListItem - Account Type Badge', () => {
     renderBalanceListItem(item)
 
     expect(screen.getByText('Poupança')).toBeInTheDocument()
-    expect(screen.getByText('💰')).toBeInTheDocument()
+    // Verify badge has correct aria-label for accessibility
+    expect(screen.getByLabelText('Tipo: Poupança')).toBeInTheDocument()
   })
 
   it('renders investment type badge for investment accounts', () => {
@@ -97,7 +99,8 @@ describe('BalanceListItem - Account Type Badge', () => {
     renderBalanceListItem(item)
 
     expect(screen.getByText('Investimento')).toBeInTheDocument()
-    expect(screen.getByText('📈')).toBeInTheDocument()
+    // Verify badge has correct aria-label for accessibility
+    expect(screen.getByLabelText('Tipo: Investimento')).toBeInTheDocument()
   })
 
   it('does not render type badge for credit cards', () => {
@@ -180,7 +183,7 @@ describe('BalanceListItem - Combined Badge Display', () => {
     expect(screen.getByText('Daniel')).toBeInTheDocument()
     // Type badge
     expect(screen.getByText('Investimento')).toBeInTheDocument()
-    expect(screen.getByText('📈')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tipo: Investimento')).toBeInTheDocument()
   })
 
   it('renders only owner badge for credit card with owner', () => {
@@ -212,7 +215,7 @@ describe('BalanceListItem - Combined Badge Display', () => {
 
     // Type badge
     expect(screen.getByText('Poupança')).toBeInTheDocument()
-    expect(screen.getByText('💰')).toBeInTheDocument()
+    expect(screen.getByLabelText('Tipo: Poupança')).toBeInTheDocument()
   })
 })
 

@@ -199,30 +199,6 @@ export class ManagePage {
       await expect(this.projectsTab).toHaveAttribute('data-state', 'active', { timeout: 3000 });
     }).toPass({ timeout: 25000, intervals: [500, 1000, 2000, 3000, 5000] });
   }
-  
-  /**
-   * Wait for the page to be interactive
-   * This waits for either data content or empty state to appear
-   * Note: The skeleton layer may still be visible but content should be usable
-   */
-  private async waitForLoadingComplete(): Promise<void> {
-    // Simply wait for actual data items to appear in the DOM
-    // This is more reliable than waiting for loading text to disappear
-    // because the skeleton and content layers can coexist
-    try {
-      await Promise.race([
-        // Data items are present
-        this.page.locator('div.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 20000 }),
-        // Empty state message
-        this.page.getByText(/nenhum|nenhuma|adicione|crie/i).first().waitFor({ state: 'visible', timeout: 20000 }),
-      ]);
-    } catch {
-      // Continue anyway - content may be loading slowly
-    }
-    
-    // Brief wait for any transitions
-    await this.page.waitForTimeout(300);
-  }
 
   /**
    * Switch to household tab
