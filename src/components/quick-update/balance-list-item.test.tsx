@@ -42,12 +42,14 @@ function createMockCreditCard(overrides: Partial<CreditCard> = {}): CreditCard {
   }
 }
 
-const defaultOnSave = vi.fn().mockResolvedValue({ success: true })
+function createDefaultOnSave() {
+  return vi.fn().mockResolvedValue({ success: true })
+}
 
 function renderBalanceListItem(
   item: BalanceItem,
   previousBalance: number = 100000,
-  onSave = defaultOnSave
+  onSave = createDefaultOnSave()
 ) {
   return render(
     <BalanceListItem
@@ -255,9 +257,11 @@ describe('BalanceListItem - Basic Rendering', () => {
     }
     renderBalanceListItem(item, 150000) // Previous: R$ 1.500
 
-    expect(screen.getByText(/Anterior:/)).toBeInTheDocument()
     // formatCurrency returns "R$ 1.500" for 150000 cents (no decimals for amounts < 10K reais)
-    expect(screen.getByText(/R\$\s*1\.500/)).toBeInTheDocument()
+    // The text is split across elements, so we check the parent element contains both parts
+    const previousBalanceElement = screen.getByText(/Anterior:/)
+    expect(previousBalanceElement).toBeInTheDocument()
+    expect(previousBalanceElement).toHaveTextContent('Anterior: R$ 1.500')
   })
 
   it('renders balance input with current value', () => {
@@ -309,7 +313,7 @@ describe('BalanceListItem - Balance Editing', () => {
     })
   })
 
-  it('does not call onSave when value is unchanged', () => {
+  it('does not call onSave when value is unchanged', async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true })
     const item: BalanceItem = {
       type: 'account',
@@ -320,8 +324,10 @@ describe('BalanceListItem - Balance Editing', () => {
     const input = screen.getByRole('textbox')
     fireEvent.blur(input)
 
-    // handleBlur returns synchronously when value is unchanged
-    expect(onSave).not.toHaveBeenCalled()
+    // Give any potential async operations a chance to complete
+    await waitFor(() => {
+      expect(onSave).not.toHaveBeenCalled()
+    })
   })
 
   it('shows saving indicator while saving', async () => {
@@ -364,8 +370,10 @@ describe('BalanceListItem - Balance Editing', () => {
     })
   })
 
-  it('has retry button when save fails', async () => {
-    const onSave = vi.fn().mockResolvedValue({ success: false, error: 'Erro' })
+  it('has retry button when save fails and retries on click', async () => {
+    const onSave = vi.fn()
+      .mockResolvedValueOnce({ success: false, error: 'Erro' })
+      .mockResolvedValueOnce({ success: true })
     const item: BalanceItem = {
       type: 'account',
       entity: createMockBankAccount({ balance: 100000 }),
@@ -379,6 +387,13 @@ describe('BalanceListItem - Balance Editing', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Tentar novamente/)).toBeInTheDocument()
+    })
+
+    // Click retry and verify save is called again
+    await userEvent.click(screen.getByText(/Tentar novamente/))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -399,6 +414,47 @@ describe('BalanceListItem - Balance Editing', () => {
     // Should reset to original value
     await waitFor(() => {
       expect(input).toHaveValue('1000,00')
+    })
+  })
+
+  it('resets to current balance when negative value is entered', async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true })
+    const item: BalanceItem = {
+      type: 'account',
+      entity: createMockBankAccount({ balance: 100000 }), // R$ 1.000,00
+    }
+    renderBalanceListItem(item, 100000, onSave)
+
+    const input = screen.getByRole('textbox')
+    await userEvent.clear(input)
+    await userEvent.type(input, '-500,00')
+    fireEvent.blur(input)
+
+    // Should not call onSave for negative values
+    await waitFor(() => {
+      expect(onSave).not.toHaveBeenCalled()
+    })
+    // Should reset to original value
+    expect(input).toHaveValue('1000,00')
+  })
+
+  it('handles non-numeric input gracefully', async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true })
+    const item: BalanceItem = {
+      type: 'account',
+      entity: createMockBankAccount({ balance: 100000 }),
+    }
+    renderBalanceListItem(item, 100000, onSave)
+
+    const input = screen.getByRole('textbox')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'abc')
+    fireEvent.blur(input)
+
+    // parseDecimal returns 0 for non-numeric, which is different from 100000
+    // Component should attempt to save the parsed value (0 cents)
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(0)
     })
   })
 })
