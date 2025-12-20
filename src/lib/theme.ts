@@ -59,7 +59,7 @@ export function getStoredTheme(): ThemeValue | null {
   }
 
   try {
-    const stored = localStorage.getItem('family-finance-theme')
+    const stored = localStorage.getItem('fluxo-certo-theme')
     if (!stored) {
       return null
     }

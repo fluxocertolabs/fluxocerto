@@ -49,7 +49,7 @@
 
 **So that:** You know exactly when you need to move money from savings, and can confidently allocate surplus to goals
 
-**[EXAMPLE: "Unlike YNAB which wants you to categorize every coffee purchase, Family Finance shows you whether you can pay your mortgage next week—in 30 seconds, once a month"]**
+**[EXAMPLE: "Unlike YNAB which wants you to categorize every coffee purchase, Fluxo Certo shows you whether you can pay your mortgage next week—in 30 seconds, once a month"]**
 
 ## 4. Competitive Moat
 

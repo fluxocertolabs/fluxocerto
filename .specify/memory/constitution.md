@@ -1,6 +1,6 @@
 # CONSTITUTION.md
 
-**Project-specific facts and conventions for Family Finance**
+**Project-specific facts and conventions for Fluxo Certo**
 
 > **For universal agent protocols**, see `../../AGENTS.md` in the project root
 
@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-**Family Finance** is a personal finance management application for families. It provides cashflow projections, expense tracking, and income management with invite-only authentication.
+**Fluxo Certo** is a personal finance management application for families. It provides cashflow projections, expense tracking, and income management with invite-only authentication.
 
 ---
 
@@ -108,7 +108,7 @@ supabase/
 ├── functions/      # Edge Functions
 └── migrations/     # Database migrations
 
-specs/              # Feature specifications
+.specify/specs/     # Feature specifications
 docs/               # Documentation
 ```
 

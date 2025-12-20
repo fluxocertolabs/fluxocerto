@@ -1,7 +1,7 @@
 # SMTP Setup Guide: Resend for Production Email Delivery
 
 **Time Required**: ~30 minutes  
-**Prerequisites**: Access to `financas.fflo.me` domain DNS, Supabase Dashboard access
+**Prerequisites**: Access to `fluxocerto.app` domain DNS, Supabase Dashboard access
 
 ## Overview
 
@@ -20,7 +20,7 @@ This guide walks you through setting up Resend as the email provider for Magic L
 
 1. In Resend Dashboard, go to **Domains**
 2. Click **Add Domain**
-3. Enter: `financas.fflo.me`
+3. Enter: `fluxocerto.app`
 4. Select your preferred region (default is fine)
 5. Click **Add**
 
@@ -32,7 +32,7 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 
 | Type | Name | Value |
 |------|------|-------|
-| TXT | `@` or `financas.fflo.me` | SPF record (provided by Resend) |
+| TXT | `@` or `fluxocerto.app` | SPF record (provided by Resend) |
 | TXT | `resend._domainkey` | DKIM key (provided by Resend) |
 
 **Optional but Recommended:**
@@ -44,14 +44,14 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 ### 2.3 Add Records to DNS Provider
 
 1. Log into your domain registrar or DNS provider
-2. Navigate to DNS settings for `financas.fflo.me`
+2. Navigate to DNS settings for `fluxocerto.app`
 3. Add the TXT records exactly as shown by Resend
 4. **Important**: Copy the full DKIM value (it's long!)
 
 ### 2.4 Verify Domain
 
 1. Return to Resend Dashboard → Domains
-2. Click **Verify** next to `financas.fflo.me`
+2. Click **Verify** next to `fluxocerto.app`
 3. If verification fails, wait 5-10 minutes for DNS propagation
 4. DNS can take up to 48 hours to propagate (usually much faster)
 
@@ -65,9 +65,9 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 1. In Resend Dashboard, go to **API Keys**
 2. Click **Create API Key**
 3. Configure:
-   - **Name**: `supabase-family-finance-production`
+   - **Name**: `supabase-fluxo-certo-production`
    - **Permission**: `Sending access`
-   - **Domain**: `financas.fflo.me`
+   - **Domain**: `fluxocerto.app`
 4. Click **Create**
 5. **Copy the API key immediately** (it's only shown once!)
 
@@ -78,12 +78,12 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 The Site URL determines the base URL used in Magic Link emails. **If this is wrong, email links will point to localhost!**
 
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your Family Finance project
+2. Select your Fluxo Certo project
 3. Navigate to **Project Settings** → **Authentication**
 4. Under **URL Configuration**:
-   - **Site URL**: Set to `https://financas.fflo.me`
+   - **Site URL**: Set to `https://fluxocerto.app`
    - **Redirect URLs**: Add:
-     - `https://financas.fflo.me/auth/confirm`
+     - `https://fluxocerto.app/auth/confirm`
      - `http://localhost:5173/auth/confirm` (for local dev)
 5. Click **Save**
 
@@ -100,8 +100,8 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 | Port | `465` |
 | Username | `resend` |
 | Password | (paste your Resend API key) |
-| Sender email | `noreply@financas.fflo.me` |
-| Sender name | `Family Finance` |
+| Sender email | `noreply@fluxocerto.app` |
+| Sender name | `Fluxo Certo` |
 
 5. Click **Save**
 
@@ -109,7 +109,7 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 
 ### 5.1 Test in Production
 
-1. Open your production Family Finance app
+1. Open your production Fluxo Certo app
 2. Enter an approved email address on the login page
 3. Click "Send Magic Link"
 4. Check your real email inbox (and spam folder)
@@ -117,9 +117,9 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 
 ### 5.2 Verify Email Details
 
-- **From**: Should show `noreply@financas.fflo.me`
+- **From**: Should show `noreply@fluxocerto.app`
 - **Subject**: Should be Supabase's default Magic Link subject
-- **Link**: Should point to `https://financas.fflo.me/auth/confirm?...` (NOT localhost!)
+- **Link**: Should point to `https://fluxocerto.app/auth/confirm?...` (NOT localhost!)
 - **Link**: Should work and complete authentication
 
 ### 5.3 Verify Local Development Unchanged
@@ -132,14 +132,14 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 ## Verification Checklist
 
 - [ ] Resend account created
-- [ ] Domain `financas.fflo.me` verified in Resend
+- [ ] Domain `fluxocerto.app` verified in Resend
 - [ ] API key created with "Sending access" permission
-- [ ] **Site URL** set to `https://financas.fflo.me` in Supabase Dashboard
-- [ ] **Redirect URLs** include `https://financas.fflo.me/auth/confirm`
+- [ ] **Site URL** set to `https://fluxocerto.app` in Supabase Dashboard
+- [ ] **Redirect URLs** include `https://fluxocerto.app/auth/confirm`
 - [ ] Supabase SMTP configured with Resend credentials
 - [ ] Production Magic Link emails delivered successfully
-- [ ] Magic Link URL in email points to `https://financas.fflo.me` (NOT localhost!)
-- [ ] Sender shows `noreply@financas.fflo.me`
+- [ ] Magic Link URL in email points to `https://fluxocerto.app` (NOT localhost!)
+- [ ] Sender shows `noreply@fluxocerto.app`
 - [ ] Repository contains no secrets
 - [ ] Local development still uses Inbucket
 
@@ -153,7 +153,7 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 
 **Fix**:
 1. Go to Supabase Dashboard → **Project Settings** → **Authentication**
-2. Under **URL Configuration**, set **Site URL** to `https://financas.fflo.me`
+2. Under **URL Configuration**, set **Site URL** to `https://fluxocerto.app`
 3. Click **Save**
 4. Request a new Magic Link - the email should now contain the correct URL
 
@@ -183,7 +183,7 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 - ✅ API key is stored only in Supabase Dashboard (not in code)
 - ✅ Repository contains no production secrets
 - ✅ API key has minimal permissions ("Sending access" only)
-- ✅ API key is restricted to `financas.fflo.me` domain
+- ✅ API key is restricted to `fluxocerto.app` domain
 - ⚠️ Never share or commit the API key
 
 ## Monitoring

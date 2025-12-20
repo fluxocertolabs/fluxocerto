@@ -1,7 +1,7 @@
 -- Migration: 001_initial_schema
 -- Feature: 008-supabase-migration
 -- Date: 2025-11-27
--- Description: Initial database schema for Family Finance app migrating from IndexedDB to Supabase
+-- Description: Initial database schema for Fluxo Certo app migrating from IndexedDB to Supabase
 
 -- ============================================================================
 -- ACCOUNTS TABLE

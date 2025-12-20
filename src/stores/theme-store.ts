@@ -32,7 +32,7 @@ function getInitialTheme(): ThemeValue {
   if (typeof window === 'undefined') return 'system'
 
   try {
-    const stored = localStorage.getItem('family-finance-theme')
+    const stored = localStorage.getItem('fluxo-certo-theme')
     if (stored) {
       const parsed = JSON.parse(stored)
       if (
@@ -67,7 +67,7 @@ export const useThemeStore = create<ThemeState>()(
       }
     },
     {
-      name: 'family-finance-theme',
+      name: 'fluxo-certo-theme',
       onRehydrateStorage: () => (state) => {
         if (state) {
           const resolvedTheme = resolveTheme(state.theme)
