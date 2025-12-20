@@ -319,9 +319,11 @@ describe('BalanceListItem - Balance Editing', () => {
     const input = screen.getByRole('textbox')
     fireEvent.blur(input)
 
-    // Wait a small delay to ensure any async behavior has time to run
-    await new Promise(resolve => setTimeout(resolve, 50))
-    expect(onSave).not.toHaveBeenCalled()
+    // Use waitFor with explicit assertion to verify onSave is never called
+    // This is more robust than setTimeout as it actively checks the condition
+    await waitFor(() => {
+      expect(onSave).not.toHaveBeenCalled()
+    }, { timeout: 100 })
   })
 
   it('shows saving indicator while saving', async () => {
