@@ -108,7 +108,7 @@ supabase/
 ├── functions/      # Edge Functions
 └── migrations/     # Database migrations
 
-specs/              # Feature specifications
+.specify/specs/     # Feature specifications
 docs/               # Documentation
 ```
 
