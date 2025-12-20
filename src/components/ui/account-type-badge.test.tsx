@@ -115,3 +115,4 @@ describe('AccountTypeBadge - All Types', () => {
   })
 })
 
+

@@ -3,7 +3,7 @@
  * Supports auto-save on blur and error display
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { OwnerBadge } from '@/components/ui/owner-badge'
@@ -99,7 +99,7 @@ export function BalanceListItem({
   )
 
   // Icon based on type - use type-specific icons for accounts
-  const getIcon = () => {
+  const Icon = useMemo(() => {
     if (item.type === 'card') return CreditCardIcon
     // Use type-specific icons for bank accounts
     switch (accountType) {
@@ -110,8 +110,7 @@ export function BalanceListItem({
       default:
         return BankIcon
     }
-  }
-  const Icon = getIcon()
+  }, [item.type, accountType])
 
   return (
     <div
