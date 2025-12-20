@@ -7,10 +7,11 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { OwnerBadge } from '@/components/ui/owner-badge'
+import { AccountTypeBadge } from '@/components/ui/account-type-badge'
 import { cn } from '@/lib/utils'
 import { formatCurrency, parseDecimal, formatDecimalBR } from '@/lib/format'
 import type { BalanceItem } from './types'
-import { getBalanceFromItem, getNameFromItem, getOwnerFromItem } from './types'
+import { getBalanceFromItem, getNameFromItem, getOwnerFromItem, getAccountTypeFromItem } from './types'
 
 interface BalanceListItemProps {
   /** The balance item to display */
@@ -29,6 +30,7 @@ export function BalanceListItem({
   const currentBalance = getBalanceFromItem(item)
   const name = getNameFromItem(item)
   const owner = getOwnerFromItem(item)
+  const accountType = getAccountTypeFromItem(item)
 
   // Convert cents to reais for display/editing (using Brazilian comma format)
   const [editValue, setEditValue] = useState(() => formatDecimalBR(currentBalance / 100))
@@ -96,8 +98,19 @@ export function BalanceListItem({
     [currentBalance]
   )
 
-  // Icon based on type
-  const Icon = item.type === 'account' ? BankIcon : CreditCardIcon
+  // Icon based on type - use type-specific icons for accounts
+  const Icon = (() => {
+    if (item.type === 'card') return CreditCardIcon
+    // Use type-specific icons for bank accounts
+    switch (accountType) {
+      case 'investment':
+        return InvestmentIcon
+      case 'savings':
+        return SavingsIcon
+      default:
+        return BankIcon
+    }
+  })()
 
   return (
     <div
@@ -111,11 +124,12 @@ export function BalanceListItem({
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
 
-      {/* Name, owner, and previous balance */}
+      {/* Name, owner, account type, and previous balance */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-foreground truncate">{name}</p>
           <OwnerBadge owner={owner} />
+          <AccountTypeBadge type={accountType} />
         </div>
         <p className="text-sm text-muted-foreground">
           Anterior: {formatCurrency(previousBalance)}
@@ -184,6 +198,42 @@ function BankIcon({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z"
+      />
+    </svg>
+  )
+}
+
+function SavingsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"
+      />
+    </svg>
+  )
+}
+
+function InvestmentIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"
       />
     </svg>
   )

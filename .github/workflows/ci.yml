@@ -275,11 +275,12 @@ jobs:
         with:
           version: 2.62.10
 
-      # Step 3: Link to staging Supabase project
+      # Step 3: Link to staging Supabase project (with password for IPv4 pooler connection)
       - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_STAGING_PROJECT_REF }}" --password "$SUPABASE_DB_PASSWORD"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
 
       # Step 4: Apply migrations with retry on failure
       - name: Apply database migrations
@@ -414,11 +415,12 @@ jobs:
         with:
           version: 2.62.10
 
-      # Step 3: Link to production Supabase project
+      # Step 3: Link to production Supabase project (with password for IPv4 pooler connection)
       - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" --password "$SUPABASE_DB_PASSWORD"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       # Step 4: Apply migrations with retry on failure
       - name: Apply database migrations

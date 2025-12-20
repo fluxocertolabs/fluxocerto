@@ -4,6 +4,7 @@
  */
 
 import type { Locator, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { AccountsSection } from './accounts-section';
 import { ExpensesSection } from './expenses-section';
 import { ProjectsSection } from './projects-section';
@@ -157,38 +158,59 @@ export class ManagePage {
   }
 
   /**
+   * Helper method to select a tab with retry logic.
+   * Uses expect().toPass() for aggressive retry under heavy parallel load.
+   * This prevents flakiness in CI environments where tab clicks may not register immediately.
+   */
+  private async selectTabWithRetry(tab: Locator): Promise<void> {
+    await expect(async () => {
+      // Ensure the tab is visible
+      await expect(tab).toBeVisible({ timeout: 5000 });
+      
+      // Click the tab
+      await tab.click();
+      
+      // Wait a moment for tab switch animation
+      await this.page.waitForTimeout(200);
+      
+      // Verify the tab became selected
+      await expect(tab).toHaveAttribute('data-state', 'active', { timeout: 3000 });
+    }).toPass({ timeout: 25000, intervals: [500, 1000, 2000, 3000, 5000] });
+  }
+
+  /**
    * Switch to accounts tab
    */
   async selectAccountsTab(): Promise<void> {
-    await this.accountsTab.click();
+    await this.selectTabWithRetry(this.accountsTab);
   }
 
   /**
    * Switch to credit cards tab
    */
   async selectCreditCardsTab(): Promise<void> {
-    await this.creditCardsTab.click();
+    await this.selectTabWithRetry(this.creditCardsTab);
   }
 
   /**
    * Switch to expenses tab
    */
   async selectExpensesTab(): Promise<void> {
-    await this.expensesTab.click();
+    await this.selectTabWithRetry(this.expensesTab);
   }
 
   /**
    * Switch to projects tab
    */
   async selectProjectsTab(): Promise<void> {
-    await this.projectsTab.click();
+    await this.selectTabWithRetry(this.projectsTab);
   }
 
   /**
    * Switch to household tab
    */
   async selectHouseholdTab(): Promise<void> {
-    await this.householdTab.click();
+    await this.selectTabWithRetry(this.householdTab);
   }
 
   /**

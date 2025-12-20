@@ -32,9 +32,11 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
         householdId
       );
 
+      // Seed accounts with ALL THREE types to test type badges
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000, owner_id: owner1.id }),
         createAccount({ name: 'Itaú Poupança', type: 'savings', balance: 200000, owner_id: owner2.id }),
+        createAccount({ name: 'XP Investimentos', type: 'investment', balance: 1000000, owner_id: owner1.id }),
       ]);
 
       await db.seedCreditCards([
@@ -74,9 +76,11 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
         householdId
       );
 
+      // Seed accounts with ALL THREE types to test type badges
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000, owner_id: owner1.id }),
         createAccount({ name: 'Itaú Poupança', type: 'savings', balance: 200000, owner_id: owner2.id }),
+        createAccount({ name: 'XP Investimentos', type: 'investment', balance: 1000000, owner_id: owner1.id }),
       ]);
 
       await db.seedCreditCards([
@@ -97,6 +101,50 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
       // Clean up profiles
       await db.deleteProfileByEmail('visual-owner1-dark@test.local');
       await db.deleteProfileByEmail('visual-owner2-dark@test.local');
+    }
+  );
+
+  visualTest(
+    'quick update - light all account types',
+    async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
+      // Test all account types without owners to focus on type badges
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 150000 }),
+        createAccount({ name: 'Poupança Reserva', type: 'savings', balance: 250000 }),
+        createAccount({ name: 'Investimentos XP', type: 'investment', balance: 500000 }),
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      // Open quick update
+      await dashboardPage.openQuickUpdate();
+      await quickUpdatePage.waitForModal();
+
+      await visual.takeScreenshot(page, 'quick-update-light-all-types.png');
+    }
+  );
+
+  visualTest(
+    'quick update - dark all account types',
+    async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
+      // Test all account types without owners to focus on type badges
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 150000 }),
+        createAccount({ name: 'Poupança Reserva', type: 'savings', balance: 250000 }),
+        createAccount({ name: 'Investimentos XP', type: 'investment', balance: 500000 }),
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      // Open quick update
+      await dashboardPage.openQuickUpdate();
+      await quickUpdatePage.waitForModal();
+
+      await visual.takeScreenshot(page, 'quick-update-dark-all-types.png');
     }
   );
 });

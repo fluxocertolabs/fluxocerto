@@ -61,3 +61,15 @@ export function getOwnerFromItem(item: BalanceItem): { name: string } | null {
   return item.entity.owner
 }
 
+/**
+ * Account type for bank accounts
+ */
+export type AccountType = 'checking' | 'savings' | 'investment'
+
+/**
+ * Get the account type from a balance item (only for accounts, not cards)
+ */
+export function getAccountTypeFromItem(item: BalanceItem): AccountType | null {
+  return item.type === 'account' ? item.entity.type : null
+}
+
