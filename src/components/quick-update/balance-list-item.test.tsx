@@ -253,10 +253,11 @@ describe('BalanceListItem - Basic Rendering', () => {
       type: 'account',
       entity: createMockBankAccount({ balance: 250000 }),
     }
-    renderBalanceListItem(item, 150000) // Previous: R$ 1.500,00
+    renderBalanceListItem(item, 150000) // Previous: R$ 1.500
 
     expect(screen.getByText(/Anterior:/)).toBeInTheDocument()
-    expect(screen.getByText(/1\.5K|1,5K|1\.500/)).toBeInTheDocument()
+    // formatCurrency returns "R$ 1.500" for 150000 cents (no decimals for amounts < 10K reais)
+    expect(screen.getByText(/R\$\s*1\.500/)).toBeInTheDocument()
   })
 
   it('renders balance input with current value', () => {
@@ -308,7 +309,7 @@ describe('BalanceListItem - Balance Editing', () => {
     })
   })
 
-  it('does not call onSave when value is unchanged', async () => {
+  it('does not call onSave when value is unchanged', () => {
     const onSave = vi.fn().mockResolvedValue({ success: true })
     const item: BalanceItem = {
       type: 'account',
@@ -319,15 +320,14 @@ describe('BalanceListItem - Balance Editing', () => {
     const input = screen.getByRole('textbox')
     fireEvent.blur(input)
 
-    // Use waitFor with explicit assertion to verify onSave is never called
-    // This is more robust than setTimeout as it actively checks the condition
-    await waitFor(() => {
-      expect(onSave).not.toHaveBeenCalled()
-    }, { timeout: 100 })
+    // handleBlur returns synchronously when value is unchanged
+    expect(onSave).not.toHaveBeenCalled()
   })
 
   it('shows saving indicator while saving', async () => {
-    const onSave = vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100)))
+    const onSave = vi.fn().mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100))
+    )
     const item: BalanceItem = {
       type: 'account',
       entity: createMockBankAccount({ balance: 100000 }),
