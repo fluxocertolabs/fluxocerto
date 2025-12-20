@@ -7,7 +7,7 @@
 
 ## Summary
 
-The Monthly Ritual Enhancement feature streamlines the monthly balance update workflow for Family Finance. The primary requirements are:
+The Monthly Ritual Enhancement feature streamlines the monthly balance update workflow for Fluxo Certo. The primary requirements are:
 
 1. **Quick Balance Update View** (P1) - A focused view showing all bank accounts and credit cards in a single list with inline editing, auto-save on blur, and keyboard navigation (Tab between fields)
 2. **Dashboard Health Indicator** (P2) - At-a-glance health status (Good/Warning/Danger) with stale data detection (30+ days)

@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implement automated deployment infrastructure for the Family Finance application using Vercel as the hosting platform and GitHub Actions for CI quality gates. The architecture separates concerns: GitHub Actions enforces quality checks (TypeScript, ESLint, tests) as merge gates, while Vercel's native Git integration handles deployment. Preview deployments are created automatically for PRs, and production deploys trigger on pushes to main after CI passes.
+Implement automated deployment infrastructure for the Fluxo Certo application using Vercel as the hosting platform and GitHub Actions for CI quality gates. The architecture separates concerns: GitHub Actions enforces quality checks (TypeScript, ESLint, tests) as merge gates, while Vercel's native Git integration handles deployment. Preview deployments are created automatically for PRs, and production deploys trigger on pushes to main after CI passes.
 
 ## Technical Context
 
@@ -55,7 +55,7 @@ specs/009-vercel-deploy/
 ### Source Code (repository root)
 
 ```text
-family-finance/
+fluxo-certo/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml              # NEW: CI workflow (from contracts/)

@@ -3,7 +3,7 @@
 **Feature Branch**: `019-e2e-testing`  
 **Created**: 2025-11-28  
 **Status**: Draft  
-**Input**: User description: "Build a comprehensive end-to-end (E2E) testing suite for the Family Finance application that covers all critical user flows. The tests must run against an isolated test database (not production) and provide confidence that the application works correctly from a user's perspective."
+**Input**: User description: "Build a comprehensive end-to-end (E2E) testing suite for the Fluxo Certo application that covers all critical user flows. The tests must run against an isolated test database (not production) and provide confidence that the application works correctly from a user's perspective."
 
 ## Clarifications
 

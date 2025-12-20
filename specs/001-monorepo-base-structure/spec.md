@@ -106,7 +106,7 @@ As a developer, I want test tooling configured, so that I can write and run unit
 - **FR-009**: Repository MUST include shadcn/ui configuration (`components.json`)
 - **FR-010**: Repository MUST include Vitest configuration for testing
 - **FR-011**: Repository MUST include `.gitignore` with appropriate exclusions for Node.js, Vite, and IDE files
-- **FR-012**: Repository MUST render a minimal placeholder when the dev server runs (empty state or "Family Finance" title)
+- **FR-012**: Repository MUST render a minimal placeholder when the dev server runs (empty state or "Fluxo Certo" title)
 - **FR-013**: Repository MUST use exact pinned versions for all dependencies (no `^`, `~`, `*`, or `latest`)
 - **FR-014**: Repository MUST include `public/` directory with default Vite assets and `docs/` directory for documentation
 - **FR-015**: All configuration files MUST use cross-platform compatible paths (forward slashes, no OS-specific assumptions)

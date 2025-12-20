@@ -3,11 +3,11 @@
 **Feature Branch**: `008-supabase-migration`  
 **Created**: 2025-11-27  
 **Status**: Draft  
-**Input**: User description: "Migrate the Family Finance application from local-first IndexedDB (Dexie.js) to Supabase as the backend database. This migration enables future multi-device sync and cloud backup capabilities while maintaining the current user experience."
+**Input**: User description: "Migrate the Fluxo Certo application from local-first IndexedDB (Dexie.js) to Supabase as the backend database. This migration enables future multi-device sync and cloud backup capabilities while maintaining the current user experience."
 
 ## Context
 
-Family Finance is a cashflow projection app for households with variable income. It currently uses:
+Fluxo Certo is a cashflow projection app for households with variable income. It currently uses:
 
 - **Database**: Dexie.js (IndexedDB wrapper) for local-first persistence
 - **State Management**: Zustand for write actions

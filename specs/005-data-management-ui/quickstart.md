@@ -167,7 +167,7 @@ pnpm dlx shadcn@latest add button card dialog input label select switch tabs ale
 - Check browser console for errors
 
 ### Data not persisting
-- Check IndexedDB in DevTools (Application → IndexedDB → FamilyFinanceDB)
+- Check IndexedDB in DevTools (Application → IndexedDB → FluxoCertoDB)
 - Clear browser data and retry
 
 ### Styles not applying

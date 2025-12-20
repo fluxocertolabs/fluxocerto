@@ -14,7 +14,7 @@
 ### 1. Install Additional Dependency
 
 ```bash
-cd /home/delucca/Workspaces/src/sandbox/family-finance
+cd /home/delucca/Workspaces/src/sandbox/fluxo-certo
 pnpm add dexie-react-hooks@4.2.0
 ```
 
@@ -96,7 +96,7 @@ export class FinanceDB extends Dexie {
   creditCards!: Table<CreditCard, string>
 
   constructor() {
-    super('FamilyFinanceDB')
+    super('FluxoCertoDB')
     
     this.version(1).stores({
       accounts: 'id, name, type',
@@ -291,7 +291,7 @@ describe('BankAccountInputSchema', () => {
 
 1. Open browser DevTools (F12)
 2. Go to Application tab
-3. Expand IndexedDB → FamilyFinanceDB
+3. Expand IndexedDB → FluxoCertoDB
 4. Click on tables to view data
 
 ### Clear Database

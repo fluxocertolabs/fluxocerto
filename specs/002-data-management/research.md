@@ -108,7 +108,7 @@ export class FinanceDB extends Dexie {
   creditCards!: Table<CreditCard, string>
 
   constructor() {
-    super('FamilyFinanceDB')
+    super('FluxoCertoDB')
     
     // Version 1: Initial schema
     this.version(1).stores({

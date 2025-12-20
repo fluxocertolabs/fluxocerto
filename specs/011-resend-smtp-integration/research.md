@@ -25,7 +25,7 @@
 | Port | `465` (SSL/TLS) |
 | Username | `resend` |
 | Password | Resend API key |
-| Sender Email | `noreply@financas.fflo.me` |
+| Sender Email | `noreply@fluxocerto.app` |
 
 **Alternatives Considered**:
 - **Resend API integration**: Rejected (requires code changes, SMTP is simpler)
@@ -41,7 +41,7 @@
 
 **Task**: Research DNS records required to verify a custom domain with Resend.
 
-**Decision**: Configure SPF, DKIM, and optionally DMARC records for `financas.fflo.me`.
+**Decision**: Configure SPF, DKIM, and optionally DMARC records for `fluxocerto.app`.
 
 **Rationale**:
 - Domain verification is required to send emails from a custom domain
@@ -54,7 +54,7 @@
 1. **SPF Record** (TXT):
    - Purpose: Authorizes Resend to send email on behalf of the domain
    - Type: TXT
-   - Name: `@` or `financas.fflo.me`
+   - Name: `@` or `fluxocerto.app`
    - Value: Provided by Resend (typically includes `include:_spf.resend.com`)
 
 2. **DKIM Record** (TXT):
@@ -77,13 +77,13 @@
 5. Wait for DNS propagation (can take up to 48 hours, usually faster)
 
 **Common Issues**:
-- DNS provider auto-appending domain name (causing `resend._domainkey.financas.fflo.me.financas.fflo.me`)
+- DNS provider auto-appending domain name (causing `resend._domainkey.fluxocerto.app.fluxocerto.app`)
 - Truncated DKIM values (copy entire value)
 - Extra quotes or spaces in record values
 - Records added to wrong DNS location (if using multiple DNS providers)
 
 **Alternatives Considered**:
-- **Subdomain only**: Could use `mail.financas.fflo.me` but full domain is cleaner
+- **Subdomain only**: Could use `mail.fluxocerto.app` but full domain is cleaner
 - **Skip DMARC**: Acceptable for initial setup, add later for better deliverability
 
 **Source**: [Resend Domain Verification](https://resend.com/docs/dashboard/domains/introduction), [Resend DMARC Guide](https://resend.com/docs/dashboard/domains/dmarc)
@@ -94,7 +94,7 @@
 
 **Task**: Research best practices for creating and managing Resend API keys.
 
-**Decision**: Create a "Sending access" API key restricted to the `financas.fflo.me` domain.
+**Decision**: Create a "Sending access" API key restricted to the `fluxocerto.app` domain.
 
 **Rationale**:
 - "Sending access" permission is sufficient for SMTP use (only needs to send emails)
@@ -112,9 +112,9 @@
 **Key Creation Steps**:
 1. Go to Resend Dashboard → API Keys
 2. Click "Create API Key"
-3. Name: `supabase-family-finance-production` (descriptive name)
+3. Name: `supabase-fluxo-certo-production` (descriptive name)
 4. Permission: "Sending access"
-5. Domain: `financas.fflo.me` (restrict to verified domain)
+5. Domain: `fluxocerto.app` (restrict to verified domain)
 6. Copy key immediately (only shown once)
 7. Store in Supabase Dashboard SMTP settings
 
@@ -147,8 +147,8 @@
    - **Port**: `465`
    - **Username**: `resend`
    - **Password**: (paste Resend API key)
-   - **Sender email**: `noreply@financas.fflo.me`
-   - **Sender name**: `Family Finance`
+   - **Sender email**: `noreply@fluxocerto.app`
+   - **Sender name**: `Fluxo Certo`
 5. Save changes
 
 **Important Notes**:
@@ -160,7 +160,7 @@
 **Testing After Configuration**:
 1. Request Magic Link in production
 2. Check email arrives in real inbox
-3. Verify sender shows `noreply@financas.fflo.me`
+3. Verify sender shows `noreply@fluxocerto.app`
 4. Click link and confirm authentication works
 
 **Alternatives Considered**:
@@ -215,7 +215,7 @@ port = 54324
 - Daily limit of 100 is more than enough for any realistic scenario
 
 **Free Tier Details**:
-| Limit | Value | Family Finance Usage |
+| Limit | Value | Fluxo Certo Usage |
 |-------|-------|---------------------|
 | Monthly emails | 3,000 | ~100 (estimated) |
 | Daily emails | 100 | ~10 (estimated) |
@@ -292,7 +292,7 @@ port = 54324
 
 ### Pre-Implementation (Administrator Tasks)
 - [ ] Create Resend account at resend.com
-- [ ] Add and verify `financas.fflo.me` domain
+- [ ] Add and verify `fluxocerto.app` domain
 - [ ] Configure DNS records (SPF, DKIM)
 - [ ] Wait for domain verification
 - [ ] Create "Sending access" API key
@@ -301,7 +301,7 @@ port = 54324
 - [ ] Navigate to Project Settings → Authentication
 - [ ] Enable Custom SMTP
 - [ ] Enter Resend SMTP credentials
-- [ ] Set sender email to `noreply@financas.fflo.me`
+- [ ] Set sender email to `noreply@fluxocerto.app`
 - [ ] Save configuration
 
 ### Verification

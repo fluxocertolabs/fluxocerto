@@ -243,7 +243,7 @@ interface BranchProtection {
 ## File Structure Impact
 
 ```
-family-finance/
+fluxo-certo/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml              # NEW: CI workflow definition

@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implement the foundational data management layer for Family Finance, enabling CRUD operations for bank accounts, projects (income sources), fixed expenses, and credit cards. The solution uses Dexie.js for IndexedDB persistence, Zustand for reactive state management, and Zod for runtime validation - all following a local-first architecture with no backend dependencies.
+Implement the foundational data management layer for Fluxo Certo, enabling CRUD operations for bank accounts, projects (income sources), fixed expenses, and credit cards. The solution uses Dexie.js for IndexedDB persistence, Zustand for reactive state management, and Zod for runtime validation - all following a local-first architecture with no backend dependencies.
 
 ## Technical Context
 

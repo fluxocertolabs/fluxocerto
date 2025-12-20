@@ -3,13 +3,13 @@
 **Feature Branch**: `002-data-management`  
 **Created**: 2025-11-26  
 **Status**: Draft  
-**Input**: User description: "Implement the core data management layer for Family Finance. This feature establishes the foundation for all financial data operations."
+**Input**: User description: "Implement the core data management layer for Fluxo Certo. This feature establishes the foundation for all financial data operations."
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Initial Financial Setup (Priority: P1)
 
-A new user opens Family Finance for the first time and needs to enter all their financial information to get started. They add their bank accounts, income sources (projects), recurring bills, and credit cards. This is the foundational experience that enables all other features.
+A new user opens Fluxo Certo for the first time and needs to enter all their financial information to get started. They add their bank accounts, income sources (projects), recurring bills, and credit cards. This is the foundational experience that enables all other features.
 
 **Why this priority**: Without the ability to add financial data, the application has no value. This is the critical path that enables all subsequent functionality.
 

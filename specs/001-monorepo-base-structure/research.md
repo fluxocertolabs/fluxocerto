@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document captures technology research and decisions for setting up the Family Finance monorepo base structure. Since the tech stack is already defined in the constitution, research focuses on configuration best practices and compatibility verification.
+This document captures technology research and decisions for setting up the Fluxo Certo monorepo base structure. Since the tech stack is already defined in the constitution, research focuses on configuration best practices and compatibility verification.
 
 ---
 
@@ -298,7 +298,7 @@ src/
 
 ### Files to Create as Placeholders
 - `src/main.tsx` - Entry point with React.createRoot
-- `src/App.tsx` - Root component with minimal "Family Finance" heading
+- `src/App.tsx` - Root component with minimal "Fluxo Certo" heading
 - `src/index.css` - Tailwind directives + CSS variables
 
 ---

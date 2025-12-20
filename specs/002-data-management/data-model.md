@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document defines the data model for the Family Finance application's core entities. All schemas are defined using Zod, with TypeScript types inferred from them.
+This document defines the data model for the Fluxo Certo application's core entities. All schemas are defined using Zod, with TypeScript types inferred from them.
 
 ---
 
@@ -191,7 +191,7 @@ export class FinanceDB extends Dexie {
   creditCards!: Table<CreditCard, string>
 
   constructor() {
-    super('FamilyFinanceDB')
+    super('FluxoCertoDB')
     
     this.version(1).stores({
       accounts: 'id, name, type',

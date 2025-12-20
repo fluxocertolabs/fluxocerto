@@ -100,13 +100,13 @@ Per spec "Out of Scope":
 | SMTP Port | `465` | FR-014 |
 | SMTP Username | `resend` | FR-015 |
 | SMTP Password | Resend API key (stored in Supabase Dashboard) | FR-016 |
-| Sender Email | `noreply@financas.fflo.me` | FR-004 |
-| Sender Name | `Family Finance` | - |
+| Sender Email | `noreply@fluxocerto.app` | FR-004 |
+| Sender Name | `Fluxo Certo` | - |
 
 ### Success Criteria Checklist
 
 - [ ] SC-001: Magic Link emails delivered within 30 seconds
-- [ ] SC-002: Sender shows `noreply@financas.fflo.me`
+- [ ] SC-002: Sender shows `noreply@fluxocerto.app`
 - [ ] SC-003: No secrets in repository (verified by grep)
 - [ ] SC-004: Local development with Inbucket works unchanged
 - [ ] SC-005: Setup documentation enables configuration in under 30 minutes

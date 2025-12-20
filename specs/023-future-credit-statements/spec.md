@@ -3,7 +3,7 @@
 **Feature Branch**: `023-future-credit-statements`  
 **Created**: 2025-12-02  
 **Status**: Draft  
-**Input**: User description: "Build a 'Future Credit Card Statements' feature for the Family Finance application that allows users to pre-define credit card statement balances (valor da fatura) for upcoming months, beyond just the current month."
+**Input**: User description: "Build a 'Future Credit Card Statements' feature for the Fluxo Certo application that allows users to pre-define credit card statement balances (valor da fatura) for upcoming months, beyond just the current month."
 
 ## Clarifications
 

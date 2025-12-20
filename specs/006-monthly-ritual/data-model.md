@@ -87,7 +87,7 @@ interface UserPreferences {
 
 **Storage Notes**:
 - Stored in localStorage (not IndexedDB) via Zustand persist middleware
-- Key: `family-finance-preferences`
+- Key: `fluxo-certo-preferences`
 - Simpler than IndexedDB for single-user preferences
 
 ---
@@ -207,7 +207,7 @@ export class FinanceDB extends Dexie {
   creditCards!: Table<CreditCard, string>
 
   constructor() {
-    super('FamilyFinanceDB')
+    super('FluxoCertoDB')
 
     // Version 1: Original schema
     this.version(1).stores({

@@ -6,7 +6,7 @@
 
 ## Overview
 
-This guide provides step-by-step implementation instructions for adding single-shot (one-time) expenses to the Family Finance app.
+This guide provides step-by-step implementation instructions for adding single-shot (one-time) expenses to the Fluxo Certo app.
 
 ---
 

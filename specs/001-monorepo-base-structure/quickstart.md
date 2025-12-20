@@ -36,7 +36,7 @@ After the base structure is implemented, verify everything works:
 ```bash
 # 1. Clone (if not already done)
 git clone <repo-url>
-cd family-finance
+cd fluxo-certo
 
 # 2. Install dependencies
 pnpm install
@@ -44,7 +44,7 @@ pnpm install
 # 3. Start development server
 pnpm dev
 # → Opens http://localhost:5173
-# → You should see "Family Finance" heading
+# → You should see "Fluxo Certo" heading
 
 # 4. Verify TypeScript
 pnpm typecheck
@@ -86,7 +86,7 @@ pnpm test
 After setup, you'll have:
 
 ```
-family-finance/
+fluxo-certo/
 ├── src/
 │   ├── components/
 │   │   └── ui/              # shadcn/ui components (empty)

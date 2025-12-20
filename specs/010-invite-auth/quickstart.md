@@ -57,12 +57,12 @@ In Supabase Dashboard:
 
 3. **Configure URL Settings** (⚠️ Critical for Magic Link emails):
    - Go to **Project Settings** → **Authentication** (or Authentication → URL Configuration)
-   - **Site URL**: Set to your production URL (e.g., `https://financas.fflo.me`)
+   - **Site URL**: Set to your production URL (e.g., `https://fluxocerto.app`)
      - This URL is used to construct Magic Link URLs in emails
      - If set to localhost, email links will point to localhost!
    - **Redirect URLs**: Add all allowed callback URLs:
      - `http://localhost:5173/auth/confirm` (local development)
-     - `https://financas.fflo.me/auth/confirm` (production)
+     - `https://fluxocerto.app/auth/confirm` (production)
      - `https://your-app.vercel.app/auth/confirm` (Vercel preview deployments)
 
 ### 4. Add Allowed Emails
@@ -213,12 +213,12 @@ The Magic Link URLs in emails are constructed by Supabase using the **Site URL**
 **In Supabase Dashboard → Project Settings → Authentication:**
 
 1. **Site URL** (most important!):
-   - Set to: `https://financas.fflo.me` (or your production domain)
+   - Set to: `https://fluxocerto.app` (or your production domain)
    - This determines the base URL in Magic Link emails
    - If this is set to `localhost`, users will receive emails with localhost links!
 
 2. **Redirect URLs** (allow-list for auth callbacks):
-   - Add: `https://financas.fflo.me/auth/confirm`
+   - Add: `https://fluxocerto.app/auth/confirm`
    - Add: `http://localhost:5173/auth/confirm` (for local dev)
    - Add any Vercel preview URLs if needed
 

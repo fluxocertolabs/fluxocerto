@@ -1,8 +1,8 @@
-# Family Finance
+# Fluxo Certo
 
 A **cloud-powered** cashflow projection app for households with variable income. See your next 30-90 days of cashflow at a glance, with danger warnings before you overdraft.
 
-> **Unlike** spreadsheets and complex budgeting apps, Family Finance shows you whether you can pay your mortgage next week—in 30 seconds, once a month.
+> **Unlike** spreadsheets and complex budgeting apps, Fluxo Certo shows you whether you can pay your mortgage next week—in 30 seconds, once a month.
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![React](https://img.shields.io/badge/React-19-61dafb)
@@ -79,7 +79,7 @@ Dual-income households with variable income streams (freelancers, contractors, p
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd family-finance
+cd fluxo-certo
 
 # Install dependencies
 pnpm install
@@ -313,7 +313,7 @@ Preview deployments require a **staging Supabase project** to isolate test data 
 #### 1. Create Staging Supabase Project
 
 1. Go to [supabase.com](https://supabase.com) (free tier allows 2 projects)
-2. Create a new project named `family-finance-staging`
+2. Create a new project named `fluxo-certo-staging`
 3. Note down:
    - **Project Reference ID** (from Settings → General → Reference ID)
    - **Database Password** (set during project creation)

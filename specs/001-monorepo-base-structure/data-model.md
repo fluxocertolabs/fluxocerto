@@ -18,7 +18,7 @@ This feature does not introduce domain entities (no accounts, projects, expenses
 
 ```typescript
 interface PackageJson {
-  name: string                    // "family-finance"
+  name: string                    // "fluxo-certo"
   version: string                 // "0.0.1"
   private: boolean                // true (not published to npm)
   type: "module"                  // ESM modules
@@ -323,7 +323,7 @@ createRoot(document.getElementById('root')!).render(
 function App() {
   return (
     <div className="min-h-screen bg-background">
-      <h1 className="text-2xl font-bold p-8">Family Finance</h1>
+      <h1 className="text-2xl font-bold p-8">Fluxo Certo</h1>
     </div>
   )
 }

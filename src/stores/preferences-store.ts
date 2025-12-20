@@ -26,7 +26,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       lastProgressionCheck: null,
       setLastProgressionCheck: (timestamp) => set({ lastProgressionCheck: timestamp }),
     }),
-    { name: 'family-finance-preferences' }
+    { name: 'fluxo-certo-preferences' }
   )
 )
 

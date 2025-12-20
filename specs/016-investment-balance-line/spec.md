@@ -3,13 +3,13 @@
 **Feature Branch**: `016-investment-balance-line`  
 **Created**: 2025-11-28  
 **Status**: Draft  
-**Input**: User description: "Build an Investment-Inclusive Balance Line feature for the Family Finance dashboard that adds a third line to the cashflow chart showing total balance including investment accounts, and makes legend items interactive for toggling line visibility"
+**Input**: User description: "Build an Investment-Inclusive Balance Line feature for the Fluxo Certo dashboard that adds a third line to the cashflow chart showing total balance including investment accounts, and makes legend items interactive for toggling line visibility"
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - View Total Balance Including Investments (Priority: P1)
 
-As a family finance user, I want to see my total financial picture including investment accounts on the cashflow chart, so that I understand my true wealth position beyond just operational cashflow.
+As a Fluxo Certo user, I want to see my total financial picture including investment accounts on the cashflow chart, so that I understand my true wealth position beyond just operational cashflow.
 
 **Why this priority**: This is the core value proposition - users currently only see checking account projections and want visibility into their complete financial position including investments.
 

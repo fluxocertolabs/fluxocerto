@@ -5,7 +5,7 @@
 
 ## Summary
 
-Create the foundational monorepo structure for the Family Finance application—a local-first SPA for cashflow projection. This feature establishes the development environment with TypeScript 5.9.3, React 19.2.0, Vite 7.2.4, and all tooling configurations without implementing any business features. The goal is a zero-to-running-dev-server experience under 2 minutes.
+Create the foundational monorepo structure for the Fluxo Certo application—a local-first SPA for cashflow projection. This feature establishes the development environment with TypeScript 5.9.3, React 19.2.0, Vite 7.2.4, and all tooling configurations without implementing any business features. The goal is a zero-to-running-dev-server experience under 2 minutes.
 
 ## Technical Context
 
@@ -53,7 +53,7 @@ specs/001-monorepo-base-structure/
 ### Source Code (repository root)
 
 ```text
-family-finance/
+fluxo-certo/
 ├── src/
 │   ├── components/           # Reusable UI components
 │   │   └── ui/               # shadcn/ui primitives (initialized)

@@ -3,7 +3,7 @@
 **Feature Branch**: `009-vercel-deploy`  
 **Created**: 2025-11-27  
 **Status**: Ready for Planning  
-**Input**: User description: "Implement automated deployment infrastructure for the Family Finance application using Vercel as the hosting platform, integrated with Supabase as the backend database. The deployment should follow CI/CD best practices with automatic deployments triggered on pushes to the main branch."
+**Input**: User description: "Implement automated deployment infrastructure for the Fluxo Certo application using Vercel as the hosting platform, integrated with Supabase as the backend database. The deployment should follow CI/CD best practices with automatic deployments triggered on pushes to the main branch."
 
 ## User Scenarios & Testing *(mandatory)*
 

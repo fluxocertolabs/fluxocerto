@@ -3,7 +3,7 @@
 **Feature Branch**: `003-cashflow-engine`  
 **Created**: 2025-11-26  
 **Status**: Draft  
-**Input**: User description: "Build the Cashflow Calculation Engine for Family Finance - a pure TypeScript module that projects daily cashflow balances over a configurable period."
+**Input**: User description: "Build the Cashflow Calculation Engine for Fluxo Certo - a pure TypeScript module that projects daily cashflow balances over a configurable period."
 
 ## User Scenarios & Testing *(mandatory)*
 

@@ -14,7 +14,7 @@
 ### 1. Install New Dependency
 
 ```bash
-cd /home/delucca/Workspaces/src/sandbox/family-finance
+cd /home/delucca/Workspaces/src/sandbox/fluxo-certo
 pnpm add recharts@3.5.0
 ```
 

@@ -141,7 +141,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       projectionDays: 30, // Default
       setProjectionDays: (days) => set({ projectionDays: days }),
     }),
-    { name: 'family-finance-preferences' }
+    { name: 'fluxo-certo-preferences' }
   )
 )
 ```

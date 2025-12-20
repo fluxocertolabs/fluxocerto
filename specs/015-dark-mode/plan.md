@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implement a dark mode feature for Family Finance that provides a theme toggle in the header, persists user preferences in Supabase, detects system theme for new users, and animates theme transitions smoothly. The implementation uses Tailwind CSS v4's native dark mode support with CSS custom properties and a React context-based ThemeProvider.
+Implement a dark mode feature for Fluxo Certo that provides a theme toggle in the header, persists user preferences in Supabase, detects system theme for new users, and animates theme transitions smoothly. The implementation uses Tailwind CSS v4's native dark mode support with CSS custom properties and a React context-based ThemeProvider.
 
 ## Technical Context
 

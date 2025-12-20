@@ -3,7 +3,7 @@
 **Feature Branch**: `006-monthly-ritual`  
 **Created**: 2025-11-26  
 **Status**: Draft  
-**Input**: User description: "Build the Monthly Ritual Enhancement feature for Family Finance - a streamlined experience for the monthly balance update workflow that is the core recurring use case."
+**Input**: User description: "Build the Monthly Ritual Enhancement feature for Fluxo Certo - a streamlined experience for the monthly balance update workflow that is the core recurring use case."
 
 ## Clarifications
 

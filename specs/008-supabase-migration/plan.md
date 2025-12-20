@@ -5,7 +5,7 @@
 
 ## Summary
 
-Migrate the Family Finance application from local-first IndexedDB (Dexie.js) to Supabase PostgreSQL as the backend database. This migration replaces the Dexie.js database layer with Supabase client, converts `useLiveQuery` reactive hooks to Supabase Realtime subscriptions, implements anonymous authentication for single-user mode, and sets up Row Level Security for future multi-user support. The migration enables cloud persistence while maintaining the current responsive user experience.
+Migrate the Fluxo Certo application from local-first IndexedDB (Dexie.js) to Supabase PostgreSQL as the backend database. This migration replaces the Dexie.js database layer with Supabase client, converts `useLiveQuery` reactive hooks to Supabase Realtime subscriptions, implements anonymous authentication for single-user mode, and sets up Row Level Security for future multi-user support. The migration enables cloud persistence while maintaining the current responsive user experience.
 
 ## Technical Context
 

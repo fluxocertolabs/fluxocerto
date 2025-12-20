@@ -5,7 +5,7 @@
 
 ## Summary
 
-Build a comprehensive Playwright E2E testing suite for the Family Finance application that covers all critical user flows (auth, accounts, expenses, projects, dashboard, credit cards, quick update, themes). Tests run against a local Supabase instance with isolated test databases, use Page Object Model pattern for maintainability, and integrate with GitHub Actions CI as a blocking PR check. Authentication is handled via Magic Link capture from Inbucket, with session injection for non-auth tests.
+Build a comprehensive Playwright E2E testing suite for the Fluxo Certo application that covers all critical user flows (auth, accounts, expenses, projects, dashboard, credit cards, quick update, themes). Tests run against a local Supabase instance with isolated test databases, use Page Object Model pattern for maintainability, and integrate with GitHub Actions CI as a blocking PR check. Authentication is handled via Magic Link capture from Inbucket, with session injection for non-auth tests.
 
 ## Technical Context
 

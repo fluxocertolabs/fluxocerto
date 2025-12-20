@@ -31,7 +31,7 @@ interface HeaderProps {
 ```tsx
 <header className="border-b bg-background">
   <nav className="container flex items-center justify-between h-14">
-    <Link to="/">Family Finance</Link>
+    <Link to="/">Fluxo Certo</Link>
     <div className="flex gap-4">
       <NavLink to="/">Dashboard</NavLink>
       <NavLink to="/manage">Manage</NavLink>

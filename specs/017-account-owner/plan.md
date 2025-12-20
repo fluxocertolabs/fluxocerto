@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add account owner assignment feature to Family Finance, allowing bank accounts and credit cards to be assigned to specific family members (Daniel or Aryane). This involves renaming the existing `allowed_emails` table to `profiles`, adding `owner_id` FK columns to `accounts` and `credit_cards` tables, and updating the UI to display/select owners with filtering capability. All UI text in Brazilian Portuguese (pt-BR).
+Add account owner assignment feature to Fluxo Certo, allowing bank accounts and credit cards to be assigned to specific family members (Daniel or Aryane). This involves renaming the existing `allowed_emails` table to `profiles`, adding `owner_id` FK columns to `accounts` and `credit_cards` tables, and updating the UI to display/select owners with filtering capability. All UI text in Brazilian Portuguese (pt-BR).
 
 ## Technical Context
 

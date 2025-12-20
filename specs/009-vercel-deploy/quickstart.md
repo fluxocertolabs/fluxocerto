@@ -2,7 +2,7 @@
 
 **Branch**: `009-vercel-deploy` | **Time to complete**: ~15 minutes
 
-This guide walks through setting up automated deployments for the Family Finance application.
+This guide walks through setting up automated deployments for the Fluxo Certo application.
 
 ---
 
@@ -22,7 +22,7 @@ This guide walks through setting up automated deployments for the Family Finance
 2. Click **"Add New Project"**
 3. Select **"Import Git Repository"**
 4. Authorize Vercel to access your GitHub account (if not already)
-5. Find and select `family-finance` repository
+5. Find and select `fluxo-certo` repository
 6. Click **"Import"**
 
 ### 1.2 Configure Project Settings
@@ -204,8 +204,8 @@ After setup, you'll have:
 
 | Environment | URL Pattern |
 |-------------|-------------|
-| Production | `https://family-finance-*.vercel.app` or custom domain |
-| Preview | `https://family-finance-*-*.vercel.app` (unique per PR) |
+| Production | `https://fluxo-certo-*.vercel.app` or custom domain |
+| Preview | `https://fluxo-certo-*-*.vercel.app` (unique per PR) |
 | Local Dev | `http://localhost:5173` |
 
 ---

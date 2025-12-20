@@ -94,6 +94,8 @@ export async function seedFullScenario(data: {
   }, workerIndex: number, userEmail: string)
 export async function expenseExists(name: string)
 export async function projectExists(name: string)
+export async function getProjectById(id: string)
+export async function updateProjectCertainty(id: string, certainty: 'guaranteed' | 'probable' | 'uncertain')
 export async function accountExists(name: string)
 export async function seedSnapshotsWithHousehold(snapshots: { name: string; data: object }[], householdId: string)
 export async function getSnapshotsForHousehold(householdId: string)
@@ -349,6 +351,7 @@ export class LoginPage {
 </file>
 
 <file path="e2e/pages/manage-page.ts">
+import '@playwright/test'
 import '@playwright/test'
 import './accounts-section'
 import './expenses-section'
@@ -4024,11 +4027,21 @@ import '@/lib/utils'
 export function StorageErrorToast()
 </file>
 
+<file path="src/components/quick-update/balance-list-item.test.tsx">
+import 'vitest'
+import '@testing-library/react'
+import '@testing-library/user-event'
+import './balance-list-item'
+import './types'
+import '@/types'
+</file>
+
 <file path="src/components/quick-update/balance-list-item.tsx">
 import 'react'
 import '@/components/ui/input'
 import '@/components/ui/button'
 import '@/components/ui/owner-badge'
+import '@/components/ui/account-type-badge'
 import '@/lib/utils'
 import '@/lib/format'
 import './types'
@@ -4094,6 +4107,8 @@ export function getBalanceFromItem(item: BalanceItem)
 export function getNameFromItem(item: BalanceItem)
 export function getIdFromItem(item: BalanceItem)
 export function getOwnerFromItem(item: BalanceItem)
+type AccountType = 'checking' | 'savings' | 'investment'
+export function getAccountTypeFromItem(item: BalanceItem)
 </file>
 
 <file path="src/components/setup-required.tsx">
@@ -4150,6 +4165,18 @@ import '@/components/ui/button'
 import '@/hooks/use-theme'
 import '@/types/theme'
 export function ThemeToggle()
+</file>
+
+<file path="src/components/ui/account-type-badge.test.tsx">
+import 'vitest'
+import '@testing-library/react'
+import './account-type-badge'
+</file>
+
+<file path="src/components/ui/account-type-badge.tsx">
+import '@/lib/utils'
+import '@/components/quick-update/types'
+export function AccountTypeBadge()
 </file>
 
 <file path="src/components/ui/alert-dialog.tsx">

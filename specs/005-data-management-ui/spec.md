@@ -3,7 +3,7 @@
 **Feature Branch**: `005-data-management-ui`  
 **Created**: 2025-11-26  
 **Status**: Draft  
-**Input**: User description: "Build the Data Management UI for Family Finance - the forms and interfaces that allow users to manage their financial data (bank accounts, projects, fixed expenses, and credit cards)."
+**Input**: User description: "Build the Data Management UI for Fluxo Certo - the forms and interfaces that allow users to manage their financial data (bank accounts, projects, fixed expenses, and credit cards)."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -175,7 +175,7 @@ A user wants to permanently remove a financial entity they no longer need. They 
 ## Assumptions
 
 - Users have a modern browser with IndexedDB support
-- Users are managing personal/family finances (not enterprise-scale data)
+- Users are managing personal finances (not enterprise-scale data)
 - Maximum of approximately 20 entities per type is a reasonable upper bound
 - shadcn/ui components will be installed as needed (currently empty ui folder)
 - The existing Zustand store and Dexie.js database layer are stable and tested

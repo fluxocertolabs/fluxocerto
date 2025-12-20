@@ -168,7 +168,7 @@ export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
     ({ theme, resolvedTheme }) => {
       // Update localStorage for Zustand persistence
       window.localStorage.setItem(
-        'family-finance-theme',
+        'fluxo-certo-theme',
         JSON.stringify({
           state: { theme, resolvedTheme, isLoaded: true },
           version: 0,

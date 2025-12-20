@@ -1,7 +1,7 @@
-# Quickstart: Resend SMTP Setup for Family Finance
+# Quickstart: Resend SMTP Setup for Fluxo Certo
 
 **Time Required**: ~30 minutes  
-**Prerequisites**: Access to `financas.fflo.me` domain DNS, Supabase Dashboard access
+**Prerequisites**: Access to `fluxocerto.app` domain DNS, Supabase Dashboard access
 
 ## Overview
 
@@ -20,7 +20,7 @@ This guide walks you through setting up Resend as the email provider for Magic L
 
 1. In Resend Dashboard, go to **Domains**
 2. Click **Add Domain**
-3. Enter: `financas.fflo.me`
+3. Enter: `fluxocerto.app`
 4. Select your preferred region (default is fine)
 5. Click **Add**
 
@@ -32,7 +32,7 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 
 | Type | Name | Value |
 |------|------|-------|
-| TXT | `@` or `financas.fflo.me` | SPF record (provided by Resend) |
+| TXT | `@` or `fluxocerto.app` | SPF record (provided by Resend) |
 | TXT | `resend._domainkey` | DKIM key (provided by Resend) |
 
 **Optional but Recommended:**
@@ -44,14 +44,14 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 ### 2.3 Add Records to DNS Provider
 
 1. Log into your domain registrar or DNS provider
-2. Navigate to DNS settings for `financas.fflo.me`
+2. Navigate to DNS settings for `fluxocerto.app`
 3. Add the TXT records exactly as shown by Resend
 4. **Important**: Copy the full DKIM value (it's long!)
 
 ### 2.4 Verify Domain
 
 1. Return to Resend Dashboard → Domains
-2. Click **Verify** next to `financas.fflo.me`
+2. Click **Verify** next to `fluxocerto.app`
 3. If verification fails, wait 5-10 minutes for DNS propagation
 4. DNS can take up to 48 hours to propagate (usually much faster)
 
@@ -65,16 +65,16 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 1. In Resend Dashboard, go to **API Keys**
 2. Click **Create API Key**
 3. Configure:
-   - **Name**: `supabase-family-finance-production`
+   - **Name**: `supabase-fluxo-certo-production`
    - **Permission**: `Sending access`
-   - **Domain**: `financas.fflo.me`
+   - **Domain**: `fluxocerto.app`
 4. Click **Create**
 5. **Copy the API key immediately** (it's only shown once!)
 
 ## Step 4: Configure Supabase SMTP (5 minutes)
 
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your Family Finance project
+2. Select your Fluxo Certo project
 3. Navigate to **Project Settings** → **Authentication**
 4. Scroll down to **SMTP Settings**
 5. Toggle **Enable Custom SMTP** to ON
@@ -86,8 +86,8 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 | Port | `465` |
 | Username | `resend` |
 | Password | (paste your Resend API key) |
-| Sender email | `noreply@financas.fflo.me` |
-| Sender name | `Family Finance` |
+| Sender email | `noreply@fluxocerto.app` |
+| Sender name | `Fluxo Certo` |
 
 7. Click **Save**
 
@@ -95,7 +95,7 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 
 ### 5.1 Test in Production
 
-1. Open your production Family Finance app
+1. Open your production Fluxo Certo app
 2. Enter an approved email address on the login page
 3. Click "Send Magic Link"
 4. Check your real email inbox (and spam folder)
@@ -103,7 +103,7 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 
 ### 5.2 Verify Email Details
 
-- **From**: Should show `noreply@financas.fflo.me`
+- **From**: Should show `noreply@fluxocerto.app`
 - **Subject**: Should be Supabase's default Magic Link subject
 - **Link**: Should work and complete authentication
 
@@ -119,11 +119,11 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 > **Note**: This checklist aligns with spec.md Success Criteria (SC-001 through SC-005).
 
 - [ ] Resend account created
-- [ ] Domain `financas.fflo.me` verified in Resend
+- [ ] Domain `fluxocerto.app` verified in Resend
 - [ ] API key created with "Sending access" permission
 - [ ] Supabase SMTP configured with Resend credentials
 - [ ] Production Magic Link emails delivered successfully (SC-001)
-- [ ] Sender shows `noreply@financas.fflo.me` (SC-002)
+- [ ] Sender shows `noreply@fluxocerto.app` (SC-002)
 - [ ] Repository contains no secrets (SC-003)
 - [ ] Local development still uses Inbucket (SC-004)
 
@@ -155,7 +155,7 @@ Resend will show you DNS records to add. You need to add these to your domain's 
 - ✅ API key is stored only in Supabase Dashboard (not in code)
 - ✅ Repository contains no production secrets
 - ✅ API key has minimal permissions ("Sending access" only)
-- ✅ API key is restricted to `financas.fflo.me` domain
+- ✅ API key is restricted to `fluxocerto.app` domain
 - ⚠️ Never share or commit the API key
 
 ## Monitoring

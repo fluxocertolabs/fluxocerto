@@ -11,7 +11,7 @@ The Cashflow Calculation Engine is a pure TypeScript module that projects daily 
 
 ```bash
 # Add date-fns dependency (if not already installed)
-cd /home/delucca/Workspaces/src/sandbox/family-finance
+cd /home/delucca/Workspaces/src/sandbox/fluxo-certo
 pnpm add date-fns@4.1.0
 ```
 

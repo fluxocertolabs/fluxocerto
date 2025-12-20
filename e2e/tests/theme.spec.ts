@@ -65,7 +65,7 @@ test.describe('Theme Switching', () => {
     await page.addInitScript(() => {
       const guardKey = 'e2e-theme-init-t070';
       if (!window.sessionStorage.getItem(guardKey)) {
-        window.localStorage.setItem('family-finance-theme', JSON.stringify({
+        window.localStorage.setItem('fluxo-certo-theme', JSON.stringify({
           state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
           version: 0
         }));
@@ -157,7 +157,7 @@ test.describe('Theme Switching', () => {
     await page.addInitScript(() => {
       const guardKey = 'e2e-theme-init-t071';
       if (!window.sessionStorage.getItem(guardKey)) {
-        window.localStorage.setItem('family-finance-theme', JSON.stringify({
+        window.localStorage.setItem('fluxo-certo-theme', JSON.stringify({
           state: { theme: 'light', resolvedTheme: 'light', isLoaded: true },
           version: 0
         }));

@@ -10,12 +10,12 @@
 ### Session 2025-11-27
 
 - Q: When a Magic Link email fails to deliver (rate limit hit, Resend outage, etc.), how should the user be informed? → A: Silent failure - user sees standard "Check your email" message (current spec behavior)
-- Q: Which domain will be used for the sender email address? → A: noreply@financas.fflo.me
+- Q: Which domain will be used for the sender email address? → A: noreply@fluxocerto.app
 - Q: Should the setup documentation include steps for monitoring email delivery health? → A: Minimal - just mention Resend dashboard exists for troubleshooting
 
 ## Context
 
-Family Finance uses Supabase Magic Link authentication (implemented in spec 010-invite-auth) for passwordless email login. Currently:
+Fluxo Certo uses Supabase Magic Link authentication (implemented in spec 010-invite-auth) for passwordless email login. Currently:
 
 - **Local development**: Emails are captured by Inbucket (configured in `supabase/config.toml`), allowing developers to test the full authentication flow without sending real emails
 - **Production**: No SMTP provider is configured, meaning Magic Link emails cannot be delivered to real email addresses
@@ -32,7 +32,7 @@ This spec integrates Resend as the email delivery provider for production deploy
 
 ### User Story 1 - Production Magic Link Email Delivery (Priority: P1)
 
-A family member attempts to log in to the production Family Finance app. They enter their email address, and within seconds receive a real Magic Link email in their inbox that allows them to authenticate.
+A family member attempts to log in to the production Fluxo Certo app. They enter their email address, and within seconds receive a real Magic Link email in their inbox that allows them to authenticate.
 
 **Why this priority**: This is the core functionality - without working email delivery in production, no one can authenticate.
 
@@ -41,7 +41,7 @@ A family member attempts to log in to the production Family Finance app. They en
 **Acceptance Scenarios**:
 
 1. **Given** a user enters their approved email on the production login page, **When** they click "Send Magic Link", **Then** they receive a Magic Link email in their real inbox within 30 seconds
-2. **Given** a user receives a Magic Link email in production, **When** they view the email, **Then** the sender shows the custom domain address (noreply@financas.fflo.me)
+2. **Given** a user receives a Magic Link email in production, **When** they view the email, **Then** the sender shows the custom domain address (noreply@fluxocerto.app)
 3. **Given** a user clicks the Magic Link in their real inbox, **When** the authentication completes, **Then** they are successfully logged into the production app
 
 ---
@@ -94,7 +94,7 @@ SMTP credentials (Resend API key) are stored securely and never committed to the
 - **FR-001**: Production environment MUST use Resend SMTP for Magic Link email delivery
 - **FR-002**: SMTP configuration MUST be done via Supabase Dashboard (Project Settings → Authentication → SMTP)
 - **FR-003**: SMTP credentials MUST NOT be committed to the repository
-- **FR-004**: Sender email MUST be `noreply@financas.fflo.me`
+- **FR-004**: Sender email MUST be `noreply@fluxocerto.app`
 
 **Local Development Preservation:**
 
@@ -123,21 +123,21 @@ SMTP credentials (Resend API key) are stored securely and never committed to the
 
 - **Supabase SMTP Configuration**: Dashboard settings for production email delivery. Contains: host, port, username, password (API key), sender email address.
 
-- **Custom Domain**: DNS-verified domain (`financas.fflo.me`) used as email sender. Requires: SPF and DKIM records configured with domain registrar. DMARC record is optional but recommended for improved deliverability and abuse monitoring.
+- **Custom Domain**: DNS-verified domain (`fluxocerto.app`) used as email sender. Requires: SPF and DKIM records configured with domain registrar. DMARC record is optional but recommended for improved deliverability and abuse monitoring.
 
 ## Success Criteria
 
 ### Measurable Outcomes
 
 - **SC-001**: Magic Link emails arrive in the user's inbox within 30 seconds of request (measured from button click to email appearing in inbox, under normal network conditions)
-- **SC-002**: Email sender displays `noreply@financas.fflo.me` (not generic Supabase domain)
+- **SC-002**: Email sender displays `noreply@fluxocerto.app` (not generic Supabase domain)
 - **SC-003**: Repository contains zero production secrets or API keys (verified by grep/search)
 - **SC-004**: Local development with Inbucket works identically to before this feature (no regressions)
 - **SC-005**: Setup documentation enables a new administrator to configure Resend in under 30 minutes of active work (excluding DNS propagation wait time, which may take up to 48 hours)
 
 ## Assumptions
 
-- Administrator has access to `financas.fflo.me` domain and can configure DNS records for it (SPF, DKIM)
+- Administrator has access to `fluxocerto.app` domain and can configure DNS records for it (SPF, DKIM)
 - Administrator has access to Supabase Dashboard for the production project
 - Resend free tier limits (3,000/month, 100/day) are sufficient for family use (~5 users)
 - Resend service maintains reasonable uptime and delivery rates

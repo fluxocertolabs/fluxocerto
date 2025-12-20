@@ -163,7 +163,7 @@ export const useThemeStore = create<ThemeState>()(
       },
     }),
     {
-      name: 'family-finance-theme',
+      name: 'fluxo-certo-theme',
       onRehydrateStorage: () => (state) => {
         if (state) {
           const resolvedTheme = resolveTheme(state.theme)

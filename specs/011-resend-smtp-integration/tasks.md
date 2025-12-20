@@ -41,12 +41,12 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 **⚠️ CRITICAL**: No user story verification can proceed until this phase is complete
 
 - [X] T002 Create Resend account at resend.com (external)
-- [X] T003 Add domain `financas.fflo.me` in Resend Dashboard (external)
+- [X] T003 Add domain `fluxocerto.app` in Resend Dashboard (external)
 - [X] T004 Configure SPF DNS record for domain verification (external - DNS provider)
 - [X] T005 Configure DKIM DNS record for domain verification (external - DNS provider)
 - [X] T006 [P] Configure DMARC DNS record (optional but recommended) (external - DNS provider)
 - [X] T007 Verify domain in Resend Dashboard (external - may require DNS propagation wait)
-- [X] T008 Create "Sending access" API key restricted to `financas.fflo.me` (external - Resend Dashboard)
+- [X] T008 Create "Sending access" API key restricted to `fluxocerto.app` (external - Resend Dashboard)
 
 **Checkpoint**: Resend account ready with verified domain and API key
 
@@ -61,11 +61,11 @@ All configuration is done via external dashboards (Resend, Supabase), not in cod
 ### Implementation for User Story 1
 
 - [X] T009 [US1] Navigate to Supabase Dashboard → Project Settings → Authentication → SMTP Settings (external)
-- [X] T010 [US1] Configure SMTP settings in Supabase Dashboard (external): Enable Custom SMTP, set host=smtp.resend.com, port=465, username=resend, password=API key, sender=noreply@financas.fflo.me, name=Family Finance (see spec.md FR-013 through FR-016)
+- [X] T010 [US1] Configure SMTP settings in Supabase Dashboard (external): Enable Custom SMTP, set host=smtp.resend.com, port=465, username=resend, password=API key, sender=noreply@fluxocerto.app, name=Fluxo Certo (see spec.md FR-013 through FR-016)
 - [X] T011 [US1] Save SMTP configuration and verify settings are persisted (external)
 - [ ] T012 [US1] Test Magic Link email delivery in production (manual verification)
 - [ ] T013 [US1] Verify email arrives within 30 seconds (SC-001)
-- [ ] T014 [US1] Verify sender shows `noreply@financas.fflo.me` (SC-002)
+- [ ] T014 [US1] Verify sender shows `noreply@fluxocerto.app` (SC-002)
 - [ ] T015 [US1] Verify Magic Link completes authentication successfully
 
 **Checkpoint**: User Story 1 complete - production Magic Link emails work

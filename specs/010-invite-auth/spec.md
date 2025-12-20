@@ -3,7 +3,7 @@
 **Feature Branch**: `010-invite-auth`  
 **Created**: 2025-11-27  
 **Status**: Draft  
-**Input**: User description: "Implement invite-only authentication for Family Finance using Supabase Magic Link (passwordless email login)."
+**Input**: User description: "Implement invite-only authentication for Fluxo Certo using Supabase Magic Link (passwordless email login)."
 
 ## Clarifications
 
@@ -17,7 +17,7 @@
 
 ## Context
 
-Family Finance currently uses Supabase anonymous authentication (implemented in spec 008-supabase-migration). This means:
+Fluxo Certo currently uses Supabase anonymous authentication (implemented in spec 008-supabase-migration). This means:
 
 - Any visitor gets an anonymous session automatically
 - Data is isolated per anonymous user via `user_id` column and RLS policies

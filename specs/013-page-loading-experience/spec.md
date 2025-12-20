@@ -3,7 +3,7 @@
 **Feature Branch**: `013-page-loading-experience`  
 **Created**: 2025-11-27  
 **Status**: Draft  
-**Input**: User description: "Build a Page Loading Experience enhancement feature for Family Finance that eliminates UI flickering and provides a polished, professional loading experience across all pages."
+**Input**: User description: "Build a Page Loading Experience enhancement feature for Fluxo Certo that eliminates UI flickering and provides a polished, professional loading experience across all pages."
 
 ## Clarifications
 

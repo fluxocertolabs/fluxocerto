@@ -7,7 +7,7 @@
 
 ## Summary
 
-Transition Family Finance from anonymous authentication to invite-only Magic Link (passwordless email) authentication. Pre-approved email addresses stored in `allowed_emails` table are validated via a Supabase `before-user-created` database hook. All authenticated family members share the same financial data (no per-user isolation) through updated RLS policies.
+Transition Fluxo Certo from anonymous authentication to invite-only Magic Link (passwordless email) authentication. Pre-approved email addresses stored in `allowed_emails` table are validated via a Supabase `before-user-created` database hook. All authenticated family members share the same financial data (no per-user isolation) through updated RLS policies.
 
 ## Technical Context
 

@@ -1,6 +1,6 @@
 # Market Analysis & ICP Evaluation
 
-## Family Finance App — Product-Market Fit Assessment
+## Fluxo Certo App — Product-Market Fit Assessment
 
 **Document Version**: 1.0  
 **Date**: December 2024  
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This document provides a strategic analysis of the Family Finance application, evaluating its true competitive advantage, ideal customer profile (ICP), and market positioning opportunities.
+This document provides a strategic analysis of the Fluxo Certo application, evaluating its true competitive advantage, ideal customer profile (ICP), and market positioning opportunities.
 
 **Key Finding**: The app's primary differentiator is not "ease of use" or "visualization" — it's the **dual-scenario cashflow projection with income certainty modeling**. This transforms the product from a generic finance tool into a specialized **income uncertainty management system**.
 

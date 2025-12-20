@@ -3,13 +3,13 @@
 **Feature Branch**: `004-cashflow-dashboard`  
 **Created**: 2025-11-26  
 **Status**: Draft  
-**Input**: User description: "Build the Dashboard and Cashflow Visualization for Family Finance - the main screen that displays the 30-day cashflow projection chart."
+**Input**: User description: "Build the Dashboard and Cashflow Visualization for Fluxo Certo - the main screen that displays the 30-day cashflow projection chart."
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - View 30-Day Cashflow Projection (Priority: P1)
 
-A user opens Family Finance to see their financial future at a glance. They immediately see a chart showing their projected balance over the next 30 days with two distinct scenarios: an optimistic projection (assuming all active income arrives) and a pessimistic projection (assuming only guaranteed income arrives). The visual distinction between scenarios helps them understand best-case versus worst-case financial outcomes.
+A user opens Fluxo Certo to see their financial future at a glance. They immediately see a chart showing their projected balance over the next 30 days with two distinct scenarios: an optimistic projection (assuming all active income arrives) and a pessimistic projection (assuming only guaranteed income arrives). The visual distinction between scenarios helps them understand best-case versus worst-case financial outcomes.
 
 **Why this priority**: This is the core value proposition of the dashboard - users need to see their financial trajectory before anything else. Without the chart, the dashboard has no purpose.
 

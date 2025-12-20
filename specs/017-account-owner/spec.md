@@ -3,7 +3,7 @@
 **Feature Branch**: `017-account-owner`  
 **Created**: 2025-11-28  
 **Status**: Draft  
-**Input**: User description: "Build an Account Owner Assignment feature for Family Finance that allows assigning bank accounts and credit cards to specific family members (owners)."
+**Input**: User description: "Build an Account Owner Assignment feature for Fluxo Certo that allows assigning bank accounts and credit cards to specific family members (owners)."
 
 ## User Scenarios & Testing *(mandatory)*
 

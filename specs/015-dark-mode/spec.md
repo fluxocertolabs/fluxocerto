@@ -3,13 +3,13 @@
 **Feature Branch**: `015-dark-mode`  
 **Created**: 2025-11-28  
 **Status**: Draft  
-**Input**: User description: "Build a Dark Mode feature for Family Finance that provides persistent dark color scheme, theme toggle in header, user preference persistence in Supabase, system theme detection, and smooth transition animations"
+**Input**: User description: "Build a Dark Mode feature for Fluxo Certo that provides persistent dark color scheme, theme toggle in header, user preference persistence in Supabase, system theme detection, and smooth transition animations"
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Toggle Between Light and Dark Themes (Priority: P1)
 
-Maria uses the Family Finance app frequently in the evening after work to check her family's cashflow. The bright white interface strains her eyes in low-light conditions. She wants to switch to a dark color scheme for comfortable viewing.
+Maria uses the Fluxo Certo app frequently in the evening after work to check her family's cashflow. The bright white interface strains her eyes in low-light conditions. She wants to switch to a dark color scheme for comfortable viewing.
 
 **Why this priority**: Core feature functionality - without the ability to toggle themes, the entire feature has no value. This is the primary interaction users will have with dark mode.
 

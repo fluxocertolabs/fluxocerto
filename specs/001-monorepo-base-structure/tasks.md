@@ -52,7 +52,7 @@
 
 **Goal**: Enable `pnpm install && pnpm dev` to start a development server immediately after cloning
 
-**Independent Test**: Run `pnpm dev` and verify server starts on http://localhost:5173 showing "Family Finance" heading
+**Independent Test**: Run `pnpm dev` and verify server starts on http://localhost:5173 showing "Fluxo Certo" heading
 
 ### Implementation for User Story 1
 
@@ -60,7 +60,7 @@
 - [x] T012 [P] [US1] Create shadcn/ui utility function cn() in src/lib/utils.ts
 - [x] T013 [US1] Create global styles with Tailwind imports and CSS variables in src/index.css
 - [x] T014 [US1] Create React entry point with StrictMode in src/main.tsx
-- [x] T015 [US1] Create root component with "Family Finance" placeholder in src/App.tsx
+- [x] T015 [US1] Create root component with "Fluxo Certo" placeholder in src/App.tsx
 
 **Checkpoint**: `pnpm dev` starts server on port 5173, browser shows placeholder page
 
