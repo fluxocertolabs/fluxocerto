@@ -7,8 +7,8 @@
  * All test data and chart projections will be consistent across runs.
  *
  * ISOLATION STRATEGY:
- * - Each worker has its own household for complete data isolation via RLS
- * - Worker-specific elements (like household name in header) are masked in screenshots
+ * - Each worker has its own group for complete data isolation via RLS
+ * - Worker-specific elements (like group name in header) are masked in screenshots
  * - This allows parallel execution while maintaining deterministic visual comparisons
  */
 
@@ -52,7 +52,7 @@ export interface VisualTestHelpers {
 
   /**
    * Take a screenshot with worker-specific elements masked for consistency.
-   * Masks: household badge in header, worker-prefixed data names
+   * Masks: group badge in header, worker-prefixed data names
    */
   takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean; mask?: Locator[] }): Promise<void>;
 
@@ -209,12 +209,12 @@ export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
 /**
  * Get locators for elements that should be masked in screenshots.
  * These are worker-specific elements that would differ between parallel workers:
- * - Household badge in header (shows "Test Worker N")
+ * - Group badge in header (shows "Test Worker N")
  */
 function getWorkerSpecificMasks(page: Page): Locator[] {
   return [
-    // Household badge in header - contains worker-specific household name
-    page.locator('[data-testid="household-badge"]'),
+    // Group badge in header - contains worker-specific group name
+    page.locator('[data-testid="group-badge"]'),
   ];
 }
 

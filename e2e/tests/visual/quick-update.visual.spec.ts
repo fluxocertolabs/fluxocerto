@@ -20,16 +20,16 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
     'quick update - light populated',
     async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
       // Create profiles to use as owners
-      const householdId = await db.getWorkerHouseholdId();
-      const owner1 = await db.createProfileInHousehold(
+      const groupId = await db.getWorkerGroupId();
+      const owner1 = await db.createProfileInGroup(
         'visual-owner1@test.local',
         'João',
-        householdId
+        groupId
       );
-      const owner2 = await db.createProfileInHousehold(
+      const owner2 = await db.createProfileInGroup(
         'visual-owner2@test.local',
         'Maria',
-        householdId
+        groupId
       );
 
       // Seed accounts with ALL THREE types to test type badges
@@ -64,16 +64,16 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
     'quick update - dark populated',
     async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
       // Create profiles to use as owners
-      const householdId = await db.getWorkerHouseholdId();
-      const owner1 = await db.createProfileInHousehold(
+      const groupId = await db.getWorkerGroupId();
+      const owner1 = await db.createProfileInGroup(
         'visual-owner1-dark@test.local',
         'João',
-        householdId
+        groupId
       );
-      const owner2 = await db.createProfileInHousehold(
+      const owner2 = await db.createProfileInGroup(
         'visual-owner2-dark@test.local',
         'Maria',
-        householdId
+        groupId
       );
 
       // Seed accounts with ALL THREE types to test type badges

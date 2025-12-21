@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useFinanceData } from '@/hooks/use-finance-data'
-import { useHousehold } from '@/hooks/use-household'
+import { useGroup } from '@/hooks/use-group'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { useFinanceStore } from '@/stores/finance-store'
 import { AccountList } from '@/components/manage/accounts/account-list'
@@ -23,7 +23,7 @@ import { SingleShotExpenseForm } from '@/components/manage/expenses/single-shot-
 import { CreditCardList } from '@/components/manage/credit-cards/credit-card-list'
 import { CreditCardForm } from '@/components/manage/credit-cards/credit-card-form'
 import { DeleteConfirmation } from '@/components/manage/shared/delete-confirmation'
-import { MembersList } from '@/components/household'
+import { MembersList } from '@/components/group'
 import { PageLoadingWrapper, ManageSkeleton, SkeletonLine } from '@/components/loading'
 import { cn } from '@/lib/utils'
 import type {
@@ -40,7 +40,7 @@ import type {
   FutureStatementInput,
 } from '@/types'
 
-type TabValue = 'accounts' | 'projects' | 'expenses' | 'cards' | 'household'
+type TabValue = 'accounts' | 'projects' | 'expenses' | 'cards' | 'group'
 
 type DialogState =
   | { type: 'none' }
@@ -69,7 +69,7 @@ type DeleteState =
 export function ManagePage() {
   const [activeTab, setActiveTab] = useState<TabValue>(() => {
     const stored = sessionStorage.getItem('manage-active-tab')
-    if (stored && ['accounts', 'projects', 'expenses', 'cards', 'household'].includes(stored)) {
+    if (stored && ['accounts', 'projects', 'expenses', 'cards', 'group'].includes(stored)) {
       return stored as TabValue
     }
     return 'accounts'
@@ -82,7 +82,7 @@ export function ManagePage() {
   const [error, setError] = useState<string | null>(null)
 
   const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, futureStatements, profiles, isLoading, error: fetchError, retry } = useFinanceData()
-  const { household, members, isLoading: householdLoading, error: householdError } = useHousehold()
+  const { group, members, isLoading: groupLoading, error: groupError } = useGroup()
   const store = useFinanceStore()
 
   // Coordinated loading state for smooth transitions
@@ -551,7 +551,7 @@ export function ManagePage() {
               <TabsTrigger value="projects">Receitas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
               <TabsTrigger value="cards">Cartões</TabsTrigger>
-              <TabsTrigger value="household">Residência</TabsTrigger>
+              <TabsTrigger value="group">Grupo</TabsTrigger>
             </TabsList>
 
             {activeTab === 'accounts' && (
@@ -652,27 +652,27 @@ export function ManagePage() {
             />
           </TabsContent>
 
-          <TabsContent value="household">
+          <TabsContent value="group">
             <Card>
               <CardHeader>
-                <CardTitle>Membros da Residência</CardTitle>
+                <CardTitle>Membros do Grupo</CardTitle>
                 <CardDescription>
-                  {household ? (
-                    <>Membros da residência <strong>{household.name}</strong></>
+                  {group ? (
+                    <>Membros do grupo <strong>{group.name}</strong></>
                   ) : (
                     'Carregando...'
                   )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {householdLoading ? (
+                {groupLoading ? (
                   <div className="space-y-2">
                     <SkeletonLine width="w-full" height="h-10" />
                     <SkeletonLine width="w-full" height="h-10" />
                   </div>
-                ) : householdError ? (
+                ) : groupError ? (
                   <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                    {householdError}
+                    {groupError}
                   </div>
                 ) : (
                   <MembersList members={members} />

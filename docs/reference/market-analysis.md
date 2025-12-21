@@ -34,7 +34,7 @@ Based on comprehensive codebase analysis, the application provides:
 | **Payment Flexibility** | Weekly, biweekly, twice-monthly, monthly schedules |
 | **Health Indicators** | At-a-glance financial health status |
 | **Projection Snapshots** | Historical captures for tracking prediction accuracy |
-| **Household Support** | Multi-member households with shared finances |
+| **Group Support** | Multi-member groups with shared finances |
 | **Quick Update Ritual** | Streamlined monthly balance refresh flow |
 
 ### Technical Architecture Highlights
@@ -62,7 +62,7 @@ Most personal finance and cashflow apps fall into two categories:
 2. **Cashflow Projection Tools** (Various spreadsheet templates, Float, Pulse)
    - Single-scenario projections
    - Assume income certainty
-   - Business-focused (not personal/household)
+   - Business-focused (not personal/group)
    - Answers: "What will my balance be on date X?"
 
 ### What This App Does Differently
@@ -108,10 +108,10 @@ This transforms reactive "oops I'm overdrawn" into proactive "I need to move mon
 
 ## Ideal Customer Profile (ICP)
 
-### Primary ICP: The Income-Variable Household
+### Primary ICP: The Income-Variable Group
 
 **Demographics:**
-- Dual-income households (typically)
+- Dual-income groups (typically)
 - Age 28-50
 - Combined income: $50K-$200K (comfortable but not wealthy)
 - At least one partner has variable/unpredictable income
@@ -158,7 +158,7 @@ This transforms reactive "oops I'm overdrawn" into proactive "I need to move mon
 
 ### Positioning Statement
 
-> **For households with variable income** who need to know if they can cover upcoming expenses, **[Product Name]** is a **cashflow projection tool** that **shows you both best-case and worst-case scenarios** so you can plan with confidence. **Unlike** budgeting apps that track where money went, **we show you where it's going** — and warn you before problems happen.
+> **For groups with variable income** who need to know if they can cover upcoming expenses, **[Product Name]** is a **cashflow projection tool** that **shows you both best-case and worst-case scenarios** so you can plan with confidence. **Unlike** budgeting apps that track where money went, **we show you where it's going** — and warn you before problems happen.
 
 ### Competitive Matrix
 
@@ -177,7 +177,7 @@ This transforms reactive "oops I'm overdrawn" into proactive "I need to move mon
 1. **Primary**: "See your worst-case scenario, not just best-case"
 2. **Secondary**: "2-minute monthly updates, not daily tracking"
 3. **Tertiary**: "Danger warnings before you overdraft"
-4. **Supporting**: "Built for variable income households"
+4. **Supporting**: "Built for variable income groups"
 
 ---
 
@@ -207,7 +207,7 @@ This transforms reactive "oops I'm overdrawn" into proactive "I need to move mon
 | No personal finance app specializes in income uncertainty | First-mover in niche |
 | Budgeting apps require high maintenance | Position as "anti-YNAB" |
 | Spreadsheet users have friction but proven need | Convert with better UX |
-| Business cashflow tools don't serve households | Underserved segment |
+| Business cashflow tools don't serve groups | Underserved segment |
 
 ### Pricing Benchmarks
 

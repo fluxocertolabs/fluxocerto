@@ -7,7 +7,7 @@
  */
 
 import { startOfMonth, differenceInMonths } from 'date-fns'
-import { getSupabase, getHouseholdId } from '@/lib/supabase'
+import { getSupabase, getGroupId } from '@/lib/supabase'
 import { transformFutureStatementRow, type FutureStatementRow } from '@/types'
 
 /**
@@ -55,10 +55,10 @@ export async function checkAndProgressMonth(
 export async function performMonthProgression(): Promise<ProgressionResult> {
   try {
     const supabase = getSupabase()
-    const householdId = await getHouseholdId()
+    const groupId = await getGroupId()
     
-    if (!householdId) {
-      return { success: false, error: 'Não foi possível identificar sua residência' }
+    if (!groupId) {
+      return { success: false, error: 'Não foi possível identificar seu grupo' }
     }
 
     // Get current month/year
@@ -66,12 +66,12 @@ export async function performMonthProgression(): Promise<ProgressionResult> {
     const currentMonth = now.getMonth() + 1
     const currentYear = now.getFullYear()
 
-    // Fetch all credit cards and future statements for this household
-    // Note: RLS policies enforce household isolation, but we add explicit filters
+    // Fetch all credit cards and future statements for this group
+    // Note: RLS policies enforce group isolation, but we add explicit filters
     // as defense-in-depth for data isolation
     const [cardsResult, statementsResult] = await Promise.all([
-      supabase.from('credit_cards').select('id, statement_balance').eq('household_id', householdId),
-      supabase.from('future_statements').select('*').eq('household_id', householdId),
+      supabase.from('credit_cards').select('id, statement_balance').eq('group_id', groupId),
+      supabase.from('future_statements').select('*').eq('group_id', groupId),
     ])
 
     if (cardsResult.error) {
@@ -140,12 +140,12 @@ export async function performMonthProgression(): Promise<ProgressionResult> {
 
     // Clean up past-month statements (FR-012)
     // Delete any future_statements where targetMonth/targetYear < current month
-    // Note: RLS policies enforce household isolation, but we add explicit filter
+    // Note: RLS policies enforce group isolation, but we add explicit filter
     // as defense-in-depth for data isolation
     const { data: deletedStatements, error: cleanupError } = await supabase
       .from('future_statements')
       .delete()
-      .eq('household_id', householdId)
+      .eq('group_id', groupId)
       .or(
         `target_year.lt.${currentYear},and(target_year.eq.${currentYear},target_month.lt.${currentMonth})`
       )

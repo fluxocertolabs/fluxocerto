@@ -15,7 +15,7 @@ export class DashboardPage {
   readonly emptyState: Locator;
   readonly chartErrorHeading: Locator;
   readonly chartRetryButton: Locator;
-  readonly householdBadge: Locator;
+  readonly groupBadge: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -28,8 +28,8 @@ export class DashboardPage {
     this.emptyState = page.getByRole('heading', { name: /nenhum dado financeiro/i });
     this.chartErrorHeading = page.getByRole('heading', { name: /não foi possível carregar a projeção/i });
     this.chartRetryButton = page.getByRole('button', { name: /tentar novamente/i });
-    // Household badge in header (FR-015) - contains Home icon and household name
-    this.householdBadge = page.locator('header').locator('span, div').filter({ hasText: /Fonseca Floriano|Família/i }).first();
+    // Group badge in header (FR-015) - contains Users icon and group name
+    this.groupBadge = page.locator('header').locator('span, div').filter({ hasText: /Fonseca Floriano|Família/i }).first();
   }
 
   /**
@@ -221,30 +221,30 @@ export class DashboardPage {
   }
 
   /**
-   * Check if household badge is visible in header (FR-015)
+   * Check if group badge is visible in header (FR-015)
    */
-  async hasHouseholdBadge(): Promise<boolean> {
-    return this.householdBadge.isVisible();
+  async hasGroupBadge(): Promise<boolean> {
+    return this.groupBadge.isVisible();
   }
 
   /**
-   * Get the household name from the badge in header
+   * Get the group name from the badge in header
    */
-  async getHouseholdName(): Promise<string | null> {
-    if (await this.householdBadge.isVisible()) {
-      return this.householdBadge.textContent();
+  async getGroupName(): Promise<string | null> {
+    if (await this.groupBadge.isVisible()) {
+      return this.groupBadge.textContent();
     }
     return null;
   }
 
   /**
-   * Verify household badge displays the expected name (FR-015)
+   * Verify group badge displays the expected name (FR-015)
    */
-  async expectHouseholdBadgeVisible(name?: string): Promise<void> {
+  async expectGroupBadgeVisible(name?: string): Promise<void> {
     await expect(async () => {
-      await expect(this.householdBadge).toBeVisible({ timeout: 5000 });
+      await expect(this.groupBadge).toBeVisible({ timeout: 5000 });
       if (name) {
-        const badgeText = await this.householdBadge.textContent();
+        const badgeText = await this.groupBadge.textContent();
         expect(badgeText).toContain(name);
       }
     }).toPass({ timeout: 20000 });

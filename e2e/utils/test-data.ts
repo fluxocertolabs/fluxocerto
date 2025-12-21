@@ -63,7 +63,7 @@ export interface TestFutureStatement {
   amount: number; // in cents
 }
 
-export interface TestHousehold {
+export interface TestGroup {
   id?: string;
   name: string;
   created_at?: string;
@@ -74,7 +74,7 @@ export interface TestProfile {
   id?: string;
   name: string;
   email: string;
-  household_id: string;
+  group_id: string;
 }
 
 /**
@@ -199,11 +199,11 @@ export function createFutureStatement(
 }
 
 /**
- * Create test household with defaults
+ * Create test group with defaults
  */
-export function createHousehold(
-  overrides: Partial<TestHousehold> = {}
-): TestHousehold {
+export function createGroup(
+  overrides: Partial<TestGroup> = {}
+): TestGroup {
   return {
     name: 'Família Teste',
     ...overrides,

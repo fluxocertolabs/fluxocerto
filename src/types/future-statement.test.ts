@@ -153,7 +153,7 @@ describe('FutureStatementSchema', () => {
     const statement = {
       id: '550e8400-e29b-41d4-a716-446655440001',
       creditCardId: '550e8400-e29b-41d4-a716-446655440000',
-      householdId: '550e8400-e29b-41d4-a716-446655440002',
+      groupId: '550e8400-e29b-41d4-a716-446655440002',
       targetMonth: 6,
       targetYear: 2025,
       amount: 150000,
@@ -168,7 +168,7 @@ describe('FutureStatementSchema', () => {
   it('rejects statement without id', () => {
     const statement = {
       creditCardId: '550e8400-e29b-41d4-a716-446655440000',
-      householdId: '550e8400-e29b-41d4-a716-446655440002',
+      groupId: '550e8400-e29b-41d4-a716-446655440002',
       targetMonth: 6,
       targetYear: 2025,
       amount: 150000,

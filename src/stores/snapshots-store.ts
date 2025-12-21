@@ -6,7 +6,7 @@
 import { create } from 'zustand'
 import {
   getSupabase,
-  getHouseholdId,
+  getGroupId,
   handleSupabaseError,
   isSupabaseConfigured,
 } from '@/lib/supabase'
@@ -26,7 +26,7 @@ type ErrorResult = { success: false; error: string }
 // Database row type for projection_snapshots
 interface SnapshotRow {
   id: string
-  household_id: string
+  group_id: string
   name: string
   schema_version: number
   data: SnapshotData
@@ -76,7 +76,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
   isLoading: false,
   error: null,
 
-  // Fetch all snapshots for current household (list view)
+  // Fetch all snapshots for current group (list view)
   fetchSnapshots: async () => {
     const configError = getSupabaseConfigError()
     if (configError) {
@@ -110,7 +110,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
       set({ snapshots, isLoading: false })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao carregar snapshots'
+      const message = err instanceof Error ? err.message : 'Erro ao carregar projeções'
       set({ error: message, isLoading: false })
     }
   },
@@ -150,7 +150,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
       // Transform to ProjectionSnapshot
       const snapshot: ProjectionSnapshot = {
         id: row.id,
-        householdId: row.household_id,
+        groupId: row.group_id,
         name: row.name,
         schemaVersion: row.schema_version,
         data: row.data,
@@ -160,7 +160,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
       set({ currentSnapshot: snapshot, isLoading: false })
       return snapshot
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao carregar snapshot'
+      const message = err instanceof Error ? err.message : 'Erro ao carregar projeção'
       set({ error: message, isLoading: false })
       return null
     }
@@ -172,10 +172,10 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
     if (configError) return configError
 
     try {
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       // Build snapshot data
@@ -192,7 +192,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
       const { data, error } = await getSupabase()
         .from('projection_snapshots')
         .insert({
-          household_id: householdId,
+          group_id: groupId,
           name: input.name,
           schema_version: CURRENT_SCHEMA_VERSION,
           data: snapshotData,
@@ -218,7 +218,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
       return { success: true, data: data.id }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao salvar snapshot'
+      const message = err instanceof Error ? err.message : 'Erro ao salvar projeção'
       return { success: false, error: message }
     }
   },
@@ -239,7 +239,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
       }
 
       if ((count ?? 0) === 0) {
-        return { success: false, error: 'Snapshot não encontrado' }
+        return { success: false, error: 'Projeção não encontrada' }
       }
 
       // Remove from snapshots list
@@ -251,7 +251,7 @@ export const useSnapshotsStore = create<SnapshotsStore>()((set) => ({
 
       return { success: true, data: undefined }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao excluir snapshot'
+      const message = err instanceof Error ? err.message : 'Erro ao excluir projeção'
       return { success: false, error: message }
     }
   },

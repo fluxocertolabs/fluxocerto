@@ -22,7 +22,7 @@ const mockUpdateCalls: unknown[] = []
 // Mock response state
 let mockInsertResponse = { data: { id: 'test-id' }, error: null as unknown }
 let mockUpdateResponse = { error: null as unknown, count: 1 }
-let mockHouseholdId: string | null = 'test-household-id'
+let mockGroupId: string | null = 'test-group-id'
 let mockIsConfigured = true
 
 // Create chainable query builder
@@ -60,7 +60,7 @@ vi.mock('../lib/supabase', () => ({
   getSupabase: vi.fn(() => ({
     from: vi.fn(() => createQueryBuilder()),
   })),
-  getHouseholdId: vi.fn(() => Promise.resolve(mockHouseholdId)),
+  getGroupId: vi.fn(() => Promise.resolve(mockGroupId)),
   isSupabaseConfigured: vi.fn(() => mockIsConfigured),
   handleSupabaseError: vi.fn((error: unknown) => ({
     success: false,
@@ -78,7 +78,7 @@ function resetMocks() {
   mockUpdateCalls.length = 0
   mockInsertResponse = { data: { id: 'test-id' }, error: null }
   mockUpdateResponse = { error: null, count: 1 }
-  mockHouseholdId = 'test-household-id'
+  mockGroupId = 'test-group-id'
   mockIsConfigured = true
 }
 
@@ -767,8 +767,8 @@ describe('Configuration Error Handling', () => {
     }
   })
 
-  it('returns error when household cannot be determined', async () => {
-    mockHouseholdId = null
+  it('returns error when group cannot be determined', async () => {
+    mockGroupId = null
 
     const result = await useFinanceStore.getState().addAccount({
       name: 'Test Account',
@@ -779,12 +779,12 @@ describe('Configuration Error Handling', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toContain('residência')
+      expect(result.error).toContain('grupo')
     }
   })
 
-  it('handles missing household for project creation', async () => {
-    mockHouseholdId = null
+  it('handles missing group for project creation', async () => {
+    mockGroupId = null
 
     const result = await useFinanceStore.getState().addProject({
       type: 'recurring',
@@ -798,12 +798,12 @@ describe('Configuration Error Handling', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toContain('residência')
+      expect(result.error).toContain('grupo')
     }
   })
 
-  it('handles missing household for expense creation', async () => {
-    mockHouseholdId = null
+  it('handles missing group for expense creation', async () => {
+    mockGroupId = null
 
     const result = await useFinanceStore.getState().addExpense({
       type: 'fixed',
@@ -815,12 +815,12 @@ describe('Configuration Error Handling', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toContain('residência')
+      expect(result.error).toContain('grupo')
     }
   })
 
-  it('handles missing household for credit card creation', async () => {
-    mockHouseholdId = null
+  it('handles missing group for credit card creation', async () => {
+    mockGroupId = null
 
     const result = await useFinanceStore.getState().addCreditCard({
       name: 'Nubank',
@@ -831,7 +831,7 @@ describe('Configuration Error Handling', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toContain('residência')
+      expect(result.error).toContain('grupo')
     }
   })
 })
@@ -1042,8 +1042,8 @@ describe('Future Statement Configuration Error Handling', () => {
     }
   })
 
-  it('returns error when household cannot be determined for addFutureStatement', async () => {
-    mockHouseholdId = null
+  it('returns error when group cannot be determined for addFutureStatement', async () => {
+    mockGroupId = null
 
     const result = await useFinanceStore.getState().addFutureStatement({
       creditCardId: validUUID,
@@ -1054,7 +1054,7 @@ describe('Future Statement Configuration Error Handling', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toContain('residência')
+      expect(result.error).toContain('grupo')
     }
   })
 })

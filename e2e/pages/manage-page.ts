@@ -9,7 +9,7 @@ import { AccountsSection } from './accounts-section';
 import { ExpensesSection } from './expenses-section';
 import { ProjectsSection } from './projects-section';
 import { CreditCardsSection } from './credit-cards-section';
-import { HouseholdSection } from './household-section';
+import { GroupSection } from './group-section';
 
 export class ManagePage {
   readonly page: Page;
@@ -17,13 +17,13 @@ export class ManagePage {
   readonly creditCardsTab: Locator;
   readonly expensesTab: Locator;
   readonly projectsTab: Locator;
-  readonly householdTab: Locator;
+  readonly groupTab: Locator;
 
   private _accounts: AccountsSection | null = null;
   private _expenses: ExpensesSection | null = null;
   private _projects: ProjectsSection | null = null;
   private _creditCards: CreditCardsSection | null = null;
-  private _household: HouseholdSection | null = null;
+  private _group: GroupSection | null = null;
 
   constructor(page: Page) {
     this.page = page;
@@ -31,7 +31,7 @@ export class ManagePage {
     this.creditCardsTab = page.getByRole('tab', { name: /cartões|credit cards/i });
     this.expensesTab = page.getByRole('tab', { name: /despesas|expenses/i });
     this.projectsTab = page.getByRole('tab', { name: /projetos|receitas|projects|income/i });
-    this.householdTab = page.getByRole('tab', { name: /residência|household/i });
+    this.groupTab = page.getByRole('tab', { name: /grupo|group/i });
   }
 
   /**
@@ -207,10 +207,10 @@ export class ManagePage {
   }
 
   /**
-   * Switch to household tab
+   * Switch to group tab
    */
-  async selectHouseholdTab(): Promise<void> {
-    await this.selectTabWithRetry(this.householdTab);
+  async selectGroupTab(): Promise<void> {
+    await this.selectTabWithRetry(this.groupTab);
   }
 
   /**
@@ -254,13 +254,13 @@ export class ManagePage {
   }
 
   /**
-   * Get household section page object
+   * Get group section page object
    */
-  household(): HouseholdSection {
-    if (!this._household) {
-      this._household = new HouseholdSection(this.page);
+  group(): GroupSection {
+    if (!this._group) {
+      this._group = new GroupSection(this.page);
     }
-    return this._household;
+    return this._group;
   }
 }
 

@@ -2,7 +2,7 @@
 
 ## 1. Problem Statement
 
-**The problem:** Dual-income households with variable income streams (freelancers, contractors, project-based workers) lack visibility into their daily cashflow. They don't know if they'll have enough in their checking account on any given day to cover upcoming expenses, leading to anxiety and reactive money management.
+**The problem:** Dual-income groups with variable income streams (freelancers, contractors, project-based workers) lack visibility into their daily cashflow. They don't know if they'll have enough in their checking account on any given day to cover upcoming expenses, leading to anxiety and reactive money management.
 
 **How people solve it today:** 
 - Manual Excel/Google Sheets with day-by-day projections
@@ -20,7 +20,7 @@
 
 ## 2. Target Customer Archetype
 
-**Primary persona:** You and your wife—a dual-income household where both partners have project-based or variable income. Combined income is comfortable, but payment timing varies. You don't need to count every penny, but you need to know the money will be there when bills are due.
+**Primary persona:** You and your wife—a dual-income group where both partners have project-based or variable income. Combined income is comfortable, but payment timing varies. You don't need to count every penny, but you need to know the money will be there when bills are due.
 
 **Day in their life:** 
 - End of month: "Let me update the spreadsheet with this month's credit card total"

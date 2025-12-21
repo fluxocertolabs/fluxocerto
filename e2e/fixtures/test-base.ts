@@ -1,9 +1,9 @@
 /**
  * Extended Playwright test with custom fixtures
  * Provides db, auth, and page object fixtures for all tests
- * Updated for per-worker isolation using household-based data separation
+ * Updated for per-worker isolation using group-based data separation
  *
- * Each worker gets its own household, ensuring complete data isolation via RLS.
+ * Each worker gets its own group, ensuring complete data isolation via RLS.
  * This eliminates race conditions and data conflicts between parallel workers.
  */
 
@@ -25,7 +25,7 @@ import { existsSync } from 'fs';
 type TestFixtures = {
   /** Worker context with isolation information */
   workerContext: IWorkerContext;
-  /** Database fixture scoped to worker (uses household-based isolation) */
+  /** Database fixture scoped to worker (uses group-based isolation) */
   db: WorkerDatabaseFixture;
   /** Auth fixture scoped to worker */
   auth: AuthFixture;
@@ -138,18 +138,18 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(workerCtx);
   },
 
-  // Database fixture scoped to worker (uses household-based isolation)
+  // Database fixture scoped to worker (uses group-based isolation)
   // Resets once per worker, not per test - tests can call db.resetDatabase() if they need a clean slate
   db: [
     async ({ workerCtx }, use) => {
       const dbFixture = createWorkerDbFixture(workerCtx);
 
       console.log(`[Fixture] Setting up DB for worker ${workerCtx.workerIndex}...`);
-      // Reset database once per worker (clears only this worker's household data)
+      // Reset database once per worker (clears only this worker's group data)
       // Tests that need a fresh DB can call db.resetDatabase() explicitly
       await dbFixture.resetDatabase();
 
-      // Ensure test user exists in worker's household
+      // Ensure test user exists in worker's group
       await dbFixture.ensureTestUser();
       console.log(`[Fixture] DB setup complete for worker ${workerCtx.workerIndex}`);
 

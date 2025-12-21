@@ -15,8 +15,8 @@ export class HistoryPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.pageHeading = page.getByRole('heading', { name: /histórico de snapshots/i });
-    this.emptyState = page.getByText(/nenhum snapshot salvo/i);
+    this.pageHeading = page.getByRole('heading', { name: /histórico de projeções/i });
+    this.emptyState = page.getByText(/nenhuma projeção salva/i);
     this.snapshotCards = page.locator('[data-testid="snapshot-card"]');
     this.loadingIndicator = page.getByText(/carregando/i);
     this.errorMessage = page.locator('.text-destructive').first();

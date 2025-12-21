@@ -227,7 +227,7 @@ test.describe('Historical Projection Snapshots', () => {
       await dashboardPage.expectChartRendered();
 
       // Click save snapshot button
-      const saveButton = page.getByRole('button', { name: /salvar snapshot/i });
+      const saveButton = page.getByRole('button', { name: /salvar projeção/i });
       await saveButton.click();
 
       // Fill in the snapshot name
@@ -239,7 +239,7 @@ test.describe('Historical Projection Snapshots', () => {
       await submitButton.click();
 
       // Wait for success toast
-      await expect(page.getByText(/snapshot salvo com sucesso/i)).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/projeção salva com sucesso/i)).toBeVisible({ timeout: 10000 });
 
       // Navigate to history and verify snapshot appears
       await historyPage.goto();
@@ -321,7 +321,7 @@ test.describe('Historical Projection Snapshots', () => {
       await dashboardPage.expectChartRendered();
 
       // Save the snapshot
-      const saveButton = page.getByRole('button', { name: /salvar snapshot/i });
+      const saveButton = page.getByRole('button', { name: /salvar projeção/i });
       await saveButton.click();
 
       const nameInput = page.getByLabel(/nome/i);
@@ -331,7 +331,7 @@ test.describe('Historical Projection Snapshots', () => {
       await submitButton.click();
 
       // Wait for success
-      await expect(page.getByText(/snapshot salvo com sucesso/i)).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/projeção salva com sucesso/i)).toBeVisible({ timeout: 10000 });
 
       // Navigate to history and open the snapshot
       await historyPage.goto();

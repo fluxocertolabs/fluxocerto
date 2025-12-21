@@ -2,15 +2,15 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme'
-import { HouseholdBadge } from '@/components/household'
+import { GroupBadge } from '@/components/group'
 import { signOut } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
-import { useHousehold } from '@/hooks/use-household'
+import { useGroup } from '@/hooks/use-group'
 
 export function Header() {
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuth()
-  const { household, isLoading: householdLoading } = useHousehold()
+  const { group, isLoading: groupLoading } = useGroup()
 
   const handleSignOut = async () => {
     const { error } = await signOut()
@@ -28,10 +28,10 @@ export function Header() {
             to="/"
             className="font-semibold text-lg text-foreground hover:text-foreground/80 transition-colors cursor-pointer"
           >
-            Finanças da Família
+            Fluxo Certo
           </Link>
-          {isAuthenticated && household && !householdLoading && (
-            <HouseholdBadge name={household.name} />
+          {isAuthenticated && group && !groupLoading && (
+            <GroupBadge name={group.name} />
           )}
         </div>
         <div className="flex items-center gap-4">

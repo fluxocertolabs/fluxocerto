@@ -17,7 +17,7 @@ import type { CashflowProjection } from '@/lib/cashflow/types'
 let mockSelectResponse: { data: unknown; error: unknown } = { data: [], error: null }
 let mockInsertResponse: { data: unknown; error: unknown } = { data: { id: 'test-id' }, error: null }
 let mockDeleteResponse: { error: unknown; count: number } = { error: null, count: 1 }
-let mockHouseholdId: string | null = 'test-household-id'
+let mockGroupId: string | null = 'test-group-id'
 let mockIsConfigured = true
 
 // Mock the supabase module
@@ -42,7 +42,7 @@ vi.mock('../lib/supabase', () => ({
       })),
     }
   }),
-  getHouseholdId: vi.fn(() => Promise.resolve(mockHouseholdId)),
+  getGroupId: vi.fn(() => Promise.resolve(mockGroupId)),
   isSupabaseConfigured: vi.fn(() => mockIsConfigured),
   handleSupabaseError: vi.fn((error: unknown) => ({
     success: false,
@@ -59,7 +59,7 @@ function resetMocks() {
   mockSelectResponse = { data: [], error: null }
   mockInsertResponse = { data: { id: 'test-id', name: 'Test', created_at: new Date().toISOString(), data: { summaryMetrics: { startingBalance: 100000, endBalanceOptimistic: 120000, dangerDayCount: 0 } } }, error: null }
   mockDeleteResponse = { error: null, count: 1 }
-  mockHouseholdId = 'test-household-id'
+  mockGroupId = 'test-group-id'
   mockIsConfigured = true
   
   // Reset store state
@@ -264,8 +264,8 @@ describe('Snapshots Store - createSnapshot', () => {
     }
   })
 
-  it('should return error when household ID is not found', async () => {
-    mockHouseholdId = null
+  it('should return error when group ID is not found', async () => {
+    mockGroupId = null
 
     const result = await useSnapshotsStore.getState().createSnapshot({
       name: 'Test',
@@ -284,7 +284,7 @@ describe('Snapshots Store - createSnapshot', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toBe('Não foi possível identificar sua residência')
+      expect(result.error).toBe('Não foi possível identificar seu grupo')
     }
   })
 
@@ -356,7 +356,7 @@ describe('Snapshots Store - deleteSnapshot', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toBe('Snapshot não encontrado')
+      expect(result.error).toBe('Projeção não encontrada')
     }
   })
 
@@ -404,7 +404,7 @@ describe('Snapshots Store - deleteSnapshot', () => {
       ],
       currentSnapshot: {
         id: 'snapshot-to-delete',
-        householdId: 'test-household',
+        groupId: 'test-group',
         name: 'Test',
         schemaVersion: 1,
         data: {
