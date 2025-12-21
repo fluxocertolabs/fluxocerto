@@ -129,16 +129,16 @@ test.describe('Quick Update Modal', () => {
     const uniqueId = Date.now();
     
     // Get the worker's household ID and create profiles to use as owners
-    const householdId = await db.getWorkerHouseholdId();
-    const accountOwner = await db.createProfileInHousehold(
+    const groupId = await db.getWorkerGroupId();
+    const accountOwner = await db.createProfileInGroup(
       `account-owner-${uniqueId}@test.local`,
       'João Silva',
-      householdId
+      groupId
     );
-    const cardOwner = await db.createProfileInHousehold(
+    const cardOwner = await db.createProfileInGroup(
       `card-owner-${uniqueId}@test.local`,
       'Maria Santos',
-      householdId
+      groupId
     );
 
     // Seed account and card with owners assigned
@@ -460,11 +460,11 @@ test.describe('Quick Update Modal', () => {
     const uniqueId = Date.now();
     
     // Create a profile to use as owner
-    const householdId = await db.getWorkerHouseholdId();
-    const owner = await db.createProfileInHousehold(
+    const groupId = await db.getWorkerGroupId();
+    const owner = await db.createProfileInGroup(
       `type-owner-${uniqueId}@test.local`,
       'Daniel',
-      householdId
+      groupId
     );
 
     // Seed an investment account with owner (using unique name without "Investimento")

@@ -3,30 +3,30 @@ import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import type { Profile } from '@/types'
 
-export interface HouseholdInfo {
+export interface GroupInfo {
   id: string
   name: string
 }
 
-export interface HouseholdMember extends Profile {
+export interface GroupMember extends Profile {
   isCurrentUser: boolean
 }
 
-export interface UseHouseholdReturn {
-  household: HouseholdInfo | null
-  members: HouseholdMember[]
+export interface UseGroupReturn {
+  group: GroupInfo | null
+  members: GroupMember[]
   isLoading: boolean
   error: string | null
   refetch: () => void
 }
 
 /**
- * Hook to fetch and manage household data.
- * Returns the current user's household and all members.
+ * Hook to fetch and manage group data.
+ * Returns the current user's group and all members.
  */
-export function useHousehold(): UseHouseholdReturn {
-  const [household, setHousehold] = useState<HouseholdInfo | null>(null)
-  const [members, setMembers] = useState<HouseholdMember[]>([])
+export function useGroup(): UseGroupReturn {
+  const [group, setGroup] = useState<GroupInfo | null>(null)
+  const [members, setMembers] = useState<GroupMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -45,39 +45,39 @@ export function useHousehold(): UseHouseholdReturn {
 
     let mounted = true
 
-    async function fetchHouseholdData() {
+    async function fetchGroupData() {
       try {
         if (mounted) setError(null)
         const client = getSupabase()
         
-        // Fetch household via RLS (returns only user's household)
-        const { data: householdData, error: householdError } = await client
-          .from('households')
+        // Fetch group via RLS (returns only user's group)
+        const { data: groupData, error: groupError } = await client
+          .from('groups')
           .select('id, name')
           .single()
         
         if (!mounted) return
         
-        if (householdError) {
+        if (groupError) {
           // PGRST116 means no rows - user is orphaned
-          if (householdError.code === 'PGRST116') {
+          if (groupError.code === 'PGRST116') {
             setError('Sua conta está desassociada. Entre em contato com o administrador.')
-            setHousehold(null)
+            setGroup(null)
             setMembers([])
             return
           }
-          throw householdError
+          throw groupError
         }
         
-        setHousehold({
-          id: householdData.id,
-          name: householdData.name,
+        setGroup({
+          id: groupData.id,
+          name: groupData.name,
         })
         
-        // Fetch members (RLS filters to same household)
+        // Fetch members (RLS filters to same group)
         const { data: membersData, error: membersError } = await client
           .from('profiles')
-          .select('id, name, email, household_id')
+          .select('id, name, email, group_id')
           .order('name')
         
         if (!mounted) return
@@ -91,26 +91,27 @@ export function useHousehold(): UseHouseholdReturn {
           (membersData ?? []).map((m) => ({
             id: m.id as string,
             name: m.name as string,
-            householdId: m.household_id as string,
+            groupId: m.group_id as string,
             isCurrentUser: (m.email as string)?.toLowerCase() === currentUserEmail,
           }))
         )
       } catch (err) {
         if (!mounted) return
-        const message = err instanceof Error ? err.message : 'Falha ao carregar residência'
+        const message = err instanceof Error ? err.message : 'Falha ao carregar grupo'
         setError(message)
       } finally {
         if (mounted) setIsLoading(false)
       }
     }
 
-    fetchHouseholdData()
+    fetchGroupData()
     
     return () => {
       mounted = false
     }
   }, [isAuthenticated, user?.id, user?.email, retryCount])
 
-  return { household, members, isLoading, error, refetch }
+  return { group, members, isLoading, error, refetch }
 }
+
 

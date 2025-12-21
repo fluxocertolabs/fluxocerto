@@ -31,7 +31,7 @@ function createTestFutureStatement(
 ): FutureStatement {
   return {
     id: overrides.id ?? crypto.randomUUID(),
-    householdId: overrides.householdId ?? 'test-household-1',
+    groupId: overrides.groupId ?? 'test-group-1',
     creditCardId: overrides.creditCardId ?? 'card-123',
     targetMonth: overrides.targetMonth ?? 6,
     targetYear: overrides.targetYear ?? 2025,

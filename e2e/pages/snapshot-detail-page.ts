@@ -21,13 +21,13 @@ export class SnapshotDetailPage {
     this.page = page;
     // The banner is a Card with bg-muted/50 containing the snapshot info
     this.historicalBanner = page.locator('[data-testid="historical-banner"]');
-    // The title h1 contains "Snapshot Histórico: {name}"
+    // The title h1 contains "Projeção Histórica: {name}"
     this.historicalBannerTitle = this.historicalBanner.locator('h1');
     this.backButton = page.getByRole('button', { name: /voltar/i });
     this.deleteButton = page.getByRole('button', { name: /excluir/i }).first();
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
-    this.notFoundMessage = page.getByText(/snapshot não encontrado/i);
+    this.notFoundMessage = page.getByText(/projeção não encontrada/i);
     this.errorMessage = page.locator('.text-destructive').first();
 
     // Loading skeleton uses animate-pulse class
@@ -95,8 +95,8 @@ export class SnapshotDetailPage {
     const text = await this.historicalBannerTitle.textContent();
     if (!text) return null;
 
-    // Extract name from "Snapshot Histórico: <name>" in a case-insensitive way
-    const match = text.match(/snapshot histórico:\s*(.+)/i);
+    // Extract name from "Projeção Histórica: <name>" in a case-insensitive way
+    const match = text.match(/projeção histórica:\s*(.+)/i);
     return match ? match[1].trim() : null;
   }
 

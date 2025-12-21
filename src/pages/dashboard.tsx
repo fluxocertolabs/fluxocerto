@@ -78,7 +78,7 @@ export function Dashboard() {
     })
 
     if (result.success) {
-      showSuccess('Snapshot salvo com sucesso!')
+      showSuccess('Projeção salva com sucesso!')
     } else {
       showError(result.error, () => handleSaveSnapshot(name))
     }
@@ -116,7 +116,7 @@ export function Dashboard() {
               onClick={() => setShowSaveSnapshot(true)}
               disabled={!projection}
             >
-              Salvar Snapshot
+              Salvar Projeção
             </Button>
             <Button onClick={() => setShowQuickUpdate(true)}>
               Atualizar Saldos

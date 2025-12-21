@@ -1,21 +1,21 @@
 /**
- * E2E Tests: Household Multi-Tenancy Feature (Spec 020)
- * Tests household display, members list, and data isolation
+ * E2E Tests: Group Multi-Tenancy Feature (Spec 020)
+ * Tests group display, members list, and data isolation
  * 
  * User Stories covered:
- * - US1: Data Isolation Between Households (P1)
- * - US2: Invite New Members to Household (P2) - partial (invite validation only)
- * - US3: View Household Information and Members (P3)
+ * - US1: Data Isolation Between Groups (P1)
+ * - US2: Invite New Members to Group (P2) - partial (invite validation only)
+ * - US3: View Group Information and Members (P3)
  */
 
 import { test, expect } from '../fixtures/test-base';
 import { createAccount, createExpense, createProject, createFullSeedData } from '../utils/test-data';
 
-test.describe('Household Multi-Tenancy', () => {
+test.describe('Group Multi-Tenancy', () => {
   // Tests run in parallel with per-worker data prefixing for isolation
 
-  test.describe('User Story 3: View Household Information and Members', () => {
-    test('T080: household name displayed in header badge → badge visible on dashboard', async ({
+  test.describe('User Story 3: View Group Information and Members', () => {
+    test('T080: group name displayed in header badge → badge visible on dashboard', async ({
       page,
       dashboardPage,
       db,
@@ -30,15 +30,15 @@ test.describe('Household Multi-Tenancy', () => {
       // Wait for page to fully load
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      // FR-015: System MUST display the current household name visibly in the application header
-      // The HouseholdBadge component shows household name with a Home icon
-      // Look for the household name text in the header (uses worker's household name)
+      // FR-015: System MUST display the current group name visibly in the application header
+      // The GroupBadge component shows group name with a Users icon
+      // Look for the group name text in the header (uses worker's group name)
       const header = page.locator('header');
-      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
-      await expect(header.getByText(householdNamePattern).first()).toBeVisible({ timeout: 10000 });
+      const groupNamePattern = new RegExp(workerContext.groupName, 'i');
+      await expect(header.getByText(groupNamePattern).first()).toBeVisible({ timeout: 10000 });
     });
 
-    test('T081: household name displayed on manage page → badge visible in header', async ({
+    test('T081: group name displayed on manage page → badge visible in header', async ({
       page,
       managePage,
       workerContext,
@@ -46,13 +46,13 @@ test.describe('Household Multi-Tenancy', () => {
       await managePage.goto();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      // FR-015: Household name should be visible on any page (header is global)
+      // FR-015: Group name should be visible on any page (header is global)
       const header = page.locator('header');
-      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
-      await expect(header.getByText(householdNamePattern).first()).toBeVisible({ timeout: 10000 });
+      const groupNamePattern = new RegExp(workerContext.groupName, 'i');
+      await expect(header.getByText(groupNamePattern).first()).toBeVisible({ timeout: 10000 });
     });
 
-    test('T082: view household members section → members list displayed with current user indicator', async ({
+    test('T082: view group members section → members list displayed with current user indicator', async ({
       page,
       managePage,
       workerContext,
@@ -60,22 +60,22 @@ test.describe('Household Multi-Tenancy', () => {
       await managePage.goto();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      // Navigate to household tab
-      await managePage.selectHouseholdTab();
+      // Navigate to group tab
+      await managePage.selectGroupTab();
 
-      const household = managePage.household();
-      await household.waitForLoad();
+      const group = managePage.group();
+      await group.waitForLoad();
 
-      // FR-016: System MUST provide a "Membros da Residência" section
+      // FR-016: System MUST provide a "Membros do Grupo" section
       // Verify the section title is visible (use exact match to avoid multiple elements)
-      await expect(page.getByText('Membros da Residência', { exact: true })).toBeVisible();
+      await expect(page.getByText('Membros do Grupo', { exact: true })).toBeVisible();
 
-      // FR-017: System MUST display all UI text related to households in Brazilian Portuguese
+      // FR-017: System MUST display all UI text related to groups in Brazilian Portuguese
       // The "(Você)" indicator should be shown for the current user
-      await household.expectCurrentUserIndicator();
+      await group.expectCurrentUserIndicator();
     });
 
-    test('T083: household section shows household name in description', async ({
+    test('T083: group section shows group name in description', async ({
       page,
       managePage,
       workerContext,
@@ -83,46 +83,46 @@ test.describe('Household Multi-Tenancy', () => {
       await managePage.goto();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      await managePage.selectHouseholdTab();
+      await managePage.selectGroupTab();
 
-      const household = managePage.household();
-      await household.waitForLoad();
+      const group = managePage.group();
+      await group.waitForLoad();
 
-      // The CardDescription should show "Membros da residência <name>"
-      // The household name should be visible in the description (uses worker's household name)
-      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
-      await expect(page.getByText(householdNamePattern).first()).toBeVisible();
+      // The CardDescription should show "Membros do grupo <name>"
+      // The group name should be visible in the description (uses worker's group name)
+      const groupNamePattern = new RegExp(workerContext.groupName, 'i');
+      await expect(page.getByText(groupNamePattern).first()).toBeVisible();
     });
 
-    test('T084: household members list shows at least one member', async ({
+    test('T084: group members list shows at least one member', async ({
       page,
       managePage,
     }) => {
       await managePage.goto();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      await managePage.selectHouseholdTab();
+      await managePage.selectGroupTab();
 
-      const household = managePage.household();
-      await household.waitForLoad();
+      const group = managePage.group();
+      await group.waitForLoad();
 
       // At minimum, the current user should be in the members list
-      const memberCount = await household.getMemberCount();
+      const memberCount = await group.getMemberCount();
       expect(memberCount).toBeGreaterThanOrEqual(1);
     });
   });
 
-  test.describe('User Story 1: Data Isolation Between Households', () => {
+  test.describe('User Story 1: Data Isolation Between Groups', () => {
     // Note: Full data isolation testing requires two separate authenticated users
-    // in different households. The current test setup uses a single user per worker.
-    // These tests verify the RLS policies work correctly for the current user's household.
+    // in different groups. The current test setup uses a single user per worker.
+    // These tests verify the RLS policies work correctly for the current user's group.
 
-    test('T085: user sees only their household data → accounts filtered by household', async ({
+    test('T085: user sees only their group data → accounts filtered by group', async ({
       page,
       managePage,
       db,
     }) => {
-      // Seed accounts for this worker's household
+      // Seed accounts for this worker's group
       const uniqueId = Date.now();
       const [seeded] = await db.seedAccounts([
         createAccount({ name: `Conta Isolada ${uniqueId}`, balance: 100000 }),
@@ -139,7 +139,7 @@ test.describe('Household Multi-Tenancy', () => {
       await accounts.expectAccountVisible(seeded.name);
     });
 
-    test('T086: user sees only their household data → expenses filtered by household', async ({
+    test('T086: user sees only their group data → expenses filtered by group', async ({
       page,
       managePage,
       db,
@@ -163,7 +163,7 @@ test.describe('Household Multi-Tenancy', () => {
       await expenses.expectExpenseVisible(seeded.name);
     });
 
-    test('T087: user sees only their household data → projects filtered by household', async ({
+    test('T087: user sees only their group data → projects filtered by group', async ({
       page,
       managePage,
       db,
@@ -184,7 +184,7 @@ test.describe('Household Multi-Tenancy', () => {
       await projects.expectProjectVisible(seeded.name);
     });
 
-    test('T088: new data created by user is assigned to their household', async ({
+    test('T088: new data created by user is assigned to their group', async ({
       page,
       managePage,
       workerContext,
@@ -203,7 +203,7 @@ test.describe('Household Multi-Tenancy', () => {
         balance: '500,00',
       });
 
-      // Account should be visible (created in user's household)
+      // Account should be visible (created in user's group)
       await accounts.expectAccountVisible(accountName);
 
       // Refresh the page and verify it persists
@@ -221,36 +221,36 @@ test.describe('Household Multi-Tenancy', () => {
     // These tests verify the invite validation logic at the UI level.
     // The actual invite flow is tested in auth.spec.ts
 
-    test('T089: household tab is accessible from manage page', async ({
+    test('T089: group tab is accessible from manage page', async ({
       page,
       managePage,
     }) => {
       await managePage.goto();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      // Verify household tab exists and is clickable
-      await expect(managePage.householdTab).toBeVisible();
-      await managePage.selectHouseholdTab();
+      // Verify group tab exists and is clickable
+      await expect(managePage.groupTab).toBeVisible();
+      await managePage.selectGroupTab();
 
-      // Verify we're now on the household section (use exact match)
-      await expect(page.getByText('Membros da Residência', { exact: true })).toBeVisible();
+      // Verify we're now on the group section (use exact match)
+      await expect(page.getByText('Membros do Grupo', { exact: true })).toBeVisible();
     });
   });
 
   test.describe('Edge Cases', () => {
-    test('T090: household section handles loading state gracefully', async ({
+    test('T090: group section handles loading state gracefully', async ({
       page,
       managePage,
     }) => {
       await managePage.goto();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      await managePage.selectHouseholdTab();
+      await managePage.selectGroupTab();
 
       // The section should eventually show content (either members or error)
       // It should not remain in loading state indefinitely
       await expect(async () => {
-        const hasMembers = await page.getByText('Membros da Residência', { exact: true }).isVisible();
+        const hasMembers = await page.getByText('Membros do Grupo', { exact: true }).isVisible();
         const hasError = await page.locator('[class*="destructive"]').isVisible();
         const hasLoading = await page.getByText(/carregando/i).isVisible();
         
@@ -259,7 +259,7 @@ test.describe('Household Multi-Tenancy', () => {
       }).toPass({ timeout: 30000 });
     });
 
-    test('T091: dashboard shows household badge even with no financial data', async ({
+    test('T091: dashboard shows group badge even with no financial data', async ({
       page,
       dashboardPage,
       workerContext,
@@ -268,18 +268,18 @@ test.describe('Household Multi-Tenancy', () => {
       await dashboardPage.goto();
       await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
-      // Household badge should still be visible in header
-      // (household info is independent of financial data)
+      // Group badge should still be visible in header
+      // (group info is independent of financial data)
       const header = page.locator('header');
-      const householdNamePattern = new RegExp(workerContext.householdName, 'i');
+      const groupNamePattern = new RegExp(workerContext.groupName, 'i');
       
-      // Badge should be visible (may take time to load household info)
+      // Badge should be visible (may take time to load group info)
       await expect(async () => {
-        await expect(header.getByText(householdNamePattern).first()).toBeVisible({ timeout: 5000 });
+        await expect(header.getByText(groupNamePattern).first()).toBeVisible({ timeout: 5000 });
       }).toPass({ timeout: 20000 });
     });
 
-    test('T092: multiple tabs navigation maintains household context', async ({
+    test('T092: multiple tabs navigation maintains group context', async ({
       page,
       managePage,
     }) => {
@@ -299,15 +299,16 @@ test.describe('Household Multi-Tenancy', () => {
       await managePage.selectCreditCardsTab();
       await page.waitForTimeout(500);
       
-      await managePage.selectHouseholdTab();
+      await managePage.selectGroupTab();
       await page.waitForTimeout(500);
 
-      // Household section should still work correctly
-      const household = managePage.household();
-      await household.waitForLoad();
+      // Group section should still work correctly
+      const group = managePage.group();
+      await group.waitForLoad();
       
-      await expect(page.getByText('Membros da Residência', { exact: true })).toBeVisible();
+      await expect(page.getByText('Membros do Grupo', { exact: true })).toBeVisible();
     });
   });
 });
+
 

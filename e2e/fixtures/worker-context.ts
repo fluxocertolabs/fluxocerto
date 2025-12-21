@@ -33,8 +33,8 @@ export interface IWorkerContext {
   /** Worker-specific PostgreSQL schema name for complete isolation */
   readonly schemaName: string;
 
-  /** Worker-specific household name for data isolation via RLS */
-  readonly householdName: string;
+  /** Worker-specific group name for data isolation via RLS */
+  readonly groupName: string;
 }
 
 /** Maximum supported workers (FR-010) - re-export from shared module */
@@ -77,17 +77,17 @@ export function getWorkerContext(workerIndex: number): IWorkerContext {
     authStatePath: resolve(__dirname, `../.auth/worker-${normalizedIndex}.json`),
     dataPrefix: `[W${normalizedIndex}] `,
     schemaName: `test_worker_${normalizedIndex}`,
-    householdName: `Test Worker ${normalizedIndex}`,
+    groupName: `Test Worker ${normalizedIndex}`,
   };
 }
 
 /**
- * Get the household name for a worker index.
+ * Get the group name for a worker index.
  *
  * @param workerIndex - Worker index
- * @returns Household name (e.g., "Test Worker 0")
+ * @returns Group name (e.g., "Test Worker 0")
  */
-export function getWorkerHouseholdName(workerIndex: number): string {
+export function getWorkerGroupName(workerIndex: number): string {
   const actualWorkerCount = getWorkerCount();
   const normalizedIndex = workerIndex % actualWorkerCount;
   return `Test Worker ${normalizedIndex}`;

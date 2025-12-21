@@ -44,7 +44,7 @@ export const FutureStatementInputSchema = z.object({
  */
 export const FutureStatementSchema = FutureStatementInputSchema.extend({
   id: z.string().uuid(),
-  householdId: z.string().uuid(),
+  groupId: z.string().uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -125,7 +125,7 @@ export function createFutureStatementKey(
 export interface FutureStatementRow {
   id: string
   credit_card_id: string
-  household_id: string
+  group_id: string
   target_month: number
   target_year: number
   amount: number
@@ -137,7 +137,7 @@ export function transformFutureStatementRow(row: FutureStatementRow): FutureStat
   return {
     id: row.id,
     creditCardId: row.credit_card_id,
-    householdId: row.household_id,
+    groupId: row.group_id,
     targetMonth: row.target_month,
     targetYear: row.target_year,
     amount: row.amount,

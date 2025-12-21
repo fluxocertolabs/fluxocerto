@@ -1,31 +1,31 @@
 /**
- * Section object for household management within ManagePage
- * Tests household info display and member list (FR-015, FR-016, FR-017)
+ * Section object for group management within ManagePage
+ * Tests group info display and member list (FR-015, FR-016, FR-017)
  */
 
 import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
-export class HouseholdSection {
+export class GroupSection {
   readonly page: Page;
   readonly membersList: Locator;
-  readonly householdName: Locator;
+  readonly groupName: Locator;
 
   constructor(page: Page) {
     this.page = page;
     // The members list is rendered by MembersList component
     this.membersList = page.locator('ul').filter({ has: page.locator('li') });
-    // Household name appears in the CardDescription
-    this.householdName = page.locator('[class*="CardDescription"]').filter({ hasText: /residência/i });
+    // Group name appears in the CardDescription
+    this.groupName = page.locator('[class*="CardDescription"]').filter({ hasText: /grupo/i });
   }
 
   /**
-   * Wait for household section to load
+   * Wait for group section to load
    */
   async waitForLoad(): Promise<void> {
     // Wait for either members list or empty state or loading to complete
     await Promise.race([
-      this.page.getByText(/membros da residência/i).waitFor({ state: 'visible', timeout: 30000 }),
+      this.page.getByText(/membros do grupo/i).waitFor({ state: 'visible', timeout: 30000 }),
       this.page.getByText(/nenhum membro/i).waitFor({ state: 'visible', timeout: 30000 }),
       this.page.getByText(/carregando/i).waitFor({ state: 'hidden', timeout: 30000 }),
     ]).catch(() => {
@@ -34,18 +34,18 @@ export class HouseholdSection {
   }
 
   /**
-   * Get the displayed household name from the section
+   * Get the displayed group name from the section
    */
-  async getHouseholdName(): Promise<string | null> {
+  async getGroupName(): Promise<string | null> {
     await this.waitForLoad();
     
-    // The household name is in the CardDescription: "Membros da residência <strong>{name}</strong>"
-    const description = this.page.locator('p').filter({ hasText: /membros da residência/i }).first();
+    // The group name is in the CardDescription: "Membros do grupo <strong>{name}</strong>"
+    const description = this.page.locator('p').filter({ hasText: /membros do grupo/i }).first();
     
     if (await description.isVisible()) {
       const text = await description.textContent();
-      // Extract the household name from the text
-      const match = text?.match(/residência\s+(.+)/i);
+      // Extract the group name from the text
+      const match = text?.match(/grupo\s+(.+)/i);
       return match?.[1]?.trim() ?? null;
     }
     
@@ -53,12 +53,12 @@ export class HouseholdSection {
   }
 
   /**
-   * Verify household name is displayed
+   * Verify group name is displayed
    */
-  async expectHouseholdNameVisible(name: string): Promise<void> {
+  async expectGroupNameVisible(name: string): Promise<void> {
     await expect(async () => {
       await this.waitForLoad();
-      // Look for the household name in the description
+      // Look for the group name in the description
       const nameElement = this.page.getByText(name, { exact: false });
       await expect(nameElement.first()).toBeVisible({ timeout: 5000 });
     }).toPass({ timeout: 20000 });

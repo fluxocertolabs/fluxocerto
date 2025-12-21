@@ -181,27 +181,27 @@ test.describe('Dev Auth Bypass - Seed Data', () => {
     await accounts.expectAccountVisible(expectedName);
   });
 
-  test('T025: RLS enforcement - only user household data is accessible', async ({
+  test('T025: RLS enforcement - only user group data is accessible', async ({
     page,
     managePage,
     workerContext,
   }) => {
     // This test verifies that RLS policies are working correctly.
-    // The user should only see data from their own household.
+    // The user should only see data from their own group.
     // The fact that we can see the dashboard and navigate means RLS is working.
     
     // Navigate to manage page
     await managePage.goto();
     
-    // Navigate to household tab to verify RLS is scoping data correctly
-    await managePage.selectHouseholdTab();
+    // Navigate to group tab to verify RLS is scoping data correctly
+    await managePage.selectGroupTab();
     
-    // Wait for household section to load
-    const household = managePage.household();
-    await household.waitForLoad();
+    // Wait for group section to load
+    const group = managePage.group();
+    await group.waitForLoad();
     
-    // Should see the worker's household name somewhere on the page
-    // This confirms RLS is working - we see our own household, not others
-    await household.expectHouseholdNameVisible(workerContext.householdName);
+    // Should see the worker's group name somewhere on the page
+    // This confirms RLS is working - we see our own group, not others
+    await group.expectGroupNameVisible(workerContext.groupName);
   });
 });

@@ -3,7 +3,7 @@ import type { Result } from '@/stores/finance-store'
 
 // Database row types for type-safe responses
 
-export interface HouseholdRow {
+export interface GroupRow {
   id: string
   name: string
   created_at: string
@@ -14,7 +14,7 @@ export interface ProfileRow {
   id: string
   name: string
   email: string | null
-  household_id: string
+  group_id: string
   created_at: string
   created_by: string | null
 }
@@ -336,11 +336,11 @@ export function isOnline(): boolean {
 }
 
 /**
- * Get the current user's household_id.
+ * Get the current user's group_id.
  * Returns null if not authenticated or no profile found.
  * Uses email to lookup profile since profiles.id may not match auth.uid().
  */
-export async function getHouseholdId(): Promise<string | null> {
+export async function getGroupId(): Promise<string | null> {
   if (!isSupabaseConfigured()) {
     return null
   }
@@ -354,7 +354,7 @@ export async function getHouseholdId(): Promise<string | null> {
 
   const { data: profile, error } = await client
     .from('profiles')
-    .select('household_id')
+    .select('group_id')
     .eq('email', user.email.toLowerCase())
     .single()
 
@@ -362,12 +362,12 @@ export async function getHouseholdId(): Promise<string | null> {
     return null
   }
 
-  return profile.household_id
+  return profile.group_id
 }
 
 /**
- * Invite a new user to the current user's household.
- * Creates a profile entry with the household_id, allowing the user to sign up.
+ * Invite a new user to the current user's group.
+ * Creates a profile entry with the group_id, allowing the user to sign up.
  * 
  * @param email - Email address of the user to invite
  * @returns Result with success/error status
@@ -379,16 +379,16 @@ export async function inviteUser(email: string): Promise<Result<void>> {
 
   const client = getSupabase()
   
-  // Get current user's household_id
-  const householdId = await getHouseholdId()
-  if (!householdId) {
-    return { success: false, error: 'Não foi possível identificar sua residência' }
+  // Get current user's group_id
+  const groupId = await getGroupId()
+  if (!groupId) {
+    return { success: false, error: 'Não foi possível identificar seu grupo' }
   }
 
-  // Check if email already exists in any household
+  // Check if email already exists in any group
   const { data: existingProfile, error: checkError } = await client
     .from('profiles')
-    .select('id, household_id')
+    .select('id, group_id')
     .eq('email', email.toLowerCase())
     .maybeSingle()
 
@@ -397,10 +397,10 @@ export async function inviteUser(email: string): Promise<Result<void>> {
   }
 
   if (existingProfile) {
-    if (existingProfile.household_id === householdId) {
-      return { success: false, error: 'Este email já é membro da sua residência' }
+    if (existingProfile.group_id === groupId) {
+      return { success: false, error: 'Este email já é membro do seu grupo' }
     }
-    return { success: false, error: 'Este email já pertence a outra residência' }
+    return { success: false, error: 'Este email já pertence a outro grupo' }
   }
 
   // Extract name from email (part before @)
@@ -409,13 +409,13 @@ export async function inviteUser(email: string): Promise<Result<void>> {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
 
-  // Create profile with household_id
+  // Create profile with group_id
   const { error: insertError } = await client
     .from('profiles')
     .insert({
       name,
       email: email.toLowerCase(),
-      household_id: householdId,
+      group_id: groupId,
     })
 
   if (insertError) {

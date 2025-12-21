@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { z } from 'zod'
 import {
   getSupabase,
-  getHouseholdId,
+  getGroupId,
   handleSupabaseError,
   isSupabaseConfigured,
 } from '../lib/supabase'
@@ -130,10 +130,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const validated = BankAccountInputSchema.parse(input)
       
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       const { data, error } = await getSupabase()
@@ -143,7 +143,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           type: validated.type,
           balance: validated.balance,
           owner_id: validated.ownerId ?? null,
-          household_id: householdId,
+          group_id: groupId,
         })
         .select('id')
         .single()
@@ -223,10 +223,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const validated = ProjectInputSchema.parse(input)
       
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       const { data, error } = await getSupabase()
@@ -238,7 +238,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           payment_schedule: validated.paymentSchedule,
           certainty: validated.certainty,
           is_active: validated.isActive,
-          household_id: householdId,
+          group_id: groupId,
         })
         .select('id')
         .single()
@@ -355,10 +355,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const validated = FixedExpenseInputSchema.parse(input)
       
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       const { data, error } = await getSupabase()
@@ -370,7 +370,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           due_day: validated.dueDay,
           date: null,
           is_active: validated.isActive,
-          household_id: householdId,
+          group_id: groupId,
         })
         .select('id')
         .single()
@@ -485,10 +485,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const validated = SingleShotExpenseInputSchema.parse(input)
       
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       const { data, error } = await getSupabase()
@@ -500,7 +500,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           date: validated.date.toISOString().split('T')[0],
           due_day: null,
           is_active: true,
-          household_id: householdId,
+          group_id: groupId,
         })
         .select('id')
         .single()
@@ -578,10 +578,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const validated = SingleShotIncomeInputSchema.parse(input)
       
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       const { data, error } = await getSupabase()
@@ -595,7 +595,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           frequency: null,
           payment_schedule: null,
           is_active: null,
-          household_id: householdId,
+          group_id: groupId,
         })
         .select('id')
         .single()
@@ -674,10 +674,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const validated = CreditCardInputSchema.parse(input)
       
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       const { data, error } = await getSupabase()
@@ -687,7 +687,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           statement_balance: validated.statementBalance,
           due_day: validated.dueDay,
           owner_id: validated.ownerId ?? null,
-          household_id: householdId,
+          group_id: groupId,
         })
         .select('id')
         .single()
@@ -767,17 +767,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const validated = FutureStatementInputSchema.parse(input)
       
-      // Get current user's household_id
-      const householdId = await getHouseholdId()
-      if (!householdId) {
-        return { success: false, error: 'Não foi possível identificar sua residência' }
+      // Get current user's group_id
+      const groupId = await getGroupId()
+      if (!groupId) {
+        return { success: false, error: 'Não foi possível identificar seu grupo' }
       }
 
       const { data, error } = await getSupabase()
         .from('future_statements')
         .insert({
           credit_card_id: validated.creditCardId,
-          household_id: householdId,
+          group_id: groupId,
           target_month: validated.targetMonth,
           target_year: validated.targetYear,
           amount: validated.amount,

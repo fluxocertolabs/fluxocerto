@@ -108,7 +108,7 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
                   }}
                   disabled={isDeleting}
                   className="h-8 w-8 p-0 text-muted-foreground transition-none hover:text-destructive hover:bg-destructive/10"
-                  aria-label="Excluir snapshot"
+                  aria-label="Excluir projeção"
                 >
                   <TrashIcon className="h-4 w-4" />
                 </Button>
@@ -122,9 +122,9 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir snapshot?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir projeção?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o snapshot "{name}"? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir a projeção "{name}"? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -91,7 +91,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await db.deleteSnapshots();
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -107,7 +107,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await db.deleteSnapshots();
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
@@ -127,7 +127,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       ]);
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -147,7 +147,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       ]);
 
       await page.goto('/history');
-      await page.waitForSelector('text=/histórico de snapshots/i', { timeout: 10000 });
+      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
@@ -167,7 +167,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
       ]);
 
       await page.goto(`/history/${seeded.id}`);
-      await page.waitForSelector('text=/snapshot histórico/i', { timeout: 10000 });
+      await page.waitForSelector('text=/projeção histórica/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -186,7 +186,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
       ]);
 
       await page.goto(`/history/${seeded.id}`);
-      await page.waitForSelector('text=/snapshot histórico/i', { timeout: 10000 });
+      await page.waitForSelector('text=/projeção histórica/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
@@ -200,7 +200,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
     'snapshot-detail - not found light',
     async ({ page, db, visual }) => {
       await page.goto('/history/00000000-0000-0000-0000-000000000000');
-      await page.waitForSelector('text=/snapshot não encontrado/i', { timeout: 10000 });
+      await page.waitForSelector('text=/projeção não encontrada/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
@@ -213,7 +213,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
     'snapshot-detail - not found dark',
     async ({ page, db, visual }) => {
       await page.goto('/history/00000000-0000-0000-0000-000000000000');
-      await page.waitForSelector('text=/snapshot não encontrado/i', { timeout: 10000 });
+      await page.waitForSelector('text=/projeção não encontrada/i', { timeout: 10000 });
       
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
@@ -235,11 +235,11 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       // Open the save snapshot dialog
-      const saveButton = page.getByRole('button', { name: /salvar snapshot/i });
+      const saveButton = page.getByRole('button', { name: /salvar projeção/i });
       await saveButton.click();
 
       // Wait for dialog to appear
-      await page.waitForSelector('text=/salvar snapshot/i', { timeout: 5000 });
+      await page.waitForSelector('text=/salvar projeção/i', { timeout: 5000 });
       await page.waitForTimeout(500); // Wait for dialog animation
 
       await visual.takeScreenshot(page, 'save-snapshot-dialog-light.png');
@@ -257,11 +257,11 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       // Open the save snapshot dialog
-      const saveButton = page.getByRole('button', { name: /salvar snapshot/i });
+      const saveButton = page.getByRole('button', { name: /salvar projeção/i });
       await saveButton.click();
 
       // Wait for dialog to appear
-      await page.waitForSelector('text=/salvar snapshot/i', { timeout: 5000 });
+      await page.waitForSelector('text=/salvar projeção/i', { timeout: 5000 });
       await page.waitForTimeout(500); // Wait for dialog animation
 
       await visual.takeScreenshot(page, 'save-snapshot-dialog-dark.png');

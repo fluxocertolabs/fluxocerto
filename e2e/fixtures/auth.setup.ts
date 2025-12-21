@@ -1,7 +1,7 @@
 /**
  * Authentication setup project
  * Runs once before all tests to authenticate and save session state
- * Updated for per-worker isolation using household-based data separation
+ * Updated for per-worker isolation using group-based data separation
  */
 
 import { test as setup } from '@playwright/test';
@@ -9,9 +9,9 @@ import { AuthFixture } from './auth';
 import {
   ensureTestUser,
   resetDatabase,
-  getOrCreateWorkerHousehold,
-  resetHouseholdData,
-  clearHouseholdCache,
+  getOrCreateWorkerGroup,
+  resetGroupData,
+  clearGroupCache,
 } from './db';
 import { getWorkerContext } from './worker-context';
 import { getWorkerCount } from './worker-count';
@@ -24,18 +24,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * Global setup: Create worker households, clean up old test data, and authenticate all workers.
+ * Global setup: Create worker groups, clean up old test data, and authenticate all workers.
  * This runs once before any tests start.
  *
- * Each worker gets its own household for complete data isolation via RLS.
+ * Each worker gets its own group for complete data isolation via RLS.
  * This eliminates race conditions and data conflicts between parallel workers.
  */
 setup('setup-parallel-workers', async ({ page, browser }) => {
   const workerCount = getWorkerCount();
-  console.log(`Setting up ${workerCount} parallel workers with household isolation...`);
+  console.log(`Setting up ${workerCount} parallel workers with group isolation...`);
 
-  // Clear any cached household IDs from previous runs
-  clearHouseholdCache();
+  // Clear any cached group IDs from previous runs
+  clearGroupCache();
 
   // Ensure .auth directory exists
   const authDir = resolve(__dirname, '../.auth');
@@ -43,21 +43,21 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
     mkdirSync(authDir, { recursive: true });
   }
 
-  // Phase 1: Create households and clean up data for each worker
-  console.log('Phase 1: Creating worker households and cleaning up data...');
-  const householdIds: string[] = [];
+  // Phase 1: Create groups and clean up data for each worker
+  console.log('Phase 1: Creating worker groups and cleaning up data...');
+  const groupIds: string[] = [];
 
   for (let i = 0; i < workerCount; i++) {
     const workerContext = getWorkerContext(i);
-    console.log(`  Creating household for worker ${i}: "${workerContext.householdName}"`);
+    console.log(`  Creating group for worker ${i}: "${workerContext.groupName}"`);
 
-    // Create or get the worker's household
-    const householdId = await getOrCreateWorkerHousehold(i, workerContext.householdName);
-    householdIds.push(householdId);
+    // Create or get the worker's group
+    const groupId = await getOrCreateWorkerGroup(i, workerContext.groupName);
+    groupIds.push(groupId);
 
-    // Clean up any existing data in this household
-    await resetHouseholdData(householdId);
-    console.log(`  ✓ Worker ${i} household ready: ${householdId}`);
+    // Clean up any existing data in this group
+    await resetGroupData(groupId);
+    console.log(`  ✓ Worker ${i} group ready: ${groupId}`);
   }
 
   // Also clean up legacy prefixed data from previous test implementations
@@ -69,11 +69,11 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
 
   for (let i = 0; i < workerCount; i++) {
     const workerContext = getWorkerContext(i);
-    const householdId = householdIds[i];
+    const groupId = groupIds[i];
     console.log(`  Setting up worker ${i}: ${workerContext.email}`);
 
-    // Ensure test user exists in profiles table with worker's household
-    await ensureTestUser(workerContext.email, i, householdId);
+    // Ensure test user exists in profiles table with worker's group
+    await ensureTestUser(workerContext.email, i, groupId);
 
     // Create auth fixture for this worker
     const auth = new AuthFixture({
@@ -117,5 +117,5 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
   // Small delay to ensure all files are fully flushed to disk
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-  console.log(`✓ All ${workerCount} workers setup complete with household isolation`);
+  console.log(`✓ All ${workerCount} workers setup complete with group isolation`);
 });

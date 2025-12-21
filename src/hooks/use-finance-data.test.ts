@@ -85,7 +85,7 @@ describe('mapProfileFromDb', () => {
       id: 'profile-123',
       name: 'John Doe',
       email: 'john@example.com',
-      household_id: 'household-789',
+      group_id: 'group-789',
       created_at: TEST_DATES.created,
       created_by: 'user-456',
     }
@@ -95,7 +95,7 @@ describe('mapProfileFromDb', () => {
     expect(result).toEqual({
       id: 'profile-123',
       name: 'John Doe',
-      householdId: 'household-789',
+      groupId: 'group-789',
     })
   })
 
@@ -104,7 +104,7 @@ describe('mapProfileFromDb', () => {
       id: 'profile-123',
       name: 'John Doe',
       email: 'john@example.com',
-      household_id: 'household-789',
+      group_id: 'group-789',
       created_at: TEST_DATES.created,
       created_by: 'user-456',
     }
@@ -114,7 +114,7 @@ describe('mapProfileFromDb', () => {
     expect(result).not.toHaveProperty('email')
     expect(result).not.toHaveProperty('created_at')
     expect(result).not.toHaveProperty('created_by')
-    expect(result).not.toHaveProperty('household_id') // Should be camelCase householdId
+    expect(result).not.toHaveProperty('group_id') // Should be camelCase groupId
   })
 })
 

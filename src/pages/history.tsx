@@ -27,7 +27,7 @@ export function HistoryPage() {
     setDeletingId(null)
 
     if (result.success) {
-      showSuccess('Snapshot excluído com sucesso!')
+      showSuccess('Projeção excluída com sucesso!')
     } else {
       showError(result.error, () => handleDelete(id))
     }
@@ -37,7 +37,7 @@ export function HistoryPage() {
     <div className={cn('container mx-auto p-4 md:p-6 max-w-4xl')}>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">
-          Histórico de Snapshots
+          Histórico de Projeções
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Visualize e compare suas projeções financeiras salvas

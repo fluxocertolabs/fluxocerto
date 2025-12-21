@@ -68,10 +68,10 @@ export function SaveSnapshotDialog({
       if (saveResult.success) {
         onOpenChange(false)
       } else {
-        setError(saveResult.error ?? 'Erro ao salvar snapshot')
+        setError(saveResult.error ?? 'Erro ao salvar projeção')
       }
     } catch {
-      setError('Erro inesperado ao salvar snapshot')
+      setError('Erro inesperado ao salvar projeção')
     } finally {
       setIsSaving(false)
     }
@@ -90,7 +90,7 @@ export function SaveSnapshotDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Salvar Snapshot</DialogTitle>
+          <DialogTitle>Salvar Projeção</DialogTitle>
           <DialogDescription>
             Salve o estado atual da sua projeção para consultar depois.
           </DialogDescription>
@@ -98,7 +98,7 @@ export function SaveSnapshotDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="snapshot-name">Nome do snapshot</Label>
+            <Label htmlFor="snapshot-name">Nome da projeção</Label>
             <Input
               id="snapshot-name"
               value={name}

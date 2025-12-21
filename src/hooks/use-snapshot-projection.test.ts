@@ -62,7 +62,7 @@ function createMockSnapshot(overrides: Partial<ProjectionSnapshot> = {}): Projec
   const projection = createMockProjection()
   return {
     id: 'test-snapshot-id',
-    householdId: 'test-household-id',
+    groupId: 'test-group-id',
     name: 'Test Snapshot',
     schemaVersion: 1,
     data: {

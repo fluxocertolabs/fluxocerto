@@ -15,7 +15,7 @@ import type {
   TestSingleShotIncome,
   TestCreditCard,
   TestFutureStatement,
-  TestHousehold,
+  TestGroup,
   TestProfile,
 } from '../utils/test-data';
 
@@ -62,63 +62,63 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
   }
 }
 
-// Cache for household IDs to avoid repeated queries
-let cachedDefaultHouseholdId: string | null = null;
-const cachedUserHouseholdIds: Map<string, string> = new Map();
-const cachedWorkerHouseholdIds: Map<number, string> = new Map();
+// Cache for group IDs to avoid repeated queries
+let cachedDefaultGroupId: string | null = null;
+const cachedUserGroupIds: Map<string, string> = new Map();
+const cachedWorkerGroupIds: Map<number, string> = new Map();
 
-// Mutex to prevent race conditions during worker household creation/lookup
-const workerHouseholdMutex = new Map<number, Promise<string>>();
+// Mutex to prevent race conditions during worker group creation/lookup
+const workerGroupMutex = new Map<number, Promise<string>>();
 
 /**
- * Get or create the default test household
- * Returns the household ID for the "Fonseca Floriano" household created by migration
+ * Get or create the default test group
+ * Returns the group ID for the "Fonseca Floriano" group created by migration
  */
-export async function getDefaultHouseholdId(): Promise<string> {
-  if (cachedDefaultHouseholdId) {
-    return cachedDefaultHouseholdId;
+export async function getDefaultGroupId(): Promise<string> {
+  if (cachedDefaultGroupId) {
+    return cachedDefaultGroupId;
   }
 
   const client = getAdminClient();
   
-  // First try to get the existing default household
-  const { data: existingHousehold, error: selectError } = await client
-    .from('households')
+  // First try to get the existing default group
+  const { data: existingGroup, error: selectError } = await client
+    .from('groups')
     .select('id')
     .eq('name', 'Fonseca Floriano')
     .maybeSingle();
 
   if (selectError) {
-    throw new Error(`Failed to query default household: ${selectError.message}`);
+    throw new Error(`Failed to query default group: ${selectError.message}`);
   }
 
-  if (existingHousehold) {
-    cachedDefaultHouseholdId = existingHousehold.id;
-    return existingHousehold.id;
+  if (existingGroup) {
+    cachedDefaultGroupId = existingGroup.id;
+    return existingGroup.id;
   }
 
   // If not found (shouldn't happen after migration), create it
-  const { data: newHousehold, error: insertError } = await client
-    .from('households')
+  const { data: newGroup, error: insertError } = await client
+    .from('groups')
     .insert({ name: 'Fonseca Floriano' })
     .select('id')
     .single();
 
   if (insertError) {
-    throw new Error(`Failed to create default household: ${insertError.message}`);
+    throw new Error(`Failed to create default group: ${insertError.message}`);
   }
 
-  cachedDefaultHouseholdId = newHousehold.id;
-  return newHousehold.id;
+  cachedDefaultGroupId = newGroup.id;
+  return newGroup.id;
 }
 
 /**
- * Get household ID for a specific user by email
- * Falls back to default household if user doesn't have one
+ * Get group ID for a specific user by email
+ * Falls back to default group if user doesn't have one
  */
-export async function getHouseholdIdForUser(email: string): Promise<string> {
+export async function getGroupIdForUser(email: string): Promise<string> {
   // Check cache first
-  const cached = cachedUserHouseholdIds.get(email);
+  const cached = cachedUserGroupIds.get(email);
   if (cached) {
     return cached;
   }
@@ -127,50 +127,50 @@ export async function getHouseholdIdForUser(email: string): Promise<string> {
   
   const { data: profile, error } = await client
     .from('profiles')
-    .select('household_id')
+    .select('group_id')
     .eq('email', email)
     .maybeSingle();
 
   if (error) {
-    console.warn(`Warning getting household for ${email}: ${error.message}`);
-    return getDefaultHouseholdId();
+    console.warn(`Warning getting group for ${email}: ${error.message}`);
+    return getDefaultGroupId();
   }
 
-  if (profile?.household_id) {
-    cachedUserHouseholdIds.set(email, profile.household_id);
-    return profile.household_id;
+  if (profile?.group_id) {
+    cachedUserGroupIds.set(email, profile.group_id);
+    return profile.group_id;
   }
 
-  // Fall back to default household
-  return getDefaultHouseholdId();
+  // Fall back to default group
+  return getDefaultGroupId();
 }
 
 /**
- * Clear household ID caches (call after database reset)
+ * Clear group ID caches (call after database reset)
  */
-export function clearHouseholdCache(): void {
-  cachedDefaultHouseholdId = null;
-  cachedUserHouseholdIds.clear();
-  cachedWorkerHouseholdIds.clear();
+export function clearGroupCache(): void {
+  cachedDefaultGroupId = null;
+  cachedUserGroupIds.clear();
+  cachedWorkerGroupIds.clear();
 }
 
 /**
- * Get or create a worker-specific household for test isolation.
- * Each worker gets its own household, ensuring complete data isolation via RLS.
+ * Get or create a worker-specific group for test isolation.
+ * Each worker gets its own group, ensuring complete data isolation via RLS.
  *
  * @param workerIndex - The worker index (0-based)
- * @param householdName - The household name (e.g., "Test Worker 0")
- * @returns The household ID
+ * @param groupName - The group name (e.g., "Test Worker 0")
+ * @returns The group ID
  */
-export async function getOrCreateWorkerHousehold(workerIndex: number, householdName: string): Promise<string> {
+export async function getOrCreateWorkerGroup(workerIndex: number, groupName: string): Promise<string> {
   // Check cache first
-  const cached = cachedWorkerHouseholdIds.get(workerIndex);
+  const cached = cachedWorkerGroupIds.get(workerIndex);
   if (cached) {
     return cached;
   }
 
   // Check if there is a pending operation for this worker
-  const pending = workerHouseholdMutex.get(workerIndex);
+  const pending = workerGroupMutex.get(workerIndex);
   if (pending) {
     return pending;
   }
@@ -180,54 +180,54 @@ export async function getOrCreateWorkerHousehold(workerIndex: number, householdN
     try {
       const client = getAdminClient();
 
-      // Try to find existing household
+      // Try to find existing group
       const { data: existing, error: selectError } = await client
-        .from('households')
+        .from('groups')
         .select('id')
-        .eq('name', householdName)
+        .eq('name', groupName)
         .maybeSingle();
 
       if (selectError) {
-        throw new Error(`Failed to query worker household: ${selectError.message}`);
+        throw new Error(`Failed to query worker group: ${selectError.message}`);
       }
 
       if (existing) {
-        cachedWorkerHouseholdIds.set(workerIndex, existing.id);
+        cachedWorkerGroupIds.set(workerIndex, existing.id);
         return existing.id;
       }
 
-      // Create new household for this worker
-      const { data: newHousehold, error: insertError } = await client
-        .from('households')
-        .insert({ name: householdName })
+      // Create new group for this worker
+      const { data: newGroup, error: insertError } = await client
+        .from('groups')
+        .insert({ name: groupName })
         .select('id')
         .single();
 
       if (insertError) {
-        throw new Error(`Failed to create worker household: ${insertError.message}`);
+        throw new Error(`Failed to create worker group: ${insertError.message}`);
       }
 
-      cachedWorkerHouseholdIds.set(workerIndex, newHousehold.id);
-      return newHousehold.id;
+      cachedWorkerGroupIds.set(workerIndex, newGroup.id);
+      return newGroup.id;
     } finally {
       // Clean up mutex entry
-      workerHouseholdMutex.delete(workerIndex);
+      workerGroupMutex.delete(workerIndex);
     }
   })();
 
-  workerHouseholdMutex.set(workerIndex, promise);
+  workerGroupMutex.set(workerIndex, promise);
   return promise;
 }
 
 /**
- * Delete all data for a specific worker's household.
+ * Delete all data for a specific worker's group.
  * This is more reliable than name-pattern matching for cleanup.
  *
- * @param householdId - The household ID to clean up
+ * @param groupId - The group ID to clean up
  */
-export async function resetHouseholdData(householdId: string): Promise<void> {
+export async function resetGroupData(groupId: string): Promise<void> {
   const client = getAdminClient();
-  console.log(`[DB] Resetting data for household ${householdId}...`);
+  console.log(`[DB] Resetting data for group ${groupId}...`);
 
   // Delete in order to respect foreign key constraints
   // Note: We don't delete profiles to preserve auth linkage
@@ -244,53 +244,53 @@ export async function resetHouseholdData(householdId: string): Promise<void> {
   for (const table of tables) {
     try {
       const start = Date.now();
-      const { error } = await client.from(table).delete().eq('household_id', householdId);
+      const { error } = await client.from(table).delete().eq('group_id', groupId);
       const duration = Date.now() - start;
       if (duration > 1000) {
-        console.warn(`[DB] Slow delete on ${table} for household ${householdId}: ${duration}ms`);
+        console.warn(`[DB] Slow delete on ${table} for group ${groupId}: ${duration}ms`);
       }
       
       if (error && !error.message.includes('does not exist')) {
-        console.warn(`Warning: Failed to reset ${table} for household ${householdId}: ${error.message}`);
+        console.warn(`Warning: Failed to reset ${table} for group ${groupId}: ${error.message}`);
       }
     } catch (err) {
       console.warn(`Warning: Exception resetting ${table}:`, err);
     }
   }
-  console.log(`[DB] Reset complete for household ${householdId}`);
+  console.log(`[DB] Reset complete for group ${groupId}`);
 }
 
 /**
- * Ensure test user email exists in profiles table with household assignment.
- * For parallel execution, assigns user to their worker-specific household.
+ * Ensure test user email exists in profiles table with group assignment.
+ * For parallel execution, assigns user to their worker-specific group.
  *
  * @param email - The test user email
- * @param workerIndex - Optional worker index for household assignment
- * @param householdId - Optional explicit household ID (overrides worker lookup)
+ * @param workerIndex - Optional worker index for group assignment
+ * @param groupId - Optional explicit group ID (overrides worker lookup)
  */
 export async function ensureTestUser(
   email: string,
   workerIndex?: number,
-  householdId?: string
+  groupId?: string
 ): Promise<void> {
   const client = getAdminClient();
   const name = email.split('@')[0]; // Use email prefix as name
 
-  // Determine household ID:
-  // 1. Use explicit householdId if provided
-  // 2. Otherwise use worker's household if workerIndex provided
-  // 3. Fall back to default household
-  let targetHouseholdId = householdId;
-  if (!targetHouseholdId && workerIndex !== undefined) {
-    // Check if we have a cached worker household
-    targetHouseholdId = cachedWorkerHouseholdIds.get(workerIndex);
+  // Determine group ID:
+  // 1. Use explicit groupId if provided
+  // 2. Otherwise use worker's group if workerIndex provided
+  // 3. Fall back to default group
+  let targetGroupId = groupId;
+  if (!targetGroupId && workerIndex !== undefined) {
+    // Check if we have a cached worker group
+    targetGroupId = cachedWorkerGroupIds.get(workerIndex);
   }
-  if (!targetHouseholdId) {
-    targetHouseholdId = await getDefaultHouseholdId();
+  if (!targetGroupId) {
+    targetGroupId = await getDefaultGroupId();
   }
 
   const { error } = await client.from('profiles').upsert(
-    { email, name, household_id: targetHouseholdId },
+    { email, name, group_id: targetGroupId },
     { onConflict: 'email' }
   );
 
@@ -298,8 +298,8 @@ export async function ensureTestUser(
     throw new Error(`Failed to ensure test user: ${error.message}`);
   }
 
-  // Update the user household cache
-  cachedUserHouseholdIds.set(email, targetHouseholdId);
+  // Update the user group cache
+  cachedUserGroupIds.set(email, targetGroupId);
 }
 
 /**
@@ -314,13 +314,13 @@ export async function removeTestUser(email: string, workerIndex?: number): Promi
 }
 
 /**
- * Seed accounts with test data using explicit household ID
+ * Seed accounts with test data using explicit group ID
  * This is the preferred method for worker-scoped fixtures to ensure correct isolation
  */
-export async function seedAccountsWithHousehold(
+export async function seedAccountsWithGroup(
   accounts: TestAccount[],
   workerIndex: number,
-  householdId: string
+  groupId: string
 ): Promise<TestAccount[]> {
   const client = getAdminClient();
   
@@ -329,7 +329,7 @@ export async function seedAccountsWithHousehold(
     type: a.type,
     balance: a.balance,
     owner_id: a.owner_id ?? null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('accounts').insert(records).select();
@@ -344,8 +344,8 @@ export async function seedAccountsWithHousehold(
 /**
  * Seed accounts with test data (legacy - uses email lookup)
  * When workerIndex is provided, prefixes names with worker identifier
- * When userEmail is provided, uses that user's household
- * @deprecated Use seedAccountsWithHousehold for better isolation
+ * When userEmail is provided, uses that user's group
+ * @deprecated Use seedAccountsWithGroup for better isolation
  */
 export async function seedAccounts(
   accounts: TestAccount[],
@@ -354,17 +354,17 @@ export async function seedAccounts(
 ): Promise<TestAccount[]> {
   const client = getAdminClient();
   
-  // Get household ID for seeding - use user's household if email provided
-  const householdId = userEmail
-    ? await getHouseholdIdForUser(userEmail)
-    : await getDefaultHouseholdId();
+  // Get group ID for seeding - use user's group if email provided
+  const groupId = userEmail
+    ? await getGroupIdForUser(userEmail)
+    : await getDefaultGroupId();
   
   const records = accounts.map((a) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(a.name, workerIndex) : a.name,
     type: a.type,
     balance: a.balance,
     owner_id: a.owner_id ?? null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('accounts').insert(records).select();
@@ -377,12 +377,12 @@ export async function seedAccounts(
 }
 
 /**
- * Seed fixed expenses with test data using explicit household ID
+ * Seed fixed expenses with test data using explicit group ID
  */
-export async function seedExpensesWithHousehold(
+export async function seedExpensesWithGroup(
   expenses: TestExpense[],
   workerIndex: number,
-  householdId: string
+  groupId: string
 ): Promise<TestExpense[]> {
   const client = getAdminClient();
   
@@ -392,7 +392,7 @@ export async function seedExpensesWithHousehold(
     due_day: e.due_day,
     is_active: e.is_active,
     type: 'fixed',
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('expenses').insert(records).select();
@@ -407,7 +407,7 @@ export async function seedExpensesWithHousehold(
 /**
  * Seed fixed expenses with test data (legacy - uses email lookup)
  * Note: Fixed expenses are stored in the 'expenses' table with type='fixed'
- * @deprecated Use seedExpensesWithHousehold for better isolation
+ * @deprecated Use seedExpensesWithGroup for better isolation
  */
 export async function seedExpenses(
   expenses: TestExpense[],
@@ -416,10 +416,10 @@ export async function seedExpenses(
 ): Promise<TestExpense[]> {
   const client = getAdminClient();
   
-  // Get household ID for seeding - use user's household if email provided
-  const householdId = userEmail
-    ? await getHouseholdIdForUser(userEmail)
-    : await getDefaultHouseholdId();
+  // Get group ID for seeding - use user's group if email provided
+  const groupId = userEmail
+    ? await getGroupIdForUser(userEmail)
+    : await getDefaultGroupId();
   
   const records = expenses.map((e) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(e.name, workerIndex) : e.name,
@@ -427,7 +427,7 @@ export async function seedExpenses(
     due_day: e.due_day,
     is_active: e.is_active,
     type: 'fixed',
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('expenses').insert(records).select();
@@ -440,12 +440,12 @@ export async function seedExpenses(
 }
 
 /**
- * Seed single-shot expenses with test data using explicit household ID
+ * Seed single-shot expenses with test data using explicit group ID
  */
-export async function seedSingleShotExpensesWithHousehold(
+export async function seedSingleShotExpensesWithGroup(
   expenses: TestSingleShotExpense[],
   workerIndex: number,
-  householdId: string
+  groupId: string
 ): Promise<TestSingleShotExpense[]> {
   const client = getAdminClient();
   
@@ -455,7 +455,7 @@ export async function seedSingleShotExpensesWithHousehold(
     date: e.date,
     type: 'single_shot',
     due_day: null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('expenses').insert(records).select();
@@ -470,7 +470,7 @@ export async function seedSingleShotExpensesWithHousehold(
 /**
  * Seed single-shot expenses with test data (legacy - uses email lookup)
  * Note: Single-shot expenses are stored in the 'expenses' table with type='single_shot'
- * @deprecated Use seedSingleShotExpensesWithHousehold for better isolation
+ * @deprecated Use seedSingleShotExpensesWithGroup for better isolation
  */
 export async function seedSingleShotExpenses(
   expenses: TestSingleShotExpense[],
@@ -479,10 +479,10 @@ export async function seedSingleShotExpenses(
 ): Promise<TestSingleShotExpense[]> {
   const client = getAdminClient();
   
-  // Get household ID for seeding - use user's household if email provided
-  const householdId = userEmail
-    ? await getHouseholdIdForUser(userEmail)
-    : await getDefaultHouseholdId();
+  // Get group ID for seeding - use user's group if email provided
+  const groupId = userEmail
+    ? await getGroupIdForUser(userEmail)
+    : await getDefaultGroupId();
   
   const records = expenses.map((e) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(e.name, workerIndex) : e.name,
@@ -490,7 +490,7 @@ export async function seedSingleShotExpenses(
     date: e.date,
     type: 'single_shot',
     due_day: null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('expenses').insert(records).select();
@@ -503,12 +503,12 @@ export async function seedSingleShotExpenses(
 }
 
 /**
- * Seed projects/income with test data using explicit household ID
+ * Seed projects/income with test data using explicit group ID
  */
-export async function seedProjectsWithHousehold(
+export async function seedProjectsWithGroup(
   projects: TestProject[],
   workerIndex: number,
-  householdId: string
+  groupId: string
 ): Promise<TestProject[]> {
   const client = getAdminClient();
   
@@ -520,7 +520,7 @@ export async function seedProjectsWithHousehold(
     payment_schedule: p.payment_schedule,
     certainty: p.certainty,
     is_active: p.is_active,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('projects').insert(records).select();
@@ -536,7 +536,7 @@ export async function seedProjectsWithHousehold(
  * Seed projects/income with test data (legacy - uses email lookup)
  * Note: user_id column was removed in migration 002_invite_auth.sql
  * Projects are now shared among all authenticated family members
- * @deprecated Use seedProjectsWithHousehold for better isolation
+ * @deprecated Use seedProjectsWithGroup for better isolation
  */
 export async function seedProjects(
   projects: TestProject[],
@@ -545,10 +545,10 @@ export async function seedProjects(
 ): Promise<TestProject[]> {
   const client = getAdminClient();
   
-  // Get household ID for seeding - use user's household if email provided
-  const householdId = userEmail
-    ? await getHouseholdIdForUser(userEmail)
-    : await getDefaultHouseholdId();
+  // Get group ID for seeding - use user's group if email provided
+  const groupId = userEmail
+    ? await getGroupIdForUser(userEmail)
+    : await getDefaultGroupId();
   
   const records = projects.map((p) => ({
     type: 'recurring',
@@ -558,7 +558,7 @@ export async function seedProjects(
     payment_schedule: p.payment_schedule,
     certainty: p.certainty,
     is_active: p.is_active,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('projects').insert(records).select();
@@ -571,12 +571,12 @@ export async function seedProjects(
 }
 
 /**
- * Seed single-shot income with test data using explicit household ID
+ * Seed single-shot income with test data using explicit group ID
  */
-export async function seedSingleShotIncomeWithHousehold(
+export async function seedSingleShotIncomeWithGroup(
   income: TestSingleShotIncome[],
   workerIndex: number,
-  householdId: string
+  groupId: string
 ): Promise<TestSingleShotIncome[]> {
   const client = getAdminClient();
   
@@ -589,7 +589,7 @@ export async function seedSingleShotIncomeWithHousehold(
     frequency: null,
     payment_schedule: null,
     is_active: null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('projects').insert(records).select();
@@ -605,7 +605,7 @@ export async function seedSingleShotIncomeWithHousehold(
  * Seed single-shot income with test data (legacy - uses email lookup)
  * Single-shot income is stored in the projects table with type='single_shot'
  * Note: user_id column was removed in migration 002_invite_auth.sql
- * @deprecated Use seedSingleShotIncomeWithHousehold for better isolation
+ * @deprecated Use seedSingleShotIncomeWithGroup for better isolation
  */
 export async function seedSingleShotIncome(
   income: TestSingleShotIncome[],
@@ -614,10 +614,10 @@ export async function seedSingleShotIncome(
 ): Promise<TestSingleShotIncome[]> {
   const client = getAdminClient();
   
-  // Get household ID for seeding - use user's household if email provided
-  const householdId = userEmail
-    ? await getHouseholdIdForUser(userEmail)
-    : await getDefaultHouseholdId();
+  // Get group ID for seeding - use user's group if email provided
+  const groupId = userEmail
+    ? await getGroupIdForUser(userEmail)
+    : await getDefaultGroupId();
   
   const records = income.map((i) => ({
     type: 'single_shot',
@@ -628,7 +628,7 @@ export async function seedSingleShotIncome(
     frequency: null,
     payment_schedule: null,
     is_active: null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('projects').insert(records).select();
@@ -641,12 +641,12 @@ export async function seedSingleShotIncome(
 }
 
 /**
- * Seed credit cards with test data using explicit household ID
+ * Seed credit cards with test data using explicit group ID
  */
-export async function seedCreditCardsWithHousehold(
+export async function seedCreditCardsWithGroup(
   cards: TestCreditCard[],
   workerIndex: number,
-  householdId: string
+  groupId: string
 ): Promise<TestCreditCard[]> {
   const client = getAdminClient();
   
@@ -655,7 +655,7 @@ export async function seedCreditCardsWithHousehold(
     statement_balance: c.statement_balance,
     due_day: c.due_day,
     owner_id: c.owner_id ?? null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('credit_cards').insert(records).select();
@@ -669,7 +669,7 @@ export async function seedCreditCardsWithHousehold(
 
 /**
  * Seed credit cards with test data (legacy - uses email lookup)
- * @deprecated Use seedCreditCardsWithHousehold for better isolation
+ * @deprecated Use seedCreditCardsWithGroup for better isolation
  */
 export async function seedCreditCards(
   cards: TestCreditCard[],
@@ -678,17 +678,17 @@ export async function seedCreditCards(
 ): Promise<TestCreditCard[]> {
   const client = getAdminClient();
   
-  // Get household ID for seeding - use user's household if email provided
-  const householdId = userEmail
-    ? await getHouseholdIdForUser(userEmail)
-    : await getDefaultHouseholdId();
+  // Get group ID for seeding - use user's group if email provided
+  const groupId = userEmail
+    ? await getGroupIdForUser(userEmail)
+    : await getDefaultGroupId();
   
   const records = cards.map((c) => ({
     name: workerIndex !== undefined ? addWorkerPrefix(c.name, workerIndex) : c.name,
     statement_balance: c.statement_balance,
     due_day: c.due_day,
     owner_id: c.owner_id ?? null,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('credit_cards').insert(records).select();
@@ -701,11 +701,11 @@ export async function seedCreditCards(
 }
 
 /**
- * Seed future statements with test data using explicit household ID
+ * Seed future statements with test data using explicit group ID
  */
-export async function seedFutureStatementsWithHousehold(
+export async function seedFutureStatementsWithGroup(
   statements: TestFutureStatement[],
-  householdId: string
+  groupId: string
 ): Promise<TestFutureStatement[]> {
   const client = getAdminClient();
   
@@ -714,7 +714,7 @@ export async function seedFutureStatementsWithHousehold(
     target_month: s.target_month,
     target_year: s.target_year,
     amount: s.amount,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('future_statements').insert(records).select();
@@ -728,7 +728,7 @@ export async function seedFutureStatementsWithHousehold(
 
 /**
  * Seed future statements with test data (legacy - uses email lookup)
- * @deprecated Use seedFutureStatementsWithHousehold for better isolation
+ * @deprecated Use seedFutureStatementsWithGroup for better isolation
  */
 export async function seedFutureStatements(
   statements: TestFutureStatement[],
@@ -736,17 +736,17 @@ export async function seedFutureStatements(
 ): Promise<TestFutureStatement[]> {
   const client = getAdminClient();
   
-  // Get household ID for seeding - use user's household if email provided
-  const householdId = userEmail
-    ? await getHouseholdIdForUser(userEmail)
-    : await getDefaultHouseholdId();
+  // Get group ID for seeding - use user's group if email provided
+  const groupId = userEmail
+    ? await getGroupIdForUser(userEmail)
+    : await getDefaultGroupId();
   
   const records = statements.map((s) => ({
     credit_card_id: s.credit_card_id,
     target_month: s.target_month,
     target_year: s.target_year,
     amount: s.amount,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('future_statements').insert(records).select();
@@ -759,93 +759,93 @@ export async function seedFutureStatements(
 }
 
 /**
- * Seed households with test data
+ * Seed groups with test data
  * Used for multi-tenancy isolation tests
  */
-export async function seedHouseholds(households: TestHousehold[], workerIndex?: number): Promise<TestHousehold[]> {
+export async function seedGroups(groups: TestGroup[], workerIndex?: number): Promise<TestGroup[]> {
   const client = getAdminClient();
-  const records = households.map((h) => ({
-    name: workerIndex !== undefined ? addWorkerPrefix(h.name, workerIndex) : h.name,
+  const records = groups.map((g) => ({
+    name: workerIndex !== undefined ? addWorkerPrefix(g.name, workerIndex) : g.name,
   }));
 
-  const { data, error } = await client.from('households').insert(records).select();
+  const { data, error } = await client.from('groups').insert(records).select();
 
   if (error) {
-    throw new Error(`Failed to seed households: ${error.message}`);
+    throw new Error(`Failed to seed groups: ${error.message}`);
   }
 
-  return data as TestHousehold[];
+  return data as TestGroup[];
 }
 
 /**
- * Get the household ID for a test user by email
+ * Get the group ID for a test user by email
  */
-export async function getHouseholdIdByEmail(email: string): Promise<string | null> {
+export async function getGroupIdByEmail(email: string): Promise<string | null> {
   const client = getAdminClient();
   const { data, error } = await client
     .from('profiles')
-    .select('household_id')
+    .select('group_id')
     .eq('email', email)
     .maybeSingle();
 
   if (error) {
-    console.warn(`Warning getting household ID: ${error.message}`);
+    console.warn(`Warning getting group ID: ${error.message}`);
     return null;
   }
 
-  return data?.household_id ?? null;
+  return data?.group_id ?? null;
 }
 
 /**
- * Get household info by ID
+ * Get group info by ID
  */
-export async function getHouseholdById(id: string): Promise<TestHousehold | null> {
+export async function getGroupById(id: string): Promise<TestGroup | null> {
   const client = getAdminClient();
   const { data, error } = await client
-    .from('households')
+    .from('groups')
     .select('id, name, created_at, updated_at')
     .eq('id', id)
     .maybeSingle();
 
   if (error) {
-    console.warn(`Warning getting household: ${error.message}`);
+    console.warn(`Warning getting group: ${error.message}`);
     return null;
   }
 
-  return data as TestHousehold | null;
+  return data as TestGroup | null;
 }
 
 /**
- * Get all members of a household
+ * Get all members of a group
  */
-export async function getHouseholdMembers(householdId: string): Promise<TestProfile[]> {
+export async function getGroupMembers(groupId: string): Promise<TestProfile[]> {
   const client = getAdminClient();
   const { data, error } = await client
     .from('profiles')
-    .select('id, name, email, household_id')
-    .eq('household_id', householdId)
+    .select('id, name, email, group_id')
+    .eq('group_id', groupId)
     .order('name');
 
   if (error) {
-    throw new Error(`Failed to get household members: ${error.message}`);
+    throw new Error(`Failed to get group members: ${error.message}`);
   }
 
   return data as TestProfile[];
 }
 
 /**
- * Create a profile with a specific household assignment
+ * Create a profile with a specific group assignment
  * Used for invite flow testing
  */
-export async function createProfileInHousehold(
+export async function createProfileInGroup(
   email: string,
   name: string,
-  householdId: string
+  groupId: string
 ): Promise<TestProfile> {
   const client = getAdminClient();
   const { data, error } = await client
     .from('profiles')
-    .insert({ email, name, household_id: householdId })
+    .insert({ email, name, group_id: groupId })
     .select()
     .single();
 
@@ -888,9 +888,9 @@ export async function deleteProfileByEmail(email: string): Promise<void> {
 }
 
 /**
- * Seed complete test scenario with all entity types using explicit household ID
+ * Seed complete test scenario with all entity types using explicit group ID
  */
-export async function seedFullScenarioWithHousehold(
+export async function seedFullScenarioWithGroup(
   data: {
     accounts?: TestAccount[];
     expenses?: TestExpense[];
@@ -900,31 +900,31 @@ export async function seedFullScenarioWithHousehold(
     creditCards?: TestCreditCard[];
   },
   workerIndex: number,
-  householdId: string
+  groupId: string
 ): Promise<void> {
   if (data.accounts?.length) {
-    await seedAccountsWithHousehold(data.accounts, workerIndex, householdId);
+    await seedAccountsWithGroup(data.accounts, workerIndex, groupId);
   }
   if (data.expenses?.length) {
-    await seedExpensesWithHousehold(data.expenses, workerIndex, householdId);
+    await seedExpensesWithGroup(data.expenses, workerIndex, groupId);
   }
   if (data.singleShotExpenses?.length) {
-    await seedSingleShotExpensesWithHousehold(data.singleShotExpenses, workerIndex, householdId);
+    await seedSingleShotExpensesWithGroup(data.singleShotExpenses, workerIndex, groupId);
   }
   if (data.projects?.length) {
-    await seedProjectsWithHousehold(data.projects, workerIndex, householdId);
+    await seedProjectsWithGroup(data.projects, workerIndex, groupId);
   }
   if (data.singleShotIncome?.length) {
-    await seedSingleShotIncomeWithHousehold(data.singleShotIncome, workerIndex, householdId);
+    await seedSingleShotIncomeWithGroup(data.singleShotIncome, workerIndex, groupId);
   }
   if (data.creditCards?.length) {
-    await seedCreditCardsWithHousehold(data.creditCards, workerIndex, householdId);
+    await seedCreditCardsWithGroup(data.creditCards, workerIndex, groupId);
   }
 }
 
 /**
  * Seed complete test scenario with all entity types (legacy - uses email lookup)
- * @deprecated Use seedFullScenarioWithHousehold for better isolation
+ * @deprecated Use seedFullScenarioWithGroup for better isolation
  */
 export async function seedFullScenario(
   data: {
@@ -1025,11 +1025,11 @@ export async function accountExists(name: string): Promise<boolean> {
 }
 
 /**
- * Seed projection snapshots with test data using explicit household ID
+ * Seed projection snapshots with test data using explicit group ID
  */
-export async function seedSnapshotsWithHousehold(
+export async function seedSnapshotsWithGroup(
   snapshots: { name: string; data: object }[],
-  householdId: string
+  groupId: string
 ): Promise<{ id: string; name: string }[]> {
   const client = getAdminClient();
   
@@ -1037,7 +1037,7 @@ export async function seedSnapshotsWithHousehold(
     name: s.name,
     schema_version: 1,
     data: s.data,
-    household_id: householdId,
+    group_id: groupId,
   }));
 
   const { data, error } = await client.from('projection_snapshots').insert(records).select('id, name');
@@ -1050,15 +1050,15 @@ export async function seedSnapshotsWithHousehold(
 }
 
 /**
- * Get all snapshots for a household
+ * Get all snapshots for a group
  */
-export async function getSnapshotsForHousehold(householdId: string): Promise<{ id: string; name: string; created_at: string }[]> {
+export async function getSnapshotsForGroup(groupId: string): Promise<{ id: string; name: string; created_at: string }[]> {
   const client = getAdminClient();
   
   const { data, error } = await client
     .from('projection_snapshots')
     .select('id, name, created_at')
-    .eq('household_id', householdId)
+    .eq('group_id', groupId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -1082,11 +1082,11 @@ export async function snapshotExists(id: string): Promise<boolean> {
 }
 
 /**
- * Delete all snapshots for a household
+ * Delete all snapshots for a group
  */
-export async function deleteSnapshotsForHousehold(householdId: string): Promise<void> {
+export async function deleteSnapshotsForGroup(groupId: string): Promise<void> {
   const client = getAdminClient();
-  const { error } = await client.from('projection_snapshots').delete().eq('household_id', householdId);
+  const { error } = await client.from('projection_snapshots').delete().eq('group_id', groupId);
   if (error) {
     throw new Error(`Failed to delete snapshots: ${error.message}`);
   }
@@ -1095,18 +1095,18 @@ export async function deleteSnapshotsForHousehold(householdId: string): Promise<
 /**
  * Create a worker-scoped database fixture
  * This returns a fixture object that prefixes all data with the worker identifier
- * and uses the worker's household for data isolation via RLS
+ * and uses the worker's group for data isolation via RLS
  */
 export function createWorkerDbFixture(workerContext: IWorkerContext) {
-  const { workerIndex, email, dataPrefix, householdName } = workerContext;
+  const { workerIndex, email, dataPrefix, groupName } = workerContext;
 
   // Track whether this worker's database has been modified since last reset
   // This allows optimizing away redundant resets (which are expensive network operations)
   let isDirty = true; // Start dirty so first reset actually runs
 
-  // Helper to get this worker's household ID (cached after first call)
-  const getWorkerHouseholdId = async () => {
-    return getOrCreateWorkerHousehold(workerIndex, householdName);
+  // Helper to get this worker's group ID (cached after first call)
+  const getWorkerGroupId = async () => {
+    return getOrCreateWorkerGroup(workerIndex, groupName);
   };
 
   // Mark the database as dirty (data has been added)
@@ -1116,13 +1116,13 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
 
   return {
     /**
-     * Reset database by clearing this worker's household data.
-     * Uses household_id for reliable isolation instead of name patterns.
+     * Reset database by clearing this worker's group data.
+     * Uses group_id for reliable isolation instead of name patterns.
      * This always resets regardless of dirty state - use clear() for optimized resets.
      */
     resetDatabase: async () => {
-      const householdId = await getWorkerHouseholdId();
-      await resetHouseholdData(householdId);
+      const groupId = await getWorkerGroupId();
+      await resetGroupData(groupId);
       isDirty = false;
     },
 
@@ -1138,8 +1138,8 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
         // Database is already clean, skip expensive reset
         return;
       }
-      const householdId = await getWorkerHouseholdId();
-      await resetHouseholdData(householdId);
+      const groupId = await getWorkerGroupId();
+      await resetGroupData(groupId);
       isDirty = false;
     },
 
@@ -1148,75 +1148,75 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
      */
     isDirty: () => isDirty,
     ensureTestUser: async (userEmail?: string) => {
-      const householdId = await getWorkerHouseholdId();
-      return ensureTestUser(userEmail ?? email, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      return ensureTestUser(userEmail ?? email, workerIndex, groupId);
     },
     removeTestUser: (userEmail?: string) => removeTestUser(userEmail ?? email, workerIndex),
-    // CRITICAL: Pass household ID directly to avoid fallback to default household
+    // CRITICAL: Pass group ID directly to avoid fallback to default group
     // All seed methods mark the database as dirty
     seedAccounts: async (accounts: TestAccount[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedAccountsWithHousehold(accounts, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedAccountsWithGroup(accounts, workerIndex, groupId);
       markDirty();
       return result;
     },
     seedExpenses: async (expenses: TestExpense[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedExpensesWithHousehold(expenses, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedExpensesWithGroup(expenses, workerIndex, groupId);
       markDirty();
       return result;
     },
     seedSingleShotExpenses: async (expenses: TestSingleShotExpense[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedSingleShotExpensesWithHousehold(expenses, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedSingleShotExpensesWithGroup(expenses, workerIndex, groupId);
       markDirty();
       return result;
     },
     seedProjects: async (projects: TestProject[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedProjectsWithHousehold(projects, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedProjectsWithGroup(projects, workerIndex, groupId);
       markDirty();
       return result;
     },
     seedSingleShotIncome: async (income: TestSingleShotIncome[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedSingleShotIncomeWithHousehold(income, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedSingleShotIncomeWithGroup(income, workerIndex, groupId);
       markDirty();
       return result;
     },
     seedCreditCards: async (cards: TestCreditCard[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedCreditCardsWithHousehold(cards, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedCreditCardsWithGroup(cards, workerIndex, groupId);
       markDirty();
       return result;
     },
     seedFutureStatements: async (statements: TestFutureStatement[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedFutureStatementsWithHousehold(statements, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedFutureStatementsWithGroup(statements, groupId);
       markDirty();
       return result;
     },
     seedSnapshots: async (snapshots: { name: string; data: object }[]) => {
-      const householdId = await getWorkerHouseholdId();
-      const result = await seedSnapshotsWithHousehold(snapshots, householdId);
+      const groupId = await getWorkerGroupId();
+      const result = await seedSnapshotsWithGroup(snapshots, groupId);
       markDirty();
       return result;
     },
     getSnapshots: async () => {
-      const householdId = await getWorkerHouseholdId();
-      return getSnapshotsForHousehold(householdId);
+      const groupId = await getWorkerGroupId();
+      return getSnapshotsForGroup(groupId);
     },
     deleteSnapshots: async () => {
-      const householdId = await getWorkerHouseholdId();
-      return deleteSnapshotsForHousehold(householdId);
+      const groupId = await getWorkerGroupId();
+      return deleteSnapshotsForGroup(groupId);
     },
     seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
-      const householdId = await getWorkerHouseholdId();
-      await seedFullScenarioWithHousehold(data, workerIndex, householdId);
+      const groupId = await getWorkerGroupId();
+      await seedFullScenarioWithGroup(data, workerIndex, groupId);
       markDirty();
     },
-    seedHouseholds: async (households: TestHousehold[]) => {
-      const result = await seedHouseholds(households, workerIndex);
+    seedGroups: async (groups: TestGroup[]) => {
+      const result = await seedGroups(groups, workerIndex);
       markDirty();
       return result;
     },
@@ -1227,24 +1227,24 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     accountExists,
     snapshotExists,
     profileExists,
-    getHouseholdIdByEmail,
-    getHouseholdById,
-    getHouseholdMembers,
-    createProfileInHousehold,
+    getGroupIdByEmail,
+    getGroupById,
+    getGroupMembers,
+    createProfileInGroup,
     deleteProfileByEmail,
-    getDefaultHouseholdId,
-    getHouseholdIdForUser,
-    getWorkerHouseholdId,
-    getOrCreateWorkerHousehold: () => getOrCreateWorkerHousehold(workerIndex, householdName),
-    clearHouseholdCache,
+    getDefaultGroupId,
+    getGroupIdForUser,
+    getWorkerGroupId,
+    getOrCreateWorkerGroup: () => getOrCreateWorkerGroup(workerIndex, groupName),
+    clearGroupCache,
     /** The data prefix for this worker (e.g., "[W0] ") */
     dataPrefix,
     /** Worker index */
     workerIndex,
     /** Worker email */
     email,
-    /** Worker household name */
-    householdName,
+    /** Worker group name */
+    groupName,
   };
 }
 

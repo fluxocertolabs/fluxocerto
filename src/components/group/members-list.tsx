@@ -1,12 +1,12 @@
 import { User } from 'lucide-react'
-import type { HouseholdMember } from '@/hooks/use-household'
+import type { GroupMember } from '@/hooks/use-group'
 
 interface MembersListProps {
-  members: HouseholdMember[]
+  members: GroupMember[]
 }
 
 /**
- * List component displaying all household members.
+ * List component displaying all group members.
  * Shows "(Você)" indicator next to the current user.
  */
 export function MembersList({ members }: MembersListProps) {
@@ -37,4 +37,5 @@ export function MembersList({ members }: MembersListProps) {
     </ul>
   )
 }
+
 

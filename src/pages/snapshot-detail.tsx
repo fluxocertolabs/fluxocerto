@@ -1,6 +1,6 @@
 /**
  * Snapshot detail page - Displays full projection chart and summary from frozen snapshot data.
- * Shows a read-only historical view with "Snapshot Histórico" banner.
+ * Shows a read-only historical view with "Projeção Histórica" banner.
  */
 
 import { useEffect, useState } from 'react'
@@ -56,7 +56,7 @@ export function SnapshotDetailPage() {
     setShowDeleteConfirm(false)
 
     if (result.success) {
-      showSuccess('Snapshot excluído com sucesso!')
+      showSuccess('Projeção excluída com sucesso!')
       // Navigate back to history after a short delay to show the toast
       setTimeout(() => navigate('/history'), 1000)
     } else {
@@ -96,7 +96,7 @@ export function SnapshotDetailPage() {
     return (
       <div className={cn('container mx-auto p-4 md:p-6 max-w-6xl')}>
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">Snapshot não encontrado</p>
+          <p className="text-muted-foreground mb-4">Projeção não encontrada</p>
           <Button variant="outline" onClick={() => navigate('/history')}>
             Voltar ao Histórico
           </Button>
@@ -132,7 +132,7 @@ export function SnapshotDetailPage() {
             <InfoCircledIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
             <div>
               <h1 className="font-semibold text-foreground">
-                Snapshot Histórico: {currentSnapshot.name}
+                Projeção Histórica: {currentSnapshot.name}
               </h1>
               <p className="text-sm text-muted-foreground">
                 Salvo em {formattedDate} • Visualização somente leitura
@@ -164,9 +164,9 @@ export function SnapshotDetailPage() {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir snapshot?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir projeção?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o snapshot "{currentSnapshot.name}"? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir a projeção "{currentSnapshot.name}"? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

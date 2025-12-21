@@ -18,10 +18,10 @@ export function SnapshotEmptyState() {
 
         <div className="space-y-2">
           <h3 className="text-lg font-medium text-foreground">
-            Nenhum snapshot salvo
+            Nenhuma projeção salva
           </h3>
           <p className="text-sm text-muted-foreground max-w-md">
-            Snapshots permitem que você salve o estado atual da sua projeção
+            Projeções salvas permitem que você guarde o estado atual da sua projeção
             financeira para consultar depois. É uma ótima forma de acompanhar
             como suas finanças evoluem ao longo do tempo.
           </p>
@@ -36,7 +36,7 @@ export function SnapshotEmptyState() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          No painel, clique em "Salvar Snapshot" para criar seu primeiro registro.
+          No painel, clique em "Salvar Projeção" para criar seu primeiro registro.
         </p>
       </div>
     </Card>

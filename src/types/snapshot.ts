@@ -55,7 +55,7 @@ export interface SnapshotData {
  */
 export interface ProjectionSnapshot {
   id: string
-  householdId: string
+  groupId: string
   name: string
   schemaVersion: number
   data: SnapshotData
@@ -66,7 +66,7 @@ export interface ProjectionSnapshot {
  * Input for creating a new snapshot.
  */
 export const SnapshotInputSchema = z.object({
-  name: z.string().min(1, 'Nome do snapshot é obrigatório').max(100),
+  name: z.string().min(1, 'Nome da projeção é obrigatório').max(100),
 })
 
 export type SnapshotInput = z.infer<typeof SnapshotInputSchema>
