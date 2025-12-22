@@ -208,8 +208,11 @@ function createSingleShotExpenseEvents(date: Date, expenses: SingleShotExpense[]
 
 /**
  * Get the credit card amount for a specific date.
- * Uses future statement if defined for that month, otherwise returns 0 for future months.
- * Current and past months use the card's statementBalance.
+ * 
+ * Logic:
+ * - Current month or next month: use statementBalance (the bill coming due)
+ * - Future months (2+ months ahead): use futureStatement if defined, else 0 (FR-006)
+ * - Past months: use statementBalance
  * 
  * @param card - The credit card
  * @param futureStatements - Array of future statements for all cards
@@ -227,17 +230,22 @@ export function getCreditCardAmountForDate(
   const targetMonth = date.getMonth() + 1
   const targetYear = date.getFullYear()
 
-  // Check if target date is in the future (after current month)
-  const isFutureMonth =
-    targetYear > currentYear ||
-    (targetYear === currentYear && targetMonth > currentMonth)
+  // Calculate next month (handling year rollover)
+  const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1
+  const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear
 
-  // Current or past month: use statementBalance
-  if (!isFutureMonth) {
+  // Check if target date is in the distant future (more than 1 month ahead)
+  const isDistantFuture =
+    targetYear > nextMonthYear ||
+    (targetYear === nextMonthYear && targetMonth > nextMonth)
+
+  // Current month, past month, or next month: use statementBalance
+  // (The statementBalance represents what needs to be paid on the next due date)
+  if (!isDistantFuture) {
     return card.statementBalance
   }
 
-  // Future month: lookup future statement
+  // Distant future month: lookup future statement
   const statement = futureStatements.find(
     (s) =>
       s.creditCardId === card.id &&

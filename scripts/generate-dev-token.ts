@@ -233,52 +233,52 @@ async function ensureAllowedEmail(client: SupabaseClient): Promise<void> {
 // ============================================================================
 
 /**
- * Create dev household if not exists
- * Idempotent: returns existing household if found
+ * Create dev group (formerly household) if not exists
+ * Idempotent: returns existing group if found
  */
 async function createDevHousehold(
   client: SupabaseClient
 ): Promise<{ id: string; isNew: boolean }> {
-  log('Creating household...');
+  log('Creating group...');
   
-  // Check if household exists (by name)
+  // Check if group exists (by name)
   const { data: existing, error: checkError } = await client
-    .from('households')
+    .from('groups')
     .select('id')
     .eq('name', DEV_HOUSEHOLD_NAME)
     .maybeSingle();
   
   if (checkError && !checkError.message.includes('no rows')) {
-    throw new Error(`Failed to check household: ${checkError.message}`);
+    throw new Error(`Failed to check group: ${checkError.message}`);
   }
   
   if (existing) {
-    logSuccess(`Household found: ${DEV_HOUSEHOLD_NAME}`);
+    logSuccess(`Group found: ${DEV_HOUSEHOLD_NAME}`);
     return { id: existing.id, isNew: false };
   }
   
-  // Create new household
+  // Create new group
   const { data: created, error: createError } = await client
-    .from('households')
+    .from('groups')
     .insert({ name: DEV_HOUSEHOLD_NAME })
     .select('id')
     .single();
   
   if (createError) {
-    throw new Error(`Failed to create household: ${createError.message}`);
+    throw new Error(`Failed to create group: ${createError.message}`);
   }
   
-  logSuccess(`Household created: ${DEV_HOUSEHOLD_NAME}`);
+  logSuccess(`Group created: ${DEV_HOUSEHOLD_NAME}`);
   return { id: created.id, isNew: true };
 }
 
 /**
- * Create dev profile linked to household
+ * Create dev profile linked to group
  * Idempotent: returns existing profile if found
  */
 async function createDevProfile(
   client: SupabaseClient,
-  householdId: string
+  groupId: string
 ): Promise<{ id: string; isNew: boolean }> {
   log('Creating profile...');
   
@@ -294,7 +294,7 @@ async function createDevProfile(
   }
   
   if (existing) {
-    logSuccess('Profile found, linked to household');
+    logSuccess('Profile found, linked to group');
     return { id: existing.id, isNew: false };
   }
   
@@ -304,7 +304,7 @@ async function createDevProfile(
     .insert({
       name: DEV_PROFILE_NAME,
       email: DEV_USER_EMAIL,
-      household_id: householdId,
+      group_id: groupId,
     })
     .select('id')
     .single();
@@ -313,7 +313,7 @@ async function createDevProfile(
     throw new Error(`Failed to create profile: ${createError.message}`);
   }
   
-  logSuccess('Profile created, linked to household');
+  logSuccess('Profile created, linked to group');
   return { id: created.id, isNew: true };
 }
 
@@ -323,17 +323,17 @@ async function createDevProfile(
  */
 async function createSeedAccount(
   client: SupabaseClient,
-  householdId: string,
+  groupId: string,
   ownerId: string
 ): Promise<{ id: string; isNew: boolean }> {
   log('Creating seed account...');
   
-  // Check if account exists (by name and household)
+  // Check if account exists (by name and group)
   const { data: existing, error: checkError } = await client
     .from('accounts')
     .select('id')
     .eq('name', DEV_ACCOUNT_NAME)
-    .eq('household_id', householdId)
+    .eq('group_id', groupId)
     .maybeSingle();
   
   if (checkError && !checkError.message.includes('no rows')) {
@@ -354,7 +354,7 @@ async function createSeedAccount(
       balance: DEV_ACCOUNT_BALANCE,
       balance_updated_at: new Date().toISOString(),
       owner_id: ownerId,
-      household_id: householdId,
+      group_id: groupId,
     })
     .select('id')
     .single();
