@@ -2,28 +2,34 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(0 0% 3.9%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(0 0% 3.9%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(0 0% 3.9%);
-  --color-primary: hsl(0 0% 9%);
-  --color-primary-foreground: hsl(0 0% 98%);
-  --color-secondary: hsl(0 0% 96.1%);
-  --color-secondary-foreground: hsl(0 0% 9%);
-  --color-muted: hsl(0 0% 96.1%);
-  --color-muted-foreground: hsl(0 0% 45.1%);
-  --color-accent: hsl(0 0% 96.1%);
-  --color-accent-foreground: hsl(0 0% 9%);
+  /* Brand palette */
+  --color-brand-snow: #f8fafd; /* light background + symbol on dark */
+  --color-brand-blue: #40b5e8; /* logo text */
+  --color-brand-ink: #26284b; /* dark background + symbol on light */
+
+  /* Semantic tokens (light mode) */
+  --color-background: var(--color-brand-snow);
+  --color-foreground: var(--color-brand-ink);
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-brand-ink);
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--color-brand-ink);
+  --color-primary: var(--color-brand-blue);
+  --color-primary-foreground: var(--color-brand-ink);
+  --color-secondary: #e6f5fc;
+  --color-secondary-foreground: var(--color-brand-ink);
+  --color-muted: #edf3fb;
+  --color-muted-foreground: #5c607f;
+  --color-accent: #e6f5fc;
+  --color-accent-foreground: var(--color-brand-ink);
   --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(0 0% 89.8%);
-  --color-input: hsl(0 0% 89.8%);
-  --color-ring: hsl(0 0% 3.9%);
+  --color-destructive-foreground: var(--color-brand-snow);
+  --color-border: #d7e3f0;
+  --color-input: #d7e3f0;
+  --color-ring: var(--color-brand-blue);
   --radius: 0.5rem;
   /* Chart colors for light mode */
-  --color-chart-1: hsl(220 70% 50%);
+  --color-chart-1: var(--color-brand-blue);
   --color-chart-2: hsl(160 60% 45%);
   --color-chart-3: hsl(30 80% 55%);
   --color-chart-4: hsl(280 65% 60%);
@@ -32,27 +38,28 @@
 
 /* Dark mode overrides - shadcn/ui Zinc theme */
 .dark {
-  --color-background: hsl(240 10% 3.9%);
-  --color-foreground: hsl(0 0% 98%);
-  --color-card: hsl(240 10% 3.9%);
-  --color-card-foreground: hsl(0 0% 98%);
-  --color-popover: hsl(240 10% 3.9%);
-  --color-popover-foreground: hsl(0 0% 98%);
-  --color-primary: hsl(0 0% 98%);
-  --color-primary-foreground: hsl(240 5.9% 10%);
-  --color-secondary: hsl(240 3.7% 15.9%);
-  --color-secondary-foreground: hsl(0 0% 98%);
-  --color-muted: hsl(240 3.7% 15.9%);
-  --color-muted-foreground: hsl(240 5% 64.9%);
-  --color-accent: hsl(240 3.7% 15.9%);
-  --color-accent-foreground: hsl(0 0% 98%);
+  /* Semantic tokens (dark mode) */
+  --color-background: var(--color-brand-ink);
+  --color-foreground: var(--color-brand-snow);
+  --color-card: #2d2f5a;
+  --color-card-foreground: var(--color-brand-snow);
+  --color-popover: #2d2f5a;
+  --color-popover-foreground: var(--color-brand-snow);
+  --color-primary: var(--color-brand-blue);
+  --color-primary-foreground: var(--color-brand-ink);
+  --color-secondary: #343663;
+  --color-secondary-foreground: var(--color-brand-snow);
+  --color-muted: #343663;
+  --color-muted-foreground: #c7c9e2;
+  --color-accent: #343663;
+  --color-accent-foreground: var(--color-brand-snow);
   --color-destructive: hsl(0 72% 51%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(240 3.7% 15.9%);
-  --color-input: hsl(240 3.7% 15.9%);
-  --color-ring: hsl(240 4.9% 83.9%);
+  --color-destructive-foreground: var(--color-brand-snow);
+  --color-border: #3f4175;
+  --color-input: #3f4175;
+  --color-ring: var(--color-brand-blue);
   /* Chart colors for dark mode - more vibrant for visibility */
-  --color-chart-1: hsl(220 70% 60%);
+  --color-chart-1: var(--color-brand-blue);
   --color-chart-2: hsl(160 60% 55%);
   --color-chart-3: hsl(30 80% 60%);
   --color-chart-4: hsl(280 65% 65%);

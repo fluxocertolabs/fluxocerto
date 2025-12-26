@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme'
 import { GroupBadge } from '@/components/group'
+import { BrandSymbol } from '@/components/brand'
 import { signOut } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import { useGroup } from '@/hooks/use-group'
@@ -11,6 +12,9 @@ export function Header() {
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuth()
   const { group, isLoading: groupLoading } = useGroup()
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
   const handleSignOut = async () => {
     const { error } = await signOut()
@@ -26,9 +30,15 @@ export function Header() {
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            className="font-semibold text-lg text-foreground hover:text-foreground/80 transition-colors cursor-pointer"
+            aria-label="Fluxo Certo"
+            className="flex items-center hover:opacity-90 transition-opacity cursor-pointer"
           >
-            Fluxo Certo
+            <BrandSymbol
+              className="h-8 w-8 text-foreground"
+              animation={prefersReducedMotion ? 'none' : 'once'}
+              aria-hidden="true"
+            />
+            <span className="sr-only">Fluxo Certo</span>
           </Link>
           {isAuthenticated && group && !groupLoading && (
             <GroupBadge name={group.name} />

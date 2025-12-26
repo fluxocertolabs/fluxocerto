@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Symbol_-_Dark_Transparent" data-name="Symbol - Dark Transparent" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #f8fafd;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" d="M82.52,127.88c-27.58,0-45.76-19.09-45.76-47.88s18.18-47.88,45.76-47.88c18.4,0,33.68,9.12,40.96,23.59h36.14C150.04,22.02,120.31,0,82.52,0,33.12,0,.39,32.12.39,80s32.73,80,82.13,80c37.59,0,67.29-21.97,77.06-55.71h-36.3c-7.4,14.49-22.58,23.59-40.77,23.59Z"/>
+  <circle class="cls-1" cx="142.57" cy="80" r="12.43" transform="translate(-14.81 124.24) rotate(-45)"/>
+</svg>
