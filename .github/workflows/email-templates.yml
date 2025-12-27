@@ -1,0 +1,99 @@
+name: Email templates
+
+on:
+  pull_request:
+    paths:
+      - "emails/mjml/**"
+      - "scripts/build-emails.ts"
+      - "scripts/emails/supabase-templates.ts"
+      - "scripts/deploy-supabase-email-templates.ts"
+  push:
+    branches: ["main"]
+    paths:
+      - "emails/mjml/**"
+      - "scripts/build-emails.ts"
+      - "scripts/emails/supabase-templates.ts"
+      - "scripts/deploy-supabase-email-templates.ts"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.12.1"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build email templates (MJML → HTML)
+        run: pnpm emails:build
+
+      - name: Ensure generated templates are committed
+        run: |
+          git diff --exit-code -- supabase/templates
+
+  deploy-staging:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.12.1"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build email templates (MJML → HTML)
+        run: pnpm emails:build
+
+      - name: Deploy templates to Supabase (staging)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+        run: pnpm emails:deploy:supabase
+
+  deploy-production:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.12.1"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build email templates (MJML → HTML)
+        run: pnpm emails:build
+
+      - name: Deploy templates to Supabase (production)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: pnpm emails:deploy:supabase
+
+

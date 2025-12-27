@@ -1,0 +1,40 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../partials/head.mjml" />
+    <mj-preview>Use este código para confirmar sua ação</mj-preview>
+    <mj-title>Código de verificação — Fluxo Certo</mj-title>
+  </mj-head>
+
+  <mj-body background-color="#f8fafd" width="600px">
+    <mj-include path="../../partials/header.mjml" />
+
+    <mj-section padding="0 16px">
+      <mj-column background-color="#ffffff" padding="24px">
+        <mj-text font-size="20px" font-weight="800" padding="0 0 12px">
+          Código de verificação
+        </mj-text>
+        <mj-text padding="0 0 16px">
+          Para continuar, digite o código abaixo na tela do Fluxo Certo:
+        </mj-text>
+
+        <mj-text
+          align="center"
+          padding="8px 0 16px"
+          font-size="34px"
+          font-weight="800"
+          letter-spacing="6px"
+        >
+          {{ .Token }}
+        </mj-text>
+
+        <mj-text padding="0" css-class="fc-muted fc-small">
+          Se você não solicitou este código, ignore este e-mail.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../../partials/footer.mjml" />
+  </mj-body>
+</mjml>
+
+

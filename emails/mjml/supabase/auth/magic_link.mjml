@@ -1,0 +1,51 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../partials/head.mjml" />
+    <mj-preview>Seu link de acesso para entrar no Fluxo Certo</mj-preview>
+    <mj-title>Seu link de acesso — Fluxo Certo</mj-title>
+  </mj-head>
+
+  <mj-body background-color="#f8fafd" width="600px">
+    <mj-include path="../../partials/header.mjml" />
+
+    <mj-section padding="0 16px">
+      <mj-column background-color="#ffffff" padding="24px">
+        <mj-text font-size="20px" font-weight="800" padding="0 0 12px">
+          Seu link de acesso
+        </mj-text>
+        <mj-text padding="0 0 16px">
+          Olá! Clique no botão abaixo para entrar no Fluxo Certo.
+        </mj-text>
+
+        <mj-button href="{{ .ConfirmationURL }}" padding="0 0 16px">
+          Entrar no Fluxo Certo
+        </mj-button>
+
+        <mj-text padding="0 0 16px" css-class="fc-muted fc-small">
+          Este link expira em 1 hora.
+        </mj-text>
+
+        <mj-divider padding="8px 0 16px" />
+
+        <mj-text padding="0 0 8px" css-class="fc-muted fc-small">
+          Se o botão não funcionar, copie e cole este link no seu navegador:
+        </mj-text>
+        <mj-text padding="0" css-class="fc-small fc-linkWrap">
+          <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0 16px">
+      <mj-column>
+        <mj-text align="center" padding="16px 0 0" css-class="fc-muted fc-small">
+          Se você não solicitou este e-mail, pode ignorá-lo com segurança.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../../partials/footer.mjml" />
+  </mj-body>
+</mjml>
+
+

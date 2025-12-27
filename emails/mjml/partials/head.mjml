@@ -1,0 +1,31 @@
+<mj-attributes>
+  <mj-all font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" />
+  <mj-text font-size="16px" line-height="24px" color="#26284b" />
+  <mj-button
+    background-color="#40b5e8"
+    color="#26284b"
+    font-weight="700"
+    border-radius="10px"
+    inner-padding="14px 22px"
+    font-size="16px"
+  />
+  <mj-divider border-color="#d7e3f0" border-width="1px" />
+</mj-attributes>
+
+<mj-style inline="inline">
+  a {
+    color: #006ea6;
+  }
+  .fc-muted {
+    color: #5c607f;
+  }
+  .fc-small {
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .fc-linkWrap a {
+    word-break: break-all;
+  }
+</mj-style>
+
+
