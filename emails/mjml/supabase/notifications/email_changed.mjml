@@ -1,0 +1,32 @@
+<mjml lang="pt-BR">
+  <mj-head>
+    <mj-include path="../../partials/head.mjml" />
+    <mj-preview>Seu e-mail foi alterado</mj-preview>
+    <mj-title>Seu e-mail foi alterado — Fluxo Certo</mj-title>
+  </mj-head>
+
+  <mj-body background-color="#f8fafd" width="600px">
+    <mj-include path="../../partials/header.mjml" />
+
+    <mj-section padding="0 16px">
+      <mj-column background-color="#ffffff" padding="24px">
+        <mj-text font-size="20px" font-weight="800" padding="0 0 12px">
+          Seu e-mail foi alterado
+        </mj-text>
+
+        <mj-text padding="0 0 16px">
+          Este é um aviso de segurança: o e-mail da sua conta foi alterado de
+          <strong>{{ .OldEmail }}</strong> para <strong>{{ .Email }}</strong>.
+        </mj-text>
+
+        <mj-text padding="0" css-class="fc-muted fc-small">
+          Se você não fez essa alteração, recomendamos que você proteja sua conta imediatamente.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../../partials/footer.mjml" />
+  </mj-body>
+</mjml>
+
+

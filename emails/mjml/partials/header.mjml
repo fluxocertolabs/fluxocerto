@@ -1,0 +1,21 @@
+<mj-section padding="24px 16px 0">
+  <mj-column>
+    <mj-image
+      src="{{ .SiteURL }}/assets/brand/logo-light.png"
+      alt="Fluxo Certo"
+      align="center"
+      width="220px"
+      padding="0"
+    />
+  </mj-column>
+</mj-section>
+
+<mj-section padding="8px 16px 20px">
+  <mj-column>
+    <mj-text align="center" font-size="14px" padding="0" css-class="fc-muted">
+      Gerencie as finanças da sua família juntos
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+

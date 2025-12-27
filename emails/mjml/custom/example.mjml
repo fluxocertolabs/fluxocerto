@@ -1,0 +1,26 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../partials/head.mjml" />
+    <mj-preview>Exemplo de e-mail transacional</mj-preview>
+    <mj-title>Exemplo — Fluxo Certo</mj-title>
+  </mj-head>
+
+  <mj-body background-color="#f8fafd" width="600px">
+    <mj-include path="../partials/header.mjml" />
+
+    <mj-section padding="0 16px">
+      <mj-column background-color="#ffffff" padding="24px">
+        <mj-text font-size="20px" font-weight="800" padding="0 0 12px">
+          Exemplo de e-mail (custom)
+        </mj-text>
+        <mj-text padding="0">
+          Este arquivo existe apenas como referência para futuros e-mails enviados pelo app (fora do Supabase Auth).
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../partials/footer.mjml" />
+  </mj-body>
+</mjml>
+
+

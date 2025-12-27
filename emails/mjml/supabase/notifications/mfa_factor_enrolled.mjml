@@ -1,0 +1,32 @@
+<mjml lang="pt-BR">
+  <mj-head>
+    <mj-include path="../../partials/head.mjml" />
+    <mj-preview>Novo método de MFA adicionado</mj-preview>
+    <mj-title>Novo método de MFA adicionado — Fluxo Certo</mj-title>
+  </mj-head>
+
+  <mj-body background-color="#f8fafd" width="600px">
+    <mj-include path="../../partials/header.mjml" />
+
+    <mj-section padding="0 16px">
+      <mj-column background-color="#ffffff" padding="24px">
+        <mj-text font-size="20px" font-weight="800" padding="0 0 12px">
+          Novo método de MFA adicionado
+        </mj-text>
+
+        <mj-text padding="0 0 16px">
+          Este é um aviso de segurança: um novo método de verificação foi adicionado à sua conta:
+          <strong>{{ .FactorType }}</strong>.
+        </mj-text>
+
+        <mj-text padding="0" css-class="fc-muted fc-small">
+          Se você não fez essa alteração, recomendamos que você proteja sua conta imediatamente.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../../partials/footer.mjml" />
+  </mj-body>
+</mjml>
+
+
