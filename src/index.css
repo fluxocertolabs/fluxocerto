@@ -6,6 +6,7 @@
   --color-brand-snow: #f8fafd; /* light background + symbol on dark */
   --color-brand-blue: #40b5e8; /* logo text */
   --color-brand-ink: #26284b; /* dark background + symbol on light */
+  --color-brand-blue-ui: #0369a1; /* UI primary (buttons/links) - higher contrast than logo blue */
 
   /* Semantic tokens (light mode) */
   --color-background: var(--color-brand-snow);
@@ -14,8 +15,8 @@
   --color-card-foreground: var(--color-brand-ink);
   --color-popover: #ffffff;
   --color-popover-foreground: var(--color-brand-ink);
-  --color-primary: var(--color-brand-blue);
-  --color-primary-foreground: var(--color-brand-ink);
+  --color-primary: var(--color-brand-blue-ui);
+  --color-primary-foreground: var(--color-brand-snow);
   --color-secondary: #e6f5fc;
   --color-secondary-foreground: var(--color-brand-ink);
   --color-muted: #edf3fb;
@@ -36,27 +37,27 @@
   --color-chart-5: hsl(340 75% 55%);
 }
 
-/* Dark mode overrides - shadcn/ui Zinc theme */
+/* Dark mode overrides - neutral near-black background + brand accents */
 .dark {
   /* Semantic tokens (dark mode) */
-  --color-background: var(--color-brand-ink);
+  --color-background: #0d1117;
   --color-foreground: var(--color-brand-snow);
-  --color-card: #2d2f5a;
+  --color-card: #161b22;
   --color-card-foreground: var(--color-brand-snow);
-  --color-popover: #2d2f5a;
+  --color-popover: #161b22;
   --color-popover-foreground: var(--color-brand-snow);
-  --color-primary: var(--color-brand-blue);
-  --color-primary-foreground: var(--color-brand-ink);
-  --color-secondary: #343663;
+  --color-primary: var(--color-brand-blue-ui);
+  --color-primary-foreground: var(--color-brand-snow);
+  --color-secondary: #21262d;
   --color-secondary-foreground: var(--color-brand-snow);
-  --color-muted: #343663;
-  --color-muted-foreground: #c7c9e2;
-  --color-accent: #343663;
+  --color-muted: #21262d;
+  --color-muted-foreground: #9aa3b2;
+  --color-accent: #21262d;
   --color-accent-foreground: var(--color-brand-snow);
   --color-destructive: hsl(0 72% 51%);
   --color-destructive-foreground: var(--color-brand-snow);
-  --color-border: #3f4175;
-  --color-input: #3f4175;
+  --color-border: #30363d;
+  --color-input: #30363d;
   --color-ring: var(--color-brand-blue);
   /* Chart colors for dark mode - more vibrant for visibility */
   --color-chart-1: var(--color-brand-blue);
