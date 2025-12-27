@@ -1,4 +1,4 @@
-<mjml>
+<mjml lang="pt-BR">
   <mj-head>
     <mj-include path="../../partials/head.mjml" />
     <mj-preview>Use este código para confirmar sua ação</mj-preview>
@@ -22,7 +22,7 @@
           padding="8px 0 16px"
           font-size="34px"
           font-weight="800"
-          letter-spacing="6px"
+          letter-spacing="4px"
         >
           {{ .Token }}
         </mj-text>

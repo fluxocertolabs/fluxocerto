@@ -3,11 +3,17 @@ import path from 'node:path'
 
 import { SUPABASE_EMAIL_TEMPLATES } from './emails/supabase-templates'
 
+/**
+ * Reads an environment variable and returns a trimmed value if it's non-empty.
+ */
 function getEnv(name: string): string | undefined {
   const value = process.env[name]
   return value && value.trim().length > 0 ? value : undefined
 }
 
+/**
+ * Reads an environment variable and throws if it's missing/empty.
+ */
 function requireEnv(name: string): string {
   const value = getEnv(name)
   if (!value) {
@@ -16,6 +22,11 @@ function requireEnv(name: string): string {
   return value
 }
 
+/**
+ * Deploys MJML-built Supabase email templates to the Supabase Management API.
+ *
+ * Use `--dry-run` to print the payload keys without sending any request.
+ */
 async function main(): Promise<void> {
   const repoRoot = process.cwd()
 
@@ -23,10 +34,6 @@ async function main(): Promise<void> {
   const setNotificationEnabledFlags = process.argv.includes('--set-notification-enabled-flags')
 
   const projectRef = getEnv('PROJECT_REF') ?? getEnv('SUPABASE_PROJECT_REF')
-  const accessToken = isDryRun ? getEnv('SUPABASE_ACCESS_TOKEN') : requireEnv('SUPABASE_ACCESS_TOKEN')
-  if (!projectRef && !isDryRun) {
-    throw new Error('Missing required env var: PROJECT_REF (or SUPABASE_PROJECT_REF)')
-  }
 
   const payload: Record<string, unknown> = {}
 
@@ -70,6 +77,12 @@ async function main(): Promise<void> {
     )
     return
   }
+
+  if (!projectRef) {
+    throw new Error('Missing required env var: PROJECT_REF (or SUPABASE_PROJECT_REF)')
+  }
+
+  const accessToken = requireEnv('SUPABASE_ACCESS_TOKEN')
 
   const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/config/auth`, {
     method: 'PATCH',

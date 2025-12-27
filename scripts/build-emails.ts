@@ -5,12 +5,18 @@ import mjml2html from 'mjml'
 
 import { SUPABASE_EMAIL_TEMPLATES } from './emails/supabase-templates'
 
+/**
+ * Asserts that the compiled template includes a required Supabase GoTemplate placeholder.
+ */
 function assertIncludes(templateId: string, haystack: string, needle: string): void {
   if (!haystack.includes(needle)) {
     throw new Error(`Template ${templateId} is missing required placeholder: ${needle}`)
   }
 }
 
+/**
+ * Normalizes MJML error output into a readable string for CI and local runs.
+ */
 function formatMjmlErrors(errors: unknown): string {
   if (!Array.isArray(errors) || errors.length === 0) {
     return ''
@@ -33,6 +39,9 @@ function formatMjmlErrors(errors: unknown): string {
     .join('\n')
 }
 
+/**
+ * Builds all Supabase email templates (MJML → HTML) and writes them to `supabase/templates/`.
+ */
 async function buildSupabaseTemplates(): Promise<void> {
   const repoRoot = process.cwd()
 
@@ -59,8 +68,8 @@ async function buildSupabaseTemplates(): Promise<void> {
 
     await mkdir(path.dirname(outputPath), { recursive: true })
 
-    // MJML emits some attributes in HTML-boolean style (e.g. `style` without a value).
-    // Some tooling/email clients are stricter, so we normalize the output.
+    // MJML occasionally emits incomplete style attributes (e.g. `style width="100%"` instead of `style="width:100%"`).
+    // This breaks rendering in some email clients, so we normalize to the correct format.
     let html = result.html
     html = html.replaceAll('style width="100%"', 'style="width:100%" width="100%"')
 
@@ -73,6 +82,9 @@ async function buildSupabaseTemplates(): Promise<void> {
         } else {
           assertIncludes(templateId, html, '{{ .ConfirmationURL }}')
         }
+      } else if (template.kind === 'notification') {
+        // Validate a common placeholder used across all notification templates (header/footer).
+        assertIncludes(templateId, html, '{{ .SiteURL }}')
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)

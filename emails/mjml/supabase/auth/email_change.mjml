@@ -1,4 +1,4 @@
-<mjml>
+<mjml lang="pt-BR">
   <mj-head>
     <mj-include path="../../partials/head.mjml" />
     <mj-preview>Confirme a troca de e-mail da sua conta</mj-preview>

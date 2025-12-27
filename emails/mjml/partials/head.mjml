@@ -24,7 +24,8 @@
     line-height: 18px;
   }
   .fc-linkWrap a {
-    word-break: break-all;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 </mj-style>
 

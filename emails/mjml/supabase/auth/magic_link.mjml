@@ -1,4 +1,4 @@
-<mjml>
+<mjml lang="pt-BR">
   <mj-head>
     <mj-include path="../../partials/head.mjml" />
     <mj-preview>Seu link de acesso para entrar no Fluxo Certo</mj-preview>
@@ -21,6 +21,7 @@
           Entrar no Fluxo Certo
         </mj-button>
 
+        <!-- NOTE: This copy assumes `otp_expiry` in `supabase/config.toml` is 3600 seconds (1 hour). Update if config changes. -->
         <mj-text padding="0 0 16px" css-class="fc-muted fc-small">
           Este link expira em 1 hora.
         </mj-text>

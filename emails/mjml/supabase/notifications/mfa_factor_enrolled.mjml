@@ -1,4 +1,4 @@
-<mjml>
+<mjml lang="pt-BR">
   <mj-head>
     <mj-include path="../../partials/head.mjml" />
     <mj-preview>Novo método de MFA adicionado</mj-preview>
