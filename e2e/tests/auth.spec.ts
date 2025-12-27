@@ -43,7 +43,10 @@ test.describe('Authentication Flow', () => {
     const mailbox = TEST_EMAIL.split('@')[0];
     const message = await inbucket.getLatestMessage(mailbox);
     expect(message).not.toBeNull();
-    expect(message?.subject).toMatch(/magic link|login|sign in/i);
+    // Supabase templates are localized (pt-BR) in this repo; assert we got the expected
+    // "magic link" email without relying on English-only copy.
+    expect(message?.subject).toMatch(/fluxo certo/i);
+    expect(message?.subject).toMatch(/link de acesso|magic link|login|sign in/i);
   });
 
   test('T023: non-allowed email requests magic link → same success message (no enumeration)', async ({
