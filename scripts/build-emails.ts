@@ -39,11 +39,51 @@ function formatMjmlErrors(errors: unknown): string {
     .join('\n')
 }
 
+async function readSupabaseOtpExpirySeconds(repoRoot: string): Promise<number> {
+  const configPath = path.join(repoRoot, 'supabase/config.toml')
+  let config: string
+  try {
+    config = await readFile(configPath, 'utf8')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed reading Supabase config at ${configPath}: ${message}`)
+  }
+
+  const match = config.match(/^\s*otp_expiry\s*=\s*(\d+)\s*$/m)
+  if (!match) {
+    throw new Error(`Failed to find otp_expiry in Supabase config at ${configPath}`)
+  }
+
+  const seconds = Number(match[1])
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error(`Invalid otp_expiry value in ${configPath}: ${String(match[1])}`)
+  }
+
+  return seconds
+}
+
+function formatDurationPtBr(seconds: number): string {
+  if (seconds % 3600 === 0) {
+    const hours = seconds / 3600
+    return hours === 1 ? '1 hora' : `${hours} horas`
+  }
+
+  if (seconds % 60 === 0) {
+    const minutes = seconds / 60
+    return minutes === 1 ? '1 minuto' : `${minutes} minutos`
+  }
+
+  return seconds === 1 ? '1 segundo' : `${seconds} segundos`
+}
+
 /**
  * Builds all Supabase email templates (MJML → HTML) and writes them to `supabase/templates/`.
  */
 async function buildSupabaseTemplates(): Promise<void> {
   const repoRoot = process.cwd()
+
+  const otpExpirySeconds = await readSupabaseOtpExpirySeconds(repoRoot)
+  const otpExpiryText = formatDurationPtBr(otpExpirySeconds)
 
   const failures: Array<{ templateId: string; error: string }> = []
 
@@ -81,6 +121,11 @@ async function buildSupabaseTemplates(): Promise<void> {
           assertIncludes(templateId, html, '{{ .Token }}')
         } else {
           assertIncludes(templateId, html, '{{ .ConfirmationURL }}')
+        }
+
+        if (template.type === 'magic_link') {
+          // Keep copy in sync with Supabase `otp_expiry` (seconds) in `supabase/config.toml`.
+          assertIncludes(templateId, html, `Este link expira em ${otpExpiryText}.`)
         }
       } else if (template.kind === 'notification') {
         // Validate a common placeholder used across all notification templates (header/footer).

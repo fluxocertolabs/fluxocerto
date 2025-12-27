@@ -1,7 +1,7 @@
 <mj-section padding="24px 16px 0">
   <mj-column>
     <mj-image
-      src="{{ .SiteURL }}/assets/brand/logo-light.svg"
+      src="{{ .SiteURL }}/assets/brand/logo-light.png"
       alt="Fluxo Certo"
       align="center"
       width="220px"
