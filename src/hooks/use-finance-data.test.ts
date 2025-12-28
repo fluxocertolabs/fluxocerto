@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { format } from 'date-fns'
 import {
   normalizeOwner,
   mapProfileFromDb,
@@ -332,16 +333,15 @@ describe('mapSingleShotIncomeFromDb', () => {
   it('maps single-shot income row to SingleShotIncome type', () => {
     const result = mapSingleShotIncomeFromDb(baseRow)
 
-    expect(result).toEqual({
-      id: 'income-123',
-      type: 'single_shot',
-      name: 'Tax Refund',
-      amount: 250000,
-      date: new Date('2025-03-15'),
-      certainty: 'probable',
-      createdAt: new Date(TEST_DATES.created),
-      updatedAt: new Date(TEST_DATES.updated),
-    })
+    expect(result.id).toBe('income-123')
+    expect(result.type).toBe('single_shot')
+    expect(result.name).toBe('Tax Refund')
+    expect(result.amount).toBe(250000)
+    // Important: DB `DATE` must map to the same local calendar day (no timezone shift)
+    expect(format(result.date, 'yyyy-MM-dd')).toBe('2025-03-15')
+    expect(result.certainty).toBe('probable')
+    expect(result.createdAt).toEqual(new Date(TEST_DATES.created))
+    expect(result.updatedAt).toEqual(new Date(TEST_DATES.updated))
   })
 
   it('always sets type to single_shot', () => {
@@ -421,15 +421,14 @@ describe('mapExpenseFromDb', () => {
     it('maps single-shot expense row correctly', () => {
       const result = mapExpenseFromDb(singleShotExpenseRow)
 
-      expect(result).toEqual({
-        id: 'expense-456',
-        name: 'Annual Insurance',
-        amount: 120000,
-        type: 'single_shot',
-        date: new Date('2025-06-01'),
-        createdAt: new Date(TEST_DATES.created),
-        updatedAt: new Date(TEST_DATES.updated),
-      })
+      expect(result.id).toBe('expense-456')
+      expect(result.name).toBe('Annual Insurance')
+      expect(result.amount).toBe(120000)
+      expect(result.type).toBe('single_shot')
+      // Important: DB `DATE` must map to the same local calendar day (no timezone shift)
+      expect(format((result as { date: Date }).date, 'yyyy-MM-dd')).toBe('2025-06-01')
+      expect(result.createdAt).toEqual(new Date(TEST_DATES.created))
+      expect(result.updatedAt).toEqual(new Date(TEST_DATES.updated))
     })
 
     it('includes date for single-shot expenses', () => {

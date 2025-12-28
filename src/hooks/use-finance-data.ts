@@ -25,6 +25,7 @@ import type {
 import { transformFutureStatementRow } from '@/types'
 import { isFixedExpense, isSingleShotExpense } from '@/types'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import { parse } from 'date-fns'
 
 export interface UseFinanceDataReturn {
   accounts: BankAccount[]
@@ -109,12 +110,14 @@ export function mapProjectFromDb(row: ProjectRow): Project {
  * Map project database row to SingleShotIncome type.
  */
 export function mapSingleShotIncomeFromDb(row: ProjectRow): SingleShotIncome {
+  const parsedDate = parse(row.date!, 'yyyy-MM-dd', new Date())
+
   return {
     id: row.id,
     type: 'single_shot',
     name: row.name,
     amount: row.amount,
-    date: new Date(row.date!),
+    date: parsedDate,
     certainty: row.certainty,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -142,10 +145,12 @@ export function mapExpenseFromDb(row: ExpenseRow): Expense {
     }
   }
 
+  const parsedDate = parse(row.date!, 'yyyy-MM-dd', new Date())
+
   return {
     ...base,
     type: 'single_shot' as const,
-    date: new Date(row.date!),
+    date: parsedDate,
   }
 }
 
