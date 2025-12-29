@@ -41,6 +41,11 @@ export interface UseFinanceDataReturn {
   error: string | null
   /** Retry function for error recovery */
   retry: () => void
+  /**
+   * Optimistically remove an expense from local state.
+   * Useful when realtime updates are slow/unavailable.
+   */
+  optimisticallyRemoveExpense: (id: string) => void
 }
 
 // =============================================================================
@@ -192,6 +197,11 @@ export function useFinanceData(): UseFinanceDataReturn {
   // Retry function for error recovery
   const retry = useCallback(() => {
     setRetryCount((c) => c + 1)
+  }, [])
+
+  // Optimistic local update helpers (do not rely on realtime)
+  const optimisticallyRemoveExpense = useCallback((id: string) => {
+    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
   }, [])
 
   // Fetch all data from Supabase
@@ -540,5 +550,6 @@ export function useFinanceData(): UseFinanceDataReturn {
     isLoading,
     error,
     retry,
+    optimisticallyRemoveExpense,
   }
 }

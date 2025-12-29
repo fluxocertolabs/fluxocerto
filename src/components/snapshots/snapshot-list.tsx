@@ -19,7 +19,7 @@ export function SnapshotList({ snapshots, onDelete, deletingId }: SnapshotListPr
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {snapshots.map((snapshot) => (
         <SnapshotCard
           key={snapshot.id}

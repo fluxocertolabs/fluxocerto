@@ -425,15 +425,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const { error, count } = await getSupabase()
         .from('expenses')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', id)
 
       if (error) {
         return handleSupabaseError(error)
       }
 
-      if (count === 0) {
-        return { success: false, error: 'Expense not found' }
+      if ((count ?? 0) === 0) {
+        return { success: false, error: 'Despesa não encontrada' }
       }
 
       return { success: true, data: undefined }
@@ -552,7 +552,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
     try {
       const { error, count } = await getSupabase()
         .from('expenses')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', id)
         .eq('type', 'single_shot')
 
@@ -560,7 +560,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
-      if (count === 0) {
+      if ((count ?? 0) === 0) {
         return { success: false, error: 'Despesa não encontrada' }
       }
 

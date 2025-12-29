@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { initializeAuth, isSupabaseConfigured, hasDevTokens, injectDevSession } from './lib/supabase'
+import { AppErrorBoundary } from '@/components/app-error-boundary'
 import './index.css'
 
 /**
@@ -118,9 +119,65 @@ async function bootstrap() {
 
   createRoot(rootElement).render(
     <StrictMode>
-      <App />
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
     </StrictMode>,
   )
 }
 
-bootstrap()
+function showBootstrapError(error: unknown): void {
+  const message =
+    error instanceof Error ? error.message : 'Erro desconhecido ao inicializar a aplicação'
+
+  const container = document.createElement('div')
+  container.style.cssText = `
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    font-family: system-ui, sans-serif;
+    background: #ffffff;
+    color: #111827;
+  `
+
+  const card = document.createElement('div')
+  card.style.cssText = `
+    width: 100%;
+    max-width: 640px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    background: #ffffff;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  `
+
+  const title = document.createElement('h1')
+  title.textContent = 'Falha ao carregar o app'
+  title.style.cssText = 'font-size: 20px; font-weight: 700; margin: 0 0 8px;'
+
+  const details = document.createElement('pre')
+  details.textContent = message
+  details.style.cssText = `
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 12px;
+    border-radius: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    font-size: 13px;
+    line-height: 1.4;
+  `
+
+  card.appendChild(title)
+  card.appendChild(details)
+  container.appendChild(card)
+  document.body.appendChild(container)
+}
+
+bootstrap().catch((error) => {
+  console.error('Bootstrap failed:', error)
+  showBootstrapError(error)
+})

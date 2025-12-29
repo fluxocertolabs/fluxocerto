@@ -81,7 +81,20 @@ export function ManagePage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, creditCards, futureStatements, profiles, isLoading, error: fetchError, retry } = useFinanceData()
+  const {
+    accounts,
+    projects,
+    singleShotIncome,
+    fixedExpenses,
+    singleShotExpenses,
+    creditCards,
+    futureStatements,
+    profiles,
+    isLoading,
+    error: fetchError,
+    retry,
+    optimisticallyRemoveExpense,
+  } = useFinanceData()
   const { group, members, isLoading: groupLoading, error: groupError } = useGroup()
   const store = useFinanceStore()
 
@@ -331,11 +344,13 @@ export function ManagePage() {
 
   const handleDeleteExpense = async () => {
     if (deleteState.type !== 'expense') return
+    const id = deleteState.id
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteExpense(deleteState.id)
+      const result = await store.deleteExpense(id)
       if (result.success) {
+        optimisticallyRemoveExpense(id)
         closeDeleteDialog()
       } else {
         setError(result.error)
@@ -397,11 +412,13 @@ export function ManagePage() {
 
   const handleDeleteSingleShotExpense = async () => {
     if (deleteState.type !== 'single-shot-expense') return
+    const id = deleteState.id
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteSingleShotExpense(deleteState.id)
+      const result = await store.deleteSingleShotExpense(id)
       if (result.success) {
+        optimisticallyRemoveExpense(id)
         closeDeleteDialog()
       } else {
         setError(result.error)

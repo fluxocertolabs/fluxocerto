@@ -53,7 +53,7 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
 
   return (
     <>
-      <Link to={`/history/${id}`}>
+      <Link to={`/history/${id}`} className="block">
         <Card
           data-testid="snapshot-card"
           className={cn(
