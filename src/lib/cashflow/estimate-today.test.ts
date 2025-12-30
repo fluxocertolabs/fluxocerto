@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { parseISO } from 'date-fns'
 import {
   calculateEstimatedTodayBalance,
   getCheckingBalanceUpdateBase,
@@ -17,7 +18,10 @@ import type {
 const TIME_ZONE = 'America/Sao_Paulo'
 
 function dateOnly(year: number, month: number, day: number): Date {
-  return new Date(year, month - 1, day)
+  // Use date-fns for consistent parsing across environments.
+  // NOTE: parseISO('YYYY-MM-DD') yields a Date at local midnight for that calendar day.
+  const isoString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return parseISO(isoString)
 }
 
 function createCheckingAccount(
