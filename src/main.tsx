@@ -5,6 +5,24 @@ import { initializeAuth, isSupabaseConfigured, hasDevTokens, injectDevSession } 
 import { AppErrorBoundary } from '@/components/app-error-boundary'
 import './index.css'
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error(timeoutMessage))
+    }, timeoutMs)
+
+    promise
+      .then((value) => {
+        window.clearTimeout(timeoutId)
+        resolve(value)
+      })
+      .catch((error) => {
+        window.clearTimeout(timeoutId)
+        reject(error)
+      })
+  })
+}
+
 /**
  * Display a dev auth bypass error toast.
  * Creates a temporary DOM element to show the error since React hasn't mounted yet.
@@ -98,7 +116,18 @@ async function bootstrap() {
     // DEV MODE: Try to inject dev session tokens BEFORE normal auth init
     // This allows AI agents and developers to bypass login for local development
     if (import.meta.env.DEV && hasDevTokens()) {
-      const result = await injectDevSession()
+      let result: Awaited<ReturnType<typeof injectDevSession>>
+      try {
+        // Guard against hanging network requests (misconfigured URL / Supabase down).
+        result = await withTimeout(
+          injectDevSession(),
+          7000,
+          'Dev auth bypass timed out (is Supabase running and reachable?)'
+        )
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error - check console'
+        result = { success: false, error: message }
+      }
       if (!result.success) {
         console.error('Dev auth bypass failed:', result.error)
         showDevAuthError(result.error || 'Unknown error - check console')
@@ -108,13 +137,11 @@ async function bootstrap() {
       }
     }
 
-    try {
-      await initializeAuth()
-    } catch (error) {
-      // Log error but don't block app rendering
-      // The app will handle auth errors gracefully
+    // Never block initial render on network/auth initialization. If Supabase is down or
+    // misconfigured, awaiting here can cause a “blank screen” until a request times out.
+    void initializeAuth().catch((error) => {
       console.error('Auth initialization failed:', error)
-    }
+    })
   }
 
   createRoot(rootElement).render(

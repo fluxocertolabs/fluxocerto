@@ -342,6 +342,27 @@ export async function seedAccountsWithGroup(
 }
 
 /**
+ * Set `balance_updated_at` for all checking accounts in a specific group.
+ * Useful for tests that need a deterministic "last balance update" base.
+ */
+export async function setCheckingAccountsBalanceUpdatedAtForGroup(
+  groupId: string,
+  balanceUpdatedAt: string | null
+): Promise<void> {
+  const client = getAdminClient();
+
+  const { error } = await client
+    .from('accounts')
+    .update({ balance_updated_at: balanceUpdatedAt })
+    .eq('group_id', groupId)
+    .eq('type', 'checking');
+
+  if (error) {
+    throw new Error(`Failed to update accounts.balance_updated_at: ${error.message}`);
+  }
+}
+
+/**
  * Seed accounts with test data (legacy - uses email lookup)
  * When workerIndex is provided, prefixes names with worker identifier
  * When userEmail is provided, uses that user's group
@@ -1159,6 +1180,11 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
       const result = await seedAccountsWithGroup(accounts, workerIndex, groupId);
       markDirty();
       return result;
+    },
+    setCheckingAccountsBalanceUpdatedAt: async (balanceUpdatedAt: string | null) => {
+      const groupId = await getWorkerGroupId();
+      await setCheckingAccountsBalanceUpdatedAtForGroup(groupId, balanceUpdatedAt);
+      markDirty();
     },
     seedExpenses: async (expenses: TestExpense[]) => {
       const groupId = await getWorkerGroupId();

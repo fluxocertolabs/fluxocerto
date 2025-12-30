@@ -19,3 +19,11 @@ export type {
 
 export { CashflowCalculationError, CashflowErrorCode } from './types'
 
+export {
+  calculateEstimatedTodayBalance,
+  getCheckingBalanceUpdateBase,
+  rebaseProjectionFromEstimatedToday,
+} from './estimate-today'
+
+export type { BalanceUpdateBase, EstimatedTodayBalance } from './estimate-today'
+

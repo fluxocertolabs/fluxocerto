@@ -10,7 +10,7 @@
  */
 
 import { visualTest } from '../../fixtures/visual-test-base';
-import { createFullSeedData } from '../../utils/test-data';
+import { createAccount, createFullSeedData } from '../../utils/test-data';
 
 /**
  * Helper to wait for chart rendering in visual tests.
@@ -83,6 +83,124 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
       await waitForChartToStabilize(page);
 
       await visual.takeScreenshot(page, 'dashboard-dark-populated.png');
+    }
+  );
+
+  visualTest(
+    'dashboard - light estimated',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-05T12:00:00Z');
+      await db.seedSingleShotExpenses([
+        { name: 'Despesa no intervalo', amount: 25_00, date: '2025-01-10' },
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+      await waitForChartToStabilize(page);
+
+      await visual.takeScreenshot(page, 'dashboard-light-estimated.png');
+    }
+  );
+
+  visualTest(
+    'dashboard - dark estimated',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-05T12:00:00Z');
+      await db.seedSingleShotExpenses([
+        { name: 'Despesa no intervalo', amount: 25_00, date: '2025-01-10' },
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+      await waitForChartToStabilize(page);
+
+      await visual.takeScreenshot(page, 'dashboard-dark-estimated.png');
+    }
+  );
+
+  visualTest(
+    'dashboard - light no-estimate',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      // Base is today => empty interval (base, today] => no estimate marker
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+      await waitForChartToStabilize(page);
+
+      await visual.takeScreenshot(page, 'dashboard-light-no-estimate.png');
+    }
+  );
+
+  visualTest(
+    'dashboard - dark no-estimate',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+      await waitForChartToStabilize(page);
+
+      await visual.takeScreenshot(page, 'dashboard-dark-no-estimate.png');
+    }
+  );
+
+  visualTest(
+    'dashboard - light no-base',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      // No balance_updated_at => "no reliable base" state
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-light-no-base.png');
+    }
+  );
+
+  visualTest(
+    'dashboard - dark no-base',
+    async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-dark-no-base.png');
     }
   );
 });

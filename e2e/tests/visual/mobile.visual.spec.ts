@@ -91,6 +91,100 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       await visual.takeScreenshot(page, 'dashboard-mobile-dark-populated.png');
     });
+
+    visualTest('dashboard - mobile light estimated', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-05T12:00:00Z');
+      await db.seedSingleShotExpenses([
+        { name: 'Despesa no intervalo', amount: 25_00, date: '2025-01-10' },
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-mobile-light-estimated.png');
+    });
+
+    visualTest('dashboard - mobile dark estimated', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-05T12:00:00Z');
+      await db.seedSingleShotExpenses([
+        { name: 'Despesa no intervalo', amount: 25_00, date: '2025-01-10' },
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-mobile-dark-estimated.png');
+    });
+
+    visualTest('dashboard - mobile light no-estimate', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-mobile-light-no-estimate.png');
+    });
+
+    visualTest('dashboard - mobile dark no-estimate', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+      await db.setCheckingAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-mobile-dark-no-estimate.png');
+    });
+
+    visualTest('dashboard - mobile light no-base', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-mobile-light-no-base.png');
+    });
+
+    visualTest('dashboard - mobile dark no-base', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await db.seedAccounts([
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+      ]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'dashboard-mobile-dark-no-base.png');
+    });
   });
 
   visualTest.describe('Manage Lists Mobile', () => {

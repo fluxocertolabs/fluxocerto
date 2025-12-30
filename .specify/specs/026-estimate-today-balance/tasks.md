@@ -47,9 +47,9 @@ description: "Actionable, dependency-ordered task list for implementing today's 
 
 **Purpose**: Create the new module/component entry points required by the plan and contracts.
 
-- [ ] T001 [Shared] Create timezone-aware date-only helpers module in `src/lib/dates/timezone.ts` (create `src/lib/dates/` if missing)
-- [ ] T002 [Shared] Create estimate helpers module scaffold in `src/lib/cashflow/estimate-today.ts` (types + function stubs from `.specify/specs/026-estimate-today-balance/contracts/estimated-balance.md`)
-- [ ] T003 [P] [Shared] Export new estimate helpers from `src/lib/cashflow/index.ts` (so hooks can import from `@/lib/cashflow`)
+- [x] T001 [Shared] Create timezone-aware date-only helpers module in `src/lib/dates/timezone.ts` (create `src/lib/dates/` if missing)
+- [x] T002 [Shared] Create estimate helpers module scaffold in `src/lib/cashflow/estimate-today.ts` (types + function stubs from `.specify/specs/026-estimate-today-balance/contracts/estimated-balance.md`)
+- [x] T003 [P] [Shared] Export new estimate helpers from `src/lib/cashflow/index.ts` (so hooks can import from `@/lib/cashflow`)
 
 ---
 
@@ -59,24 +59,24 @@ description: "Actionable, dependency-ordered task list for implementing today's 
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 [US1] Add unit tests (TDD) for date rules + base derivation + estimation interval math in `src/lib/cashflow/estimate-today.test.ts`:
+- [x] T008 [US1] Add unit tests (TDD) for date rules + base derivation + estimation interval math in `src/lib/cashflow/estimate-today.test.ts`:
   - `(baseDate, today]` start-exclusive/end-inclusive behavior
   - `America/Sao_Paulo` date-only “today”
   - “no reliable base” (`hasBase === false`) when user never updated balances OR any checking account lacks `balanceUpdatedAt`
   - multi-checking base formatting inputs: single date vs range
   - scenario rules (optimistic includes probable/uncertain; pessimistic guaranteed-only)
   - scenario-specific estimate marker: only “provável/incerta” income in `(baseDate, today]` ⇒ `isEstimated.optimistic === true` and `isEstimated.pessimistic === false`
-- [ ] T009 [US1] Add unit tests (TDD) for rebasing correctness in `src/lib/cashflow/estimate-today.test.ts`:
+- [x] T009 [US1] Add unit tests (TDD) for rebasing correctness in `src/lib/cashflow/estimate-today.test.ts`:
   - no double counting (future projection starts tomorrow)
   - synthetic “today” point prepended to keep `projectionDays`
   - optimistic offset behavior where `optimisticOffset = optimisticEstimatedToday - pessimisticEstimatedToday` is applied to optimistic balances and derived danger flags
-- [ ] T004 [Shared] Implement date-only conversion helpers in `src/lib/dates/timezone.ts` using `Intl.DateTimeFormat` with explicit `timeZone` (per `.specify/specs/026-estimate-today-balance/research.md`)
-- [ ] T005 [Shared] Implement `getCheckingBalanceUpdateBase()` in `src/lib/cashflow/estimate-today.ts`:
+- [x] T004 [Shared] Implement date-only conversion helpers in `src/lib/dates/timezone.ts` using `Intl.DateTimeFormat` with explicit `timeZone` (per `.specify/specs/026-estimate-today-balance/research.md`)
+- [x] T005 [Shared] Implement `getCheckingBalanceUpdateBase()` in `src/lib/cashflow/estimate-today.ts`:
   - derive base as single date vs range from checking accounts’ `balanceUpdatedAt` (date-only in `America/Sao_Paulo`)
   - return `null` if any checking account is missing `balanceUpdatedAt` (no reliable base; aligns with FR-009)
   - choose `baseForComputation` as the **earliest** checking-account base date (safe base) while retaining the full range for UI transparency (aligns with FR-012)
-- [ ] T006 [Shared] Implement `calculateEstimatedTodayBalance()` in `src/lib/cashflow/estimate-today.ts` by reusing `calculateCashflow()` for the interval `(baseForComputation, today]` (start exclusive, end inclusive; `today` is date-only in `America/Sao_Paulo`)
-- [ ] T007 [Shared] Implement `rebaseProjectionFromEstimatedToday()` in `src/lib/cashflow/estimate-today.ts`:
+- [x] T006 [Shared] Implement `calculateEstimatedTodayBalance()` in `src/lib/cashflow/estimate-today.ts` by reusing `calculateCashflow()` for the interval `(baseForComputation, today]` (start exclusive, end inclusive; `today` is date-only in `America/Sao_Paulo`)
+- [x] T007 [Shared] Implement `rebaseProjectionFromEstimatedToday()` in `src/lib/cashflow/estimate-today.ts`:
   - prepend synthetic “today”
   - forward projection starts tomorrow (prevents double counting)
   - apply `optimisticOffset = optimisticEstimatedToday - pessimisticEstimatedToday` to optimistic balances and derived flags (per `.specify/specs/026-estimate-today-balance/research.md`)
@@ -100,23 +100,23 @@ description: "Actionable, dependency-ordered task list for implementing today's 
 > - Foundational unit tests live in **Phase 2** (T008–T009).
 > - Write the E2E + visual tests below before wiring UI (they should fail until implementation is complete).
 
-- [ ] T010 [P] [US1] Add E2E seed helpers to set `accounts.balance_updated_at` and insert dated movements using admin client in `e2e/fixtures/db.ts`
-- [ ] T011 [US1] Add Playwright page-object locators + helpers for the estimate indicator in `e2e/pages/dashboard-page.ts`
-- [ ] T012 [US1] Add E2E test for “Saldo estimado” indicator + base text + CTA opens QuickUpdate in `e2e/tests/dashboard-estimated-balance.spec.ts`
+- [x] T010 [P] [US1] Add E2E seed helpers to set `accounts.balance_updated_at` and insert dated movements using admin client in `e2e/fixtures/db.ts`
+- [x] T011 [US1] Add Playwright page-object locators + helpers for the estimate indicator in `e2e/pages/dashboard-page.ts`
+- [x] T012 [US1] Add E2E test for “Saldo estimado” indicator + base text + CTA opens QuickUpdate in `e2e/tests/dashboard-estimated-balance.spec.ts`
   - Include scenario-specific marker behavior: with only “provável/incerta” income in `(baseDate, today]`, the marker is visible in **Otimista** and NOT visible in **Pessimista**
-- [ ] T030 [P] [US1] Add desktop visual regression coverage for estimated/no-estimate/no-base Dashboard states in `e2e/tests/visual/dashboard.visual.spec.ts` (light + dark screenshots)
-- [ ] T031 [P] [US1] Add mobile visual regression coverage for estimated/no-estimate/no-base Dashboard states in `e2e/tests/visual/mobile.visual.spec.ts` (light + dark screenshots)
-- [ ] T032 [US1] Add E2E test for the “no reliable base” state (FR-009): when checking account(s) have `balance_updated_at = null`, Dashboard shows guidance + CTA to **Atualizar Saldos**, and does NOT show “Saldo estimado” in `e2e/tests/dashboard-estimated-balance.spec.ts`
+- [x] T030 [P] [US1] Add desktop visual regression coverage for estimated/no-estimate/no-base Dashboard states in `e2e/tests/visual/dashboard.visual.spec.ts` (light + dark screenshots)
+- [x] T031 [P] [US1] Add mobile visual regression coverage for estimated/no-estimate/no-base Dashboard states in `e2e/tests/visual/mobile.visual.spec.ts` (light + dark screenshots)
+- [x] T032 [US1] Add E2E test for the “no reliable base” state (FR-009): when checking account(s) have `balance_updated_at = null`, Dashboard shows guidance + CTA to **Atualizar Saldos**, and does NOT show “Saldo estimado” in `e2e/tests/dashboard-estimated-balance.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Add pt-BR date formatting helper for “DD/MM” (and range formatting) in `src/lib/format.ts` + add unit coverage in `src/lib/format.test.ts`
-- [ ] T014 [P] [US1] Implement `EstimatedBalanceIndicator` UI (marker + base text + CTA affordance) in `src/components/cashflow/estimated-balance-indicator.tsx`
-- [ ] T015 [US1] Export the new indicator from `src/components/cashflow/index.ts`
-- [ ] T016 [US1] Extend `useCashflowProjection()` to compute `EstimatedTodayBalance` + rebased projection in `src/hooks/use-cashflow-projection.ts` (use `America/Sao_Paulo`; ensure snapshot hook path remains untouched) + add unit coverage in `src/hooks/use-cashflow-projection.test.ts`
-- [ ] T017 [US1] Render `EstimatedBalanceIndicator` above the Summary/Chart in `src/pages/dashboard.tsx` and wire click → `setShowQuickUpdate(true)`
-- [ ] T037 [US1] Implement the “no reliable base” state (FR-009) in `src/pages/dashboard.tsx`: when `estimate.hasBase === false`, show pt-BR guidance + CTA to **Atualizar Saldos**, and do not show “Saldo estimado”
-- [ ] T033 [P] [US1] Add component-level unit tests for `EstimatedBalanceIndicator` (copy + base formatting + click behavior) in `src/components/cashflow/estimated-balance-indicator.test.tsx`
+- [x] T013 [P] [US1] Add pt-BR date formatting helper for “DD/MM” (and range formatting) in `src/lib/format.ts` + add unit coverage in `src/lib/format.test.ts`
+- [x] T014 [P] [US1] Implement `EstimatedBalanceIndicator` UI (marker + base text + CTA affordance) in `src/components/cashflow/estimated-balance-indicator.tsx`
+- [x] T015 [US1] Export the new indicator from `src/components/cashflow/index.ts`
+- [x] T016 [US1] Extend `useCashflowProjection()` to compute `EstimatedTodayBalance` + rebased projection in `src/hooks/use-cashflow-projection.ts` (use `America/Sao_Paulo`; ensure snapshot hook path remains untouched) + add unit coverage in `src/hooks/use-cashflow-projection.test.ts`
+- [x] T017 [US1] Render `EstimatedBalanceIndicator` above the Summary/Chart in `src/pages/dashboard.tsx` and wire click → `setShowQuickUpdate(true)`
+- [x] T037 [US1] Implement the “no reliable base” state (FR-009) in `src/pages/dashboard.tsx`: when `estimate.hasBase === false`, show pt-BR guidance + CTA to **Atualizar Saldos**, and do not show “Saldo estimado”
+- [x] T033 [P] [US1] Add component-level unit tests for `EstimatedBalanceIndicator` (copy + base formatting + click behavior) in `src/components/cashflow/estimated-balance-indicator.test.tsx`
 
 **Checkpoint**: User Story 1 complete — Dashboard shows estimated-today balance with marker and rebased projection
 
@@ -130,13 +130,13 @@ description: "Actionable, dependency-ordered task list for implementing today's 
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Add unit test asserting `isEstimated.optimistic === false` and `isEstimated.pessimistic === false` (therefore `isEstimated.any === false`) when no movements exist in `(baseDate, today]` in `src/lib/cashflow/estimate-today.test.ts`
-- [ ] T019 [P] [US2] Add E2E test asserting the estimate indicator is NOT visible when no movements exist in `e2e/tests/dashboard-estimated-balance.spec.ts`
+- [x] T018 [P] [US2] Add unit test asserting `isEstimated.optimistic === false` and `isEstimated.pessimistic === false` (therefore `isEstimated.any === false`) when no movements exist in `(baseDate, today]` in `src/lib/cashflow/estimate-today.test.ts`
+- [x] T019 [P] [US2] Add E2E test asserting the estimate indicator is NOT visible when no movements exist in `e2e/tests/dashboard-estimated-balance.spec.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Gate `EstimatedBalanceIndicator` rendering on `estimate.hasBase === true && estimate.isEstimated[activeScenario] === true` (do NOT use `isEstimated.any` for UI gating) and keep the “no base” state from FR-009 intact in `src/pages/dashboard.tsx`
-- [ ] T021 [US2] Ensure `calculateEstimatedTodayBalance()` treats “no movements” correctly for both scenarios (guaranteed-only rules) in `src/lib/cashflow/estimate-today.ts`
+- [x] T020 [US2] Gate `EstimatedBalanceIndicator` rendering on `estimate.hasBase === true && estimate.isEstimated[activeScenario] === true` (do NOT use `isEstimated.any` for UI gating) and keep the “no base” state from FR-009 intact in `src/pages/dashboard.tsx`
+- [x] T021 [US2] Ensure `calculateEstimatedTodayBalance()` treats “no movements” correctly for both scenarios (guaranteed-only rules) in `src/lib/cashflow/estimate-today.ts`
 
 **Checkpoint**: User Story 2 complete — no false “estimated” warnings
 
@@ -152,13 +152,13 @@ description: "Actionable, dependency-ordered task list for implementing today's 
 
 ### Tests for User Story 3
 
-- [ ] T022 [US3] Add E2E test: from estimated state → open QuickUpdate → Concluir → indicator disappears in `e2e/tests/dashboard-estimated-balance.spec.ts`
-- [ ] T023 [US3] Add E2E test: insert/update a dated single-shot expense within `(baseDate, today]` and assert estimate recomputes in `e2e/tests/dashboard-estimated-balance.spec.ts`
+- [x] T022 [US3] Add E2E test: from estimated state → open QuickUpdate → Concluir → indicator disappears in `e2e/tests/dashboard-estimated-balance.spec.ts`
+- [x] T023 [US3] Add E2E test: insert/update a dated single-shot expense within `(baseDate, today]` and assert estimate recomputes in `e2e/tests/dashboard-estimated-balance.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T024 [P] [US3] Ensure estimate/projection recompute is fully reactive to realtime updates (accounts/projects/expenses/cards/futureStatements) in `src/hooks/use-cashflow-projection.ts`
-- [ ] T025 [P] [US3] Ensure QuickUpdate completion updates `balance_updated_at` for checking accounts so estimate state clears (validate store path used by `QuickUpdateView`) in `src/stores/finance-store.ts` + add unit coverage in `src/stores/finance-store.test.ts`
+- [x] T024 [P] [US3] Ensure estimate/projection recompute is fully reactive to realtime updates (accounts/projects/expenses/cards/futureStatements) in `src/hooks/use-cashflow-projection.ts`
+- [x] T025 [P] [US3] Ensure QuickUpdate completion updates `balance_updated_at` for checking accounts so estimate state clears (validate store path used by `QuickUpdateView`) in `src/stores/finance-store.ts` + add unit coverage in `src/stores/finance-store.test.ts`
 
 **Checkpoint**: User Story 3 complete — estimate clears after update; retroactive changes recompute automatically
 
@@ -168,16 +168,16 @@ description: "Actionable, dependency-ordered task list for implementing today's 
 
 **Purpose**: Validate end-to-end behavior and guard against regressions (especially snapshots).
 
-- [ ] T026 [P] [Shared] Add regression coverage to ensure snapshot pages never show “Saldo estimado”:
+- [x] T026 [P] [Shared] Add regression coverage to ensure snapshot pages never show “Saldo estimado”:
   - E2E: assert the indicator is not visible on `/history` and `/history/:id` in `e2e/tests/snapshots.spec.ts`
   - Visual: ensure snapshot screenshots remain free of estimate UI in `e2e/tests/visual/snapshots.visual.spec.ts`
-- [ ] T034 [P] [Shared] Add E2E regression for SC-004 in `e2e/tests/snapshots.spec.ts`: after saving a snapshot, add/edit a current income/expense and verify the snapshot detail values do **not** change
-- [ ] T027 [P] [Shared] Ensure all new UI copy is pt-BR and matches spec wording in `src/components/cashflow/estimated-balance-indicator.tsx`
-- [ ] T028 [Shared] Run the manual validation checklist in `.specify/specs/026-estimate-today-balance/quickstart.md` (include the required test commands: `pnpm test:unit:coverage`, `pnpm test:e2e:run`, `pnpm test:visual:local`)
-- [ ] T035 [P] [Shared] Validate plan NFRs (NFR-001/NFR-002):
+- [x] T034 [P] [Shared] Add E2E regression for SC-004 in `e2e/tests/snapshots.spec.ts`: after saving a snapshot, add/edit a current income/expense and verify the snapshot detail values do **not** change
+- [x] T027 [P] [Shared] Ensure all new UI copy is pt-BR and matches spec wording in `src/components/cashflow/estimated-balance-indicator.tsx`
+- [x] T028 [Shared] Run the manual validation checklist in `.specify/specs/026-estimate-today-balance/quickstart.md` (include the required test commands: `pnpm test:unit:coverage`, `pnpm test:e2e:run`, `pnpm test:visual:local`)
+- [x] T035 [P] [Shared] Validate plan NFRs (NFR-001/NFR-002):
   - Performance: time the pure in-memory estimate + rebase computation path against the representative dataset defined in `spec.md` NFR-001 (≤100 entities; `projectionDays = 90`) and confirm it stays < 50ms
   - Network: confirm no new Supabase table queries or realtime subscriptions were added for this feature beyond the existing Dashboard finance data load pattern
-- [ ] T029 [P] [Shared] Confirm exports and imports remain consistent (no circular deps) after adding estimate module in `src/lib/cashflow/index.ts` (NFR-004 maintainability gate)
+- [x] T029 [P] [Shared] Confirm exports and imports remain consistent (no circular deps) after adding estimate module in `src/lib/cashflow/index.ts` (NFR-004 maintainability gate)
 
 ---
 

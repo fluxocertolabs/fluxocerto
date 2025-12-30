@@ -179,3 +179,20 @@ export function parseDecimal(value: string): number {
 export function formatDecimalBR(value: number, decimals: number = 2): string {
   return value.toFixed(decimals).replace('.', ',')
 }
+
+/**
+ * Format a Date into DD/MM for pt-BR UI copy (day + month only).
+ */
+export function formatDayMonth(date: Date): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  }).format(date)
+}
+
+/**
+ * Format a day/month range as "DD/MM e DD/MM".
+ */
+export function formatDayMonthRange(from: Date, to: Date): string {
+  return `${formatDayMonth(from)} e ${formatDayMonth(to)}`
+}

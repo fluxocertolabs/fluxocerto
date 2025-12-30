@@ -67,6 +67,27 @@ function createMockSnapshotData() {
 }
 
 test.describe('Historical Projection Snapshots', () => {
+  test('T026: snapshot pages never show "Saldo estimado" indicator (history list + detail)', async ({
+    historyPage,
+    snapshotDetailPage,
+    db,
+    page,
+  }) => {
+    // Seed a snapshot
+    const [seeded] = await db.seedSnapshots([
+      { name: 'Indicator Absence Snapshot', data: createMockSnapshotData() },
+    ])
+
+    await historyPage.goto()
+    await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible()
+
+    await historyPage.clickSnapshot('Indicator Absence Snapshot')
+    await page.waitForURL(/\/history\/[a-f0-9-]+/)
+    await snapshotDetailPage.expectSummaryRendered()
+
+    await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible()
+  })
+
   test.describe('History Page - Empty State', () => {
     test('T026c: navigate to /history with no snapshots → empty state message displayed', async ({
       historyPage,
@@ -245,6 +266,60 @@ test.describe('Historical Projection Snapshots', () => {
       await historyPage.goto();
       await historyPage.expectSnapshotVisible('My Test Snapshot');
     });
+
+    test('T034 (SC-004): snapshot detail remains frozen after current data changes', async ({
+      dashboardPage,
+      historyPage,
+      snapshotDetailPage,
+      db,
+      page,
+    }) => {
+      const seedData = createFullSeedData()
+      await db.seedFullScenario(seedData)
+
+      await dashboardPage.goto()
+      await dashboardPage.expectChartRendered()
+
+      // Save a snapshot
+      const saveButton = page.getByRole('button', { name: /salvar projeção/i })
+      await saveButton.click()
+      await page.getByLabel(/nome/i).fill('Frozen Snapshot')
+      await page.getByRole('button', { name: /salvar/i }).last().click()
+      await expect(page.getByText(/projeção salva com sucesso/i)).toBeVisible({ timeout: 10000 })
+
+      // Open snapshot detail
+      await historyPage.goto()
+      await historyPage.clickSnapshot('Frozen Snapshot')
+      await page.waitForURL(/\/history\/[a-f0-9-]+/)
+      await snapshotDetailPage.expectSummaryRendered()
+
+      // Capture stable summary values
+      const startingLabel = page.getByText(/saldo inicial/i)
+      const startingCard = startingLabel.locator('..')
+      const startingValue = startingCard.locator('p').nth(1)
+
+      const endingLabel = page.getByText(/^saldo final$/i)
+      const endingCard = endingLabel.locator('..')
+      const endingValue = endingCard.locator('p').nth(1)
+
+      const startingText = (await startingValue.textContent())?.trim()
+      const endingText = (await endingValue.textContent())?.trim()
+
+      expect(startingText).toBeTruthy()
+      expect(endingText).toBeTruthy()
+
+      // Mutate current data (should NOT affect snapshot)
+      await db.seedSingleShotExpenses([
+        { name: 'Mutating expense', amount: 12345, date: '2025-01-20' },
+      ])
+
+      // Wait and assert snapshot values remain unchanged
+      await expect(startingValue).toHaveText(startingText!)
+      await expect(endingValue).toHaveText(endingText!)
+
+      // Also confirm estimate UI is never shown in historical context
+      await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible()
+    })
   });
 
   test.describe('Navigation Flow', () => {

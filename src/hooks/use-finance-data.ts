@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   getSupabase,
   isSupabaseConfigured,
@@ -187,6 +187,14 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+
+  // Each hook instance must use a unique realtime channel name.
+  // Multiple mounted instances (e.g. dashboard + quick update) can otherwise
+  // interfere with each other if they share the same channel identifier.
+  const channelNameRef = useRef<string | null>(null)
+  if (!channelNameRef.current) {
+    channelNameRef.current = `finance-data-changes-${Math.random().toString(36).slice(2)}`
+  }
   
   const { isAuthenticated } = useAuth()
 
@@ -470,7 +478,7 @@ export function useFinanceData(): UseFinanceDataReturn {
       // Subscribe to realtime changes (no user_id filter - shared family data)
       const client = getSupabase()
       channel = client
-        .channel('finance-data-changes')
+        .channel(channelNameRef.current!)
         .on(
           'postgres_changes',
           {

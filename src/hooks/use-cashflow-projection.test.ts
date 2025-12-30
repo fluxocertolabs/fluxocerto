@@ -3,10 +3,23 @@
  * Tests the pure transformation functions.
  */
 
-import { describe, it, expect } from 'vitest'
-import { transformToChartData, getDangerRanges } from './use-cashflow-projection'
+import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
+import {
+  calculateProjectionWithEstimate,
+  transformToChartData,
+  getDangerRanges,
+} from './use-cashflow-projection'
 import type { DailySnapshot } from '@/lib/cashflow/types'
 import type { ChartDataPoint } from '@/components/cashflow/types'
+import type {
+  BankAccount,
+  CreditCard,
+  FixedExpense,
+  FutureStatement,
+  Project,
+  SingleShotExpense,
+  SingleShotIncome,
+} from '@/types'
 
 /**
  * Helper to create a mock DailySnapshot for testing.
@@ -24,6 +37,14 @@ function createMockSnapshot(overrides: Partial<DailySnapshot> = {}): DailySnapsh
     ...overrides,
   }
 }
+
+beforeEach(() => {
+  vi.useFakeTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('transformToChartData', () => {
   describe('investment total calculation', () => {
@@ -411,6 +432,119 @@ describe('getDangerRanges', () => {
       expect(result[0]).toEqual({ start: '3 Jan', end: '4 Jan', scenario: 'pessimistic' })
       expect(result[1]).toEqual({ start: '6 Jan', end: '7 Jan', scenario: 'both' })
     })
+  })
+})
+
+// =============================================================================
+// calculateProjectionWithEstimate TESTS (Estimated today + rebase)
+// =============================================================================
+
+function createCheckingAccount(overrides: Partial<BankAccount> = {}): BankAccount {
+  return {
+    id: overrides.id ?? crypto.randomUUID(),
+    name: overrides.name ?? 'Conta Corrente',
+    type: 'checking',
+    balance: overrides.balance ?? 0,
+    ownerId: overrides.ownerId,
+    owner: overrides.owner ?? null,
+    balanceUpdatedAt: overrides.balanceUpdatedAt,
+    createdAt: overrides.createdAt ?? new Date(),
+    updatedAt: overrides.updatedAt ?? new Date(),
+  }
+}
+
+function createSingleShotIncome(overrides: Partial<SingleShotIncome> & Pick<SingleShotIncome, 'date' | 'amount' | 'certainty'>): SingleShotIncome {
+  return {
+    id: overrides.id ?? crypto.randomUUID(),
+    type: 'single_shot',
+    name: overrides.name ?? 'Receita',
+    amount: overrides.amount,
+    date: overrides.date,
+    certainty: overrides.certainty,
+    createdAt: overrides.createdAt ?? new Date(),
+    updatedAt: overrides.updatedAt ?? new Date(),
+  }
+}
+
+function createSingleShotExpense(overrides: Partial<SingleShotExpense> & Pick<SingleShotExpense, 'date' | 'amount'>): SingleShotExpense {
+  return {
+    id: overrides.id ?? crypto.randomUUID(),
+    type: 'single_shot',
+    name: overrides.name ?? 'Despesa',
+    amount: overrides.amount,
+    date: overrides.date,
+    createdAt: overrides.createdAt ?? new Date(),
+    updatedAt: overrides.updatedAt ?? new Date(),
+  }
+}
+
+describe('calculateProjectionWithEstimate', () => {
+  const emptyProjects: Project[] = []
+  const emptyFixedExpenses: FixedExpense[] = []
+  const emptyCreditCards: CreditCard[] = []
+  const emptyFutureStatements: FutureStatement[] = []
+
+  it('rebases the projection from estimated-today when a reliable base exists', () => {
+    vi.setSystemTime(new Date('2025-01-15T12:00:00Z'))
+
+    const accounts = [
+      createCheckingAccount({
+        balance: 10_000,
+        balanceUpdatedAt: new Date('2025-01-05T12:00:00Z'),
+      }),
+    ]
+
+    const { projection, estimate } = calculateProjectionWithEstimate({
+      accounts,
+      projects: emptyProjects,
+      fixedExpenses: emptyFixedExpenses,
+      singleShotExpenses: [
+        createSingleShotExpense({ date: new Date(2025, 0, 10), amount: 2_000 }),
+      ],
+      singleShotIncome: [],
+      creditCards: emptyCreditCards,
+      futureStatements: emptyFutureStatements,
+      projectionDays: 7,
+    })
+
+    expect(estimate.hasBase).toBe(true)
+    expect(projection.days).toHaveLength(7)
+
+    // Synthetic today snapshot equals estimated balances (rebased start)
+    expect(projection.startingBalance).toBe(estimate.pessimisticCents)
+    expect(projection.days[0].pessimisticBalance).toBe(estimate.pessimisticCents)
+    expect(projection.days[0].optimisticBalance).toBe(estimate.optimisticCents)
+
+    // Forward projection starts tomorrow (no double counting)
+    const tomorrow = new Date(estimate.today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    expect(projection.days[1].date.getFullYear()).toBe(tomorrow.getFullYear())
+    expect(projection.days[1].date.getMonth()).toBe(tomorrow.getMonth())
+    expect(projection.days[1].date.getDate()).toBe(tomorrow.getDate())
+  })
+
+  it('keeps existing behavior when there is no reliable base (projection starts today and can include today events)', () => {
+    vi.setSystemTime(new Date('2025-01-15T12:00:00Z'))
+
+    const accounts = [createCheckingAccount({ balance: 0, balanceUpdatedAt: undefined })]
+    const today = new Date(2025, 0, 15)
+
+    const { projection, estimate } = calculateProjectionWithEstimate({
+      accounts,
+      projects: emptyProjects,
+      fixedExpenses: emptyFixedExpenses,
+      singleShotExpenses: [],
+      singleShotIncome: [
+        createSingleShotIncome({ date: today, amount: 5_000, certainty: 'guaranteed' }),
+      ],
+      creditCards: emptyCreditCards,
+      futureStatements: emptyFutureStatements,
+      projectionDays: 7,
+    })
+
+    expect(estimate.hasBase).toBe(false)
+    expect(projection.days).toHaveLength(7)
+    expect(projection.days[0].incomeEvents.length).toBeGreaterThan(0)
   })
 })
 

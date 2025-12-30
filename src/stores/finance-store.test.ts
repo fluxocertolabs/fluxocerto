@@ -8,7 +8,7 @@
  * These unit tests focus on input validation and error handling paths.
  */
 
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { useFinanceStore } from './finance-store'
 
 // =============================================================================
@@ -376,6 +376,34 @@ describe('Project Actions - Validation', () => {
 
       expect(result.success).toBe(false)
     })
+  })
+})
+
+// =============================================================================
+// BALANCE UPDATE ACTIONS (QuickUpdate completion)
+// =============================================================================
+
+describe('Balance Update Actions - markAllBalancesUpdated', () => {
+  beforeEach(() => {
+    resetMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-01-15T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('updates balance_updated_at for accounts and credit cards', async () => {
+    const result = await useFinanceStore.getState().markAllBalancesUpdated()
+
+    expect(result.success).toBe(true)
+    expect(mockUpdateCalls.length).toBe(2)
+
+    const nowIso = new Date().toISOString()
+    for (const call of mockUpdateCalls) {
+      expect(call).toMatchObject({ balance_updated_at: nowIso })
+    }
   })
 })
 

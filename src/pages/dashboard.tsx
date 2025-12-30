@@ -3,7 +3,7 @@
  * Orchestrates all dashboard components with coordinated loading/error/empty states.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useCashflowProjection } from '@/hooks/use-cashflow-projection'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { useHealthIndicator } from '@/hooks/use-health-indicator'
@@ -15,6 +15,7 @@ import { SummaryPanel } from '@/components/cashflow/summary-panel'
 import { HealthIndicator } from '@/components/cashflow/health-indicator'
 import { ProjectionSelector } from '@/components/cashflow/projection-selector'
 import { EmptyState } from '@/components/cashflow/empty-state'
+import { EstimatedBalanceIndicator } from '@/components/cashflow'
 import { PageLoadingWrapper, DashboardSkeleton } from '@/components/loading'
 import { QuickUpdateView } from '@/components/quick-update'
 import { SaveSnapshotDialog } from '@/components/snapshots'
@@ -23,10 +24,12 @@ import { Toast } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import type { ProjectionDays } from '@/types'
+import { DEFAULT_LINE_VISIBILITY, type LineVisibility } from '@/components/cashflow/types'
 
 export function Dashboard() {
   const [showQuickUpdate, setShowQuickUpdate] = useState(false)
   const [showSaveSnapshot, setShowSaveSnapshot] = useState(false)
+  const [chartVisibility, setChartVisibility] = useState<LineVisibility>(DEFAULT_LINE_VISIBILITY)
   const { projectionDays, setProjectionDays } = usePreferencesStore()
   const { toast, showSuccess, showError, hideToast } = useToast()
 
@@ -35,6 +38,7 @@ export function Dashboard() {
 
   const {
     projection,
+    estimate,
     chartData,
     dangerRanges,
     summaryStats,
@@ -55,6 +59,13 @@ export function Dashboard() {
   )
 
   const healthIndicator = useHealthIndicator(summaryStats)
+
+  const activeScenario = useMemo<'optimistic' | 'pessimistic'>(() => {
+    if (chartVisibility.optimistic && !chartVisibility.pessimistic) return 'optimistic'
+    if (chartVisibility.pessimistic && !chartVisibility.optimistic) return 'pessimistic'
+    // Default: optimistic is the app's "best case" baseline
+    return 'optimistic'
+  }, [chartVisibility])
 
   // Handle save snapshot
   const handleSaveSnapshot = async (name: string) => {
@@ -141,11 +152,42 @@ export function Dashboard() {
             />
           )}
 
+          {/* No reliable base guidance (FR-009) */}
+          {estimate && !estimate.hasBase && (
+            <div
+              className={cn(
+                'rounded-xl border p-4',
+                'bg-muted/40 border-border',
+                'flex items-center justify-between gap-4 flex-wrap'
+              )}
+            >
+              <div>
+                <h2 className="font-semibold text-foreground">Atualize seus saldos</h2>
+                <p className="text-sm text-muted-foreground">
+                  Para calcular o saldo de hoje, atualize os saldos das suas contas.
+                </p>
+              </div>
+              <Button onClick={() => setShowQuickUpdate(true)}>Atualizar Saldos</Button>
+            </div>
+          )}
+
+          {/* Estimated-today indicator (scenario-specific) */}
+          {estimate?.hasBase && estimate.base && estimate.isEstimated[activeScenario] && (
+            <EstimatedBalanceIndicator
+              base={estimate.base}
+              onUpdateBalances={() => setShowQuickUpdate(true)}
+            />
+          )}
+
           {/* Summary Panel */}
           {summaryStats && <SummaryPanel stats={summaryStats} />}
 
           {/* Cashflow Chart */}
-          <CashflowChart chartData={chartData} dangerRanges={dangerRanges} />
+          <CashflowChart
+            chartData={chartData}
+            dangerRanges={dangerRanges}
+            onVisibilityChange={setChartVisibility}
+          />
         </div>
       </PageLoadingWrapper>
 

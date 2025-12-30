@@ -19,23 +19,39 @@ export function useAuth(): AuthState {
     }
 
     const client = getSupabase()
+    let isActive = true
+
+    // Safety: avoid an infinite loading state if the auth request hangs
+    // (e.g. misconfigured Supabase URL or network issues).
+    const timeoutId = window.setTimeout(() => {
+      if (!isActive) return
+      console.warn('Auth session check timed out; continuing unauthenticated.')
+      setUser(null)
+      setIsLoading(false)
+    }, 7000)
 
     // Get initial session
     client.auth.getSession()
       .then(({ data: { session } }) => {
+        if (!isActive) return
         setUser(session?.user ?? null)
       })
       .catch((error) => {
+        if (!isActive) return
         console.error('Failed to get session:', error)
         setUser(null)
       })
       .finally(() => {
+        window.clearTimeout(timeoutId)
+        if (!isActive) return
         setIsLoading(false)
       })
 
     // Subscribe to auth state changes
     const { data: { subscription } } = client.auth.onAuthStateChange(
       (_event: string, session: Session | null) => {
+        window.clearTimeout(timeoutId)
+        if (!isActive) return
         setUser(session?.user ?? null)
         setIsLoading(false)
       }
@@ -43,6 +59,8 @@ export function useAuth(): AuthState {
 
     // Cleanup subscription on unmount
     return () => {
+      isActive = false
+      window.clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [])

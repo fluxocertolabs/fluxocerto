@@ -5,7 +5,7 @@
  * @visual
  */
 
-import { visualTest } from '../../fixtures/visual-test-base';
+import { visualTest, expect } from '../../fixtures/visual-test-base';
 import { createFullSeedData } from '../../utils/test-data';
 
 // Helper to create mock snapshot data for seeding
@@ -96,6 +96,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
+      await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible();
       await visual.takeScreenshot(page, 'history-light-empty.png');
     }
   );
@@ -112,6 +113,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
+      await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible();
       await visual.takeScreenshot(page, 'history-dark-empty.png');
     }
   );
@@ -132,6 +134,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
+      await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible();
       await visual.takeScreenshot(page, 'history-light-with-snapshots.png');
     }
   );
@@ -152,6 +155,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
+      await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible();
       await visual.takeScreenshot(page, 'history-dark-with-snapshots.png');
     }
   );
@@ -173,6 +177,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
       await waitForChartToStabilize(page);
 
+      await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible();
       await visual.takeScreenshot(page, 'snapshot-detail-light.png');
     }
   );
@@ -192,6 +197,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
       await waitForChartToStabilize(page);
 
+      await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible();
       await visual.takeScreenshot(page, 'snapshot-detail-dark.png');
     }
   );

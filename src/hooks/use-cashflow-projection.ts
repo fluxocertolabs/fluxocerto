@@ -5,12 +5,29 @@
 
 import { useMemo, useCallback, useState } from 'react'
 import { useFinanceData } from '@/hooks/use-finance-data'
-import { calculateCashflow } from '@/lib/cashflow'
+import {
+  calculateCashflow,
+  calculateEstimatedTodayBalance,
+  rebaseProjectionFromEstimatedToday,
+} from '@/lib/cashflow'
 import { formatChartDate } from '@/lib/format'
 import { usePreferencesStore } from '@/stores/preferences-store'
 import type { CashflowProjection, DailySnapshot } from '@/lib/cashflow/types'
 import type { ChartDataPoint, DangerRange, SummaryStats } from '@/components/cashflow/types'
 import type { ProjectionDays } from '@/types'
+import type { EstimatedTodayBalance } from '@/lib/cashflow'
+import { getTodayDateOnlyInTimeZone } from '@/lib/dates/timezone'
+import type {
+  BankAccount,
+  CreditCard,
+  FixedExpense,
+  FutureStatement,
+  Project,
+  SingleShotExpense,
+  SingleShotIncome,
+} from '@/types'
+
+const DASHBOARD_TIME_ZONE = 'America/Sao_Paulo'
 
 /**
  * Transform DailySnapshot array to chart-compatible format.
@@ -127,6 +144,8 @@ export interface UseCashflowProjectionOptions {
 export interface UseCashflowProjectionResult {
   /** Raw projection from engine (null while loading) */
   projection: CashflowProjection | null
+  /** Metadata about today's estimate + base (used for UI indicator) */
+  estimate: EstimatedTodayBalance | null
   /** Chart-ready data points */
   chartData: ChartDataPoint[]
   /** Consolidated danger day ranges */
@@ -149,8 +168,62 @@ export interface UseCashflowProjectionResult {
  * Result of cashflow calculation - either success with projection or error.
  */
 type CalculationResult =
-  | { success: true; projection: CashflowProjection }
+  | { success: true; projection: CashflowProjection; estimate: EstimatedTodayBalance }
   | { success: false; error: Error }
+
+export function calculateProjectionWithEstimate(params: {
+  accounts: BankAccount[]
+  projects: Project[]
+  fixedExpenses: FixedExpense[]
+  singleShotExpenses: SingleShotExpense[]
+  singleShotIncome: SingleShotIncome[]
+  creditCards: CreditCard[]
+  futureStatements: FutureStatement[]
+  projectionDays: ProjectionDays
+}): { projection: CashflowProjection; estimate: EstimatedTodayBalance } {
+  const estimate = calculateEstimatedTodayBalance({
+    accounts: params.accounts,
+    projects: params.projects,
+    fixedExpenses: params.fixedExpenses,
+    singleShotExpenses: params.singleShotExpenses,
+    singleShotIncome: params.singleShotIncome,
+    creditCards: params.creditCards,
+    futureStatements: params.futureStatements,
+    timeZone: DASHBOARD_TIME_ZONE,
+  })
+
+  // If there's no reliable base, keep the current Dashboard behavior: projection from "today"
+  // (do not start tomorrow, otherwise we'd drop today's scheduled events).
+  if (!estimate.hasBase) {
+    const startDate = getTodayDateOnlyInTimeZone(DASHBOARD_TIME_ZONE)
+    const projection = calculateCashflow({
+      accounts: params.accounts,
+      projects: params.projects,
+      expenses: params.fixedExpenses,
+      singleShotExpenses: params.singleShotExpenses,
+      singleShotIncome: params.singleShotIncome,
+      creditCards: params.creditCards,
+      futureStatements: params.futureStatements,
+      options: { startDate, projectionDays: params.projectionDays },
+    })
+
+    return { projection, estimate }
+  }
+
+  const projection = rebaseProjectionFromEstimatedToday({
+    projectionDays: params.projectionDays,
+    estimatedToday: estimate,
+    accounts: params.accounts,
+    projects: params.projects,
+    fixedExpenses: params.fixedExpenses,
+    singleShotExpenses: params.singleShotExpenses,
+    singleShotIncome: params.singleShotIncome,
+    creditCards: params.creditCards,
+    futureStatements: params.futureStatements,
+  })
+
+  return { projection, estimate }
+}
 
 /**
  * Hook to compute and provide cashflow projection data.
@@ -207,17 +280,17 @@ export function useCashflowProjection(
     if (isLoading) return null
 
     try {
-      const projection = calculateCashflow({
+      const { projection, estimate } = calculateProjectionWithEstimate({
         accounts,
         projects,
-        expenses: fixedExpenses,
+        fixedExpenses,
         singleShotExpenses,
         singleShotIncome,
         creditCards,
         futureStatements,
         projectionDays,
       })
-      return { success: true, projection }
+      return { success: true, projection, estimate }
     } catch (err) {
       return {
         success: false,
@@ -228,6 +301,7 @@ export function useCashflowProjection(
 
   // Extract projection and error from result
   const projection = calculationResult?.success ? calculationResult.projection : null
+  const estimate = calculationResult?.success ? calculationResult.estimate : null
   const calculationError = calculationResult && !calculationResult.success ? calculationResult.error : null
   const error = fetchError ? new Error(fetchError) : calculationError
 
@@ -255,6 +329,7 @@ export function useCashflowProjection(
 
   return {
     projection,
+    estimate,
     chartData,
     dangerRanges,
     summaryStats,

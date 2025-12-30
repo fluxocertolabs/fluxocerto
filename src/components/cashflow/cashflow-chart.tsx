@@ -40,9 +40,11 @@ const AXIS_COLORS = {
 interface CashflowChartProps {
   chartData: ChartDataPoint[]
   dangerRanges: DangerRange[]
+  /** Optional callback to observe legend visibility toggles (used by Dashboard for scenario-specific UI) */
+  onVisibilityChange?: (visibility: LineVisibility) => void
 }
 
-export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
+export function CashflowChart({ chartData, dangerRanges, onVisibilityChange }: CashflowChartProps) {
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const axisColor = AXIS_COLORS[resolvedTheme]
 
@@ -50,8 +52,12 @@ export function CashflowChart({ chartData, dangerRanges }: CashflowChartProps) {
   const [visibility, setVisibility] = useState<LineVisibility>(DEFAULT_LINE_VISIBILITY)
 
   const handleToggle = useCallback((key: keyof LineVisibility) => {
-    setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))
-  }, [])
+    setVisibility((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      onVisibilityChange?.(next)
+      return next
+    })
+  }, [onVisibilityChange])
 
   // Calculate appropriate Y-axis domain with padding
   // Handle empty data case with sensible defaults
