@@ -24,7 +24,7 @@ test.describe('Dashboard & Cashflow Projection', () => {
     // Define locators using stable, semantic selectors
     const emptyStateLocator = page.getByRole('heading', { name: /nenhum dado financeiro/i });
     const chartLocator = page.locator('.recharts-wrapper').first();
-    const quickUpdateButton = page.getByRole('button', { name: /atualizar saldos/i });
+    const quickUpdateButton = page.getByRole('button', { name: /atualizar saldos/i }).first();
     
     // Use Playwright's auto-waiting with expect assertions
     // This is more reliable than manual isVisible() checks

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { initializeAuth, isSupabaseConfigured, hasDevTokens, injectDevSession } from './lib/supabase'
 import { AppErrorBoundary } from '@/components/app-error-boundary'
+import { withTimeout } from '@/lib/utils/promise'
 import './index.css'
 
 /**
@@ -98,7 +99,18 @@ async function bootstrap() {
     // DEV MODE: Try to inject dev session tokens BEFORE normal auth init
     // This allows AI agents and developers to bypass login for local development
     if (import.meta.env.DEV && hasDevTokens()) {
-      const result = await injectDevSession()
+      let result: Awaited<ReturnType<typeof injectDevSession>>
+      try {
+        // Guard against hanging network requests (misconfigured URL / Supabase down).
+        result = await withTimeout(
+          injectDevSession(),
+          7000,
+          'Dev auth bypass timed out (is Supabase running and reachable?)'
+        )
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error - check console'
+        result = { success: false, error: message }
+      }
       if (!result.success) {
         console.error('Dev auth bypass failed:', result.error)
         showDevAuthError(result.error || 'Unknown error - check console')
@@ -108,13 +120,11 @@ async function bootstrap() {
       }
     }
 
-    try {
-      await initializeAuth()
-    } catch (error) {
-      // Log error but don't block app rendering
-      // The app will handle auth errors gracefully
+    // Never block initial render on network/auth initialization. If Supabase is down or
+    // misconfigured, awaiting here can cause a “blank screen” until a request times out.
+    void initializeAuth().catch((error) => {
       console.error('Auth initialization failed:', error)
-    }
+    })
   }
 
   createRoot(rootElement).render(

@@ -15,6 +15,8 @@ import {
   parseBRLToCents,
   parseDecimal,
   formatDecimalBR,
+  formatDayMonth,
+  formatDayMonthRange,
 } from './format'
 
 /**
@@ -225,6 +227,23 @@ describe('formatChartDate', () => {
     const result = formatChartDate(lastDay)
     expect(result).toMatch(/31/)
     expect(result.toLowerCase()).toMatch(/dez/)
+  })
+})
+
+// =============================================================================
+// formatDayMonth / formatDayMonthRange TESTS (Estimated balance indicator)
+// =============================================================================
+
+describe('formatDayMonth', () => {
+  it('formats day/month as DD/MM', () => {
+    expect(formatDayMonth(new Date(2025, 0, 5))).toBe('05/01')
+    expect(formatDayMonth(new Date(2025, 9, 15))).toBe('15/10')
+  })
+})
+
+describe('formatDayMonthRange', () => {
+  it('formats range as "DD/MM e DD/MM"', () => {
+    expect(formatDayMonthRange(new Date(2025, 0, 5), new Date(2025, 0, 10))).toBe('05/01 e 10/01')
   })
 })
 

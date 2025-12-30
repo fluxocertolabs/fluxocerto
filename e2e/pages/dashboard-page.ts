@@ -12,6 +12,9 @@ export class DashboardPage {
   readonly summaryPanel: Locator;
   readonly healthIndicator: Locator;
   readonly quickUpdateButton: Locator;
+  readonly estimatedBalanceIndicator: Locator;
+  readonly estimatedBalanceBaseText: Locator;
+  readonly estimatedBalanceCta: Locator;
   readonly emptyState: Locator;
   readonly chartErrorHeading: Locator;
   readonly chartRetryButton: Locator;
@@ -23,7 +26,12 @@ export class DashboardPage {
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
     this.healthIndicator = page.locator('[data-testid="health-indicator"]');
-    this.quickUpdateButton = page.getByRole('button', { name: /atualizar saldos/i });
+    // Dashboard now contains multiple "Atualizar Saldos" CTAs (header + estimate/no-base banners).
+    // The header button is rendered before the main content, so `.first()` targets it reliably.
+    this.quickUpdateButton = page.getByRole('button', { name: /atualizar saldos/i }).first();
+    this.estimatedBalanceIndicator = page.locator('[data-testid="estimated-balance-indicator"]');
+    this.estimatedBalanceBaseText = page.locator('[data-testid="estimated-balance-base"]');
+    this.estimatedBalanceCta = this.estimatedBalanceIndicator.getByRole('button', { name: /atualizar saldos/i });
     // Empty state shows "Nenhum Dado Financeiro Ainda" heading
     this.emptyState = page.getByRole('heading', { name: /nenhum dado financeiro/i });
     this.chartErrorHeading = page.getByRole('heading', { name: /não foi possível carregar a projeção/i });
@@ -126,6 +134,33 @@ export class DashboardPage {
       // If regular click fails due to interception, use force click
       await this.quickUpdateButton.click({ force: true });
     }
+  }
+
+  /**
+   * Check if the "Saldo estimado" indicator is visible.
+   */
+  async hasEstimatedBalanceIndicator(): Promise<boolean> {
+    return this.estimatedBalanceIndicator.isVisible().catch(() => false)
+  }
+
+  /**
+   * Get the base text shown by the estimate indicator.
+   */
+  async getEstimatedBalanceBaseText(): Promise<string | null> {
+    if (!(await this.estimatedBalanceBaseText.isVisible().catch(() => false))) {
+      return null
+    }
+    const text = await this.estimatedBalanceBaseText.textContent()
+    return text?.trim() ?? null
+  }
+
+  /**
+   * Click the estimate indicator CTA ("Atualizar Saldos").
+   */
+  async openQuickUpdateFromEstimatedIndicator(): Promise<void> {
+    await expect(this.estimatedBalanceIndicator).toBeVisible({ timeout: 20000 })
+    // Prefer clicking the CTA button inside the indicator (more accessible/stable)
+    await this.estimatedBalanceCta.click({ timeout: 5000 })
   }
 
   /**

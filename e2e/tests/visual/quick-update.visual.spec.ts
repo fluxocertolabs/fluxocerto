@@ -5,7 +5,7 @@
  * @visual
  */
 
-import { visualTest, expect } from '../../fixtures/visual-test-base';
+import { visualTest } from '../../fixtures/visual-test-base';
 import { createAccount, createCreditCard } from '../../utils/test-data';
 
 /**
@@ -16,6 +16,13 @@ import { createAccount, createCreditCard } from '../../utils/test-data';
  * The populated tests provide sufficient coverage for the quick update modal.
  */
 visualTest.describe('Quick Update Visual Regression @visual', () => {
+  visualTest.beforeEach(async ({ db }) => {
+    // Visual tests run in parallel and DB is worker-scoped; reset before each test
+    // to avoid cross-test contamination.
+    await db.resetDatabase();
+    await db.ensureTestUser();
+  });
+
   visualTest(
     'quick update - light populated',
     async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {

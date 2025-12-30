@@ -5,7 +5,8 @@
  * @visual
  */
 
-import { visualTest, expect } from '../../fixtures/visual-test-base';
+import { expect } from '@playwright/test';
+import { visualTest } from '../../fixtures/visual-test-base';
 import { createCreditCard, createFutureStatement } from '../../utils/test-data';
 
 /**
@@ -14,10 +15,17 @@ import { createCreditCard, createFutureStatement } from '../../utils/test-data';
  * IMPORTANT: Each test explicitly resets the database to ensure isolation.
  */
 visualTest.describe('Future Statements Visual Regression @visual', () => {
+  visualTest.beforeEach(async ({ db }) => {
+    // Visual tests run in parallel and DB is worker-scoped; reset before each test
+    // to avoid cross-test contamination.
+    await db.resetDatabase();
+    await db.ensureTestUser();
+  });
+
   visualTest.describe('Credit Card with Future Statements', () => {
     visualTest('future statements - light empty', async ({ page, managePage, db, visual }) => {
       // Seed a credit card without future statements
-      await db.seedCreditCards([
+      const [seededCard] = await db.seedCreditCards([
         createCreditCard({ name: 'Nubank Visual', statement_balance: 300000, due_day: 15 }),
       ]);
 
@@ -28,7 +36,7 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
 
       // Expand the future statements section
       const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Visual', level: 3 }),
+        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
       }).first();
 
       await expect(cardElement).toBeVisible({ timeout: 10000 });
@@ -42,7 +50,7 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
 
     visualTest('future statements - dark empty', async ({ page, managePage, db, visual }) => {
       // Seed a credit card without future statements
-      await db.seedCreditCards([
+      const [seededCard] = await db.seedCreditCards([
         createCreditCard({ name: 'Nubank Visual', statement_balance: 300000, due_day: 15 }),
       ]);
 
@@ -53,7 +61,7 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
 
       // Expand the future statements section
       const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Visual', level: 3 }),
+        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
       }).first();
 
       await expect(cardElement).toBeVisible({ timeout: 10000 });
@@ -101,7 +109,7 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
 
       // Expand the future statements section
       const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Visual', level: 3 }),
+        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
       }).first();
 
       await expect(cardElement).toBeVisible({ timeout: 10000 });
@@ -148,7 +156,7 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
 
       // Expand the future statements section
       const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Visual', level: 3 }),
+        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
       }).first();
 
       await expect(cardElement).toBeVisible({ timeout: 10000 });

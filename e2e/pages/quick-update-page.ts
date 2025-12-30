@@ -9,11 +9,14 @@ import { expect } from '@playwright/test';
 
 export class QuickUpdatePage {
   readonly page: Page;
+  readonly dialog: Locator;
   readonly completeButton: Locator;
   readonly cancelButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
+    // QuickUpdateView root container
+    this.dialog = page.locator('[role="dialog"][aria-labelledby="quick-update-title"]');
     // QuickUpdateView uses a header with "Concluir" and "Cancelar" buttons
     this.completeButton = page.getByRole('button', { name: /concluir|complete/i });
     this.cancelButton = page.getByRole('button', { name: /cancelar|cancel/i });
@@ -32,7 +35,8 @@ export class QuickUpdatePage {
    * Wait for Quick Update view to be visible and loaded
    */
   async waitForModal(): Promise<void> {
-    // Wait for the "Concluir" button which indicates the view is loaded
+    // Wait for the view container and the "Concluir" button which indicate the view is loaded
+    await expect(this.dialog).toBeVisible({ timeout: 10000 });
     await expect(this.completeButton).toBeVisible({ timeout: 10000 });
     // Also wait for the content to load (either balance items or empty state)
     await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
@@ -85,8 +89,8 @@ export class QuickUpdatePage {
    */
   async complete(): Promise<void> {
     await this.completeButton.click();
-    // Wait for view to close
-    await expect(this.completeButton).not.toBeVisible({ timeout: 5000 });
+    // Wait for view to close (button text may change to "Salvando..." while still open)
+    await expect(this.dialog).not.toBeVisible({ timeout: 15000 });
   }
 
   /**
@@ -94,15 +98,14 @@ export class QuickUpdatePage {
    */
   async cancel(): Promise<void> {
     await this.cancelButton.click();
-    // Wait for view to close
-    await expect(this.cancelButton).not.toBeVisible({ timeout: 5000 });
+    await expect(this.dialog).not.toBeVisible({ timeout: 15000 });
   }
 
   /**
    * Verify view is closed (we're back on dashboard)
    */
   async expectModalClosed(): Promise<void> {
-    await expect(this.completeButton).not.toBeVisible();
+    await expect(this.dialog).not.toBeVisible();
   }
 
   /**
@@ -151,7 +154,7 @@ export class QuickUpdatePage {
    * Check if modal is currently visible
    */
   async isModalVisible(): Promise<boolean> {
-    return await this.completeButton.isVisible();
+    return await this.dialog.isVisible().catch(() => false);
   }
 }
 

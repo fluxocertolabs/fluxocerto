@@ -12,7 +12,7 @@
  * @visual
  */
 
-import { visualTest, expect } from '../../fixtures/visual-test-base';
+import { visualTest } from '../../fixtures/visual-test-base';
 
 visualTest.describe('Dev Auth Bypass Visual Regression @visual', () => {
   visualTest.describe.configure({ mode: 'serial' });
