@@ -411,12 +411,18 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
+    // Reset database to ensure clean state - this test relies on the seeded card being visible
+    // and avoids flakiness from large lists / stale banners created by prior tests in the same worker.
+    await db.resetDatabase();
+    await db.ensureTestUser();
+
     const uniqueId = Date.now();
+    const cardName = `Cartão Teste ${uniqueId}`;
     
     // Seed a credit card
     await db.seedCreditCards([
       createCreditCard({ 
-        name: `Cartão Teste ${uniqueId}`, 
+        name: cardName, 
         statement_balance: 150000,
         due_day: 15,
       }),
@@ -432,12 +438,13 @@ test.describe('Quick Update Modal', () => {
     await expect(quickUpdatePage.completeButton).toBeVisible();
 
     // Verify the card is listed
-    await expect(page.getByText(`Cartão Teste ${uniqueId}`, { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /cartões de crédito/i })).toBeVisible();
+    await expect(page.getByText(cardName, { exact: false })).toBeVisible();
 
     // Find the card row specifically and verify it doesn't have type badges
     // The card row contains the card name
     const cardRow = page.locator('div.rounded-lg.border').filter({ 
-      hasText: `Cartão Teste ${uniqueId}` 
+      hasText: cardName 
     });
     await expect(cardRow).toBeVisible();
     

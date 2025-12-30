@@ -35,18 +35,23 @@ export interface UseHealthIndicatorResult {
 }
 
 const NEAR_DANGER_STARTING_RATIO = 0.05
-const NEAR_DANGER_THRESHOLD_MIN = 1_000
-const NEAR_DANGER_THRESHOLD_MAX = 20_000
+const NEAR_DANGER_THRESHOLD_MIN_REAIS = 1_000
+const NEAR_DANGER_THRESHOLD_MAX_REAIS = 20_000
 
 /**
- * Compute a "near danger" threshold (in dollars) to flag projections that get
+ * Compute a "near danger" threshold (in reais) to flag projections that get
  * close to zero without crossing it.
+ *
+ * Input and output are in reais.
  *
  * Designed to scale with the user's balance while staying within sane bounds.
  */
-export function calculateNearDangerThreshold(startingBalance: number): number {
-  const scaled = Math.abs(startingBalance) * NEAR_DANGER_STARTING_RATIO
-  return Math.min(NEAR_DANGER_THRESHOLD_MAX, Math.max(NEAR_DANGER_THRESHOLD_MIN, scaled))
+export function calculateNearDangerThreshold(startingBalanceReais: number): number {
+  const scaled = Math.abs(startingBalanceReais) * NEAR_DANGER_STARTING_RATIO
+  return Math.min(
+    NEAR_DANGER_THRESHOLD_MAX_REAIS,
+    Math.max(NEAR_DANGER_THRESHOLD_MIN_REAIS, scaled)
+  )
 }
 
 /**
@@ -163,8 +168,8 @@ export function useHealthIndicator(
     const pessimisticDangerDays = summaryStats.pessimistic.dangerDayCount
     const staleCount = staleEntities.length
 
-    const nearDangerThreshold = calculateNearDangerThreshold(summaryStats.startingBalance)
     const pessimisticMinBalance = summaryStats.pessimistic.minBalance
+    const nearDangerThreshold = calculateNearDangerThreshold(summaryStats.startingBalance)
     const isNearDanger =
       pessimisticMinBalance >= 0 && pessimisticMinBalance <= nearDangerThreshold
 

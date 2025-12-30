@@ -118,24 +118,22 @@ export function transformToSummaryStats(projection: CashflowProjection): Summary
   const pessimisticEndBalance = projection.pessimistic.endBalance / 100
 
   const initialMinDate = projection.days[0]?.date ?? projection.startDate
-  const minOptimistic = projection.days.reduce(
+  const { minOptimistic, minPessimistic } = projection.days.reduce(
     (acc, day) => {
-      if (day.optimisticBalance < acc.minBalance) {
-        return { minBalance: day.optimisticBalance, minBalanceDate: day.date }
-      }
-      return acc
+      const nextOpt =
+        day.optimisticBalance < acc.minOptimistic.minBalance
+          ? { minBalance: day.optimisticBalance, minBalanceDate: day.date }
+          : acc.minOptimistic
+      const nextPess =
+        day.pessimisticBalance < acc.minPessimistic.minBalance
+          ? { minBalance: day.pessimisticBalance, minBalanceDate: day.date }
+          : acc.minPessimistic
+      return { minOptimistic: nextOpt, minPessimistic: nextPess }
     },
-    { minBalance: Number.POSITIVE_INFINITY, minBalanceDate: initialMinDate }
-  )
-
-  const minPessimistic = projection.days.reduce(
-    (acc, day) => {
-      if (day.pessimisticBalance < acc.minBalance) {
-        return { minBalance: day.pessimisticBalance, minBalanceDate: day.date }
-      }
-      return acc
-    },
-    { minBalance: Number.POSITIVE_INFINITY, minBalanceDate: initialMinDate }
+    {
+      minOptimistic: { minBalance: Number.POSITIVE_INFINITY, minBalanceDate: initialMinDate },
+      minPessimistic: { minBalance: Number.POSITIVE_INFINITY, minBalanceDate: initialMinDate },
+    }
   )
 
   const optimisticMinBalance = (Number.isFinite(minOptimistic.minBalance)
