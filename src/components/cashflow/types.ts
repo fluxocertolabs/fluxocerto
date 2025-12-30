@@ -91,6 +91,10 @@ export interface SummaryStats {
     totalExpenses: number
     endBalance: number
     dangerDayCount: number
+    /** Minimum projected balance during the period (dollars) */
+    minBalance: number
+    /** Date when the minimum projected balance occurs */
+    minBalanceDate: Date
     /** Surplus (positive) or deficit (negative): endBalance - startingBalance */
     surplus: number
   }
@@ -100,6 +104,10 @@ export interface SummaryStats {
     totalExpenses: number
     endBalance: number
     dangerDayCount: number
+    /** Minimum projected balance during the period (dollars) */
+    minBalance: number
+    /** Date when the minimum projected balance occurs */
+    minBalanceDate: Date
     /** Surplus (positive) or deficit (negative): endBalance - startingBalance */
     surplus: number
   }

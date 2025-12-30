@@ -117,6 +117,34 @@ export function transformToSummaryStats(projection: CashflowProjection): Summary
   const optimisticEndBalance = projection.optimistic.endBalance / 100
   const pessimisticEndBalance = projection.pessimistic.endBalance / 100
 
+  const initialMinDate = projection.days[0]?.date ?? projection.startDate
+  const minOptimistic = projection.days.reduce(
+    (acc, day) => {
+      if (day.optimisticBalance < acc.minBalance) {
+        return { minBalance: day.optimisticBalance, minBalanceDate: day.date }
+      }
+      return acc
+    },
+    { minBalance: Number.POSITIVE_INFINITY, minBalanceDate: initialMinDate }
+  )
+
+  const minPessimistic = projection.days.reduce(
+    (acc, day) => {
+      if (day.pessimisticBalance < acc.minBalance) {
+        return { minBalance: day.pessimisticBalance, minBalanceDate: day.date }
+      }
+      return acc
+    },
+    { minBalance: Number.POSITIVE_INFINITY, minBalanceDate: initialMinDate }
+  )
+
+  const optimisticMinBalance = (Number.isFinite(minOptimistic.minBalance)
+    ? minOptimistic.minBalance
+    : projection.startingBalance) / 100
+  const pessimisticMinBalance = (Number.isFinite(minPessimistic.minBalance)
+    ? minPessimistic.minBalance
+    : projection.startingBalance) / 100
+
   return {
     startingBalance,
     optimistic: {
@@ -124,6 +152,8 @@ export function transformToSummaryStats(projection: CashflowProjection): Summary
       totalExpenses: projection.optimistic.totalExpenses / 100,
       endBalance: optimisticEndBalance,
       dangerDayCount: projection.optimistic.dangerDayCount,
+      minBalance: optimisticMinBalance,
+      minBalanceDate: minOptimistic.minBalanceDate,
       surplus: optimisticEndBalance - startingBalance,
     },
     pessimistic: {
@@ -131,6 +161,8 @@ export function transformToSummaryStats(projection: CashflowProjection): Summary
       totalExpenses: projection.pessimistic.totalExpenses / 100,
       endBalance: pessimisticEndBalance,
       dangerDayCount: projection.pessimistic.dangerDayCount,
+      minBalance: pessimisticMinBalance,
+      minBalanceDate: minPessimistic.minBalanceDate,
       surplus: pessimisticEndBalance - startingBalance,
     },
   }

@@ -5,7 +5,35 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { calculateHealthStatus, getHealthMessage } from './use-health-indicator'
+import {
+  calculateHealthStatus,
+  calculateNearDangerThreshold,
+  getHealthMessage,
+} from './use-health-indicator'
+
+// =============================================================================
+// calculateNearDangerThreshold TESTS
+// =============================================================================
+
+describe('calculateNearDangerThreshold', () => {
+  it('clamps to the minimum threshold for small starting balances', () => {
+    expect(calculateNearDangerThreshold(0)).toBe(1000)
+    expect(calculateNearDangerThreshold(100)).toBe(1000)
+    expect(calculateNearDangerThreshold(1_000)).toBe(1000)
+  })
+
+  it('scales at 5% of starting balance within bounds', () => {
+    // 5% of 100k is 5k (within min/max)
+    expect(calculateNearDangerThreshold(100_000)).toBe(5_000)
+    // Uses absolute value
+    expect(calculateNearDangerThreshold(-100_000)).toBe(5_000)
+  })
+
+  it('clamps to the maximum threshold for very large starting balances', () => {
+    // 5% of 1M is 50k -> capped at 20k
+    expect(calculateNearDangerThreshold(1_000_000)).toBe(20_000)
+  })
+})
 
 // =============================================================================
 // calculateHealthStatus TESTS
@@ -29,6 +57,21 @@ describe('calculateHealthStatus', () => {
       expect(calculateHealthStatus(0, 1)).toBe('warning')
       expect(calculateHealthStatus(0, 5)).toBe('warning')
       expect(calculateHealthStatus(0, 15)).toBe('warning')
+    })
+  })
+
+  describe('caution status', () => {
+    it('returns "caution" when near danger but no danger days', () => {
+      expect(calculateHealthStatus(0, 0, { isNearDanger: true })).toBe('caution')
+    })
+
+    it('returns "caution" when data is stale but no danger days', () => {
+      expect(calculateHealthStatus(0, 0, { isStale: true })).toBe('caution')
+    })
+
+    it('prioritizes warning/danger over caution', () => {
+      expect(calculateHealthStatus(0, 2, { isNearDanger: true, isStale: true })).toBe('warning')
+      expect(calculateHealthStatus(1, 0, { isNearDanger: true, isStale: true })).toBe('danger')
     })
   })
 
@@ -114,6 +157,30 @@ describe('getHealthMessage', () => {
     it('warning message mentions "pior cenário"', () => {
       const message = getHealthMessage('warning', 0, 3)
       expect(message).toContain('pior cenário')
+    })
+  })
+
+  describe('caution messages', () => {
+    it('returns near danger message with minimum balance and date', () => {
+      // Use a local date to avoid timezone shifts affecting the formatted day/month.
+      const date = new Date(2025, 0, 15)
+      const message = getHealthMessage('caution', 0, 0, {
+        minBalance: 500,
+        minBalanceDate: date,
+      })
+
+      expect(message).toContain('Saldo projetado próximo de zero')
+      expect(message).toContain('500')
+      expect(message).toContain('15/01')
+    })
+
+    it('returns stale data message when staleCount is provided', () => {
+      expect(getHealthMessage('caution', 0, 0, { staleCount: 1 })).toBe(
+        '1 item com saldo desatualizado'
+      )
+      expect(getHealthMessage('caution', 0, 0, { staleCount: 2 })).toBe(
+        '2 itens com saldo desatualizado'
+      )
     })
   })
 

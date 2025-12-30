@@ -363,6 +363,46 @@ export async function setCheckingAccountsBalanceUpdatedAtForGroup(
 }
 
 /**
+ * Set `balance_updated_at` for ALL accounts in a specific group.
+ * Useful for tests that want to avoid stale-data banners.
+ */
+export async function setAccountsBalanceUpdatedAtForGroup(
+  groupId: string,
+  balanceUpdatedAt: string | null
+): Promise<void> {
+  const client = getAdminClient();
+
+  const { error } = await client
+    .from('accounts')
+    .update({ balance_updated_at: balanceUpdatedAt })
+    .eq('group_id', groupId);
+
+  if (error) {
+    throw new Error(`Failed to update accounts.balance_updated_at: ${error.message}`);
+  }
+}
+
+/**
+ * Set `balance_updated_at` for ALL credit cards in a specific group.
+ * Useful for tests that want to avoid stale-data banners.
+ */
+export async function setCreditCardsBalanceUpdatedAtForGroup(
+  groupId: string,
+  balanceUpdatedAt: string | null
+): Promise<void> {
+  const client = getAdminClient();
+
+  const { error } = await client
+    .from('credit_cards')
+    .update({ balance_updated_at: balanceUpdatedAt })
+    .eq('group_id', groupId);
+
+  if (error) {
+    throw new Error(`Failed to update credit_cards.balance_updated_at: ${error.message}`);
+  }
+}
+
+/**
  * Seed accounts with test data (legacy - uses email lookup)
  * When workerIndex is provided, prefixes names with worker identifier
  * When userEmail is provided, uses that user's group
@@ -1184,6 +1224,16 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     setCheckingAccountsBalanceUpdatedAt: async (balanceUpdatedAt: string | null) => {
       const groupId = await getWorkerGroupId();
       await setCheckingAccountsBalanceUpdatedAtForGroup(groupId, balanceUpdatedAt);
+      markDirty();
+    },
+    setAccountsBalanceUpdatedAt: async (balanceUpdatedAt: string | null) => {
+      const groupId = await getWorkerGroupId();
+      await setAccountsBalanceUpdatedAtForGroup(groupId, balanceUpdatedAt);
+      markDirty();
+    },
+    setCreditCardsBalanceUpdatedAt: async (balanceUpdatedAt: string | null) => {
+      const groupId = await getWorkerGroupId();
+      await setCreditCardsBalanceUpdatedAtForGroup(groupId, balanceUpdatedAt);
       markDirty();
     },
     seedExpenses: async (expenses: TestExpense[]) => {

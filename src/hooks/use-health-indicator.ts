@@ -5,9 +5,10 @@
 import { useMemo } from 'react'
 import { useFinanceData } from '@/hooks/use-finance-data'
 import { isStale } from '@/lib/staleness'
+import { formatCurrency, formatDayMonth } from '@/lib/format'
 import type { SummaryStats } from '@/components/cashflow/types'
 
-export type HealthStatus = 'good' | 'warning' | 'danger'
+export type HealthStatus = 'good' | 'caution' | 'warning' | 'danger'
 
 export interface StaleEntity {
   id: string
@@ -33,16 +34,38 @@ export interface UseHealthIndicatorResult {
   isLoading: boolean
 }
 
+const NEAR_DANGER_STARTING_RATIO = 0.05
+const NEAR_DANGER_THRESHOLD_MIN = 1_000
+const NEAR_DANGER_THRESHOLD_MAX = 20_000
+
+/**
+ * Compute a "near danger" threshold (in dollars) to flag projections that get
+ * close to zero without crossing it.
+ *
+ * Designed to scale with the user's balance while staying within sane bounds.
+ */
+export function calculateNearDangerThreshold(startingBalance: number): number {
+  const scaled = Math.abs(startingBalance) * NEAR_DANGER_STARTING_RATIO
+  return Math.min(NEAR_DANGER_THRESHOLD_MAX, Math.max(NEAR_DANGER_THRESHOLD_MIN, scaled))
+}
+
 /**
  * Calculate health status from danger day counts.
  * Exported for unit testing.
  */
 export function calculateHealthStatus(
   optimisticDangerDays: number,
-  pessimisticDangerDays: number
+  pessimisticDangerDays: number,
+  options?: {
+    /** True when projection does not cross 0, but minimum balance is close to it */
+    isNearDanger?: boolean
+    /** True when any account/card data is stale (>30 days) */
+    isStale?: boolean
+  }
 ): HealthStatus {
   if (optimisticDangerDays > 0) return 'danger'
   if (pessimisticDangerDays > 0) return 'warning'
+  if (options?.isNearDanger || options?.isStale) return 'caution'
   return 'good'
 }
 
@@ -53,13 +76,34 @@ export function calculateHealthStatus(
 export function getHealthMessage(
   status: HealthStatus,
   optimisticDangerDays: number,
-  pessimisticDangerDays: number
+  pessimisticDangerDays: number,
+  options?: {
+    /** Minimum balance in dollars (pessimistic scenario) */
+    minBalance?: number
+    /** Date when minimum balance occurs */
+    minBalanceDate?: Date
+    /** Count of stale entities */
+    staleCount?: number
+  }
 ): string {
   switch (status) {
     case 'danger':
       return `${optimisticDangerDays} ${optimisticDangerDays !== 1 ? 'dias de perigo' : 'dia de perigo'} mesmo no melhor cenário`
     case 'warning':
       return `${pessimisticDangerDays} ${pessimisticDangerDays !== 1 ? 'dias de perigo' : 'dia de perigo'} no pior cenário`
+    case 'caution': {
+      // Prefer the most actionable reason in the message (near danger), while the UI
+      // can still show the stale badge CTA when applicable.
+      if (typeof options?.minBalance === 'number' && options.minBalanceDate) {
+        return `Saldo projetado próximo de zero no pior cenário (mínimo: ${formatCurrency(Math.round(options.minBalance * 100))} em ${formatDayMonth(options.minBalanceDate)})`
+      }
+
+      if (typeof options?.staleCount === 'number' && options.staleCount > 0) {
+        return `${options.staleCount} ${options.staleCount !== 1 ? 'itens' : 'item'} com saldo desatualizado`
+      }
+
+      return 'Atenção necessária'
+    }
     case 'good':
       return 'Nenhum problema detectado'
   }
@@ -117,14 +161,27 @@ export function useHealthIndicator(
 
     const optimisticDangerDays = summaryStats.optimistic.dangerDayCount
     const pessimisticDangerDays = summaryStats.pessimistic.dangerDayCount
+    const staleCount = staleEntities.length
 
-    const status = calculateHealthStatus(optimisticDangerDays, pessimisticDangerDays)
-    const message = getHealthMessage(status, optimisticDangerDays, pessimisticDangerDays)
+    const nearDangerThreshold = calculateNearDangerThreshold(summaryStats.startingBalance)
+    const pessimisticMinBalance = summaryStats.pessimistic.minBalance
+    const isNearDanger =
+      pessimisticMinBalance >= 0 && pessimisticMinBalance <= nearDangerThreshold
+
+    const status = calculateHealthStatus(optimisticDangerDays, pessimisticDangerDays, {
+      isNearDanger,
+      isStale: staleCount > 0,
+    })
+    const message = getHealthMessage(status, optimisticDangerDays, pessimisticDangerDays, {
+      minBalance: isNearDanger ? pessimisticMinBalance : undefined,
+      minBalanceDate: isNearDanger ? summaryStats.pessimistic.minBalanceDate : undefined,
+      staleCount,
+    })
 
     return {
       status,
       message,
-      isStale: staleEntities.length > 0,
+      isStale: staleCount > 0,
       staleEntities,
       dangerDays: {
         optimistic: optimisticDangerDays,

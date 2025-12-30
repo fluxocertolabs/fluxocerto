@@ -27,8 +27,15 @@ const statusConfig = {
     textColor: 'text-green-600',
     icon: CheckCircleIcon,
   },
-  warning: {
+  caution: {
     label: 'Atenção',
+    bgColor: 'bg-yellow-500/10',
+    borderColor: 'border-yellow-500/30',
+    textColor: 'text-yellow-600',
+    icon: AlertTriangleIcon,
+  },
+  warning: {
+    label: 'Risco',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/30',
     textColor: 'text-amber-600',
@@ -55,6 +62,7 @@ export function HealthIndicator({
 
   return (
     <div
+      data-testid="health-indicator"
       className={cn(
         'rounded-xl border p-4',
         config.bgColor,

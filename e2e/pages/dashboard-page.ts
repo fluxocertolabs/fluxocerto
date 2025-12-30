@@ -251,8 +251,11 @@ export class DashboardPage {
    * Check if stale data warning indicator is visible
    */
   async hasStaleWarning(): Promise<boolean> {
-    const staleWarning = this.page.getByText(/desatualizado|stale|outdated/i);
-    return staleWarning.isVisible();
+    // Prefer the stale CTA badge ("Atualizar agora") which is a stable, unique signal.
+    // Use `.first()` to avoid strict-mode violations when multiple elements contain
+    // "desatualizado" (e.g. banner message + badge text).
+    const staleWarning = this.page.getByRole('button', { name: /atualizar agora/i }).first()
+    return staleWarning.isVisible().catch(() => false)
   }
 
   /**
