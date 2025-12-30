@@ -83,7 +83,7 @@ export function getHealthMessage(
   optimisticDangerDays: number,
   pessimisticDangerDays: number,
   options?: {
-    /** Minimum balance in dollars (pessimistic scenario) */
+    /** Minimum balance in reais (pessimistic scenario) */
     minBalance?: number
     /** Date when minimum balance occurs */
     minBalanceDate?: Date

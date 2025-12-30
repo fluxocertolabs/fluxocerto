@@ -9,6 +9,14 @@ import { createAccount, createCreditCard } from '../utils/test-data';
 test.describe('Quick Update Modal', () => {
   // Tests now run in parallel with per-worker data prefixing for isolation
 
+  async function resetForCleanState(db: {
+    resetDatabase: () => Promise<void>
+    ensureTestUser: (userEmail?: string) => Promise<void>
+  }) {
+    await db.resetDatabase()
+    await db.ensureTestUser()
+  }
+
   test('T071: open Quick Update → all accounts and credit cards listed', async ({
     page,
     dashboardPage,
@@ -364,9 +372,8 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
-    // Reset database to ensure clean state - this test relies on specific badge counts
-    await db.resetDatabase();
-    await db.ensureTestUser();
+    // Reset for clean state - this test relies on specific badge counts
+    await resetForCleanState(db);
     
     const uniqueId = Date.now();
     const accountName = `Multi ${uniqueId}`;
@@ -411,10 +418,8 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
-    // Reset database to ensure clean state - this test relies on the seeded card being visible
-    // and avoids flakiness from large lists / stale banners created by prior tests in the same worker.
-    await db.resetDatabase();
-    await db.ensureTestUser();
+    // Reset for clean state to avoid stale data from prior tests
+    await resetForCleanState(db);
 
     const uniqueId = Date.now();
     const cardName = `Cartão Teste ${uniqueId}`;
@@ -460,9 +465,8 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
-    // Reset database to ensure clean state - this test relies on specific badge presence
-    await db.resetDatabase();
-    await db.ensureTestUser();
+    // Reset for clean state - this test relies on specific badge presence
+    await resetForCleanState(db);
     
     const uniqueId = Date.now();
     
