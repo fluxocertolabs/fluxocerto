@@ -368,6 +368,90 @@ describe('rebaseProjectionFromEstimatedToday', () => {
     expect(rebased.days[1].isPessimisticDanger).toBe(true)
     expect(rebased.days[1].isOptimisticDanger).toBe(false)
   })
+
+  it('when projectionDays=1, returns only a synthetic today point (no forward projection)', () => {
+    vi.setSystemTime(new Date('2025-01-20T12:00:00Z')) // today = 2025-01-20 in Sao Paulo
+
+    const accounts = [
+      createCheckingAccount({ balance: 0, balanceUpdatedAt: new Date('2025-01-10T12:00:00Z') }),
+    ]
+
+    const singleShotExpenses = [
+      // Included in estimate (today)
+      createSingleShotExpense({ date: dateOnly(2025, 1, 20), amount: 10_000 }),
+    ]
+    const singleShotIncome = [
+      // Included in optimistic estimate only (today)
+      createSingleShotIncome({
+        date: dateOnly(2025, 1, 20),
+        amount: 20_000,
+        certainty: 'probable',
+      }),
+    ]
+
+    const estimatedToday = calculateEstimatedTodayBalance({
+      accounts,
+      projects: emptyProjects,
+      fixedExpenses: emptyFixedExpenses,
+      singleShotExpenses,
+      singleShotIncome,
+      creditCards: emptyCreditCards,
+      futureStatements: emptyFutureStatements,
+      timeZone: TIME_ZONE,
+    })
+
+    // Sanity: pessimistic should be negative, optimistic non-negative (offset > 0)
+    expect(estimatedToday.pessimisticCents).toBe(-10_000)
+    expect(estimatedToday.optimisticCents).toBe(10_000)
+
+    const projectionDays = 1
+    const rebased = rebaseProjectionFromEstimatedToday({
+      projectionDays,
+      estimatedToday,
+      accounts,
+      projects: emptyProjects,
+      fixedExpenses: emptyFixedExpenses,
+      singleShotExpenses,
+      singleShotIncome,
+      creditCards: emptyCreditCards,
+      futureStatements: emptyFutureStatements,
+    })
+
+    expect(rebased.days).toHaveLength(projectionDays)
+    expect(rebased.days[1]).toBeUndefined()
+
+    // Dates should start/end on today
+    expect(rebased.startDate.getFullYear()).toBe(estimatedToday.today.getFullYear())
+    expect(rebased.startDate.getMonth()).toBe(estimatedToday.today.getMonth())
+    expect(rebased.startDate.getDate()).toBe(estimatedToday.today.getDate())
+    expect(rebased.endDate.getFullYear()).toBe(estimatedToday.today.getFullYear())
+    expect(rebased.endDate.getMonth()).toBe(estimatedToday.today.getMonth())
+    expect(rebased.endDate.getDate()).toBe(estimatedToday.today.getDate())
+
+    // Synthetic "today" only
+    expect(rebased.days[0].dayOffset).toBe(0)
+    expect(rebased.days[0].date.getFullYear()).toBe(estimatedToday.today.getFullYear())
+    expect(rebased.days[0].date.getMonth()).toBe(estimatedToday.today.getMonth())
+    expect(rebased.days[0].date.getDate()).toBe(estimatedToday.today.getDate())
+    expect(rebased.days[0].pessimisticBalance).toBe(estimatedToday.pessimisticCents)
+    expect(rebased.days[0].optimisticBalance).toBe(estimatedToday.optimisticCents)
+    expect(rebased.days[0].incomeEvents).toHaveLength(0)
+    expect(rebased.days[0].expenseEvents).toHaveLength(0)
+    expect(rebased.days[0].isPessimisticDanger).toBe(true)
+    expect(rebased.days[0].isOptimisticDanger).toBe(false)
+
+    // Starting balance is rebased to pessimistic estimate
+    expect(rebased.startingBalance).toBe(estimatedToday.pessimisticCents)
+
+    // Summaries should reflect single-day projection
+    expect(rebased.optimistic.endBalance).toBe(estimatedToday.optimisticCents)
+    expect(rebased.pessimistic.endBalance).toBe(estimatedToday.pessimisticCents)
+    expect(rebased.optimistic.dangerDayCount).toBe(0)
+    expect(rebased.pessimistic.dangerDayCount).toBe(1)
+    expect(rebased.pessimistic.dangerDays).toHaveLength(1)
+    expect(rebased.pessimistic.dangerDays[0].dayOffset).toBe(0)
+    expect(rebased.pessimistic.dangerDays[0].balance).toBe(estimatedToday.pessimisticCents)
+  })
 })
 
 
