@@ -1,3 +1,6 @@
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+
 /**
  * Currency and date formatting utilities for the dashboard.
  * Uses Portuguese locale for consistent display.
@@ -184,10 +187,7 @@ export function formatDecimalBR(value: number, decimals: number = 2): string {
  * Format a Date into DD/MM for pt-BR UI copy (day + month only).
  */
 export function formatDayMonth(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  }).format(date)
+  return format(date, 'dd/MM', { locale: ptBR })
 }
 
 /**

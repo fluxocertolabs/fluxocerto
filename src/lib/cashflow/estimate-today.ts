@@ -16,7 +16,7 @@ import type {
   FutureStatement,
 } from '../../types'
 import { addDays, differenceInCalendarDays, isAfter } from 'date-fns'
-import { calculateCashflow } from './calculate'
+import { calculateCashflow, calculateStartingBalance } from './calculate'
 import type { CashflowProjection, DailySnapshot, DangerDay, ScenarioSummary } from './types'
 import { getTodayDateOnlyInTimeZone, toDateOnlyInTimeZone } from '../dates/timezone'
 
@@ -80,12 +80,6 @@ export interface EstimateTodayInput {
   creditCards: CreditCard[]
   futureStatements: FutureStatement[]
   timeZone: string
-}
-
-function calculateStartingBalance(accounts: BankAccount[]): number {
-  return accounts
-    .filter((account) => account.type === 'checking')
-    .reduce((sum, account) => sum + account.balance, 0)
 }
 
 export function calculateEstimatedTodayBalance(input: EstimateTodayInput): EstimatedTodayBalance {

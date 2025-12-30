@@ -5,7 +5,8 @@
  * @visual
  */
 
-import { visualTest, expect } from '../../fixtures/visual-test-base';
+import { expect } from '@playwright/test';
+import { visualTest } from '../../fixtures/visual-test-base';
 import {
   createAccount,
   createExpense,

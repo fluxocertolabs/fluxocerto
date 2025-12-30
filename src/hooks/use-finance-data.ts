@@ -193,9 +193,13 @@ export function useFinanceData(): UseFinanceDataReturn {
   // interfere with each other if they share the same channel identifier.
   const channelNameRef = useRef<string | null>(null)
   if (!channelNameRef.current) {
-    channelNameRef.current = `finance-data-changes-${Math.random().toString(36).slice(2)}`
+    const id =
+      globalThis.crypto?.randomUUID?.() ??
+      Math.random().toString(36).slice(2)
+
+    channelNameRef.current = `finance-data-changes-${id}`
   }
-  
+
   const { isAuthenticated } = useAuth()
 
   // Derive filtered expense lists

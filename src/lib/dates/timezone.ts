@@ -43,7 +43,18 @@ export function parseDateOnly(dateOnly: string): Date {
   const day = Number(match[3])
 
   // month is 1-12 in string, 0-11 in Date constructor
-  return new Date(year, month - 1, day)
+  const date = new Date(year, month - 1, day)
+
+  // Validate the date wasn't auto-corrected (e.g., Feb 30 -> Mar 2)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    throw new Error(`Invalid date-only string: ${dateOnly}`)
+  }
+
+  return date
 }
 
 /**
