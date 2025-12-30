@@ -50,6 +50,25 @@ export function useAuth(): AuthState {
     // Subscribe to auth state changes
     const { data: { subscription } } = client.auth.onAuthStateChange(
       (_event: string, session: Session | null) => {
+        // #region agent log
+        fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H3',
+            location: 'src/hooks/use-auth.ts:useAuth:onAuthStateChange',
+            message: 'Auth state changed',
+            data: {
+              event: _event,
+              hasSession: Boolean(session),
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {})
+        // #endregion agent log
+
         window.clearTimeout(timeoutId)
         if (!isActive) return
         setUser(session?.user ?? null)

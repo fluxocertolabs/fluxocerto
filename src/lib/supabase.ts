@@ -155,6 +155,31 @@ export function getSupabase(): SupabaseClient {
     )
   }
 
+  // #region agent log
+  fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H2',
+      location: 'src/lib/supabase.ts:getSupabase:createClient',
+      message: 'Creating Supabase client',
+      data: {
+        envDev: Boolean(import.meta.env.DEV),
+        supabaseHost: (() => {
+          try {
+            return new URL(url).host
+          } catch {
+            return 'invalid-url'
+          }
+        })(),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion agent log
+
   supabaseInstance = createClient(url, anonKey, {
     auth: {
       autoRefreshToken: true,
@@ -302,13 +327,53 @@ export async function signInWithMagicLink(email: string): Promise<{ error: Error
   }
 
   const client = getSupabase()
+  const emailRedirectTo = `${window.location.origin}/auth/confirm`
+
+  // #region agent log
+  fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H2',
+      location: 'src/lib/supabase.ts:signInWithMagicLink:beforeOtp',
+      message: 'Requesting magic link via signInWithOtp',
+      data: {
+        origin: window.location.origin,
+        emailRedirectTo,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion agent log
+
   const { error } = await client.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      emailRedirectTo,
       shouldCreateUser: true, // Let the hook handle validation
     },
   })
+
+  // #region agent log
+  fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H2',
+      location: 'src/lib/supabase.ts:signInWithMagicLink:afterOtp',
+      message: 'signInWithOtp response',
+      data: {
+        ok: !error,
+        errorMessage: error?.message ?? null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion agent log
 
   return { error }
 }
