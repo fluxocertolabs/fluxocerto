@@ -16,18 +16,25 @@ import type {
   FutureStatement,
 } from '../../types'
 import { addDays, differenceInCalendarDays, isAfter } from 'date-fns'
-import { calculateCashflow, calculateStartingBalance } from './calculate'
-import type { CashflowProjection, DailySnapshot, DangerDay, ScenarioSummary } from './types'
+import { calculateCashflow, calculateStartingBalance, generateScenarioSummary } from './calculate'
+import type { CashflowProjection, DailySnapshot } from './types'
 import { getTodayDateOnlyInTimeZone, toDateOnlyInTimeZone } from '../dates/timezone'
 
 export type BalanceUpdateBase =
   | { kind: 'single'; date: Date }
   | { kind: 'range'; from: Date; to: Date }
 
+export type BalanceUpdateBaseFailureReason = 'no_checking_accounts' | 'missing_timestamps'
+
+export type CheckingBalanceUpdateBaseResult =
+  | { success: true; base: BalanceUpdateBase; baseForComputation: Date }
+  | { success: false; reason: BalanceUpdateBaseFailureReason }
+
 export interface EstimatedTodayBalance {
   today: Date
   hasBase: boolean
   base?: BalanceUpdateBase
+  baseFailureReason?: BalanceUpdateBaseFailureReason
   optimisticCents: number
   pessimisticCents: number
   isEstimated: {
@@ -40,16 +47,18 @@ export interface EstimatedTodayBalance {
 export function getCheckingBalanceUpdateBase(
   accounts: BankAccount[],
   timeZone: string
-): { base: BalanceUpdateBase; baseForComputation: Date } | null {
+): CheckingBalanceUpdateBaseResult {
   const checkingAccounts = accounts.filter((a) => a.type === 'checking')
-  if (checkingAccounts.length === 0) return null
+  if (checkingAccounts.length === 0) {
+    return { success: false, reason: 'no_checking_accounts' }
+  }
 
   const dateOnlyBases: Date[] = []
 
   for (const account of checkingAccounts) {
     if (!account.balanceUpdatedAt) {
       // No reliable base (FR-009)
-      return null
+      return { success: false, reason: 'missing_timestamps' }
     }
     dateOnlyBases.push(toDateOnlyInTimeZone(account.balanceUpdatedAt, timeZone))
   }
@@ -60,12 +69,14 @@ export function getCheckingBalanceUpdateBase(
 
   if (earliest.getTime() === latest.getTime()) {
     return {
+      success: true,
       base: { kind: 'single', date: earliest },
       baseForComputation: earliest,
     }
   }
 
   return {
+    success: true,
     base: { kind: 'range', from: earliest, to: latest },
     baseForComputation: earliest,
   }
@@ -87,10 +98,11 @@ export function calculateEstimatedTodayBalance(input: EstimateTodayInput): Estim
   const startingBalance = calculateStartingBalance(input.accounts)
 
   const baseResult = getCheckingBalanceUpdateBase(input.accounts, input.timeZone)
-  if (!baseResult) {
+  if (!baseResult.success) {
     return {
       today,
       hasBase: false,
+      baseFailureReason: baseResult.reason,
       optimisticCents: startingBalance,
       pessimisticCents: startingBalance,
       isEstimated: { optimistic: false, pessimistic: false, any: false },
@@ -222,8 +234,8 @@ export function rebaseProjectionFromEstimatedToday(
   const endDate = days[days.length - 1].date
   const startingBalance = input.estimatedToday.pessimisticCents
 
-  const optimistic = summarizeScenario(days, true)
-  const pessimistic = summarizeScenario(days, false)
+  const optimistic = generateScenarioSummary(days, true)
+  const pessimistic = generateScenarioSummary(days, false)
 
   return {
     startDate,
@@ -234,47 +246,3 @@ export function rebaseProjectionFromEstimatedToday(
     pessimistic,
   }
 }
-
-function summarizeScenario(days: DailySnapshot[], isOptimistic: boolean): ScenarioSummary {
-  let totalIncome = 0
-  let totalExpenses = 0
-  const dangerDays: DangerDay[] = []
-
-  for (const day of days) {
-    if (isOptimistic) {
-      totalIncome += day.incomeEvents.reduce((sum, ev) => sum + ev.amount, 0)
-    } else {
-      totalIncome += day.incomeEvents
-        .filter((ev) => ev.certainty === 'guaranteed')
-        .reduce((sum, ev) => sum + ev.amount, 0)
-    }
-
-    totalExpenses += day.expenseEvents.reduce((sum, ev) => sum + ev.amount, 0)
-
-    const balance = isOptimistic ? day.optimisticBalance : day.pessimisticBalance
-    const isDanger = isOptimistic ? day.isOptimisticDanger : day.isPessimisticDanger
-
-    if (isDanger) {
-      dangerDays.push({
-        date: day.date,
-        dayOffset: day.dayOffset,
-        balance,
-      })
-    }
-  }
-
-  const endBalance =
-    days.length > 0
-      ? (isOptimistic ? days[days.length - 1].optimisticBalance : days[days.length - 1].pessimisticBalance)
-      : 0
-
-  return {
-    totalIncome,
-    totalExpenses,
-    endBalance,
-    dangerDays,
-    dangerDayCount: dangerDays.length,
-  }
-}
-
-

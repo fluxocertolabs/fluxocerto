@@ -338,7 +338,7 @@ function calculateTotalExpenses(expenseEvents: ExpenseEvent[]): number {
 /**
  * Generate scenario summary from daily snapshots.
  */
-function generateScenarioSummary(
+export function generateScenarioSummary(
   days: DailySnapshot[],
   isOptimistic: boolean
 ): ScenarioSummary {

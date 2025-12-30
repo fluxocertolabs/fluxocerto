@@ -74,17 +74,23 @@ afterEach(() => {
 })
 
 describe('getCheckingBalanceUpdateBase', () => {
-  it('returns null when user never updated balances (no checking balanceUpdatedAt)', () => {
+  it('returns missing_timestamps when user never updated balances (no checking balanceUpdatedAt)', () => {
     const accounts = [createCheckingAccount({ balanceUpdatedAt: undefined })]
-    expect(getCheckingBalanceUpdateBase(accounts, TIME_ZONE)).toBeNull()
+    const result = getCheckingBalanceUpdateBase(accounts, TIME_ZONE)
+    expect(result.success).toBe(false)
+    if (result.success) throw new Error('expected failure')
+    expect(result.reason).toBe('missing_timestamps')
   })
 
-  it('returns null when any checking account is missing balanceUpdatedAt', () => {
+  it('returns missing_timestamps when any checking account is missing balanceUpdatedAt', () => {
     const accounts = [
       createCheckingAccount({ balanceUpdatedAt: new Date('2025-01-10T12:00:00Z') }),
       createCheckingAccount({ balanceUpdatedAt: undefined }),
     ]
-    expect(getCheckingBalanceUpdateBase(accounts, TIME_ZONE)).toBeNull()
+    const result = getCheckingBalanceUpdateBase(accounts, TIME_ZONE)
+    expect(result.success).toBe(false)
+    if (result.success) throw new Error('expected failure')
+    expect(result.reason).toBe('missing_timestamps')
   })
 
   it('returns a single base when all checking accounts share the same date-only base', () => {
@@ -94,14 +100,15 @@ describe('getCheckingBalanceUpdateBase', () => {
     ]
 
     const result = getCheckingBalanceUpdateBase(accounts, TIME_ZONE)
-    expect(result).not.toBeNull()
-    expect(result!.base.kind).toBe('single')
-    if (result!.base.kind !== 'single') throw new Error('expected single base')
+    expect(result.success).toBe(true)
+    if (!result.success) throw new Error('expected success')
+    expect(result.base.kind).toBe('single')
+    if (result.base.kind !== 'single') throw new Error('expected single base')
 
-    expect(result!.base.date.getFullYear()).toBe(2025)
-    expect(result!.base.date.getMonth()).toBe(0)
-    expect(result!.base.date.getDate()).toBe(10)
-    expect(result!.baseForComputation.getTime()).toBe(result!.base.date.getTime())
+    expect(result.base.date.getFullYear()).toBe(2025)
+    expect(result.base.date.getMonth()).toBe(0)
+    expect(result.base.date.getDate()).toBe(10)
+    expect(result.baseForComputation.getTime()).toBe(result.base.date.getTime())
   })
 
   it('returns a range base when checking accounts have different date-only bases and uses earliest for computation', () => {
@@ -111,13 +118,14 @@ describe('getCheckingBalanceUpdateBase', () => {
     ]
 
     const result = getCheckingBalanceUpdateBase(accounts, TIME_ZONE)
-    expect(result).not.toBeNull()
-    expect(result!.base.kind).toBe('range')
-    if (result!.base.kind !== 'range') throw new Error('expected range base')
+    expect(result.success).toBe(true)
+    if (!result.success) throw new Error('expected success')
+    expect(result.base.kind).toBe('range')
+    if (result.base.kind !== 'range') throw new Error('expected range base')
 
-    expect(result!.base.from.getDate()).toBe(10)
-    expect(result!.base.to.getDate()).toBe(11)
-    expect(result!.baseForComputation.getDate()).toBe(10)
+    expect(result.base.from.getDate()).toBe(10)
+    expect(result.base.to.getDate()).toBe(11)
+    expect(result.baseForComputation.getDate()).toBe(10)
   })
 })
 
