@@ -205,7 +205,7 @@ export function createGroup(
   overrides: Partial<TestGroup> = {}
 ): TestGroup {
   return {
-    name: 'Família Teste',
+    name: 'Grupo Teste',
     ...overrides,
   };
 }

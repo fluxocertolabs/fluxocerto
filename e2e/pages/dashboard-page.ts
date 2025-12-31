@@ -37,7 +37,7 @@ export class DashboardPage {
     this.chartErrorHeading = page.getByRole('heading', { name: /não foi possível carregar a projeção/i });
     this.chartRetryButton = page.getByRole('button', { name: /tentar novamente/i });
     // Group badge in header (FR-015) - contains Users icon and group name
-    this.groupBadge = page.locator('header').locator('span, div').filter({ hasText: /Fonseca Floriano|Família/i }).first();
+    this.groupBadge = page.locator('header').locator('span, div').filter({ hasText: /Fonseca Floriano|Grupo/i }).first();
   }
 
   /**
