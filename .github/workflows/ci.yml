@@ -353,6 +353,13 @@ jobs:
           url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$url" >> $GITHUB_OUTPUT
 
+      - name: Allowlist Preview Auth Redirect URL in Supabase (staging)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+        run: pnpm exec tsx scripts/update-supabase-auth-urls.ts
+
       - name: Comment Preview URL on PR
         uses: actions/github-script@v7
         with:

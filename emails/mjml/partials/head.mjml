@@ -2,8 +2,8 @@
   <mj-all font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" />
   <mj-text font-size="16px" line-height="24px" color="#26284b" />
   <mj-button
-    background-color="#40b5e8"
-    color="#26284b"
+    background-color="#0369a1"
+    color="#f8fafd"
     font-weight="700"
     border-radius="10px"
     inner-padding="14px 22px"
@@ -14,7 +14,7 @@
 
 <mj-style inline="inline">
   a {
-    color: #006ea6;
+    color: #0369a1;
   }
   .fc-muted {
     color: #5c607f;
