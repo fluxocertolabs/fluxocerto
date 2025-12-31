@@ -81,8 +81,10 @@
         Intentionally hardcoded:
         - Staging/preview deployments don't have a stable SiteURL, and many email clients won't render relative assets reliably.
         - We use the canonical www host to avoid redirects that some email clients may not follow.
-        Maintenance: if the domain or logo path changes, update THIS file and run `pnpm emails:build`
-        to regenerate `supabase/templates/*.html` (do not manually edit each template).
+        Maintenance:
+        - Files in `supabase/templates/*.html` are GENERATED (MJML → HTML). Do not edit them directly.
+        - Update the source template `emails/mjml/partials/header.mjml` and run `pnpm emails:build`
+          to regenerate all `supabase/templates/*.html`.
       -->
               <tr>
                 <td align="center" style="font-size:0px;padding:0;word-break:break-word;">
