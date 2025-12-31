@@ -20,10 +20,8 @@ export function AuthCallbackPage() {
       }
 
       // #region agent log
-      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      {
+        const payload = {
           sessionId: 'debug-session',
           runId: 'pre-fix',
           hypothesisId: 'H3',
@@ -40,8 +38,17 @@ export function AuthCallbackPage() {
             hashHasErrorCode: window.location.hash.includes('error_code='),
           },
           timestamp: Date.now(),
-        }),
-      }).catch(() => {})
+        }
+        if (window.location.protocol === 'http:') {
+          fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          }).catch(() => {})
+        } else {
+          console.info('[debug-auth]', payload)
+        }
+      }
       // #endregion agent log
 
       const client = getSupabase()
@@ -56,10 +63,8 @@ export function AuthCallbackPage() {
         setIsExpired(isExpiredLinkError(errorObj))
 
         // #region agent log
-        fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        {
+          const payload = {
             sessionId: 'debug-session',
             runId: 'pre-fix',
             hypothesisId: 'H3',
@@ -70,8 +75,17 @@ export function AuthCallbackPage() {
               hasErrorDescription: Boolean(errorDescription),
             },
             timestamp: Date.now(),
-          }),
-        }).catch(() => {})
+          }
+          if (window.location.protocol === 'http:') {
+            fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }).catch(() => {})
+          } else {
+            console.info('[debug-auth]', payload)
+          }
+        }
         // #endregion agent log
 
         return
@@ -85,10 +99,8 @@ export function AuthCallbackPage() {
         setIsExpired(isExpiredLinkError(sessionError))
 
         // #region agent log
-        fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        {
+          const payload = {
             sessionId: 'debug-session',
             runId: 'pre-fix',
             hypothesisId: 'H3',
@@ -98,8 +110,17 @@ export function AuthCallbackPage() {
               errorMessage: sessionError.message,
             },
             timestamp: Date.now(),
-          }),
-        }).catch(() => {})
+          }
+          if (window.location.protocol === 'http:') {
+            fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }).catch(() => {})
+          } else {
+            console.info('[debug-auth]', payload)
+          }
+        }
         // #endregion agent log
 
         return
@@ -113,10 +134,8 @@ export function AuthCallbackPage() {
         setError('Não foi possível completar o login. Por favor, solicite um novo link de acesso.')
 
         // #region agent log
-        fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        {
+          const payload = {
             sessionId: 'debug-session',
             runId: 'pre-fix',
             hypothesisId: 'H3',
@@ -126,8 +145,17 @@ export function AuthCallbackPage() {
               hashPresent: window.location.hash.length > 1,
             },
             timestamp: Date.now(),
-          }),
-        }).catch(() => {})
+          }
+          if (window.location.protocol === 'http:') {
+            fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }).catch(() => {})
+          } else {
+            console.info('[debug-auth]', payload)
+          }
+        }
         // #endregion agent log
 
       }

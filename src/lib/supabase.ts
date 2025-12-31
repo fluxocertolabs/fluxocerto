@@ -156,10 +156,8 @@ export function getSupabase(): SupabaseClient {
   }
 
   // #region agent log
-  fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  {
+    const payload = {
       sessionId: 'debug-session',
       runId: 'pre-fix',
       hypothesisId: 'H2',
@@ -176,8 +174,18 @@ export function getSupabase(): SupabaseClient {
         })(),
       },
       timestamp: Date.now(),
-    }),
-  }).catch(() => {})
+    }
+    if (window.location.protocol === 'http:') {
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {})
+    } else {
+      // Preview/Prod (https): can't send to http://localhost due to mixed-content.
+      console.info('[debug-auth]', payload)
+    }
+  }
   // #endregion agent log
 
   supabaseInstance = createClient(url, anonKey, {
@@ -330,10 +338,8 @@ export async function signInWithMagicLink(email: string): Promise<{ error: Error
   const emailRedirectTo = `${window.location.origin}/auth/confirm`
 
   // #region agent log
-  fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  {
+    const payload = {
       sessionId: 'debug-session',
       runId: 'pre-fix',
       hypothesisId: 'H2',
@@ -344,8 +350,17 @@ export async function signInWithMagicLink(email: string): Promise<{ error: Error
         emailRedirectTo,
       },
       timestamp: Date.now(),
-    }),
-  }).catch(() => {})
+    }
+    if (window.location.protocol === 'http:') {
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {})
+    } else {
+      console.info('[debug-auth]', payload)
+    }
+  }
   // #endregion agent log
 
   const { error } = await client.auth.signInWithOtp({
@@ -357,10 +372,8 @@ export async function signInWithMagicLink(email: string): Promise<{ error: Error
   })
 
   // #region agent log
-  fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  {
+    const payload = {
       sessionId: 'debug-session',
       runId: 'pre-fix',
       hypothesisId: 'H2',
@@ -371,8 +384,17 @@ export async function signInWithMagicLink(email: string): Promise<{ error: Error
         errorMessage: error?.message ?? null,
       },
       timestamp: Date.now(),
-    }),
-  }).catch(() => {})
+    }
+    if (window.location.protocol === 'http:') {
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {})
+    } else {
+      console.info('[debug-auth]', payload)
+    }
+  }
   // #endregion agent log
 
   return { error }
