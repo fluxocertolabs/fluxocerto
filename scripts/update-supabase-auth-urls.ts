@@ -107,7 +107,9 @@ async function main(): Promise<void> {
   const shouldSendString =
     typeof existingRaw === 'string' || isStringAllowListKey(redirectKey)
 
-  const patchValue: unknown = shouldSendString ? next.join('\n') : next
+  // GoTrue's `URI_ALLOW_LIST` environment variable is a comma-separated list.
+  // The Supabase Management API expects the raw string value for `uri_allow_list`.
+  const patchValue: unknown = shouldSendString ? next.join(',') : next
 
   const patchPayload: Record<string, unknown> = {
     [redirectKey]: patchValue,
@@ -134,7 +136,7 @@ async function main(): Promise<void> {
     const wantsArray = patchResult.text.includes('Expected array') && shouldSendString
 
     if (wantsString || wantsArray) {
-      const alternateValue = wantsString ? next.join('\n') : next
+      const alternateValue = wantsString ? next.join(',') : next
       patchResult = await patchOnce({ [redirectKey]: alternateValue })
     }
   }
