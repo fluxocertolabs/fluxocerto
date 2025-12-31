@@ -50,6 +50,11 @@ function unique(list: string[]): string[] {
   return out
 }
 
+function isStringAllowListKey(key: string): boolean {
+  const normalized = key.toLowerCase()
+  return normalized.includes('uri_allow_list') || normalized === 'uri_allow_list' || normalized === 'uri-allow-list'
+}
+
 /**
  * Update the hosted Supabase Auth URL configuration to allow the current Vercel preview deployment.
  *
@@ -95,25 +100,47 @@ async function main(): Promise<void> {
     )
   }
 
-  const existing = toStringArray(config[redirectKey])
-  const next = unique([...existing, previewConfirmUrl])
+  const existingRaw = config[redirectKey]
+  const existing = toStringArray(existingRaw)
+  const next = unique([...existing, previewUrl, previewConfirmUrl])
+
+  const shouldSendString =
+    typeof existingRaw === 'string' || isStringAllowListKey(redirectKey)
+
+  const patchValue: unknown = shouldSendString ? next.join('\n') : next
 
   const patchPayload: Record<string, unknown> = {
-    [redirectKey]: next,
+    [redirectKey]: patchValue,
   }
 
-  const patchRes = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/config/auth`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(patchPayload),
-  })
+  const patchOnce = async (payload: Record<string, unknown>) => {
+    const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/config/auth`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    const text = await res.text()
+    return { ok: res.ok, status: res.status, text }
+  }
 
-  if (!patchRes.ok) {
-    const text = await patchRes.text()
-    throw new Error(`Supabase Management API PATCH error (${patchRes.status}): ${text}`)
+  let patchResult = await patchOnce(patchPayload)
+
+  // Retry once with alternate representation if API rejects the inferred type.
+  if (!patchResult.ok) {
+    const wantsString = patchResult.text.includes('Expected string') && !shouldSendString
+    const wantsArray = patchResult.text.includes('Expected array') && shouldSendString
+
+    if (wantsString || wantsArray) {
+      const alternateValue = wantsString ? next.join('\n') : next
+      patchResult = await patchOnce({ [redirectKey]: alternateValue })
+    }
+  }
+
+  if (!patchResult.ok) {
+    throw new Error(`Supabase Management API PATCH error (${patchResult.status}): ${patchResult.text}`)
   }
 
   console.log(
@@ -121,7 +148,8 @@ async function main(): Promise<void> {
       {
         projectRef,
         updatedField: redirectKey,
-        added: previewConfirmUrl,
+        added: [previewUrl, previewConfirmUrl],
+        sentValueType: typeof patchValue,
         totalRedirectUrls: next.length,
       },
       null,
