@@ -19,38 +19,6 @@ export function AuthCallbackPage() {
         return
       }
 
-      // #region agent log
-      {
-        const payload = {
-          sessionId: 'debug-session',
-          runId: 'pre-fix',
-          hypothesisId: 'H3',
-          location: 'src/pages/auth-callback.tsx:AuthCallbackPage:handleCallback:start',
-          message: 'Auth callback handling started',
-          data: {
-            origin: window.location.origin,
-            path: window.location.pathname,
-            searchHasError: searchParams.has('error'),
-            searchKeys: Array.from(searchParams.keys()),
-            hashHasAccessToken: window.location.hash.includes('access_token='),
-            hashHasRefreshToken: window.location.hash.includes('refresh_token='),
-            hashHasError: window.location.hash.includes('error='),
-            hashHasErrorCode: window.location.hash.includes('error_code='),
-          },
-          timestamp: Date.now(),
-        }
-        if (window.location.protocol === 'http:') {
-          fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          }).catch(() => {})
-        } else {
-          console.info('[debug-auth]', payload)
-        }
-      }
-      // #endregion agent log
-
       const client = getSupabase()
       
       // Check for error in URL params (from Supabase redirect)
@@ -62,32 +30,6 @@ export function AuthCallbackPage() {
         setError(getAuthErrorMessage(errorObj))
         setIsExpired(isExpiredLinkError(errorObj))
 
-        // #region agent log
-        {
-          const payload = {
-            sessionId: 'debug-session',
-            runId: 'pre-fix',
-            hypothesisId: 'H3',
-            location: 'src/pages/auth-callback.tsx:AuthCallbackPage:handleCallback:errorParam',
-            message: 'Auth callback has explicit error params',
-            data: {
-              error: errorParam,
-              hasErrorDescription: Boolean(errorDescription),
-            },
-            timestamp: Date.now(),
-          }
-          if (window.location.protocol === 'http:') {
-            fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            }).catch(() => {})
-          } else {
-            console.info('[debug-auth]', payload)
-          }
-        }
-        // #endregion agent log
-
         return
       }
 
@@ -98,31 +40,6 @@ export function AuthCallbackPage() {
         setError(getAuthErrorMessage(sessionError))
         setIsExpired(isExpiredLinkError(sessionError))
 
-        // #region agent log
-        {
-          const payload = {
-            sessionId: 'debug-session',
-            runId: 'pre-fix',
-            hypothesisId: 'H3',
-            location: 'src/pages/auth-callback.tsx:AuthCallbackPage:handleCallback:getSessionError',
-            message: 'client.auth.getSession returned error',
-            data: {
-              errorMessage: sessionError.message,
-            },
-            timestamp: Date.now(),
-          }
-          if (window.location.protocol === 'http:') {
-            fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            }).catch(() => {})
-          } else {
-            console.info('[debug-auth]', payload)
-          }
-        }
-        // #endregion agent log
-
         return
       }
 
@@ -132,31 +49,6 @@ export function AuthCallbackPage() {
       } else {
         // No session and no error - might be a stale callback
         setError('Não foi possível completar o login. Por favor, solicite um novo link de acesso.')
-
-        // #region agent log
-        {
-          const payload = {
-            sessionId: 'debug-session',
-            runId: 'pre-fix',
-            hypothesisId: 'H3',
-            location: 'src/pages/auth-callback.tsx:AuthCallbackPage:handleCallback:noSessionNoError',
-            message: 'No session and no error after callback',
-            data: {
-              hashPresent: window.location.hash.length > 1,
-            },
-            timestamp: Date.now(),
-          }
-          if (window.location.protocol === 'http:') {
-            fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            }).catch(() => {})
-          } else {
-            console.info('[debug-auth]', payload)
-          }
-        }
-        // #endregion agent log
 
       }
     }

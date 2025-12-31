@@ -127,9 +127,6 @@ async function buildSupabaseTemplates(): Promise<void> {
           // Keep copy in sync with Supabase `otp_expiry` (seconds) in `supabase/config.toml`.
           assertIncludes(templateId, html, `Este link expira em ${otpExpiryText}.`)
         }
-      } else if (template.kind === 'notification') {
-        // Validate a common placeholder used across all notification templates (header/footer).
-        assertIncludes(templateId, html, '{{ .SiteURL }}')
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)

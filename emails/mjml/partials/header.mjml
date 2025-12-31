@@ -1,8 +1,11 @@
 <mj-section padding="24px 16px 0">
   <mj-column>
+    <mj-raw>
+      <!-- Intentionally hardcoded: staging/preview deployments don't have a stable SiteURL, and many email clients won't render relative assets reliably. -->
+    </mj-raw>
     <mj-image
-      src="https://fluxocerto.app/assets/brand/logo-light.png"
-      href="https://fluxocerto.app"
+      src="https://www.fluxocerto.app/assets/brand/logo-light.png"
+      href="https://www.fluxocerto.app"
       alt="Fluxo Certo"
       align="center"
       width="220px"
