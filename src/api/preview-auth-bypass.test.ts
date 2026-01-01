@@ -199,6 +199,23 @@ describe('api/preview-auth-bypass handler', () => {
     expect(res.getJson().error).toContain('Failed to resolve session tokens')
   })
 
+  it('returns 500 when an unexpected error is thrown', async () => {
+    setEnv({
+      VERCEL_ENV: 'preview',
+      PREVIEW_AUTH_BYPASS_ENABLED: 'true',
+      VITE_SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role',
+    })
+
+    generateLinkMock.mockRejectedValue(new Error('Unexpected failure'))
+
+    const res = createMockRes()
+    await handler({ method: 'GET' }, res)
+
+    expect(res.statusCode).toBe(500)
+    expect(res.getJson().error).toContain('Preview auth bypass failed')
+  })
+
   it('returns tokens when enabled in preview and redirects include token hash', async () => {
     setEnv({
       VERCEL_ENV: 'preview',
