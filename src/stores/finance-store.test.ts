@@ -10,6 +10,7 @@
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { useFinanceStore } from './finance-store'
+import { notifyFinanceDataInvalidated } from '../lib/finance-data-events'
 
 // =============================================================================
 // MOCK SETUP
@@ -20,7 +21,10 @@ const mockInsertCalls: unknown[] = []
 const mockUpdateCalls: unknown[] = []
 
 // Mock response state
-let mockInsertResponse = { data: { id: 'test-id' }, error: null as unknown }
+let mockInsertResponse: { data: Record<string, unknown>; error: unknown } = {
+  data: { id: 'test-id' },
+  error: null as unknown,
+}
 let mockUpdateResponse = { error: null as unknown, count: 1 }
 let mockGroupId: string | null = 'test-group-id'
 let mockIsConfigured = true
@@ -68,6 +72,11 @@ vi.mock('../lib/supabase', () => ({
   })),
 }))
 
+// Mock data invalidation event dispatch so we can assert when it's triggered
+vi.mock('../lib/finance-data-events', () => ({
+  notifyFinanceDataInvalidated: vi.fn(),
+}))
+
 // =============================================================================
 // TEST HELPERS
 // =============================================================================
@@ -81,6 +90,195 @@ function resetMocks() {
   mockGroupId = 'test-group-id'
   mockIsConfigured = true
 }
+
+// =============================================================================
+// DATA INVALIDATION EVENT DISPATCH TESTS
+// =============================================================================
+
+describe('Finance Store - data invalidation event dispatch', () => {
+  beforeEach(resetMocks)
+
+  it('dispatches invalidation after successful single-shot income creation', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().addSingleShotIncome({
+      type: 'single_shot',
+      name: 'Annual Bonus',
+      amount: 1000000,
+      date: new Date('2025-12-20'),
+      certainty: 'guaranteed',
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not dispatch invalidation when single-shot income validation fails', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().addSingleShotIncome({
+      type: 'single_shot',
+      name: '',
+      amount: 1000000,
+      date: new Date('2025-12-20'),
+      certainty: 'guaranteed',
+    })
+
+    expect(result.success).toBe(false)
+    expect(mockNotify).not.toHaveBeenCalled()
+  })
+
+  it('dispatches invalidation after successful single-shot income update', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().updateSingleShotIncome('test-id', {
+      name: 'Updated Bonus',
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful single-shot income deletion', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().deleteSingleShotIncome('test-id')
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful single-shot expense creation', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().addSingleShotExpense({
+      type: 'single_shot',
+      name: 'Furniture Purchase',
+      amount: 500000,
+      date: new Date('2025-12-15'),
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful single-shot expense update', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().updateSingleShotExpense('test-id', {
+      name: 'Updated Expense',
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful single-shot expense deletion', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().deleteSingleShotExpense('test-id')
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful recurring project creation', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().addProject({
+      type: 'recurring',
+      name: 'Salary',
+      amount: 800000,
+      frequency: 'monthly',
+      paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 5 },
+      certainty: 'guaranteed',
+      isActive: true,
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful recurring project update', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().updateProject('test-id', {
+      name: 'Updated Project',
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful recurring project deletion', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().deleteProject('test-id')
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful recurring project active toggle', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+    // toggleProjectActive reads current is_active via .single()
+    mockInsertResponse = { data: { is_active: true }, error: null }
+
+    const result = await useFinanceStore.getState().toggleProjectActive('test-id')
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    // Ensure we attempted to flip the boolean
+    expect(mockUpdateCalls.at(-1)).toEqual({ is_active: false })
+  })
+
+  it('dispatches invalidation after successful fixed expense creation', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().addExpense({
+      type: 'fixed',
+      name: 'Rent',
+      amount: 200000,
+      dueDay: 10,
+      isActive: true,
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful fixed expense update', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().updateExpense('test-id', {
+      name: 'Updated Expense',
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful fixed expense deletion', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+
+    const result = await useFinanceStore.getState().deleteExpense('test-id')
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches invalidation after successful fixed expense active toggle', async () => {
+    const mockNotify = vi.mocked(notifyFinanceDataInvalidated)
+    // toggleExpenseActive reads current is_active via .single()
+    mockInsertResponse = { data: { is_active: true }, error: null }
+
+    const result = await useFinanceStore.getState().toggleExpenseActive('test-id')
+
+    expect(result.success).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect(mockUpdateCalls.at(-1)).toEqual({ is_active: false })
+  })
+})
 
 // =============================================================================
 // BANK ACCOUNT VALIDATION TESTS
