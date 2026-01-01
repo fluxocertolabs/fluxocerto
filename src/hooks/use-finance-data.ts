@@ -27,6 +27,7 @@ import { isFixedExpense, isSingleShotExpense } from '@/types'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { parse } from 'date-fns'
 import { FINANCE_DATA_INVALIDATED_EVENT } from '@/lib/finance-data-events'
+import { upsertUniqueById } from '@/lib/utils'
 
 export interface UseFinanceDataReturn {
   accounts: BankAccount[]
@@ -304,26 +305,7 @@ export function useFinanceData(): UseFinanceDataReturn {
    * - Removes any duplicates of the same id
    * - Appends if the id does not exist yet
    */
-  function upsertUniqueById<T extends { id: string }>(prev: T[], nextItem: T): T[] {
-    let replaced = false
-    const out: T[] = []
-
-    for (const item of prev) {
-      if (item.id !== nextItem.id) {
-        out.push(item)
-        continue
-      }
-
-      if (!replaced) {
-        out.push(nextItem)
-        replaced = true
-      }
-      // Skip duplicates of the same id
-    }
-
-    if (!replaced) out.push(nextItem)
-    return out
-  }
+  // Note: moved to shared util (`src/lib/utils/array.ts`) so other hooks/components can reuse it.
 
   // Handle realtime changes for accounts
   const handleAccountChange = useCallback((payload: RealtimePostgresChangesPayload<AccountRow>) => {

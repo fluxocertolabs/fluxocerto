@@ -3,6 +3,29 @@ import { createClient } from '@supabase/supabase-js'
 
 const PREVIEW_EMAIL = 'preview-auth-bypass@example.test'
 const PREVIEW_PASSWORD = 'preview-bypass-test-password-12345'
+const PREVIEW_GROUP_NAME = process.env.PREVIEW_AUTH_BYPASS_GROUP_NAME ?? 'Fonseca Floriano'
+
+type AdminListedUser = { id: string; email?: string | null }
+
+async function findUserByEmail(
+  admin: ReturnType<typeof createClient>,
+  email: string
+): Promise<AdminListedUser | null> {
+  const perPage = 500
+  const maxPages = 50
+
+  for (let page = 1; page <= maxPages; page++) {
+    const { data: listData, error: listError } = await admin.auth.admin.listUsers({ page, perPage })
+    if (listError) throw new Error(`Failed to list users: ${listError.message}`)
+
+    const existing = listData.users.find((u) => u.email === email)
+    if (existing) return existing
+
+    if (listData.users.length < perPage) return null
+  }
+
+  throw new Error(`Failed to find user by email after ${maxPages} pages (perPage=${perPage})`)
+}
 
 async function ensurePreviewUserAndGetTokens(): Promise<{ accessToken: string; refreshToken: string }> {
   const supabaseUrl = process.env.VITE_SUPABASE_URL
@@ -16,13 +39,7 @@ async function ensurePreviewUserAndGetTokens(): Promise<{ accessToken: string; r
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  const { data: listData, error: listError } = await admin.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  })
-  if (listError) throw new Error(`Failed to list users: ${listError.message}`)
-
-  const existing = listData.users.find((u) => u.email === PREVIEW_EMAIL)
+  const existing = await findUserByEmail(admin, PREVIEW_EMAIL)
   if (existing) {
     const { error } = await admin.auth.admin.updateUserById(existing.id, {
       password: PREVIEW_PASSWORD,
@@ -42,7 +59,7 @@ async function ensurePreviewUserAndGetTokens(): Promise<{ accessToken: string; r
   const { data: group, error: groupError } = await admin
     .from('groups')
     .select('id')
-    .eq('name', 'Fonseca Floriano')
+    .eq('name', PREVIEW_GROUP_NAME)
     .maybeSingle()
 
   if (groupError) throw new Error(`Failed to query groups: ${groupError.message}`)
@@ -75,11 +92,10 @@ async function ensurePreviewUserAndGetTokens(): Promise<{ accessToken: string; r
 
 test.describe('Preview Auth Bypass (production build)', () => {
   let tokens: { accessToken: string; refreshToken: string }
+  const isConfigured = Boolean(process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  test.skip(!isConfigured, 'Supabase is not configured/running for preview bypass tests')
 
   test.beforeAll(async () => {
-    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      test.skip(true, 'Supabase is not configured/running for preview bypass tests')
-    }
     tokens = await ensurePreviewUserAndGetTokens()
   })
 

@@ -74,7 +74,7 @@ describe('api/preview-auth-bypass handler', () => {
     setEnv({ VERCEL_ENV: 'production', PREVIEW_AUTH_BYPASS_ENABLED: 'true' })
     const res = createMockRes()
 
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(404)
     expect(res.getJson().error).toBe('Not found')
@@ -85,7 +85,7 @@ describe('api/preview-auth-bypass handler', () => {
     setEnv({ VERCEL_ENV: 'preview', PREVIEW_AUTH_BYPASS_ENABLED: 'false' })
     const res = createMockRes()
 
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(404)
     expect(res.getJson().error).toBe('Not found')
@@ -96,7 +96,7 @@ describe('api/preview-auth-bypass handler', () => {
     setEnv({ VERCEL_ENV: 'preview', PREVIEW_AUTH_BYPASS_ENABLED: 'true' })
     const res = createMockRes()
 
-    await handler({ method: 'POST' } as any, res as any)
+    await handler({ method: 'POST' }, res)
 
     expect(res.statusCode).toBe(405)
     expect(res.headers['Allow']).toBe('GET')
@@ -111,7 +111,7 @@ describe('api/preview-auth-bypass handler', () => {
     })
     const res = createMockRes()
 
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(500)
     expect(res.getJson().error).toContain('VITE_SUPABASE_URL')
@@ -126,7 +126,7 @@ describe('api/preview-auth-bypass handler', () => {
     })
     const res = createMockRes()
 
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(500)
     expect(res.getJson().error).toContain('SUPABASE_SERVICE_ROLE_KEY')
@@ -146,7 +146,7 @@ describe('api/preview-auth-bypass handler', () => {
     })
 
     const res = createMockRes()
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(500)
     expect(res.getJson().error).toContain('generateLink failed')
@@ -166,7 +166,7 @@ describe('api/preview-auth-bypass handler', () => {
     })
 
     const res = createMockRes()
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(500)
     expect(res.getJson().error).toContain('no action_link')
@@ -188,16 +188,12 @@ describe('api/preview-auth-bypass handler', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {
-        return {
-          headers: {
-            get: () => null,
-          },
-        } as any
+        return new Response(null)
       })
     )
 
     const res = createMockRes()
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(500)
     expect(res.getJson().error).toContain('Failed to resolve session tokens')
@@ -220,16 +216,16 @@ describe('api/preview-auth-bypass handler', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {
-        return {
+        return new Response(null, {
           headers: {
-            get: () => 'https://example.com/#access_token=at&refresh_token=rt',
+            location: 'https://example.com/#access_token=at&refresh_token=rt',
           },
-        } as any
+        })
       })
     )
 
     const res = createMockRes()
-    await handler({ method: 'GET' } as any, res as any)
+    await handler({ method: 'GET' }, res)
 
     expect(res.statusCode).toBe(200)
     expect(res.getJson().accessToken).toBe('at')

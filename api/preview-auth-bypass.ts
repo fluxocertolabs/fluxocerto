@@ -5,7 +5,22 @@ type PreviewAuthBypassResponse =
   | { accessToken: string; refreshToken: string; email: string }
   | { error: string }
 
-function sendJson(res: any, status: number, body: PreviewAuthBypassResponse): void {
+type PreviewAuthBypassRequest = {
+  method?: string
+}
+
+type PreviewAuthBypassResponseWriter = {
+  statusCode: number
+  setHeader: (key: string, value: string) => void
+  end: (chunk: string) => void
+}
+
+type GenerateLinkData = {
+  properties?: { action_link?: string; actionLink?: string }
+  action_link?: string
+}
+
+function sendJson(res: PreviewAuthBypassResponseWriter, status: number, body: PreviewAuthBypassResponse): void {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
   res.setHeader('Cache-Control', 'no-store')
@@ -64,7 +79,7 @@ async function followRedirectsForSession(
  * - PREVIEW_AUTH_BYPASS_ENABLED=true
  * - PREVIEW_AUTH_BYPASS_EMAIL=preview-auth-bypass@example.test
  */
-export default async function handler(req: any, res: any): Promise<void> {
+export default async function handler(req: PreviewAuthBypassRequest, res: PreviewAuthBypassResponseWriter): Promise<void> {
   try {
     // We hide this endpoint outside Preview deployments by returning 404.
     if (process.env.VERCEL_ENV !== 'preview') {
@@ -108,12 +123,12 @@ export default async function handler(req: any, res: any): Promise<void> {
       return sendJson(res, 500, { error: `generateLink failed: ${error.message}` })
     }
 
+    const typedData = data as GenerateLinkData | null
     const actionLink: string | undefined =
-      // Supabase docs shape: data.properties.action_link
-      (data as any)?.properties?.action_link ??
-      // Defensive fallbacks for potential shape changes
-      (data as any)?.action_link ??
-      (data as any)?.properties?.actionLink
+      typedData?.properties?.action_link ??
+      // Defensive fallback for potential API shape changes
+      typedData?.action_link ??
+      typedData?.properties?.actionLink
 
     if (!actionLink) {
       return sendJson(res, 500, { error: 'generateLink returned no action_link' })

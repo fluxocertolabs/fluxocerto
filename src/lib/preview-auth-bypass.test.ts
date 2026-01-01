@@ -68,11 +68,10 @@ describe('injectPreviewSession', () => {
 
   it('returns failure when endpoint responds non-OK with error JSON', async () => {
     const fetchSpy = vi.fn(async () => {
-      return {
-        ok: false,
+      return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
-        json: async () => ({ error: 'Not found' }),
-      } as any
+        headers: { 'Content-Type': 'application/json' },
+      })
     })
     vi.stubGlobal('fetch', fetchSpy)
 
@@ -85,11 +84,10 @@ describe('injectPreviewSession', () => {
 
   it('returns failure when endpoint returns invalid tokens', async () => {
     const fetchSpy = vi.fn(async () => {
-      return {
-        ok: true,
+      return new Response(JSON.stringify({ accessToken: 123, refreshToken: 'rt' }), {
         status: 200,
-        json: async () => ({ accessToken: 123, refreshToken: 'rt' }),
-      } as any
+        headers: { 'Content-Type': 'application/json' },
+      })
     })
     vi.stubGlobal('fetch', fetchSpy)
 
@@ -103,11 +101,10 @@ describe('injectPreviewSession', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {
-        return {
-          ok: true,
+        return new Response(JSON.stringify({ accessToken: 'at', refreshToken: 'rt' }), {
           status: 200,
-          json: async () => ({ accessToken: 'at', refreshToken: 'rt' }),
-        } as any
+          headers: { 'Content-Type': 'application/json' },
+        })
       })
     )
 
@@ -123,11 +120,10 @@ describe('injectPreviewSession', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {
-        return {
-          ok: true,
+        return new Response(JSON.stringify({ accessToken: 'at', refreshToken: 'rt' }), {
           status: 200,
-          json: async () => ({ accessToken: 'at', refreshToken: 'rt' }),
-        } as any
+          headers: { 'Content-Type': 'application/json' },
+        })
       })
     )
 
