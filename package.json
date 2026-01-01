@@ -23,6 +23,7 @@
     "test:unit:coverage": "vitest --coverage",
     "test:e2e": "pnpm db:ensure && pnpm test:e2e:run; EXIT_CODE=$?; pnpm db:stop; exit $EXIT_CODE",
     "test:e2e:run": "playwright test --config e2e/playwright.config.ts --project=setup --project=auth-tests --project=chromium",
+    "test:e2e:preview-bypass": "pnpm db:ensure && playwright test --config e2e/playwright.preview-bypass.config.ts; EXIT_CODE=$?; pnpm db:stop; exit $EXIT_CODE",
     "test:e2e:ui": "pnpm db:ensure && playwright test --config e2e/playwright.config.ts --ui",
     "test:e2e:debug": "pnpm db:ensure && playwright test --config e2e/playwright.config.ts --debug",
     "test:e2e:report": "playwright show-report",

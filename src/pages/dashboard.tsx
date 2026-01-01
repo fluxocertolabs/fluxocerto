@@ -142,7 +142,7 @@ export function Dashboard() {
       >
         <div className="space-y-6">
           {/* Health Indicator */}
-          {!healthIndicator.isLoading && (
+          {!healthIndicator.isLoading && healthIndicator.status !== 'good' && (
             <HealthIndicator
               status={healthIndicator.status}
               message={healthIndicator.message}

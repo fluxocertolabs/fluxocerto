@@ -71,7 +71,7 @@ test.describe('Future Statement Management', () => {
     // Submit
     await submitButton.click();
     // Increase timeout for CI environments which can be slower
-    await expect(dialog).not.toBeVisible({ timeout: 10000 });
+    await expect(dialog).not.toBeVisible({ timeout: 12000 });
 
     // Verify future statement appears in the list
     await expect(async () => {

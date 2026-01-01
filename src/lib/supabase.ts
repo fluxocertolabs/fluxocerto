@@ -184,6 +184,19 @@ export function hasDevTokens(): boolean {
 }
 
 /**
+ * Preview-only auth bypass toggle.
+ *
+ * This is intended for PR preview deployments (e.g. Vercel "Preview") where we
+ * want to skip the Magic Link login flow while reviewing changes.
+ *
+ * IMPORTANT: This must never be enabled for production deployments.
+ */
+export function isPreviewAuthBypassEnabled(): boolean {
+  const raw = import.meta.env.VITE_PREVIEW_AUTH_BYPASS
+  return raw === 'true' || raw === '1'
+}
+
+/**
  * Inject dev session tokens into Supabase client.
  * DEV MODE ONLY - This function bypasses normal authentication for local development.
  * 
@@ -239,6 +252,75 @@ export async function injectDevSession(): Promise<{ success: boolean; error?: st
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { success: false, error: `Dev session injection failed: ${message}` }
+  }
+}
+
+/**
+ * Inject a preview session (PR preview deployments).
+ *
+ * This calls a server endpoint that mints a session for a known preview user and
+ * then injects the returned access/refresh tokens into the Supabase client.
+ *
+ * Security guards:
+ * - Only runs when VITE_PREVIEW_AUTH_BYPASS is enabled (build-time flag)
+ * - The server endpoint is expected to be disabled outside Preview deployments
+ */
+export async function injectPreviewSession(): Promise<{ success: boolean; error?: string }> {
+  // Guard: require explicit enable
+  if (!isPreviewAuthBypassEnabled()) {
+    return { success: false, error: 'Preview auth bypass is disabled' }
+  }
+
+  // Guard: Supabase must be configured
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase is not configured' }
+  }
+
+  try {
+    const response = await fetch('/api/preview-auth-bypass', {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+
+    let payload: unknown = null
+    try {
+      payload = await response.json()
+    } catch {
+      // ignore JSON parse error, handle below
+    }
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'object' && payload !== null && 'error' in payload
+          ? String((payload as { error?: unknown }).error ?? 'Unknown error')
+          : `HTTP ${response.status}`
+      return { success: false, error: `Preview auth endpoint failed: ${message}` }
+    }
+
+    const data = payload as { accessToken?: unknown; refreshToken?: unknown }
+    const accessToken = typeof data.accessToken === 'string' ? data.accessToken : null
+    const refreshToken = typeof data.refreshToken === 'string' ? data.refreshToken : null
+
+    if (!accessToken || !refreshToken) {
+      return { success: false, error: 'Preview auth endpoint returned invalid tokens' }
+    }
+
+    const client = getSupabase()
+    const { error } = await client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    })
+
+    if (error) {
+      return { success: false, error: `setSession failed: ${error.message}` }
+    }
+
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: `Preview session injection failed: ${message}` }
   }
 }
 
@@ -302,10 +384,12 @@ export async function signInWithMagicLink(email: string): Promise<{ error: Error
   }
 
   const client = getSupabase()
+  const emailRedirectTo = `${window.location.origin}/auth/confirm`
+
   const { error } = await client.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      emailRedirectTo,
       shouldCreateUser: true, // Let the hook handle validation
     },
   })

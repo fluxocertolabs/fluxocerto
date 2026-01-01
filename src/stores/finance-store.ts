@@ -6,6 +6,7 @@ import {
   handleSupabaseError,
   isSupabaseConfigured,
 } from '../lib/supabase'
+import { notifyFinanceDataInvalidated } from '../lib/finance-data-events'
 import {
   BankAccountInputSchema,
   ProjectInputSchema,
@@ -152,6 +153,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
@@ -185,6 +187,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Account not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -209,6 +212,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Account not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -247,6 +251,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
@@ -282,6 +287,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Project not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -306,6 +312,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Project not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -341,6 +348,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(updateError)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -379,6 +387,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
@@ -412,6 +421,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Expense not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -436,6 +446,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Despesa não encontrada' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -471,6 +482,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(updateError)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -509,6 +521,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
@@ -539,6 +552,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Despesa não encontrada' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -564,6 +578,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Despesa não encontrada' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -604,6 +619,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
@@ -635,6 +651,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Receita não encontrada' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -660,6 +677,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Receita não encontrada' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -696,6 +714,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
@@ -729,6 +748,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Credit card not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -753,6 +773,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Credit card not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -793,6 +814,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(error)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
@@ -829,6 +851,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Fatura futura não encontrada' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -853,6 +876,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Fatura futura não encontrada' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -886,6 +910,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Account not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -918,6 +943,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return { success: false, error: 'Credit card not found' }
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -952,6 +978,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
         return handleSupabaseError(cardsError)
       }
 
+      notifyFinanceDataInvalidated()
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)

@@ -26,6 +26,8 @@ import { transformFutureStatementRow } from '@/types'
 import { isFixedExpense, isSingleShotExpense } from '@/types'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { parse } from 'date-fns'
+import { FINANCE_DATA_INVALIDATED_EVENT } from '@/lib/finance-data-events'
+import { upsertUniqueById } from '@/lib/utils'
 
 export interface UseFinanceDataReturn {
   accounts: BankAccount[]
@@ -41,6 +43,11 @@ export interface UseFinanceDataReturn {
   error: string | null
   /** Retry function for error recovery */
   retry: () => void
+  /**
+   * Background refresh of all finance data (does not force full-page loading state).
+   * Useful as a deterministic fallback when realtime delivery is delayed.
+   */
+  refresh: () => Promise<void>
   /**
    * Optimistically remove an expense from local state.
    * Useful when realtime updates are slow/unavailable.
@@ -280,6 +287,26 @@ export function useFinanceData(): UseFinanceDataReturn {
     }
   }, [])
 
+  // Background refresh (does NOT set isLoading=true, so UI won't remount)
+  const refresh = useCallback(async () => {
+    await fetchAllData()
+  }, [fetchAllData])
+
+  /**
+   * Idempotent upsert helper for realtime events.
+   *
+   * Problem: we can receive a realtime INSERT/UPDATE for a record that was already
+   * included by a refetch (e.g. after explicit invalidation). If we blindly append
+   * on INSERT we can end up with duplicated items in state, which then breaks UI
+   * counts (e.g. "Próximas Faturas" badge) and can cause flakiness.
+   *
+   * This helper:
+   * - Replaces the first occurrence (preserving list order)
+   * - Removes any duplicates of the same id
+   * - Appends if the id does not exist yet
+   */
+  // Note: moved to shared util (`src/lib/utils/array.ts`) so other hooks/components can reuse it.
+
   // Handle realtime changes for accounts
   const handleAccountChange = useCallback((payload: RealtimePostgresChangesPayload<AccountRow>) => {
     const { eventType, new: newRecord, old: oldRecord } = payload
@@ -287,18 +314,14 @@ export function useFinanceData(): UseFinanceDataReturn {
     switch (eventType) {
       case 'INSERT':
         if (newRecord) {
-          setAccounts(prev => [...prev, mapAccountFromDb(newRecord as AccountRow)])
+          const mapped = mapAccountFromDb(newRecord as AccountRow)
+          setAccounts((prev) => upsertUniqueById(prev, mapped))
         }
         break
       case 'UPDATE':
         if (newRecord) {
-          setAccounts(prev =>
-            prev.map(account =>
-              account.id === (newRecord as AccountRow).id
-                ? mapAccountFromDb(newRecord as AccountRow)
-                : account
-            )
-          )
+          const mapped = mapAccountFromDb(newRecord as AccountRow)
+          setAccounts((prev) => upsertUniqueById(prev, mapped))
         }
         break
       case 'DELETE':
@@ -318,9 +341,15 @@ export function useFinanceData(): UseFinanceDataReturn {
         if (newRecord) {
           const row = newRecord as ProjectRow
           if (row.type === 'single_shot') {
-            setSingleShotIncome(prev => [...prev, mapSingleShotIncomeFromDb(row)])
+            const mapped = mapSingleShotIncomeFromDb(row)
+            setSingleShotIncome((prev) => upsertUniqueById(prev, mapped))
+            // Defensive: ensure it doesn't exist in recurring list
+            setProjects((prev) => prev.filter((p) => p.id !== row.id))
           } else {
-            setProjects(prev => [...prev, mapProjectFromDb(row)])
+            const mapped = mapProjectFromDb(row)
+            setProjects((prev) => upsertUniqueById(prev, mapped))
+            // Defensive: ensure it doesn't exist in single-shot list
+            setSingleShotIncome((prev) => prev.filter((p) => p.id !== row.id))
           }
         }
         break
@@ -328,28 +357,21 @@ export function useFinanceData(): UseFinanceDataReturn {
         if (newRecord) {
           const row = newRecord as ProjectRow
           if (row.type === 'single_shot') {
-            setSingleShotIncome(prev =>
-              prev.map(income =>
-                income.id === row.id ? mapSingleShotIncomeFromDb(row) : income
-              )
-            )
+            const mapped = mapSingleShotIncomeFromDb(row)
+            setSingleShotIncome((prev) => upsertUniqueById(prev, mapped))
+            setProjects((prev) => prev.filter((p) => p.id !== row.id))
           } else {
-            setProjects(prev =>
-              prev.map(project =>
-                project.id === row.id ? mapProjectFromDb(row) : project
-              )
-            )
+            const mapped = mapProjectFromDb(row)
+            setProjects((prev) => upsertUniqueById(prev, mapped))
+            setSingleShotIncome((prev) => prev.filter((p) => p.id !== row.id))
           }
         }
         break
       case 'DELETE':
         if (oldRecord) {
           const row = oldRecord as ProjectRow
-          if (row.type === 'single_shot') {
-            setSingleShotIncome(prev => prev.filter(income => income.id !== row.id))
-          } else {
-            setProjects(prev => prev.filter(project => project.id !== row.id))
-          }
+          setSingleShotIncome((prev) => prev.filter((income) => income.id !== row.id))
+          setProjects((prev) => prev.filter((project) => project.id !== row.id))
         }
         break
     }
@@ -362,18 +384,14 @@ export function useFinanceData(): UseFinanceDataReturn {
     switch (eventType) {
       case 'INSERT':
         if (newRecord) {
-          setExpenses(prev => [...prev, mapExpenseFromDb(newRecord as ExpenseRow)])
+          const mapped = mapExpenseFromDb(newRecord as ExpenseRow)
+          setExpenses((prev) => upsertUniqueById(prev, mapped))
         }
         break
       case 'UPDATE':
         if (newRecord) {
-          setExpenses(prev =>
-            prev.map(expense =>
-              expense.id === (newRecord as ExpenseRow).id
-                ? mapExpenseFromDb(newRecord as ExpenseRow)
-                : expense
-            )
-          )
+          const mapped = mapExpenseFromDb(newRecord as ExpenseRow)
+          setExpenses((prev) => upsertUniqueById(prev, mapped))
         }
         break
       case 'DELETE':
@@ -391,18 +409,14 @@ export function useFinanceData(): UseFinanceDataReturn {
     switch (eventType) {
       case 'INSERT':
         if (newRecord) {
-          setCreditCards(prev => [...prev, mapCreditCardFromDb(newRecord as CreditCardRow)])
+          const mapped = mapCreditCardFromDb(newRecord as CreditCardRow)
+          setCreditCards((prev) => upsertUniqueById(prev, mapped))
         }
         break
       case 'UPDATE':
         if (newRecord) {
-          setCreditCards(prev =>
-            prev.map(card =>
-              card.id === (newRecord as CreditCardRow).id
-                ? mapCreditCardFromDb(newRecord as CreditCardRow)
-                : card
-            )
-          )
+          const mapped = mapCreditCardFromDb(newRecord as CreditCardRow)
+          setCreditCards((prev) => upsertUniqueById(prev, mapped))
         }
         break
       case 'DELETE':
@@ -421,10 +435,9 @@ export function useFinanceData(): UseFinanceDataReturn {
       case 'INSERT':
         if (newRecord) {
           setFutureStatements(prev => {
-            const newStatement = transformFutureStatementRow(newRecord as FutureStatementRow)
-            // Insert in sorted order (by year, then month)
-            const newList = [...prev, newStatement]
-            return newList.sort((a, b) => {
+            const mapped = transformFutureStatementRow(newRecord as FutureStatementRow)
+            const next = upsertUniqueById(prev, mapped)
+            return next.sort((a, b) => {
               if (a.targetYear !== b.targetYear) return a.targetYear - b.targetYear
               return a.targetMonth - b.targetMonth
             })
@@ -434,13 +447,9 @@ export function useFinanceData(): UseFinanceDataReturn {
       case 'UPDATE':
         if (newRecord) {
           setFutureStatements(prev => {
-            const updated = prev.map(statement =>
-              statement.id === (newRecord as FutureStatementRow).id
-                ? transformFutureStatementRow(newRecord as FutureStatementRow)
-                : statement
-            )
-            // Re-sort in case date changed
-            return updated.sort((a, b) => {
+            const mapped = transformFutureStatementRow(newRecord as FutureStatementRow)
+            const next = upsertUniqueById(prev, mapped)
+            return next.sort((a, b) => {
               if (a.targetYear !== b.targetYear) return a.targetYear - b.targetYear
               return a.targetMonth - b.targetMonth
             })
@@ -549,6 +558,21 @@ export function useFinanceData(): UseFinanceDataReturn {
     }
   }, [isAuthenticated, fetchAllData, handleAccountChange, handleProjectChange, handleExpenseChange, handleCreditCardChange, handleFutureStatementChange, retryCount])
 
+  // Listen for explicit invalidation signals after mutations (fallback to realtime).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!isSupabaseConfigured()) return
+    if (!isAuthenticated) return
+
+    const onInvalidated = () => {
+      // Fire and forget; fetchAllData already manages error state.
+      void fetchAllData()
+    }
+
+    window.addEventListener(FINANCE_DATA_INVALIDATED_EVENT, onInvalidated)
+    return () => window.removeEventListener(FINANCE_DATA_INVALIDATED_EVENT, onInvalidated)
+  }, [isAuthenticated, fetchAllData])
+
   return {
     accounts,
     projects,
@@ -562,6 +586,7 @@ export function useFinanceData(): UseFinanceDataReturn {
     isLoading,
     error,
     retry,
+    refresh,
     optimisticallyRemoveExpense,
   }
 }

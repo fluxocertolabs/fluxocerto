@@ -37,7 +37,7 @@ export class DashboardPage {
     this.chartErrorHeading = page.getByRole('heading', { name: /não foi possível carregar a projeção/i });
     this.chartRetryButton = page.getByRole('button', { name: /tentar novamente/i });
     // Group badge in header (FR-015) - contains Users icon and group name
-    this.groupBadge = page.locator('header').locator('span, div').filter({ hasText: /Fonseca Floriano|Família/i }).first();
+    this.groupBadge = page.locator('header').locator('span, div').filter({ hasText: /Fonseca Floriano|Grupo/i }).first();
   }
 
   /**
@@ -251,8 +251,11 @@ export class DashboardPage {
    * Check if stale data warning indicator is visible
    */
   async hasStaleWarning(): Promise<boolean> {
-    const staleWarning = this.page.getByText(/desatualizado|stale|outdated/i);
-    return staleWarning.isVisible();
+    // Prefer the stale CTA badge ("Atualizar agora") which is a stable, unique signal.
+    // Use `.first()` to avoid strict-mode violations when multiple elements contain
+    // "desatualizado" (e.g. banner message + badge text).
+    const staleWarning = this.page.getByRole('button', { name: /atualizar agora/i }).first()
+    return staleWarning.isVisible().catch(() => false)
   }
 
   /**

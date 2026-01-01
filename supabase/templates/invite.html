@@ -77,7 +77,15 @@
         
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
         <tbody>
-          
+          <!--
+        Intentionally hardcoded:
+        - Staging/preview deployments don't have a stable SiteURL, and many email clients won't render relative assets reliably.
+        - We use the canonical www host to avoid redirects that some email clients may not follow.
+        Maintenance:
+        - Files in `supabase/templates/*.html` are GENERATED (MJML → HTML). Do not edit them directly.
+        - Update the source template `emails/mjml/partials/header.mjml` and run `pnpm emails:build`
+          to regenerate all `supabase/templates/*.html`.
+      -->
               <tr>
                 <td align="center" style="font-size:0px;padding:0;word-break:break-word;">
                   
@@ -86,8 +94,12 @@
           <tr>
             <td style="width:220px;">
               
-      <img alt="Fluxo Certo" src="{{ .SiteURL }}/assets/brand/logo-light.png" style="border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:13px;" width="220" height="auto">
+        <a href="https://www.fluxocerto.app" target="_blank" style="color: #0369a1;">
+          
+      <img alt="Fluxo Certo" src="https://www.fluxocerto.app/assets/brand/logo-light.png" style="border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:13px;" width="220" height="auto">
     
+        </a>
+      
             </td>
           </tr>
         </tbody>
@@ -129,7 +141,7 @@
               <tr>
                 <td align="center" class="fc-muted" style="color: #5c607f; font-size: 0px; padding: 0; word-break: break-word;">
                   
-      <div style="font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;font-size:14px;line-height:24px;text-align:center;color:#26284b;">Gerencie as finanças da sua família juntos</div>
+      <div style="font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;font-size:14px;line-height:24px;text-align:center;color:#26284b;">Preveja seu fluxo de caixa com clareza</div>
     
                 </td>
               </tr>
@@ -192,8 +204,8 @@
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;">
         <tbody>
           <tr>
-            <td align="center" bgcolor="#40b5e8" role="presentation" style="border:none;border-radius:10px;cursor:auto;mso-padding-alt:14px 22px;background:#40b5e8;" valign="middle">
-              <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #40b5e8; color: #26284b; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 120%; margin: 0; text-decoration: none; text-transform: none; padding: 14px 22px; mso-padding-alt: 0px; border-radius: 10px;" target="_blank">
+            <td align="center" bgcolor="#0369a1" role="presentation" style="border:none;border-radius:10px;cursor:auto;mso-padding-alt:14px 22px;background:#0369a1;" valign="middle">
+              <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #0369a1; color: #f8fafd; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 120%; margin: 0; text-decoration: none; text-transform: none; padding: 14px 22px; mso-padding-alt: 0px; border-radius: 10px;" target="_blank">
                 Aceitar convite
               </a>
             </td>
@@ -228,7 +240,7 @@
               <tr>
                 <td align="left" class="fc-small fc-linkWrap" style="line-height: 18px; font-size: 0px; padding: 0; word-break: break-word;">
                   
-      <div style="font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#26284b;"><a href="{{ .ConfirmationURL }}" style="color: #006ea6; overflow-wrap: break-word; word-break: break-word;">{{ .ConfirmationURL }}</a></div>
+      <div style="font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#26284b;"><a href="{{ .ConfirmationURL }}" style="color: #0369a1; overflow-wrap: break-word; word-break: break-word;">{{ .ConfirmationURL }}</a></div>
     
                 </td>
               </tr>
@@ -306,14 +318,6 @@
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
         <tbody>
           
-              <tr>
-                <td align="center" class="fc-muted fc-small" style="color: #5c607f; line-height: 18px; font-size: 0px; padding: 0; word-break: break-word;">
-                  
-      <div style="font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:center;color:#26284b;">Fluxo Certo • <a href="{{ .SiteURL }}" style="color: #006ea6;">{{ .SiteURL }}</a></div>
-    
-                </td>
-              </tr>
-            
               <tr>
                 <td align="center" class="fc-muted fc-small" style="color: #5c607f; line-height: 18px; font-size: 0px; padding: 8px 0 0; word-break: break-word;">
                   

@@ -1,7 +1,19 @@
 <mj-section padding="24px 16px 0">
   <mj-column>
+    <mj-raw>
+      <!--
+        Intentionally hardcoded:
+        - Staging/preview deployments don't have a stable SiteURL, and many email clients won't render relative assets reliably.
+        - We use the canonical www host to avoid redirects that some email clients may not follow.
+        Maintenance:
+        - Files in `supabase/templates/*.html` are GENERATED (MJML → HTML). Do not edit them directly.
+        - Update the source template `emails/mjml/partials/header.mjml` and run `pnpm emails:build`
+          to regenerate all `supabase/templates/*.html`.
+      -->
+    </mj-raw>
     <mj-image
-      src="{{ .SiteURL }}/assets/brand/logo-light.png"
+      src="https://www.fluxocerto.app/assets/brand/logo-light.png"
+      href="https://www.fluxocerto.app"
       alt="Fluxo Certo"
       align="center"
       width="220px"
@@ -13,7 +25,7 @@
 <mj-section padding="8px 16px 20px">
   <mj-column>
     <mj-text align="center" font-size="14px" padding="0" css-class="fc-muted">
-      Gerencie as finanças da sua família juntos
+      Preveja seu fluxo de caixa com clareza
     </mj-text>
   </mj-column>
 </mj-section>

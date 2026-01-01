@@ -123,7 +123,7 @@ export default defineConfig({
     // Storage state is loaded dynamically per worker via the test fixture
     {
       name: 'chromium',
-      testIgnore: [/auth\.spec\.ts/, /visual\//], // Skip auth and visual tests
+      testIgnore: [/auth\.spec\.ts/, /visual\//, /\.preview\.spec\.ts/], // Skip auth, visual, and preview-only tests
       use: {
         ...devices['Desktop Chrome'],
         // Note: Storage state is NOT set here because it needs to be per-worker

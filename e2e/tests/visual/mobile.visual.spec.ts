@@ -45,6 +45,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú', type: 'savings', balance: 200000 }),
       ]);
+      await db.setAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
 
       await db.seedProjects([
         createProject({ name: 'Salário', amount: 800000, certainty: 'guaranteed' }),
@@ -58,6 +59,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.seedCreditCards([
         createCreditCard({ name: 'Nubank', statement_balance: 150000, due_day: 15 }),
       ]);
+      await db.setCreditCardsBalanceUpdatedAt('2025-01-15T12:00:00Z');
 
       await dashboardPage.goto();
       await visual.setTheme(page, 'light');
@@ -71,6 +73,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú', type: 'savings', balance: 200000 }),
       ]);
+      await db.setAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
 
       await db.seedProjects([
         createProject({ name: 'Salário', amount: 800000, certainty: 'guaranteed' }),
@@ -84,6 +87,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.seedCreditCards([
         createCreditCard({ name: 'Nubank', statement_balance: 150000, due_day: 15 }),
       ]);
+      await db.setCreditCardsBalanceUpdatedAt('2025-01-15T12:00:00Z');
 
       await dashboardPage.goto();
       await visual.setTheme(page, 'dark');
@@ -96,7 +100,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.clear();
 
       await db.seedAccounts([
-        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 50_000_00 }),
       ]);
       await db.setCheckingAccountsBalanceUpdatedAt('2025-01-05T12:00:00Z');
       await db.seedSingleShotExpenses([
@@ -114,7 +118,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.clear();
 
       await db.seedAccounts([
-        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 50_000_00 }),
       ]);
       await db.setCheckingAccountsBalanceUpdatedAt('2025-01-05T12:00:00Z');
       await db.seedSingleShotExpenses([
@@ -132,7 +136,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.clear();
 
       await db.seedAccounts([
-        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 50_000_00 }),
       ]);
       await db.setCheckingAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
 
@@ -147,7 +151,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.clear();
 
       await db.seedAccounts([
-        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 50_000_00 }),
       ]);
       await db.setCheckingAccountsBalanceUpdatedAt('2025-01-15T12:00:00Z');
 
@@ -162,7 +166,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.clear();
 
       await db.seedAccounts([
-        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 50_000_00 }),
       ]);
 
       await dashboardPage.goto();
@@ -176,7 +180,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await db.clear();
 
       await db.seedAccounts([
-        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 100_00 }),
+        createAccount({ name: 'Conta Corrente', type: 'checking', balance: 50_000_00 }),
       ]);
 
       await dashboardPage.goto();

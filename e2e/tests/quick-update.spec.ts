@@ -9,6 +9,14 @@ import { createAccount, createCreditCard } from '../utils/test-data';
 test.describe('Quick Update Modal', () => {
   // Tests now run in parallel with per-worker data prefixing for isolation
 
+  async function resetForCleanState(db: {
+    resetDatabase: () => Promise<void>
+    ensureTestUser: (userEmail?: string) => Promise<void>
+  }) {
+    await db.resetDatabase()
+    await db.ensureTestUser()
+  }
+
   test('T071: open Quick Update → all accounts and credit cards listed', async ({
     page,
     dashboardPage,
@@ -364,9 +372,8 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
-    // Reset database to ensure clean state - this test relies on specific badge counts
-    await db.resetDatabase();
-    await db.ensureTestUser();
+    // Reset for clean state - this test relies on specific badge counts
+    await resetForCleanState(db);
     
     const uniqueId = Date.now();
     const accountName = `Multi ${uniqueId}`;
@@ -411,12 +418,16 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
+    // Reset for clean state to avoid stale data from prior tests
+    await resetForCleanState(db);
+
     const uniqueId = Date.now();
+    const cardName = `Cartão Teste ${uniqueId}`;
     
     // Seed a credit card
     await db.seedCreditCards([
       createCreditCard({ 
-        name: `Cartão Teste ${uniqueId}`, 
+        name: cardName, 
         statement_balance: 150000,
         due_day: 15,
       }),
@@ -432,12 +443,13 @@ test.describe('Quick Update Modal', () => {
     await expect(quickUpdatePage.completeButton).toBeVisible();
 
     // Verify the card is listed
-    await expect(page.getByText(`Cartão Teste ${uniqueId}`, { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /cartões de crédito/i })).toBeVisible();
+    await expect(page.getByText(cardName, { exact: false })).toBeVisible();
 
     // Find the card row specifically and verify it doesn't have type badges
     // The card row contains the card name
     const cardRow = page.locator('div.rounded-lg.border').filter({ 
-      hasText: `Cartão Teste ${uniqueId}` 
+      hasText: cardName 
     });
     await expect(cardRow).toBeVisible();
     
@@ -453,9 +465,8 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
-    // Reset database to ensure clean state - this test relies on specific badge presence
-    await db.resetDatabase();
-    await db.ensureTestUser();
+    // Reset for clean state - this test relies on specific badge presence
+    await resetForCleanState(db);
     
     const uniqueId = Date.now();
     

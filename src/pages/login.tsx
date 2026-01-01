@@ -9,7 +9,7 @@ export function LoginPage() {
         <div className="text-center mb-8 flex flex-col items-center gap-3">
           <BrandLogo className="h-10 w-auto" />
           <p className="text-muted-foreground mt-2">
-            Gerencie as finanças da sua família juntos
+            Preveja seu fluxo de caixa com clareza
           </p>
         </div>
         
@@ -26,7 +26,7 @@ export function LoginPage() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Apenas membros da família pré-aprovados podem acessar este app.
+          Apenas usuários pré-aprovados podem acessar este app.
         </p>
       </div>
     </div>

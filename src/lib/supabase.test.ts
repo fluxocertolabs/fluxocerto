@@ -6,7 +6,15 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { getMissingEnvVars, isSupabaseConfigured, isOnline, handleSupabaseError, hasDevTokens, injectDevSession } from './supabase'
+import {
+  getMissingEnvVars,
+  isSupabaseConfigured,
+  isOnline,
+  handleSupabaseError,
+  hasDevTokens,
+  injectDevSession,
+  isPreviewAuthBypassEnabled,
+} from './supabase'
 
 // =============================================================================
 // getMissingEnvVars TESTS
@@ -313,6 +321,36 @@ describe('hasDevTokens', () => {
     vi.stubEnv('VITE_DEV_REFRESH_TOKEN', 'some-refresh-token')
     
     expect(hasDevTokens()).toBe(true)
+  })
+})
+
+// =============================================================================
+// isPreviewAuthBypassEnabled TESTS
+// =============================================================================
+
+describe('isPreviewAuthBypassEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('returns false when env var is missing/empty', () => {
+    vi.stubEnv('VITE_PREVIEW_AUTH_BYPASS', '')
+    expect(isPreviewAuthBypassEnabled()).toBe(false)
+  })
+
+  it('returns true when set to "true"', () => {
+    vi.stubEnv('VITE_PREVIEW_AUTH_BYPASS', 'true')
+    expect(isPreviewAuthBypassEnabled()).toBe(true)
+  })
+
+  it('returns true when set to "1"', () => {
+    vi.stubEnv('VITE_PREVIEW_AUTH_BYPASS', '1')
+    expect(isPreviewAuthBypassEnabled()).toBe(true)
+  })
+
+  it('returns false for other values', () => {
+    vi.stubEnv('VITE_PREVIEW_AUTH_BYPASS', 'false')
+    expect(isPreviewAuthBypassEnabled()).toBe(false)
   })
 })
 

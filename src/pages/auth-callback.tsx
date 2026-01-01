@@ -29,6 +29,7 @@ export function AuthCallbackPage() {
         const errorObj = new Error(errorDescription || errorParam)
         setError(getAuthErrorMessage(errorObj))
         setIsExpired(isExpiredLinkError(errorObj))
+
         return
       }
 
@@ -38,6 +39,7 @@ export function AuthCallbackPage() {
       if (sessionError) {
         setError(getAuthErrorMessage(sessionError))
         setIsExpired(isExpiredLinkError(sessionError))
+
         return
       }
 
@@ -47,6 +49,7 @@ export function AuthCallbackPage() {
       } else {
         // No session and no error - might be a stale callback
         setError('Não foi possível completar o login. Por favor, solicite um novo link de acesso.')
+
       }
     }
 

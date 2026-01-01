@@ -1,18 +1,25 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { initializeAuth, isSupabaseConfigured, hasDevTokens, injectDevSession } from './lib/supabase'
+import {
+  initializeAuth,
+  isSupabaseConfigured,
+  hasDevTokens,
+  injectDevSession,
+  isPreviewAuthBypassEnabled,
+  injectPreviewSession,
+} from './lib/supabase'
 import { AppErrorBoundary } from '@/components/app-error-boundary'
 import { withTimeout } from '@/lib/utils/promise'
 import './index.css'
 
 /**
- * Display a dev auth bypass error toast.
+ * Display an auth bypass error toast.
  * Creates a temporary DOM element to show the error since React hasn't mounted yet.
  * Auto-dismisses after 5 seconds.
  * Uses DOM APIs instead of innerHTML to prevent XSS.
  */
-function showDevAuthError(message: string): void {
+function showAuthBypassError(titleText: string, message: string): void {
   // Create style element for animation
   const style = document.createElement('style')
   style.textContent = '@keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }'
@@ -39,7 +46,7 @@ function showDevAuthError(message: string): void {
   // Create title
   const title = document.createElement('strong')
   title.style.cssText = 'display: block; margin-bottom: 4px;'
-  title.textContent = 'Dev Auth Bypass Failed'
+  title.textContent = titleText
   
   // Create message span (using textContent to prevent XSS)
   const messageSpan = document.createElement('span')
@@ -113,10 +120,34 @@ async function bootstrap() {
       }
       if (!result.success) {
         console.error('Dev auth bypass failed:', result.error)
-        showDevAuthError(result.error || 'Unknown error - check console')
+        showAuthBypassError('Dev Auth Bypass Failed', result.error || 'Unknown error - check console')
         // Fall through to normal auth initialization
       } else {
         console.log('✓ Dev auth bypass: Session injected successfully')
+      }
+    }
+
+    // PREVIEW MODE: Optional PR-preview auth bypass (disabled by default)
+    // This is controlled by VITE_PREVIEW_AUTH_BYPASS at build time.
+    if (!import.meta.env.DEV && isPreviewAuthBypassEnabled()) {
+      let result: Awaited<ReturnType<typeof injectPreviewSession>>
+      try {
+        result = await withTimeout(
+          injectPreviewSession(),
+          7000,
+          'Preview auth bypass timed out (is Supabase reachable and configured for this deployment?)'
+        )
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error - check console'
+        result = { success: false, error: message }
+      }
+
+      if (!result.success) {
+        console.error('Preview auth bypass failed:', result.error)
+        showAuthBypassError('Preview Auth Bypass Failed', result.error || 'Unknown error - check console')
+        // Fall through to normal auth initialization
+      } else {
+        console.log('✓ Preview auth bypass: Session injected successfully')
       }
     }
 
