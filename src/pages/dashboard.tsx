@@ -115,26 +115,30 @@ export function Dashboard() {
         <h1 className="text-2xl font-bold text-foreground">
           Painel de Fluxo de Caixa
         </h1>
-        {/* Only show controls when not loading */}
-        {!loadingState.showSkeleton && !loadingState.showError && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-            <ProjectionSelector
-              value={projectionDays}
-              onChange={setProjectionDays}
-            />
-            <Button
-              variant="outline"
-              onClick={() => setShowSaveSnapshot(true)}
-              disabled={!projection}
-              className="w-full sm:w-auto"
-            >
-              Salvar Projeção
-            </Button>
-            <Button onClick={() => setShowQuickUpdate(true)} className="w-full sm:w-auto">
-              Atualizar Saldos
-            </Button>
-          </div>
-        )}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          {/* Projection + snapshot controls depend on projection data; keep them hidden while loading/error */}
+          {!loadingState.showSkeleton && !loadingState.showError && (
+            <>
+              <ProjectionSelector
+                value={projectionDays}
+                onChange={setProjectionDays}
+              />
+              <Button
+                variant="outline"
+                onClick={() => setShowSaveSnapshot(true)}
+                disabled={!projection}
+                className="w-full sm:w-auto"
+              >
+                Salvar Projeção
+              </Button>
+            </>
+          )}
+
+          {/* Quick Update is a safe action even while the chart is (re)loading or in an error state. */}
+          <Button onClick={() => setShowQuickUpdate(true)} className="w-full sm:w-auto">
+            Atualizar Saldos
+          </Button>
+        </div>
       </div>
 
       <PageLoadingWrapper
