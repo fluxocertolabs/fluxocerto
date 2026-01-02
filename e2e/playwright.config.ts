@@ -13,6 +13,23 @@ const __dirname = dirname(__filename);
  * This ensures tests always have the correct keys without manual env setup
  */
 function getSupabaseConfig() {
+  // If the caller already provided keys (e.g. dockerized visual runs), don't
+  // shell out to Supabase CLI. This avoids misleading warnings in containers
+  // where the Supabase CLI/Docker socket aren't available.
+  const envUrl = process.env.VITE_SUPABASE_URL;
+  const envAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+  const envServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const envInbucketUrl = process.env.INBUCKET_URL;
+
+  if (envUrl && envAnonKey && envServiceRoleKey) {
+    return {
+      url: envUrl,
+      anonKey: envAnonKey,
+      serviceRoleKey: envServiceRoleKey,
+      inbucketUrl: envInbucketUrl || 'http://localhost:54324',
+    };
+  }
+
   try {
     const output = execSync('npx supabase status -o json', {
       cwd: resolve(__dirname, '..'),

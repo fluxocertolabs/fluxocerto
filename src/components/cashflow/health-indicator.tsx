@@ -67,16 +67,16 @@ export function HealthIndicator({
         'rounded-xl border p-4',
         config.bgColor,
         config.borderColor,
-        'flex items-center justify-between gap-4'
+        'flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <Icon className={cn('h-6 w-6 flex-shrink-0', config.textColor)} />
-        <div>
+        <div className="min-w-0">
           <p className={cn('font-semibold', config.textColor)}>
             {config.label}
           </p>
-          <p className="text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground break-words">{message}</p>
         </div>
       </div>
 
@@ -88,11 +88,12 @@ export function HealthIndicator({
             'flex items-center gap-2 px-3 py-1.5 rounded-full',
             'bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/30',
             'text-sm font-medium transition-colors cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-amber-500/50'
+            'focus:outline-none focus:ring-2 focus:ring-amber-500/50',
+            'w-full sm:w-auto justify-center sm:justify-start text-left'
           )}
         >
           <ClockIcon className="h-4 w-4" />
-          <span>
+          <span className="whitespace-normal">
             {staleCount} {staleCount !== 1 ? 'itens desatualizados' : 'item desatualizado'} - Atualizar agora
           </span>
         </button>

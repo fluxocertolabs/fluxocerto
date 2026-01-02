@@ -117,7 +117,7 @@ export function Dashboard() {
         </h1>
         {/* Only show controls when not loading */}
         {!loadingState.showSkeleton && !loadingState.showError && (
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <ProjectionSelector
               value={projectionDays}
               onChange={setProjectionDays}
@@ -126,10 +126,11 @@ export function Dashboard() {
               variant="outline"
               onClick={() => setShowSaveSnapshot(true)}
               disabled={!projection}
+              className="w-full sm:w-auto"
             >
               Salvar Projeção
             </Button>
-            <Button onClick={() => setShowQuickUpdate(true)}>
+            <Button onClick={() => setShowQuickUpdate(true)} className="w-full sm:w-auto">
               Atualizar Saldos
             </Button>
           </div>

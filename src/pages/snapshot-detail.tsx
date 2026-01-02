@@ -127,11 +127,11 @@ export function SnapshotDetailPage() {
 
       {/* Historical snapshot banner */}
       <Card data-testid="historical-banner" className="mb-6 p-4 bg-muted/50 border-muted-foreground/20">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <InfoCircledIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-            <div>
-              <h1 className="font-semibold text-foreground">
+            <div className="min-w-0">
+              <h1 className="font-semibold text-foreground break-words">
                 Projeção Histórica: {currentSnapshot.name}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -143,10 +143,10 @@ export function SnapshotDetailPage() {
             variant="ghost"
             size="sm"
             onClick={() => setShowDeleteConfirm(true)}
-            className="text-muted-foreground transition-none hover:text-destructive hover:bg-destructive/10"
+            className="text-muted-foreground transition-none hover:text-destructive hover:bg-destructive/10 self-end sm:self-auto"
           >
             <TrashIcon className="w-4 h-4" />
-            Excluir
+            <span className="sr-only sm:not-sr-only">Excluir</span>
           </Button>
         </div>
       </Card>

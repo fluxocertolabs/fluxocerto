@@ -62,14 +62,14 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
             dangerDayCount > 0 ? 'border-l-destructive' : 'border-l-emerald-500'
           )}
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
               <h3 className="font-medium text-foreground truncate">{name}</h3>
               <p className="text-sm text-muted-foreground mt-1">{formattedDate}</p>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col items-end gap-1 text-sm">
+            <div className="flex items-start justify-between sm:justify-end gap-4">
+              <div className="flex flex-col items-start sm:items-end gap-1 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">Saldo inicial:</span>
                   <span className="font-medium">
@@ -107,7 +107,7 @@ export function SnapshotCard({ snapshot, onDelete, isDeleting }: SnapshotCardPro
                     setShowDeleteConfirm(true)
                   }}
                   disabled={isDeleting}
-                  className="h-8 w-8 p-0 text-muted-foreground transition-none hover:text-destructive hover:bg-destructive/10"
+                  className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground transition-none hover:text-destructive hover:bg-destructive/10"
                   aria-label="Excluir projeção"
                 >
                   <TrashIcon className="h-4 w-4" />

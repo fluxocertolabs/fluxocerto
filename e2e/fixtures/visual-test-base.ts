@@ -13,7 +13,6 @@
  */
 
 import { test as base, expect, type Page, type BrowserContext, type Locator } from '@playwright/test';
-import { waitForNetworkSettled } from '../utils/wait-helpers';
 import { createWorkerDbFixture, type WorkerDatabaseFixture } from './db';
 import { AuthFixture, createWorkerAuthFixture } from './auth';
 import { getWorkerContext, type IWorkerContext } from './worker-context';
@@ -215,6 +214,10 @@ function getWorkerSpecificMasks(page: Page): Locator[] {
   return [
     // Group badge in header - contains worker-specific group name
     page.locator('[data-testid="group-badge"]'),
+    // Group name in Manage → Group tab (worker-specific)
+    page.locator('[data-testid="group-name"]'),
+    // Member names are worker-specific (each worker has its own group/user)
+    page.locator('[data-testid="member-name"]'),
   ];
 }
 

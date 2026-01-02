@@ -243,7 +243,6 @@ export async function injectDevSession(): Promise<{ success: boolean; error?: st
       access_token: accessToken,
       refresh_token: refreshToken,
     })
-
     if (error) {
       return { success: false, error: `setSession failed: ${error.message}` }
     }

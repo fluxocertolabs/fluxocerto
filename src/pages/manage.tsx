@@ -563,13 +563,15 @@ export function ManagePage() {
       >
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <TabsList className="grid w-full sm:w-auto grid-cols-5">
-              <TabsTrigger value="accounts">Contas</TabsTrigger>
-              <TabsTrigger value="projects">Receitas</TabsTrigger>
-              <TabsTrigger value="expenses">Despesas</TabsTrigger>
-              <TabsTrigger value="cards">Cartões</TabsTrigger>
-              <TabsTrigger value="group">Grupo</TabsTrigger>
-            </TabsList>
+            <div className="w-full overflow-x-auto sm:overflow-visible">
+              <TabsList className="w-max min-w-full sm:w-auto justify-start sm:justify-center">
+                <TabsTrigger value="accounts">Contas</TabsTrigger>
+                <TabsTrigger value="projects">Receitas</TabsTrigger>
+                <TabsTrigger value="expenses">Despesas</TabsTrigger>
+                <TabsTrigger value="cards">Cartões</TabsTrigger>
+                <TabsTrigger value="group">Grupo</TabsTrigger>
+              </TabsList>
+            </div>
 
             {activeTab === 'accounts' && (
               <Button onClick={() => setDialogState({ type: 'add-account' })}>
@@ -675,7 +677,7 @@ export function ManagePage() {
                 <CardTitle>Membros do Grupo</CardTitle>
                 <CardDescription>
                   {group ? (
-                    <>Membros do grupo <strong>{group.name}</strong></>
+                    <>Membros do grupo <strong data-testid="group-name">{group.name}</strong></>
                   ) : (
                     'Carregando...'
                   )}

@@ -124,7 +124,13 @@ export function CreditCardCard({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+            className={cn(
+              'h-8 w-8 transition-opacity',
+              // Mobile: always visible (no hover)
+              'opacity-100',
+              // Desktop: reveal on hover/focus for a cleaner card UI
+              'sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100'
+            )}
             onClick={() => setShowActions(!showActions)}
             aria-label="Mais opções"
           >

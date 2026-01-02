@@ -122,6 +122,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
   visualTest(
     'history - light with snapshots',
     async ({ page, db, visual }) => {
+      await db.clear();
       // Seed multiple snapshots
       await db.seedSnapshots([
         { name: 'Snapshot Janeiro 2025', data: createMockSnapshotData() },
@@ -143,6 +144,7 @@ visualTest.describe('History Page Visual Regression @visual', () => {
   visualTest(
     'history - dark with snapshots',
     async ({ page, db, visual }) => {
+      await db.clear();
       // Seed multiple snapshots
       await db.seedSnapshots([
         { name: 'Snapshot Janeiro 2025', data: createMockSnapshotData() },
@@ -166,6 +168,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
   visualTest(
     'snapshot-detail - light',
     async ({ page, db, visual }) => {
+      await db.clear();
       // Seed a snapshot
       const [seeded] = await db.seedSnapshots([
         { name: 'Visual Test Snapshot', data: createMockSnapshotData() },
@@ -186,6 +189,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
   visualTest(
     'snapshot-detail - dark',
     async ({ page, db, visual }) => {
+      await db.clear();
       // Seed a snapshot
       const [seeded] = await db.seedSnapshots([
         { name: 'Visual Test Snapshot', data: createMockSnapshotData() },
@@ -234,6 +238,7 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
   visualTest(
     'save-snapshot-dialog - light',
     async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
       const seedData = createFullSeedData();
       await db.seedFullScenario(seedData);
 
@@ -245,9 +250,11 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
       const saveButton = page.getByRole('button', { name: /salvar projeção/i });
       await saveButton.click();
 
-      // Wait for dialog to appear
-      await page.waitForSelector('text=/salvar projeção/i', { timeout: 5000 });
-      await page.waitForTimeout(500); // Wait for dialog animation
+      // Wait for dialog to appear (don't rely on text matching the button itself)
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('heading', { name: /salvar projeção/i })).toBeVisible();
+      await expect(dialog.locator('#snapshot-name')).toBeVisible();
 
       await visual.takeScreenshot(page, 'save-snapshot-dialog-light.png');
     }
@@ -256,6 +263,7 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
   visualTest(
     'save-snapshot-dialog - dark',
     async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
       const seedData = createFullSeedData();
       await db.seedFullScenario(seedData);
 
@@ -267,9 +275,11 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
       const saveButton = page.getByRole('button', { name: /salvar projeção/i });
       await saveButton.click();
 
-      // Wait for dialog to appear
-      await page.waitForSelector('text=/salvar projeção/i', { timeout: 5000 });
-      await page.waitForTimeout(500); // Wait for dialog animation
+      // Wait for dialog to appear (don't rely on text matching the button itself)
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('heading', { name: /salvar projeção/i })).toBeVisible();
+      await expect(dialog.locator('#snapshot-name')).toBeVisible();
 
       await visual.takeScreenshot(page, 'save-snapshot-dialog-dark.png');
     }

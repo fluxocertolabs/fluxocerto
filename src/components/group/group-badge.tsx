@@ -12,10 +12,11 @@ export function GroupBadge({ name }: GroupBadgeProps) {
   return (
     <span
       data-testid="group-badge"
-      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md"
+      title={name}
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md min-w-0 max-w-[11rem] md:max-w-none"
     >
-      <Users className="h-3 w-3" />
-      {name}
+      <Users className="h-3 w-3 flex-shrink-0" />
+      <span className="truncate">{name}</span>
     </span>
   )
 }

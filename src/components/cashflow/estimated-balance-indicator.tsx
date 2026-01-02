@@ -36,26 +36,31 @@ export function EstimatedBalanceIndicator({
       className={cn(
         'rounded-xl border p-4',
         'bg-amber-500/10 border-amber-500/30',
-        'flex items-start justify-between gap-4',
+        'flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4',
         className
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 min-w-0">
         <Sparkles className="h-6 w-6 flex-shrink-0 text-amber-700 dark:text-amber-400" />
-        <div>
+        <div className="min-w-0">
           <p className="font-semibold text-amber-800 dark:text-amber-300">
             Saldo estimado
           </p>
           <p
             data-testid="estimated-balance-base"
-            className="text-sm text-muted-foreground"
+            className="text-sm text-muted-foreground break-words"
           >
             {getBaseText(base)}
           </p>
         </div>
       </div>
 
-      <Button variant="outline" size="sm" onClick={onUpdateBalances}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onUpdateBalances}
+        className="w-full sm:w-auto"
+      >
         Atualizar Saldos
       </Button>
     </div>

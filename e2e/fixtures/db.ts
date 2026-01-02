@@ -1094,11 +1094,20 @@ export async function seedSnapshotsWithGroup(
 ): Promise<{ id: string; name: string }[]> {
   const client = getAdminClient();
   
-  const records = snapshots.map((s) => ({
+  // IMPORTANT (visual determinism):
+  // Many visual regression screenshots render snapshot `created_at` (e.g. "Salvo em ...").
+  // If we let Postgres default `now()` populate this field, screenshots will vary by run time
+  // (and even by worker execution order), causing flaky visual diffs.
+  //
+  // We set a deterministic timestamp and increment per inserted row to keep ordering stable.
+  const baseCreatedAtMs = new Date('2025-01-15T12:00:00.000Z').getTime();
+
+  const records = snapshots.map((s, index) => ({
     name: s.name,
     schema_version: 1,
     data: s.data,
     group_id: groupId,
+    created_at: new Date(baseCreatedAtMs + index * 60_000).toISOString(),
   }));
 
   const { data, error } = await client.from('projection_snapshots').insert(records).select('id, name');

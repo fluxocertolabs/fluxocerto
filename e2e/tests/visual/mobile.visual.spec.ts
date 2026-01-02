@@ -6,12 +6,85 @@
  */
 
 import { visualTest } from '../../fixtures/visual-test-base';
+import { test as unauthTest, expect as unauthExpect, type Page } from '@playwright/test';
+import { disableAnimations, setTheme, waitForStableUI } from '../../fixtures/visual-test-base';
 import {
   createAccount,
   createExpense,
   createProject,
   createCreditCard,
 } from '../../utils/test-data';
+
+function createMockSnapshotData() {
+  // Use fixed date for deterministic screenshots
+  const fixedDate = new Date('2025-01-15T12:00:00');
+  return {
+    inputs: {
+      accounts: [{ id: 'acc-1', name: 'Test Account', type: 'checking', balance: 100000 }],
+      projects: [],
+      singleShotIncome: [],
+      fixedExpenses: [],
+      singleShotExpenses: [],
+      creditCards: [],
+      futureStatements: [],
+      projectionDays: 30,
+    },
+    projection: {
+      startDate: fixedDate.toISOString(),
+      endDate: new Date(fixedDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      startingBalance: 100000,
+      days: [
+        {
+          date: fixedDate.toISOString(),
+          dayOffset: 0,
+          optimisticBalance: 100000,
+          pessimisticBalance: 90000,
+          incomeEvents: [],
+          expenseEvents: [],
+          isOptimisticDanger: false,
+          isPessimisticDanger: false,
+        },
+        {
+          date: new Date(fixedDate.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+          dayOffset: 1,
+          optimisticBalance: 95000,
+          pessimisticBalance: 85000,
+          incomeEvents: [],
+          expenseEvents: [],
+          isOptimisticDanger: false,
+          isPessimisticDanger: false,
+        },
+      ],
+      optimistic: {
+        totalIncome: 50000,
+        totalExpenses: 30000,
+        endBalance: 120000,
+        dangerDays: [],
+        dangerDayCount: 0,
+      },
+      pessimistic: {
+        totalIncome: 40000,
+        totalExpenses: 30000,
+        endBalance: 110000,
+        dangerDays: [],
+        dangerDayCount: 0,
+      },
+    },
+    summaryMetrics: {
+      startingBalance: 100000,
+      endBalanceOptimistic: 120000,
+      dangerDayCount: 0,
+    },
+  };
+}
+
+async function waitForChartToStabilize(page: Page): Promise<void> {
+  const chartContainer = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
+  await chartContainer.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {
+    // Chart may not be present if no data
+  });
+  await page.waitForTimeout(1000);
+}
 
 /**
  * Mobile Visual Regression Tests
@@ -40,6 +113,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('dashboard - mobile light populated', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
       // Seed data for a realistic dashboard view
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
@@ -69,6 +143,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('dashboard - mobile dark populated', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú', type: 'savings', balance: 200000 }),
@@ -195,6 +270,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     // Even though accounts is the default tab, explicitly selecting it ensures
     // the tab content is fully loaded before taking screenshots
     visualTest('accounts list - mobile light', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú Poupança', type: 'savings', balance: 200000 }),
@@ -210,6 +286,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('accounts list - mobile dark', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú Poupança', type: 'savings', balance: 200000 }),
@@ -225,6 +302,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('expenses list - mobile light', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedExpenses([
         createExpense({ name: 'Aluguel', amount: 200000, due_day: 10 }),
         createExpense({ name: 'Internet', amount: 15000, due_day: 15 }),
@@ -240,6 +318,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('expenses list - mobile dark', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedExpenses([
         createExpense({ name: 'Aluguel', amount: 200000, due_day: 10 }),
         createExpense({ name: 'Internet', amount: 15000, due_day: 15 }),
@@ -255,6 +334,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('projects list - mobile light', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedProjects([
         createProject({ name: 'Salário', amount: 800000, certainty: 'guaranteed' }),
         createProject({ name: 'Freelance', amount: 200000, certainty: 'probable' }),
@@ -269,6 +349,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('projects list - mobile dark', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedProjects([
         createProject({ name: 'Salário', amount: 800000, certainty: 'guaranteed' }),
         createProject({ name: 'Freelance', amount: 200000, certainty: 'probable' }),
@@ -283,6 +364,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('credit cards list - mobile light', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedCreditCards([
         createCreditCard({ name: 'Nubank Platinum', statement_balance: 300000, due_day: 15 }),
         createCreditCard({ name: 'Itaú Visa', statement_balance: 150000, due_day: 10 }),
@@ -300,6 +382,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('credit cards list - mobile dark', async ({ page, managePage, db, visual }) => {
+      await db.clear();
       await db.seedCreditCards([
         createCreditCard({ name: 'Nubank Platinum', statement_balance: 300000, due_day: 15 }),
         createCreditCard({ name: 'Itaú Visa', statement_balance: 150000, due_day: 10 }),
@@ -315,10 +398,38 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       await visual.takeScreenshot(page, 'manage-credit-cards-mobile-dark.png');
     });
+
+    visualTest('group tab - mobile light', async ({ page, managePage, db, visual }) => {
+      await db.clear();
+
+      await managePage.goto();
+      await managePage.selectGroupTab();
+      // Wait for members to render (names are masked in screenshots but still need to load)
+      await page.locator('[data-testid="member-name"]').first().waitFor({ state: 'visible', timeout: 10000 });
+
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'manage-group-mobile-light.png');
+    });
+
+    visualTest('group tab - mobile dark', async ({ page, managePage, db, visual }) => {
+      await db.clear();
+
+      await managePage.goto();
+      await managePage.selectGroupTab();
+      await page.locator('[data-testid="member-name"]').first().waitFor({ state: 'visible', timeout: 10000 });
+
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'manage-group-mobile-dark.png');
+    });
   });
 
   visualTest.describe('Quick Update Mobile', () => {
     visualTest('quick update - mobile light', async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
+      await db.clear();
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú', type: 'savings', balance: 200000 }),
@@ -340,6 +451,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     });
 
     visualTest('quick update - mobile dark', async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
+      await db.clear();
       await db.seedAccounts([
         createAccount({ name: 'Nubank', type: 'checking', balance: 500000 }),
         createAccount({ name: 'Itaú', type: 'savings', balance: 200000 }),
@@ -359,6 +471,189 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       await visual.takeScreenshot(page, 'quick-update-mobile-dark.png');
     });
+  });
+
+  visualTest.describe('Mobile Navigation', () => {
+    visualTest('mobile menu - open light', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await page.getByRole('button', { name: /abrir menu/i }).click();
+      await page.getByRole('dialog', { name: 'Menu' }).waitFor({ state: 'visible', timeout: 5000 });
+
+      await visual.takeScreenshot(page, 'mobile-menu-open-light.png');
+    });
+
+    visualTest('mobile menu - open dark', async ({ page, dashboardPage, db, visual }) => {
+      await db.clear();
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await page.getByRole('button', { name: /abrir menu/i }).click();
+      await page.getByRole('dialog', { name: 'Menu' }).waitFor({ state: 'visible', timeout: 5000 });
+
+      await visual.takeScreenshot(page, 'mobile-menu-open-dark.png');
+    });
+  });
+
+  visualTest.describe('History & Snapshot Detail Mobile', () => {
+    visualTest('history - mobile light empty', async ({ page, historyPage, db, visual }) => {
+      await db.clear();
+
+      await historyPage.goto();
+      await unauthExpect(page.getByText(/nenhuma projeção salva/i)).toBeVisible();
+
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'history-mobile-light-empty.png');
+    });
+
+    visualTest('history - mobile dark empty', async ({ page, historyPage, db, visual }) => {
+      await db.clear();
+
+      await historyPage.goto();
+      await unauthExpect(page.getByText(/nenhuma projeção salva/i)).toBeVisible();
+
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'history-mobile-dark-empty.png');
+    });
+
+    visualTest('history - mobile light with snapshots', async ({ page, db, visual }) => {
+      await db.clear();
+      await db.seedSnapshots([
+        { name: 'Snapshot Janeiro 2025', data: createMockSnapshotData() },
+        { name: 'Snapshot Fevereiro 2025', data: createMockSnapshotData() },
+      ]);
+
+      await page.goto('/history');
+      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
+
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'history-mobile-light-with-snapshots.png');
+    });
+
+    visualTest('history - mobile dark with snapshots', async ({ page, db, visual }) => {
+      await db.clear();
+      await db.seedSnapshots([
+        { name: 'Snapshot Janeiro 2025', data: createMockSnapshotData() },
+        { name: 'Snapshot Fevereiro 2025', data: createMockSnapshotData() },
+      ]);
+
+      await page.goto('/history');
+      await page.waitForSelector('text=/histórico de projeções/i', { timeout: 10000 });
+
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'history-mobile-dark-with-snapshots.png');
+    });
+
+    visualTest('snapshot detail - mobile light', async ({ page, db, visual }) => {
+      await db.clear();
+      const [seeded] = await db.seedSnapshots([
+        { name: 'Visual Mobile Snapshot', data: createMockSnapshotData() },
+      ]);
+
+      await page.goto(`/history/${seeded.id}`);
+      await page.waitForSelector('text=/projeção histórica/i', { timeout: 10000 });
+
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+      await waitForChartToStabilize(page);
+
+      await visual.takeScreenshot(page, 'snapshot-detail-mobile-light.png');
+    });
+
+    visualTest('snapshot detail - mobile dark', async ({ page, db, visual }) => {
+      await db.clear();
+      const [seeded] = await db.seedSnapshots([
+        { name: 'Visual Mobile Snapshot', data: createMockSnapshotData() },
+      ]);
+
+      await page.goto(`/history/${seeded.id}`);
+      await page.waitForSelector('text=/projeção histórica/i', { timeout: 10000 });
+
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+      await waitForChartToStabilize(page);
+
+      await visual.takeScreenshot(page, 'snapshot-detail-mobile-dark.png');
+    });
+
+    visualTest('snapshot detail - mobile light not-found', async ({ page, snapshotDetailPage, visual }) => {
+      await snapshotDetailPage.goto('00000000-0000-0000-0000-000000000000');
+      await snapshotDetailPage.expectNotFound();
+
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'snapshot-detail-mobile-light-not-found.png');
+    });
+
+    visualTest('snapshot detail - mobile dark not-found', async ({ page, snapshotDetailPage, visual }) => {
+      await snapshotDetailPage.goto('00000000-0000-0000-0000-000000000000');
+      await snapshotDetailPage.expectNotFound();
+
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'snapshot-detail-mobile-dark-not-found.png');
+    });
+  });
+});
+
+unauthTest.describe('Mobile Visual Regression (Public Routes) @visual', () => {
+  // Ensure we can see /login and /auth/confirm (authenticated contexts redirect away)
+  unauthTest.use({ storageState: { cookies: [], origins: [] } });
+
+  unauthTest('login - mobile light (initial)', async ({ page }) => {
+    await page.goto('/login');
+    await disableAnimations(page);
+    await setTheme(page, 'light');
+    await waitForStableUI(page);
+
+    await unauthExpect(page.locator('#email')).toBeVisible();
+    await unauthExpect(page).toHaveScreenshot('login-mobile-light-initial.png');
+  });
+
+  unauthTest('login - mobile dark (initial)', async ({ page }) => {
+    await page.goto('/login');
+    await disableAnimations(page);
+    await setTheme(page, 'dark');
+    await waitForStableUI(page);
+
+    await unauthExpect(page.locator('#email')).toBeVisible();
+    await unauthExpect(page).toHaveScreenshot('login-mobile-dark-initial.png');
+  });
+
+  unauthTest('auth confirm - expired link - mobile light', async ({ page }) => {
+    await page.goto('/auth/confirm?error=otp_expired&error_description=expired');
+    await disableAnimations(page);
+    await setTheme(page, 'light');
+    await waitForStableUI(page);
+
+    await unauthExpect(page.getByRole('button', { name: /solicitar novo link|voltar para login/i })).toBeVisible();
+    await unauthExpect(page).toHaveScreenshot('auth-confirm-mobile-light-expired.png');
+  });
+
+  unauthTest('auth confirm - expired link - mobile dark', async ({ page }) => {
+    await page.goto('/auth/confirm?error=otp_expired&error_description=expired');
+    await disableAnimations(page);
+    await setTheme(page, 'dark');
+    await waitForStableUI(page);
+
+    await unauthExpect(page.getByRole('button', { name: /solicitar novo link|voltar para login/i })).toBeVisible();
+    await unauthExpect(page).toHaveScreenshot('auth-confirm-mobile-dark-expired.png');
   });
 });
 
