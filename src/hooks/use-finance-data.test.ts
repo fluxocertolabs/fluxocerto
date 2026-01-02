@@ -13,6 +13,7 @@ import {
   mapSingleShotIncomeFromDb,
   mapExpenseFromDb,
   mapCreditCardFromDb,
+  mergeRealtimeOwner,
 } from './use-finance-data'
 import type { ProfileRow, AccountRow, ProjectRow, ExpenseRow, CreditCardRow } from '@/lib/supabase'
 
@@ -528,6 +529,70 @@ describe('mapCreditCardFromDb', () => {
 
     expect(result.ownerId).toBeNull()
     expect(result.owner).toBeNull()
+  })
+})
+
+// =============================================================================
+// mergeRealtimeOwner TESTS (regression: realtime UPDATE payloads omit joined owner)
+// =============================================================================
+
+describe('mergeRealtimeOwner', () => {
+  type Owner = { id: string; name: string } | null
+  type Entity = { id: string; ownerId: string | null; owner: Owner }
+
+  const profiles = [
+    { id: 'p1', name: 'João', groupId: 'g1' },
+    { id: 'p2', name: 'Maria', groupId: 'g1' },
+  ]
+
+  it('returns mapped as-is when owner join is present', () => {
+    const mapped: Entity = { id: 'a1', ownerId: 'p1', owner: { id: 'p1', name: 'João' } }
+    const existing: Entity = { id: 'a1', ownerId: 'p1', owner: { id: 'p1', name: 'Old' } }
+
+    const result = mergeRealtimeOwner(mapped, existing, true, profiles)
+
+    expect(result.next).toEqual(mapped)
+    expect(result.ownerSource).toBe('mapped')
+  })
+
+  it('preserves existing owner when join is missing and ownerId matches', () => {
+    const mapped: Entity = { id: 'a1', ownerId: 'p1', owner: null } // join missing -> mapped owner null
+    const existing: Entity = { id: 'a1', ownerId: 'p1', owner: { id: 'p1', name: 'João' } }
+
+    const result = mergeRealtimeOwner(mapped, existing, false, profiles)
+
+    expect(result.next.owner).toEqual({ id: 'p1', name: 'João' })
+    expect(result.ownerSource).toBe('existing')
+  })
+
+  it('resolves owner from profiles when join is missing and existing has no owner', () => {
+    const mapped: Entity = { id: 'a1', ownerId: 'p2', owner: null }
+    const existing: Entity = { id: 'a1', ownerId: 'p2', owner: null }
+
+    const result = mergeRealtimeOwner(mapped, existing, false, profiles)
+
+    expect(result.next.owner).toEqual({ id: 'p2', name: 'Maria' })
+    expect(result.ownerSource).toBe('profiles')
+  })
+
+  it('keeps owner null when join is missing and ownerId is null', () => {
+    const mapped: Entity = { id: 'a1', ownerId: null, owner: null }
+    const existing: Entity = { id: 'a1', ownerId: 'p1', owner: { id: 'p1', name: 'João' } }
+
+    const result = mergeRealtimeOwner(mapped, existing, false, profiles)
+
+    expect(result.next.owner).toBeNull()
+    expect(result.ownerSource).toBe('null')
+  })
+
+  it('does not incorrectly keep old owner when ownerId changed', () => {
+    const mapped: Entity = { id: 'a1', ownerId: 'p2', owner: null }
+    const existing: Entity = { id: 'a1', ownerId: 'p1', owner: { id: 'p1', name: 'João' } }
+
+    const result = mergeRealtimeOwner(mapped, existing, false, profiles)
+
+    expect(result.next.owner).toEqual({ id: 'p2', name: 'Maria' })
+    expect(result.ownerSource).toBe('profiles')
   })
 })
 

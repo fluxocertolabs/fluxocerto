@@ -331,8 +331,12 @@ describe('BalanceListItem - Balance Editing', () => {
   })
 
   it('shows saving indicator while saving', async () => {
+    let resolveSave: ((value: { success: boolean }) => void) | undefined
     const onSave = vi.fn().mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100))
+      () =>
+        new Promise<{ success: boolean }>((resolve) => {
+          resolveSave = resolve
+        })
     )
     const item: BalanceItem = {
       type: 'account',
@@ -345,11 +349,16 @@ describe('BalanceListItem - Balance Editing', () => {
     await userEvent.type(input, '2000,00')
     fireEvent.blur(input)
 
-    expect(screen.getByText(/Salvando/)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /salvando/i })).toBeInTheDocument()
+    expect(input).toBeDisabled()
+
+    resolveSave?.({ success: true })
 
     await waitFor(() => {
-      expect(screen.queryByText(/Salvando/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('img', { name: /salvando/i })).not.toBeInTheDocument()
     })
+
+    expect(input).not.toBeDisabled()
   })
 
   it('shows error message when save fails', async () => {

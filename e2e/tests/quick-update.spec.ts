@@ -511,4 +511,74 @@ test.describe('Quick Update Modal', () => {
     // Clean up
     await db.deleteProfileByEmail(`type-owner-${uniqueId}@test.local`);
   });
+
+  test('T084: update balance does not remove owner/type badges in Quick Update', async ({
+    page,
+    dashboardPage,
+    quickUpdatePage,
+    db,
+  }) => {
+    // Reset for clean state - reduces flakiness for badge visibility assertions
+    await resetForCleanState(db);
+
+    const uniqueId = Date.now();
+    const groupId = await db.getWorkerGroupId();
+
+    const owner = await db.createProfileInGroup(
+      `update-owner-${uniqueId}@test.local`,
+      'Daniel',
+      groupId
+    );
+
+    const accountName = `Conta Update Owned ${uniqueId}`;
+    await db.seedAccounts([
+      createAccount({
+        name: accountName,
+        type: 'checking',
+        balance: 100000,
+        owner_id: owner.id,
+      }),
+    ]);
+
+    await dashboardPage.goto();
+    await dashboardPage.expectChartRendered();
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    const accountRow = page.locator('div.rounded-lg.border').filter({ hasText: accountName });
+    await expect(accountRow).toBeVisible();
+
+    // Precondition: badges visible
+    await expect(accountRow.getByText('Daniel')).toBeVisible();
+    await expect(accountRow.locator('span').filter({ hasText: /^🏦Corrente$/ })).toBeVisible();
+
+    // Update balance (auto-save on blur)
+    const escapedName = accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const balanceInput = page.getByLabel(new RegExp(`Saldo de.*${escapedName}`, 'i')).last();
+    await expect(balanceInput).toBeVisible();
+    await balanceInput.clear();
+    await balanceInput.fill('2000,00');
+    await balanceInput.blur();
+
+    // Wait for save to settle (input disables during save)
+    await expect(balanceInput).toBeDisabled({ timeout: 5000 }).catch(() => {});
+    await expect(balanceInput).not.toBeDisabled({ timeout: 15000 });
+
+    // Regression: owner/type badges must still be visible after save
+    await expect(accountRow.getByText('Daniel')).toBeVisible();
+    await expect(accountRow.locator('span').filter({ hasText: /^🏦Corrente$/ })).toBeVisible();
+
+    // Close + reopen to ensure no "tags dropped" state lingers
+    await quickUpdatePage.complete();
+    await quickUpdatePage.expectModalClosed();
+
+    await dashboardPage.openQuickUpdate();
+    await quickUpdatePage.waitForModal();
+
+    const accountRowAfter = page.locator('div.rounded-lg.border').filter({ hasText: accountName });
+    await expect(accountRowAfter.getByText('Daniel')).toBeVisible();
+    await expect(accountRowAfter.locator('span').filter({ hasText: /^🏦Corrente$/ })).toBeVisible();
+
+    await db.deleteProfileByEmail(`update-owner-${uniqueId}@test.local`);
+  });
 });

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { OwnerBadge } from '@/components/ui/owner-badge'
 import { AccountTypeBadge } from '@/components/ui/account-type-badge'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency, parseDecimal, formatDecimalBR } from '@/lib/format'
 import type { BalanceItem } from './types'
@@ -138,26 +139,42 @@ export function BalanceListItem({
 
       {/* Balance input */}
       <div className="flex flex-col items-end gap-1">
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-            R$
-          </span>
-          <Input
-            ref={inputRef}
-            type="text"
-            inputMode="decimal"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            disabled={isSaving}
-            className={cn(
-              'w-32 pl-7 text-right',
-              isSaving && 'opacity-50'
+        <div className="flex items-center gap-2">
+          {/* Reserve fixed space for spinner so layout doesn't shift while saving */}
+          <div className="w-4 h-4 flex items-center justify-center">
+            {isSaving ? (
+              <Loader2
+                className="h-4 w-4 animate-spin text-muted-foreground"
+                role="img"
+                aria-label="Salvando"
+              />
+            ) : (
+              <span aria-hidden="true" className="h-4 w-4" />
             )}
-            aria-label={`Saldo de ${name}`}
-            placeholder="0,00"
-          />
+          </div>
+
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              R$
+            </span>
+            <Input
+              ref={inputRef}
+              type="text"
+              inputMode="decimal"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              disabled={isSaving}
+              aria-busy={isSaving}
+              className={cn(
+                'w-32 pl-7 text-right',
+                isSaving && 'opacity-50'
+              )}
+              aria-label={`Saldo de ${name}`}
+              placeholder="0,00"
+            />
+          </div>
         </div>
 
         {/* Error display with retry */}
@@ -173,11 +190,6 @@ export function BalanceListItem({
               Tentar novamente
             </Button>
           </div>
-        )}
-
-        {/* Saving indicator */}
-        {isSaving && (
-          <span className="text-xs text-muted-foreground">Salvando...</span>
         )}
       </div>
     </div>

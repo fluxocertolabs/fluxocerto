@@ -183,6 +183,55 @@ export function mapCreditCardFromDb(row: CreditCardRow): CreditCard {
   }
 }
 
+type OwnerRef = { id: string; name: string } | null
+export type RealtimeOwnerSource = 'mapped' | 'existing' | 'profiles' | 'null'
+
+/**
+ * Supabase realtime payloads for base tables (accounts/credit_cards) do NOT include
+ * our joined `owner` field (from `owner:profiles!owner_id(id, name)`).
+ *
+ * When the join is missing, we preserve/resolve owner to prevent UI flicker and
+ * accidental tag loss after balance updates.
+ */
+export function mergeRealtimeOwner<T extends { ownerId?: string | null; owner: OwnerRef }>(
+  mapped: T,
+  existing: T | undefined,
+  ownerJoinPresent: boolean,
+  profiles: Profile[]
+): { next: T; ownerSource: RealtimeOwnerSource } {
+  // If the join is present, trust the mapped payload (even if null).
+  if (ownerJoinPresent) {
+    return { next: mapped, ownerSource: mapped.owner ? 'mapped' : 'null' }
+  }
+
+  // No join present — resolve owner from local sources.
+  if (mapped.ownerId == null) {
+    if (mapped.owner == null) return { next: mapped, ownerSource: 'null' }
+    return { next: { ...mapped, owner: null }, ownerSource: 'null' }
+  }
+
+  if (existing?.owner && existing.ownerId === mapped.ownerId) {
+    return {
+      next: mapped.owner === existing.owner ? mapped : ({ ...mapped, owner: existing.owner } as T),
+      ownerSource: 'existing',
+    }
+  }
+
+  const profile = profiles.find((p) => p.id === mapped.ownerId)
+  if (profile) {
+    const resolved = { id: profile.id, name: profile.name }
+    return {
+      next: mapped.owner?.id === resolved.id && mapped.owner?.name === resolved.name
+        ? mapped
+        : ({ ...mapped, owner: resolved } as T),
+      ownerSource: 'profiles',
+    }
+  }
+
+  if (mapped.owner == null) return { next: mapped, ownerSource: 'null' }
+  return { next: { ...mapped, owner: null }, ownerSource: 'null' }
+}
+
 export function useFinanceData(): UseFinanceDataReturn {
   const [accounts, setAccounts] = useState<BankAccount[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -191,6 +240,7 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [futureStatements, setFutureStatements] = useState<FutureStatement[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const profilesRef = useRef<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -208,6 +258,12 @@ export function useFinanceData(): UseFinanceDataReturn {
   }
 
   const { isAuthenticated } = useAuth()
+
+  // Keep latest profiles in a ref so realtime handlers can resolve owner names
+  // without re-subscribing on every profiles change.
+  useEffect(() => {
+    profilesRef.current = profiles
+  }, [profiles])
 
   // Derive filtered expense lists
   const fixedExpenses = expenses.filter(isFixedExpense)
@@ -265,19 +321,35 @@ export function useFinanceData(): UseFinanceDataReturn {
 
       // Map database rows to TypeScript types
       // Type assertions needed because Supabase infers complex types from select strings
-      setAccounts((accountsResult.data ?? []).map((row) => mapAccountFromDb(row as unknown as AccountRow)))
+      const mappedAccounts = (accountsResult.data ?? []).map((row) =>
+        mapAccountFromDb(row as unknown as AccountRow)
+      )
       
       // Separate projects by type: recurring vs single-shot income
       const allProjects = projectsResult.data ?? []
       const recurringProjects = allProjects.filter((p) => p.type === 'recurring' || !p.type)
       const singleShotIncomeRows = allProjects.filter((p) => p.type === 'single_shot')
-      setProjects(recurringProjects.map(mapProjectFromDb))
-      setSingleShotIncome(singleShotIncomeRows.map(mapSingleShotIncomeFromDb))
+      const mappedProjects = recurringProjects.map(mapProjectFromDb)
+      const mappedSingleShotIncome = singleShotIncomeRows.map(mapSingleShotIncomeFromDb)
       
-      setExpenses((expensesResult.data ?? []).map(mapExpenseFromDb))
-      setCreditCards((creditCardsResult.data ?? []).map((row) => mapCreditCardFromDb(row as unknown as CreditCardRow)))
-      setFutureStatements((futureStatementsResult.data ?? []).map((row) => transformFutureStatementRow(row as FutureStatementRow)))
-      setProfiles((profilesResult.data ?? []).map((row) => mapProfileFromDb(row as ProfileRow)))
+      const mappedExpenses = (expensesResult.data ?? []).map(mapExpenseFromDb)
+      const mappedCreditCards = (creditCardsResult.data ?? []).map((row) =>
+        mapCreditCardFromDb(row as unknown as CreditCardRow)
+      )
+      const mappedFutureStatements = (futureStatementsResult.data ?? []).map((row) =>
+        transformFutureStatementRow(row as FutureStatementRow)
+      )
+      const mappedProfiles = (profilesResult.data ?? []).map((row) =>
+        mapProfileFromDb(row as ProfileRow)
+      )
+
+      setAccounts(mappedAccounts)
+      setProjects(mappedProjects)
+      setSingleShotIncome(mappedSingleShotIncome)
+      setExpenses(mappedExpenses)
+      setCreditCards(mappedCreditCards)
+      setFutureStatements(mappedFutureStatements)
+      setProfiles(mappedProfiles)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao carregar dados'
       setError(message)
@@ -321,7 +393,24 @@ export function useFinanceData(): UseFinanceDataReturn {
       case 'UPDATE':
         if (newRecord) {
           const mapped = mapAccountFromDb(newRecord as AccountRow)
-          setAccounts((prev) => upsertUniqueById(prev, mapped))
+          setAccounts((prev) => {
+            const existing = prev.find((a) => a.id === mapped.id)
+
+            // Supabase realtime payloads for base tables do NOT include our joined `owner` field
+            // (from `owner:profiles!owner_id(...)` select). Preserve/resolve owner to avoid UI flicker.
+            const ownerJoinPresent = Object.prototype.hasOwnProperty.call(
+              newRecord as unknown as Record<string, unknown>,
+              'owner'
+            )
+            const { next } = mergeRealtimeOwner(
+              mapped,
+              existing,
+              ownerJoinPresent,
+              profilesRef.current
+            )
+
+            return upsertUniqueById(prev, next)
+          })
         }
         break
       case 'DELETE':
@@ -416,7 +505,23 @@ export function useFinanceData(): UseFinanceDataReturn {
       case 'UPDATE':
         if (newRecord) {
           const mapped = mapCreditCardFromDb(newRecord as CreditCardRow)
-          setCreditCards((prev) => upsertUniqueById(prev, mapped))
+          setCreditCards((prev) => {
+            const existing = prev.find((c) => c.id === mapped.id)
+
+            // Preserve/resolve joined `owner` to avoid flicker (realtime payload won't include join).
+            const ownerJoinPresent = Object.prototype.hasOwnProperty.call(
+              newRecord as unknown as Record<string, unknown>,
+              'owner'
+            )
+            const { next } = mergeRealtimeOwner(
+              mapped,
+              existing,
+              ownerJoinPresent,
+              profilesRef.current
+            )
+
+            return upsertUniqueById(prev, next)
+          })
         }
         break
       case 'DELETE':
