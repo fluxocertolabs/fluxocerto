@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Self-serve Magic Link signup + onboarding wizard + first-time page tours"
 
+## Clarifications
+
+### Session 2026-01-04
+
+- Q: After a user skips/dismisses the onboarding wizard before “minimum setup complete”, should the wizard auto-show again on later app loads? → A: Auto-show only once; after skip/dismiss it will not auto-show again, and the user continues via “Continue setup” / empty-state CTAs.
+- Q: For first-time page tours on a user’s first visit to a target page, should the tour auto-start or only be offered? → A: Auto-start the tour on first visit (with Skip/Close always available).
+- Q: If the onboarding wizard is being shown (because minimum setup isn’t complete), what should happen with page tours on those first visits? → A: Defer tours while the wizard is active; after the wizard is completed or dismissed, tours can auto-start on the next eligible page visit.
+- Q: Which pages should have first-time tours in this feature’s scope? → A: Only Dashboard, Manage, History.
+- Q: Where should onboarding state (progress + dismissed/completed) and tour state (per page completion/dismissal + version) be persisted? → A: Server-side (Supabase DB) per user (and group-aware for onboarding), shared across devices.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Unified Magic Link sign-in/sign-up (Priority: P1)
@@ -52,13 +62,13 @@ When the user’s current group is not yet configured with the minimum data requ
 1. **Given** a signed-in user’s group does not meet minimum setup, **When** they enter the app, **Then** the onboarding wizard is offered automatically and can be skipped at any time.
 2. **Given** the user leaves or refreshes mid-onboarding, **When** they return, **Then** they can resume where they left off (progress retained).
 3. **Given** the user completes onboarding with the minimum dataset, **When** they open the dashboard, **Then** they can see a cashflow projection without needing to hunt for additional required setup screens.
-4. **Given** the user skips required setup, **When** they navigate the app, **Then** they are not blocked but see clear CTAs to continue setup from relevant empty states.
+4. **Given** the user skips required setup, **When** they navigate the app, **Then** they are not blocked, the onboarding wizard does not auto-show again, and they see clear CTAs to continue setup from relevant empty states.
 
 ---
 
 ### User Story 4 - First-time page tours (coachmarks) (Priority: P2)
 
-When a user visits certain key pages for the first time (e.g., Dashboard, Manage, History), the app offers a short guided tour highlighting important UI elements. The tour is navigable (Next/Back) and dismissible (Skip/Close). Completed/dismissed tours do not auto-show again, but can be replayed intentionally.
+When a user visits the in-scope key pages for the first time (Dashboard, Manage, History), the app auto-starts a short guided tour highlighting important UI elements (unless the onboarding wizard is active, in which case tours are deferred until onboarding is completed or dismissed). The tour is navigable (Next/Back) and dismissible (Skip/Close). Completed/dismissed tours do not auto-show again, but can be replayed intentionally.
 
 **Why this priority**: Helps users build a mental model of the product faster and reduces “where do I click?” confusion.
 
@@ -66,10 +76,11 @@ When a user visits certain key pages for the first time (e.g., Dashboard, Manage
 
 **Acceptance Scenarios**:
 
-1. **Given** a user opens a target page for the first time, **When** the page renders, **Then** the tour is shown automatically (or offered immediately) and can be navigated with Next/Back or dismissed.
+1. **Given** a user opens a target page for the first time and the onboarding wizard is not currently active, **When** the page renders, **Then** the tour auto-starts and can be navigated with Next/Back or dismissed.
 2. **Given** a user completes or dismisses a page tour, **When** they revisit that page, **Then** the tour does not auto-show again.
 3. **Given** the user chooses “Show tour” intentionally, **When** they trigger it, **Then** the tour runs again regardless of prior completion state.
 4. **Given** a tour step’s target element is not present due to responsive layout or conditional UI, **When** the tour runs, **Then** it gracefully skips or adapts without breaking the tour flow.
+5. **Given** the onboarding wizard is currently active, **When** a user opens a target page for the first time, **Then** the page tour does not auto-start and is deferred until onboarding is completed or dismissed.
 
 ---
 
@@ -79,6 +90,7 @@ When a user visits certain key pages for the first time (e.g., Dashboard, Manage
 - First-login provisioning partially succeeds (user exists but group membership missing) → self-heal on next app load or show recoverable error with retry
 - Multiple group members → onboarding/tour auto-show behavior should not repeatedly interrupt each person
 - User skips onboarding and later wants to complete setup → clear re-entry points and progress continuity
+- Onboarding wizard is active → page tours are deferred (no overlapping overlays) until onboarding is completed or dismissed
 - Responsive layouts hide tour targets → tour skips/reorders steps safely
 - User signs in on a second device → onboarding/tour completion state should behave consistently for the same user
 
@@ -103,17 +115,17 @@ When a user visits certain key pages for the first time (e.g., Dashboard, Manage
 **Onboarding wizard:**
 
 - **FR-009**: The app MUST define “minimum setup complete” as: at least 1 bank account, at least 1 income source, and at least 1 expense in the current group. Credit cards are optional.
-- **FR-010**: If minimum setup is not complete, the app MUST automatically offer a first-run onboarding wizard that is skippable and does not block navigation.
-- **FR-011**: The onboarding wizard MUST retain progress across refreshes and allow the user to resume later.
+- **FR-010**: If minimum setup is not complete, the app MUST automatically offer a first-run onboarding wizard that is skippable, does not block navigation, and auto-shows at most once per user per group (it MUST NOT auto-show again after being skipped/dismissed).
+- **FR-011**: The onboarding wizard MUST retain progress across refreshes and allow the user to resume later, with state persisted server-side (Supabase DB) so behavior is consistent across sessions/devices for the same user (and group-aware).
 - **FR-012**: The onboarding wizard MUST guide the user through creating: display name (optional), group name (optional), first bank account, at least one income source, at least one expense, and optionally a credit card (or explicitly skip credit cards).
-- **FR-013**: If the user skips onboarding before minimum setup is complete, the app MUST still function and MUST provide clear CTAs to continue setup from relevant empty states and/or a dedicated “Continue setup” entry point.
+- **FR-013**: If the user skips onboarding before minimum setup is complete, the app MUST still function and MUST provide clear CTAs to continue setup from relevant empty states and/or a dedicated “Continue setup” entry point (and the wizard MUST remain accessible via those entry points).
 
 **Page tours (coachmarks):**
 
-- **FR-014**: The system MUST provide first-time page tours for the agreed set of key pages (at minimum: Dashboard, Manage, History).
+- **FR-014**: The system MUST provide first-time page tours for the in-scope key pages: Dashboard, Manage, History (additional page tours are out of scope for this feature).
 - **FR-015**: Page tours MUST support Next, Back, and Skip/Close actions, and MUST not permanently block core actions.
-- **FR-016**: Page tours MUST auto-show at most once per user per page (unless the user intentionally replays them).
-- **FR-017**: Tours MUST persist completion/dismissal state so users are not repeatedly interrupted across sessions/devices.
+- **FR-016**: Page tours MUST auto-show at most once per user per page (unless the user intentionally replays them) and MUST be deferred while the onboarding wizard is active; after onboarding is completed or dismissed, tours can auto-start on the next eligible page visit.
+- **FR-017**: Tours MUST persist completion/dismissal state server-side (Supabase DB) so users are not repeatedly interrupted across sessions/devices.
 - **FR-018**: Tours MUST gracefully handle missing targets due to responsive layout or conditional UI (skip/adapt without breaking).
 
 **Copy & environments:**
@@ -134,8 +146,8 @@ When a user visits certain key pages for the first time (e.g., Dashboard, Manage
 - **User**: A person identified by their email address who can authenticate via Magic Link.
 - **Group**: A data-isolated container for a household’s financial data (accounts, incomes, expenses, credit cards).
 - **Membership**: A link between a user and a group that determines which group data they can access.
-- **Onboarding State**: Per-user (and group-aware) state that stores whether onboarding is in progress, completed, or dismissed, plus step progress.
-- **Tour State**: Per-user state that stores, for each target page tour, whether it is not-started, completed, or dismissed (and the tour version).
+- **Onboarding State**: Server-side (Supabase DB) per-user, group-aware state that stores whether onboarding is in progress, completed, or dismissed, plus step progress.
+- **Tour State**: Server-side (Supabase DB) per-user state that stores, for each target page tour, whether it is not-started, completed, or dismissed (and the tour version).
 - **Bank Account**: A group-scoped financial account (e.g., checking) needed as a base for cashflow.
 - **Income Source**: A recurring or one-off inflow definition used in projections.
 - **Expense**: A recurring or one-off outflow definition used in projections.
@@ -155,6 +167,8 @@ When a user visits certain key pages for the first time (e.g., Dashboard, Manage
 
 - Self-serve registration is fully open in this scope (no invite codes/allowlist gating).
 - New self-serve sign-ups create a brand-new group by default; joining an existing group is explicitly out of scope here.
-- Onboarding auto-show is driven by group readiness (minimum setup) and should not repeatedly interrupt the same user once dismissed/completed.
+- Onboarding auto-show is driven by group readiness (minimum setup) and auto-shows at most once per user per group (once dismissed/skipped, it will not auto-show again).
 - Tour completion is tracked per user (preferred for multi-member groups) and applies consistently across devices for the same signed-in user.
+- Page tours in this scope are limited to: Dashboard, Manage, History.
+- Onboarding and tour state are persisted server-side (Supabase DB) and shared across devices for the same user.
 - Dependencies: the product continues to support Magic Link email delivery, a group-based data isolation model, and persistent per-user state for onboarding/tour completion.
