@@ -9,7 +9,8 @@ import { InbucketClient } from '../utils/inbucket';
 import { ensureTestUser } from '../fixtures/db';
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
-const NON_ALLOWED_EMAIL = 'not-allowed@example.com';
+// For self-serve signup testing: generate unique email per test run
+const SELF_SERVE_EMAIL = `self-serve-${Date.now()}@example.com`;
 
 test.describe('Authentication Flow', () => {
   // Run auth tests serially to avoid rate limiting and mailbox conflicts
@@ -22,7 +23,7 @@ test.describe('Authentication Flow', () => {
     await ensureTestUser(TEST_EMAIL);
     // Purge all mailboxes at the start
     await inbucket.purgeMailbox(TEST_EMAIL.split('@')[0]);
-    await inbucket.purgeMailbox(NON_ALLOWED_EMAIL.split('@')[0]);
+    await inbucket.purgeMailbox(SELF_SERVE_EMAIL.split('@')[0]);
   });
 
   test.beforeEach(async () => {
@@ -49,18 +50,54 @@ test.describe('Authentication Flow', () => {
     expect(message?.subject).toMatch(/link de acesso|magic link|login|sign in/i);
   });
 
-  test('T023: non-allowed email requests magic link → same success message (no enumeration)', async ({
+  test('T023: self-serve email requests magic link → same success message (no enumeration)', async ({
     page,
   }) => {
     const loginPage = new LoginPage(page);
 
     await loginPage.goto();
-    await loginPage.requestMagicLink(NON_ALLOWED_EMAIL);
+    await loginPage.requestMagicLink(SELF_SERVE_EMAIL);
     
     // Should show same success message (no enumeration)
-    // Note: Current implementation sends magic links to all emails
-    // The invite validation happens at a different layer
+    // Self-serve signups are now allowed for any email
     await loginPage.expectMagicLinkSent();
+  });
+
+  test('T040: self-serve signup - never-before-seen email completes Magic Link flow end-to-end', async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+    const mailbox = SELF_SERVE_EMAIL.split('@')[0];
+
+    // Purge mailbox to ensure clean state
+    await inbucket.purgeMailbox(mailbox);
+
+    // Request magic link for a never-before-seen email
+    await loginPage.goto();
+    await loginPage.requestMagicLink(SELF_SERVE_EMAIL);
+    await loginPage.expectMagicLinkSent();
+
+    // Get magic link from Inbucket
+    let magicLink: string | null = null;
+    for (let i = 0; i < 10; i++) {
+      const message = await inbucket.getLatestMessage(mailbox);
+      if (message) {
+        magicLink = inbucket.extractMagicLink(message);
+        if (magicLink) break;
+      }
+      await page.waitForTimeout(500);
+    }
+
+    expect(magicLink).not.toBeNull();
+
+    // Click magic link - should complete auth and redirect to dashboard
+    await page.goto(magicLink!);
+
+    // Verify redirected to dashboard (self-serve user is provisioned automatically)
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
+    
+    // Verify the app loads without "missing group/profile" errors
+    await expect(page.getByText(/desassociada|orphan|missing/i)).not.toBeVisible();
   });
 
   test('T024: click magic link from Inbucket → user authenticated, redirected to dashboard', async ({

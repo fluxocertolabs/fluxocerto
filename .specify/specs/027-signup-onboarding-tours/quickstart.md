@@ -133,4 +133,42 @@ E2E tests:
 pnpm test:e2e:run
 ```
 
+## Success Criteria Measurement Protocol
+
+### SC-001: First Projection Within 5 Minutes
+
+**Goal**: A new user can complete onboarding and see their first cashflow projection within 5 minutes.
+
+**Test Protocol**:
+1. Start a timer when opening `http://localhost:5174/login`
+2. Use a brand-new email address
+3. Complete the Magic Link flow (check Inbucket)
+4. Complete the onboarding wizard (add account, income, expense)
+5. Stop timer when the Dashboard shows a cashflow projection chart
+
+**Pass Criteria**: Total time ≤ 5 minutes
+
+**Notes**:
+- Exclude email delivery time (Inbucket is instant locally)
+- Include all user interaction time
+- User should not need external documentation
+
+### SC-002: No Dead-End States
+
+**Goal**: Users never encounter unrecoverable errors during signup or onboarding.
+
+**Test Protocol**:
+1. Complete signup flow with a new email
+2. Refresh the page at various points:
+   - After clicking Magic Link
+   - During onboarding wizard (mid-step)
+   - After dismissing onboarding
+3. Navigate between Dashboard, Manage, and History pages
+4. Verify no "missing group/profile" errors appear
+
+**Pass Criteria**:
+- All error states show recovery actions ("Tentar novamente", "Sair", "Ajuda")
+- App remains functional after refresh at any point
+- Navigation between pages works without errors
+
 

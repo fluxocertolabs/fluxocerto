@@ -5,15 +5,22 @@
 
 import { useEffect, useState } from 'react'
 import { useSnapshotsStore } from '@/stores/snapshots-store'
+import { usePageTour } from '@/hooks/use-page-tour'
 import { SnapshotList } from '@/components/snapshots/snapshot-list'
+import { TourRunner } from '@/components/tours'
 import { Toast } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { getTourDefinition } from '@/lib/tours/definitions'
 
 export function HistoryPage() {
   const { snapshots, isLoading, error, fetchSnapshots, deleteSnapshot } = useSnapshotsStore()
   const { toast, showSuccess, showError, hideToast } = useToast()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  
+  // Page tour
+  const historyTour = usePageTour('history')
+  const tourDefinition = getTourDefinition('history')
 
   // Fetch snapshots on mount
   useEffect(() => {
@@ -65,11 +72,13 @@ export function HistoryPage() {
           </button>
         </div>
       ) : (
-        <SnapshotList
-          snapshots={snapshots}
-          onDelete={handleDelete}
-          deletingId={deletingId}
-        />
+        <div data-tour="snapshot-list">
+          <SnapshotList
+            snapshots={snapshots}
+            onDelete={handleDelete}
+            deletingId={deletingId}
+          />
+        </div>
       )}
 
       {/* Toast notifications */}
@@ -81,6 +90,17 @@ export function HistoryPage() {
           onRetry={toast.onRetry}
         />
       )}
+
+      {/* Page Tour */}
+      <TourRunner
+        steps={tourDefinition.steps}
+        currentStepIndex={historyTour.currentStepIndex}
+        onNext={historyTour.nextStep}
+        onPrevious={historyTour.previousStep}
+        onComplete={historyTour.completeTour}
+        onDismiss={historyTour.dismissTour}
+        isActive={historyTour.isTourActive}
+      />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { Menu, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,15 +16,45 @@ import { BrandSymbol } from '@/components/brand'
 import { signOut } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import { useGroup } from '@/hooks/use-group'
+import { useTourStore } from '@/stores/tour-store'
+import type { TourKey } from '@/types'
+
+/**
+ * Get the tour key for the current route.
+ */
+function getTourKeyForRoute(pathname: string): TourKey | null {
+  if (pathname === '/' || pathname === '/dashboard') {
+    return 'dashboard'
+  }
+  if (pathname === '/manage') {
+    return 'manage'
+  }
+  if (pathname === '/history') {
+    return 'history'
+  }
+  return null
+}
 
 export function Header() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isAuthenticated, user } = useAuth()
   const { group, isLoading: groupLoading } = useGroup()
+  const { startTour } = useTourStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  
+  // Get the tour key for the current route
+  const currentTourKey = getTourKeyForRoute(location.pathname)
+  
+  const handleShowTour = () => {
+    if (currentTourKey) {
+      startTour(currentTourKey)
+    }
+    setMobileMenuOpen(false)
+  }
 
   const handleSignOut = async () => {
     const { error } = await signOut()
@@ -93,6 +123,18 @@ export function Header() {
               Gerenciar
             </NavLink>
             <ThemeToggle />
+            {isAuthenticated && currentTourKey && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShowTour}
+                className="text-muted-foreground hover:text-foreground gap-1"
+                aria-label="Mostrar tour da página"
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span className="hidden lg:inline">Tour</span>
+              </Button>
+            )}
             {isAuthenticated && (
               <div className="flex items-center gap-3 ml-4 pl-4 border-l">
                 {user?.email && (
@@ -191,7 +233,17 @@ export function Header() {
             </NavLink>
           </div>
 
-          <div className="mt-auto pt-4 border-t">
+          <div className="mt-auto pt-4 border-t space-y-2">
+            {currentTourKey && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2"
+                onClick={handleShowTour}
+              >
+                <HelpCircle className="h-4 w-4" />
+                Mostrar tour da página
+              </Button>
+            )}
             <Button variant="outline" className="w-full" onClick={handleSignOut}>
               Sair
             </Button>

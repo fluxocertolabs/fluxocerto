@@ -26,7 +26,7 @@ export function LoginPage() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Apenas usuários pré-aprovados podem acessar este app.
+          Ao continuar, você concorda com nossos termos de uso.
         </p>
       </div>
     </div>

@@ -2,7 +2,7 @@
  * Hook for managing toast notification state.
  */
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { ToastType } from '@/components/ui/toast'
 
 interface ToastState {
@@ -14,17 +14,19 @@ interface ToastState {
 export function useToast() {
   const [toast, setToast] = useState<ToastState | null>(null)
 
-  const showToast = (message: string, type: ToastType, onRetry?: () => void) => {
+  const showToast = useCallback((message: string, type: ToastType, onRetry?: () => void) => {
     setToast({ message, type, onRetry })
-  }
+  }, [])
 
-  const hideToast = () => {
+  const hideToast = useCallback(() => {
     setToast(null)
-  }
+  }, [])
 
-  const showSuccess = (message: string) => showToast(message, 'success')
-  const showError = (message: string, onRetry?: () => void) =>
-    showToast(message, 'error', onRetry)
+  const showSuccess = useCallback((message: string) => showToast(message, 'success'), [showToast])
+  const showError = useCallback(
+    (message: string, onRetry?: () => void) => showToast(message, 'error', onRetry),
+    [showToast]
+  )
 
   return {
     toast,

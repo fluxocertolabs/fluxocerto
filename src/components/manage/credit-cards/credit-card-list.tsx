@@ -21,6 +21,8 @@ interface CreditCardListProps {
   onAddFutureStatement: (input: FutureStatementInput) => Promise<void>
   onUpdateFutureStatement: (id: string, amount: number) => Promise<void>
   onDeleteFutureStatement: (id: string) => Promise<void>
+  /** Optional callback to open the onboarding wizard */
+  onStartSetup?: () => void
 }
 
 export function CreditCardList({
@@ -34,6 +36,7 @@ export function CreditCardList({
   onAddFutureStatement,
   onUpdateFutureStatement,
   onDeleteFutureStatement,
+  onStartSetup,
 }: CreditCardListProps) {
   const [ownerFilter, setOwnerFilter] = useState<string | null>(null)
 
@@ -44,7 +47,7 @@ export function CreditCardList({
   }, [creditCards, ownerFilter])
 
   if (creditCards.length === 0) {
-    return <EntityEmptyState entityType="credit-card" onAdd={onAdd} />
+    return <EntityEmptyState entityType="credit-card" onAdd={onAdd} onStartSetup={onStartSetup} />
   }
 
   return (

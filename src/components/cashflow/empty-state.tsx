@@ -1,13 +1,18 @@
 /**
  * Empty state component for when no financial data exists.
- * Provides guidance on how to get started.
+ * Provides guidance on how to get started via onboarding wizard or manage page.
  */
 
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export function EmptyState() {
+interface EmptyStateProps {
+  /** Callback to open the onboarding wizard (if available) */
+  onStartSetup?: () => void
+}
+
+export function EmptyState({ onStartSetup }: EmptyStateProps) {
   return (
     <div
       className={cn(
@@ -46,10 +51,23 @@ export function EmptyState() {
         sua projeção de fluxo de caixa de 30 dias.
       </p>
 
-      {/* CTA Button */}
-      <Button asChild size="lg" className="mb-6">
-        <Link to="/manage">Começar</Link>
-      </Button>
+      {/* CTA Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {onStartSetup ? (
+          <Button size="lg" onClick={onStartSetup}>
+            Configurar Agora
+          </Button>
+        ) : (
+          <Button asChild size="lg">
+            <Link to="/manage">Começar</Link>
+          </Button>
+        )}
+        {onStartSetup && (
+          <Button asChild variant="outline" size="lg">
+            <Link to="/manage">Gerenciar Dados</Link>
+          </Button>
+        )}
+      </div>
 
       {/* Action hints */}
       <div className="flex flex-col sm:flex-row gap-3 text-sm">

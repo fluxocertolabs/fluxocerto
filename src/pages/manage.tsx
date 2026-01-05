@@ -1,17 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
+import { signOut } from '@/lib/supabase'
 import { useFinanceData } from '@/hooks/use-finance-data'
 import { useGroup } from '@/hooks/use-group'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
+import { usePageTour } from '@/hooks/use-page-tour'
 import { useFinanceStore } from '@/stores/finance-store'
+import { useOnboardingStore } from '@/stores/onboarding-store'
+import { TourRunner } from '@/components/tours'
+import { getTourDefinition } from '@/lib/tours/definitions'
 import { AccountList } from '@/components/manage/accounts/account-list'
 import { AccountForm } from '@/components/manage/accounts/account-form'
 import { ProjectSection } from '@/components/manage/projects/project-section'
@@ -95,7 +103,41 @@ export function ManagePage() {
     retry,
     optimisticallyRemoveExpense,
   } = useFinanceData()
-  const { group, members, isLoading: groupLoading, error: groupError } = useGroup()
+  const { group, members, isLoading: groupLoading, error: groupError, isRecoverable: groupIsRecoverable, recoverProvisioning } = useGroup()
+  const { openWizard } = useOnboardingStore()
+  const navigate = useNavigate()
+  
+  // Page tour
+  const manageTour = usePageTour('manage')
+  const tourDefinition = getTourDefinition('manage')
+  const [isRecoveringGroup, setIsRecoveringGroup] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleGroupRecovery = useCallback(async () => {
+    setIsRecoveringGroup(true)
+    const success = await recoverProvisioning()
+    if (!success) {
+      // If recovery failed, retry will still be called but error will persist
+    }
+    setIsRecoveringGroup(false)
+  }, [recoverProvisioning])
+
+  const handleSignOut = useCallback(async () => {
+    await signOut()
+    navigate('/login', { replace: true })
+  }, [navigate])
+
+  const handleCopyDiagnostics = useCallback(() => {
+    const payload = JSON.stringify({
+      error: groupError,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    }, null, 2)
+    navigator.clipboard.writeText(payload)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [groupError])
   const store = useFinanceStore()
 
   // Coordinated loading state for smooth transitions
@@ -564,11 +606,11 @@ export function ManagePage() {
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="w-full overflow-x-auto sm:overflow-visible">
-              <TabsList className="w-max min-w-full sm:w-auto justify-start sm:justify-center">
-                <TabsTrigger value="accounts">Contas</TabsTrigger>
-                <TabsTrigger value="projects">Receitas</TabsTrigger>
-                <TabsTrigger value="expenses">Despesas</TabsTrigger>
-                <TabsTrigger value="cards">Cartões</TabsTrigger>
+              <TabsList className="w-max min-w-full sm:w-auto justify-start sm:justify-center" data-tour="manage-tabs">
+                <TabsTrigger value="accounts" data-tour="accounts-tab">Contas</TabsTrigger>
+                <TabsTrigger value="projects" data-tour="projects-tab">Receitas</TabsTrigger>
+                <TabsTrigger value="expenses" data-tour="expenses-tab">Despesas</TabsTrigger>
+                <TabsTrigger value="cards" data-tour="cards-tab">Cartões</TabsTrigger>
                 <TabsTrigger value="group">Grupo</TabsTrigger>
               </TabsList>
             </div>
@@ -600,6 +642,7 @@ export function ManagePage() {
                 }
               }}
               onUpdateBalance={handleUpdateAccountBalance}
+              onStartSetup={openWizard}
             />
           </TabsContent>
 
@@ -624,6 +667,7 @@ export function ManagePage() {
                 }
               }}
               onToggleRecurringActive={handleToggleProjectActive}
+              onStartSetup={openWizard}
             />
           </TabsContent>
 
@@ -648,6 +692,7 @@ export function ManagePage() {
                 }
               }}
               onToggleFixedActive={handleToggleExpenseActive}
+              onStartSetup={openWizard}
             />
           </TabsContent>
 
@@ -668,6 +713,7 @@ export function ManagePage() {
               onAddFutureStatement={handleAddFutureStatement}
               onUpdateFutureStatement={handleUpdateFutureStatement}
               onDeleteFutureStatement={handleDeleteFutureStatement}
+              onStartSetup={openWizard}
             />
           </TabsContent>
 
@@ -690,8 +736,55 @@ export function ManagePage() {
                     <SkeletonLine width="w-full" height="h-10" />
                   </div>
                 ) : groupError ? (
-                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                    {groupError}
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                      {groupError}
+                    </div>
+                    {groupIsRecoverable && (
+                      <div className="flex flex-col gap-2">
+                        <Button onClick={handleGroupRecovery} disabled={isRecoveringGroup}>
+                          {isRecoveringGroup ? 'Tentando...' : 'Tentar Novamente'}
+                        </Button>
+                        <Button variant="outline" onClick={handleSignOut}>
+                          Sair
+                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              Ajuda
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Precisa de Ajuda?</DialogTitle>
+                              <DialogDescription className="space-y-4">
+                                <p>
+                                  Ocorreu um erro ao carregar os dados do seu grupo. Tente as seguintes soluções:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1 text-sm">
+                                  <li>Verifique sua conexão com a internet</li>
+                                  <li>Clique em "Tentar Novamente"</li>
+                                  <li>Se o problema persistir, saia e faça login novamente</li>
+                                </ul>
+                                <p className="text-sm text-muted-foreground">
+                                  Se precisar de suporte, copie os detalhes abaixo e entre em contato conosco.
+                                </p>
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="mt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={handleCopyDiagnostics}
+                              >
+                                {copied ? 'Copiado!' : 'Copiar Detalhes'}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <MembersList members={members} />
@@ -882,6 +975,17 @@ export function ManagePage() {
         }
         onConfirm={handleDeleteConfirm}
         isDeleting={isDeleting}
+      />
+
+      {/* Page Tour */}
+      <TourRunner
+        steps={tourDefinition.steps}
+        currentStepIndex={manageTour.currentStepIndex}
+        onNext={manageTour.nextStep}
+        onPrevious={manageTour.previousStep}
+        onComplete={manageTour.completeTour}
+        onDismiss={manageTour.dismissTour}
+        isActive={manageTour.isTourActive}
       />
     </div>
   )

@@ -17,6 +17,8 @@ interface AccountListProps {
   onEdit: (account: BankAccount) => void
   onDelete: (id: string) => void
   onUpdateBalance: (id: string, balance: number) => Promise<void>
+  /** Optional callback to open the onboarding wizard */
+  onStartSetup?: () => void
 }
 
 export function AccountList({
@@ -26,6 +28,7 @@ export function AccountList({
   onEdit,
   onDelete,
   onUpdateBalance,
+  onStartSetup,
 }: AccountListProps) {
   const [ownerFilter, setOwnerFilter] = useState<string | null>(null)
 
@@ -36,7 +39,7 @@ export function AccountList({
   }, [accounts, ownerFilter])
 
   if (accounts.length === 0) {
-    return <EntityEmptyState entityType="account" onAdd={onAdd} />
+    return <EntityEmptyState entityType="account" onAdd={onAdd} onStartSetup={onStartSetup} />
   }
 
   return (

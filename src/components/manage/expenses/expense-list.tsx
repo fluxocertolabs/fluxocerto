@@ -9,6 +9,8 @@ interface ExpenseListProps {
   onEdit: (expense: FixedExpense) => void
   onDelete: (id: string) => void
   onToggleActive: (id: string) => void
+  /** Optional callback to open the onboarding wizard */
+  onStartSetup?: () => void
 }
 
 export function ExpenseList({
@@ -17,9 +19,10 @@ export function ExpenseList({
   onEdit,
   onDelete,
   onToggleActive,
+  onStartSetup,
 }: ExpenseListProps) {
   if (expenses.length === 0) {
-    return <EntityEmptyState entityType="expense" onAdd={onAdd} />
+    return <EntityEmptyState entityType="expense" onAdd={onAdd} onStartSetup={onStartSetup} />
   }
 
   return (

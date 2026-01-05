@@ -32,7 +32,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     }
 
     // Always show success message to prevent email enumeration
-    // The before-user-created hook handles invite validation
     setIsSubmitted(true)
     onSuccess?.()
   }

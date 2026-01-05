@@ -9,6 +9,8 @@ interface ProjectListProps {
   onEdit: (project: Project) => void
   onDelete: (id: string) => void
   onToggleActive: (id: string) => void
+  /** Optional callback to open the onboarding wizard */
+  onStartSetup?: () => void
 }
 
 export function ProjectList({
@@ -17,9 +19,10 @@ export function ProjectList({
   onEdit,
   onDelete,
   onToggleActive,
+  onStartSetup,
 }: ProjectListProps) {
   if (projects.length === 0) {
-    return <EntityEmptyState entityType="project" onAdd={onAdd} />
+    return <EntityEmptyState entityType="project" onAdd={onAdd} onStartSetup={onStartSetup} />
   }
 
   return (
