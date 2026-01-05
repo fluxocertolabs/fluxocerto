@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import { useMonthProgression } from '@/hooks/use-month-progression'
 import { Header } from '@/components/layout/header'
+import { FloatingHelpButton } from '@/components/help'
 import { BrandSymbol } from '@/components/brand'
 import { SetupRequired } from '@/components/setup-required'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
@@ -36,6 +37,8 @@ function AuthenticatedLayout() {
       <Outlet />
       {/* Onboarding wizard - renders as dialog overlay when active */}
       <OnboardingWizard />
+      {/* Floating help button - bottom right corner */}
+      <FloatingHelpButton />
     </div>
   )
 }

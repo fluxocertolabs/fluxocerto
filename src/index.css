@@ -70,8 +70,7 @@
 /* Smooth transitions for theme changes (200ms per spec) */
 * {
   transition: background-color 200ms ease-in-out,
-              border-color 200ms ease-in-out,
-              color 200ms ease-in-out;
+              border-color 200ms ease-in-out;
 }
 
 /* Disable transitions during initial load to prevent FOUC animation */
@@ -105,8 +104,45 @@ body {
   animation: shake 180ms ease-in-out;
 }
 
+/* Floating help button animations */
+@keyframes help-pulse {
+  0%, 100% {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+  50% {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+}
+
+@keyframes help-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.animate-help-pulse {
+  animation: help-pulse 3s ease-in-out infinite;
+}
+
+.animate-help-ring {
+  animation: help-ring 2s ease-out infinite;
+}
+
+.animate-help-ring-delayed {
+  animation: help-ring 2s ease-out infinite;
+  animation-delay: 0.5s;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-shake {
+  .animate-shake,
+  .animate-help-pulse,
+  .animate-help-ring,
+  .animate-help-ring-delayed {
     animation: none;
   }
 }
