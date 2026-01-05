@@ -9,11 +9,14 @@
 
 ### Session 2026-01-04
 
-- Q: After a user skips/dismisses the onboarding wizard before “minimum setup complete”, should the wizard auto-show again on later app loads? → A: Auto-show only once; after skip/dismiss it will not auto-show again, and the user continues via “Continue setup” / empty-state CTAs.
+- Q: After a user skips/dismisses the onboarding wizard before “minimum setup complete”, should the wizard auto-show again on later app loads? → A: Auto-show only once; after skip/dismiss it will not auto-show again, and the user continues via “Continuar configuração” / empty-state CTAs.
 - Q: For first-time page tours on a user’s first visit to a target page, should the tour auto-start or only be offered? → A: Auto-start the tour on first visit (with Skip/Close always available).
 - Q: If the onboarding wizard is being shown (because minimum setup isn’t complete), what should happen with page tours on those first visits? → A: Defer tours while the wizard is active; after the wizard is completed or dismissed, tours can auto-start on the next eligible page visit.
 - Q: Which pages should have first-time tours in this feature’s scope? → A: Only Dashboard, Manage, History.
 - Q: Where should onboarding state (progress + dismissed/completed) and tour state (per page completion/dismissal + version) be persisted? → A: Server-side (Supabase DB) per user (and group-aware for onboarding), shared across devices.
+- Q: In the recoverable provisioning error state (“Tentar novamente / Sair / Ajuda”), what does “Ajuda” do? → A: Opens an in-app help dialog with troubleshooting steps and a “Copiar detalhes” action that copies diagnostic details to the clipboard. Minimum requirements:
+  - Troubleshooting content (pt-BR): short, actionable steps (e.g., verify connection, refresh, try again, sign out/in) plus guidance to share copied details with support.
+  - Copied diagnostic payload: includes at least an error `message`, error `code` (when available), current route, timestamp (ISO), and the authenticated `user_id` (and `group_id` if known).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -29,7 +32,7 @@ A visitor enters their email on the login screen and requests a Magic Link. Clic
 
 1. **Given** a logged-out visitor enters any email and requests a Magic Link, **When** the request completes, **Then** they see the same generic success state regardless of whether the email is new or existing.
 2. **Given** a visitor clicks a valid Magic Link, **When** authentication completes, **Then** they are signed in and redirected into the app.
-3. **Given** a visitor clicks an expired or invalid Magic Link, **When** the app processes it, **Then** they see a clear recovery path to request a new link (without revealing account existence).
+3. **Given** a visitor clicks an expired or invalid Magic Link, **When** the app processes it, **Then** they see a pt-BR error state (e.g., “Link inválido ou expirado”) with a primary action like “Solicitar novo link” that returns them to the login screen to request a new Magic Link (without revealing account existence).
 
 ---
 
@@ -44,7 +47,7 @@ After a brand-new user completes authentication, the system ensures they have a 
 **Acceptance Scenarios**:
 
 1. **Given** a user signs in for the first time, **When** they land in the app, **Then** they have membership in exactly one data-isolated group and group-scoped pages load without “missing membership/profile” errors.
-2. **Given** group/profile provisioning fails, **When** the user lands in the app, **Then** they see a recoverable error state with actions to retry, sign out, and get help (no dead-end session).
+2. **Given** group/profile provisioning fails, **When** the user lands in the app, **Then** they see a recoverable error state with actions “Tentar novamente”, “Sair”, and “Ajuda”. “Ajuda” opens an in-app dialog (pt-BR) with troubleshooting steps and a “Copiar detalhes” action to copy diagnostic details — no dead-end session.
 3. **Given** a user refreshes immediately after first login, **When** the app reloads, **Then** it still resolves the same valid group context and remains usable.
 
 ---
@@ -62,7 +65,7 @@ When the user’s current group is not yet configured with the minimum data requ
 1. **Given** a signed-in user’s group does not meet minimum setup, **When** they enter the app, **Then** the onboarding wizard is offered automatically and can be skipped at any time.
 2. **Given** the user leaves or refreshes mid-onboarding, **When** they return, **Then** they can resume where they left off (progress retained).
 3. **Given** the user completes onboarding with the minimum dataset, **When** they open the dashboard, **Then** they can see a cashflow projection without needing to hunt for additional required setup screens.
-4. **Given** the user skips required setup, **When** they navigate the app, **Then** they are not blocked, the onboarding wizard does not auto-show again, and they see clear CTAs to continue setup from relevant empty states.
+4. **Given** the user skips required setup, **When** they navigate the app, **Then** they are not blocked, the onboarding wizard does not auto-show again, and they see clear CTAs to “Continuar configuração” from relevant empty states.
 
 ---
 
@@ -72,13 +75,13 @@ When a user visits the in-scope key pages for the first time (Dashboard, Manage,
 
 **Why this priority**: Helps users build a mental model of the product faster and reduces “where do I click?” confusion.
 
-**Independent Test**: Visit a target page for the first time and complete/skip the tour; revisit the same page to confirm it does not auto-show; trigger the tour again via an explicit “Show tour” action.
+**Independent Test**: Visit a target page for the first time and complete/skip the tour; revisit the same page to confirm it does not auto-show; trigger the tour again via an explicit “Mostrar tour” action.
 
 **Acceptance Scenarios**:
 
 1. **Given** a user opens a target page for the first time and the onboarding wizard is not currently active, **When** the page renders, **Then** the tour auto-starts and can be navigated with Next/Back or dismissed.
 2. **Given** a user completes or dismisses a page tour, **When** they revisit that page, **Then** the tour does not auto-show again.
-3. **Given** the user chooses “Show tour” intentionally, **When** they trigger it, **Then** the tour runs again regardless of prior completion state.
+3. **Given** the user chooses “Mostrar tour” intentionally, **When** they trigger it, **Then** the tour runs again regardless of prior completion state.
 4. **Given** a tour step’s target element is not present due to responsive layout or conditional UI, **When** the tour runs, **Then** it gracefully skips or adapts without breaking the tour flow.
 5. **Given** the onboarding wizard is currently active, **When** a user opens a target page for the first time, **Then** the page tour does not auto-start and is deferred until onboarding is completed or dismissed.
 
@@ -87,7 +90,7 @@ When a user visits the in-scope key pages for the first time (Dashboard, Manage,
 ### Edge Cases
 
 - Magic Link is expired/invalid → show a clear recovery action to request a new link
-- First-login provisioning partially succeeds (user exists but group membership missing) → self-heal on next app load or show recoverable error with retry
+- First-login provisioning partially succeeds (user exists but group membership missing) → self-heal on next app load or show recoverable error with “Tentar novamente” / “Sair” / “Ajuda”
 - Multiple group members → onboarding/tour auto-show behavior should not repeatedly interrupt each person
 - User skips onboarding and later wants to complete setup → clear re-entry points and progress continuity
 - Onboarding wizard is active → page tours are deferred (no overlapping overlays) until onboarding is completed or dismissed
@@ -110,28 +113,36 @@ When a user visits the in-scope key pages for the first time (Dashboard, Manage,
 
 - **FR-006**: After first successful authentication for a brand-new user, the system MUST ensure the user has a valid profile and membership in exactly one data-isolated group before loading group-scoped pages.
 - **FR-007**: For self-serve sign-ups, the system MUST create a brand-new group for the new user (joining existing groups via invitation is out of scope for this feature).
-- **FR-008**: If group/profile provisioning fails, the app MUST present a recoverable error state that does not leave the user in an unusable session (retry + sign out + help).
+- **FR-008**: If group/profile provisioning fails, the app MUST present a recoverable error state that does not leave the user in an unusable session (“Tentar novamente” + “Sair” + “Ajuda”, with “Copiar detalhes” available from Ajuda).
 
 **Onboarding wizard:**
 
 - **FR-009**: The app MUST define “minimum setup complete” as: at least 1 bank account, at least 1 income source, and at least 1 expense in the current group. Credit cards are optional.
 - **FR-010**: If minimum setup is not complete, the app MUST automatically offer a first-run onboarding wizard that is skippable, does not block navigation, and auto-shows at most once per user per group (it MUST NOT auto-show again after being skipped/dismissed).
-- **FR-011**: The onboarding wizard MUST retain progress across refreshes and allow the user to resume later, with state persisted server-side (Supabase DB) so behavior is consistent across sessions/devices for the same user (and group-aware).
+- **FR-011**: The onboarding wizard MUST retain progress across refreshes and allow the user to resume later, with state persisted server-side (Supabase DB). Persisted state MUST include (at minimum) the wizard `status` and `current_step`, and dismissing/skipping MUST preserve progress for later manual resume (and remain consistent across sessions/devices for the same user, group-aware).
 - **FR-012**: The onboarding wizard MUST guide the user through creating: display name (optional), group name (optional), first bank account, at least one income source, at least one expense, and optionally a credit card (or explicitly skip credit cards).
-- **FR-013**: If the user skips onboarding before minimum setup is complete, the app MUST still function and MUST provide clear CTAs to continue setup from relevant empty states and/or a dedicated “Continue setup” entry point (and the wizard MUST remain accessible via those entry points).
+- **FR-013**: If the user skips onboarding before minimum setup is complete, the app MUST still function and MUST provide clear CTAs to continue setup from relevant empty states and/or a dedicated “Continuar configuração” entry point (and the wizard MUST remain accessible via those entry points).
 
 **Page tours (coachmarks):**
 
 - **FR-014**: The system MUST provide first-time page tours for the in-scope key pages: Dashboard, Manage, History (additional page tours are out of scope for this feature).
 - **FR-015**: Page tours MUST support Next, Back, and Skip/Close actions, and MUST not permanently block core actions.
-- **FR-016**: Page tours MUST auto-show at most once per user per page (unless the user intentionally replays them) and MUST be deferred while the onboarding wizard is active; after onboarding is completed or dismissed, tours can auto-start on the next eligible page visit.
-- **FR-017**: Tours MUST persist completion/dismissal state server-side (Supabase DB) so users are not repeatedly interrupted across sessions/devices.
+- **FR-016**: Page tours MUST auto-show at most once per user per page **per tour version** (unless the user intentionally replays them) and MUST be deferred while the onboarding wizard is active; after onboarding is completed or dismissed, tours can auto-start on the next eligible page visit.
+- **FR-017**: Tours MUST persist completion/dismissal state server-side (Supabase DB), including a `version` field, so users are not repeatedly interrupted across sessions/devices; if a tour’s version increases, the updated tour becomes eligible to auto-show again once.
 - **FR-018**: Tours MUST gracefully handle missing targets due to responsive layout or conditional UI (skip/adapt without breaking).
 
 **Copy & environments:**
 
 - **FR-019**: All user-facing copy introduced by this feature MUST be in Brazilian Portuguese (pt-BR).
 - **FR-020**: Existing development/preview authentication bypass behavior MUST remain available and should not be blocked by onboarding/tour UX.
+
+### Non-Functional Requirements
+
+- **NFR-001 (Privacy)**: The login experience MUST not allow email enumeration across the full flow (requesting a Magic Link, handling restrictions, and recovering from invalid/expired links). User-visible states and copy MUST remain generic and MUST NOT differ based on whether an email is registered.
+- **NFR-002 (Reliability)**: Brand-new self-serve users MUST not land in a dead-end “missing group/profile” state; failures MUST be recoverable (“Tentar novamente” + “Sair” + “Ajuda”).
+- **NFR-003 (Cross-device consistency)**: Onboarding and tour state MUST behave consistently across devices/browsers for the same signed-in user (server-side persistence is the source of truth).
+- **NFR-004 (Overlay coordination)**: Onboarding wizard and page tours MUST never overlap; tours are deferred while the wizard is active.
+- **NFR-005 (Performance)**: On initial authenticated app load, onboarding + tours MUST add at most ~2 small Supabase reads beyond existing baseline group/finance reads (≤1 for onboarding state + ≤1 for tour state), and MUST not introduce polling loops that degrade responsiveness.
 
 **Acceptance coverage (traceability):**
 
@@ -140,6 +151,7 @@ When a user visits the in-scope key pages for the first time (Dashboard, Manage,
 - User Story 3 acceptance scenarios cover **FR-009** through **FR-013**
 - User Story 4 acceptance scenarios cover **FR-014** through **FR-018**
 - **FR-019** and **FR-020** are cross-cutting requirements validated throughout the experience
+- **NFR-005** is validated via a perf sanity check using browser network inspection (onboarding + tour state reads only).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -149,7 +161,7 @@ When a user visits the in-scope key pages for the first time (Dashboard, Manage,
 - **Onboarding State**: Server-side (Supabase DB) per-user, group-aware state that stores whether onboarding is in progress, completed, or dismissed, plus step progress.
 - **Tour State**: Server-side (Supabase DB) per-user state that stores, for each target page tour, whether it is not-started, completed, or dismissed (and the tour version).
 - **Bank Account**: A group-scoped financial account (e.g., checking) needed as a base for cashflow.
-- **Income Source**: A recurring or one-off inflow definition used in projections.
+- **Income Source**: A recurring or one-off inflow definition used in projections. *(Implementation note: in the current schema, income sources map to `projects`.)*
 - **Expense**: A recurring or one-off outflow definition used in projections.
 - **Credit Card**: An optional group-scoped liability used in projections and cashflow awareness.
 
@@ -161,12 +173,18 @@ When a user visits the in-scope key pages for the first time (Dashboard, Manage,
 - **SC-002**: In a usability test, at least 90% of new users who start onboarding reach a visible cashflow projection on the dashboard within 5 minutes of first app load.
 - **SC-003**: Login submission responses are indistinguishable to the user (same UI state + copy) for new vs existing emails, preventing email enumeration via the login experience.
 - **SC-004**: Onboarding progress persists across refresh: users resume at the same step after a reload in 100% of tested cases.
-- **SC-005**: Each page tour auto-shows at most once per user per page, and can be replayed intentionally on demand.
+- **SC-005**: Each page tour auto-shows at most once per user per page per tour version, and can be replayed intentionally on demand.
+
+### Measurement Notes
+
+- **SC-001 / SC-002** are measured via a lightweight manual usability test protocol (timed sessions), and are not enforced via automated tests in this feature’s scope.
+- **SC-003 / SC-004 / SC-005** are validated via acceptance scenarios and automated E2E/manual regression checks.
 
 ## Assumptions & Scope Notes
 
 - Self-serve registration is fully open in this scope (no invite codes/allowlist gating).
 - New self-serve sign-ups create a brand-new group by default; joining an existing group is explicitly out of scope here.
+- Implementation note: for idempotent self-serve provisioning, the newly created group’s `id` is deterministic and equals `auth.uid()`.
 - Onboarding auto-show is driven by group readiness (minimum setup) and auto-shows at most once per user per group (once dismissed/skipped, it will not auto-show again).
 - Tour completion is tracked per user (preferred for multi-member groups) and applies consistently across devices for the same signed-in user.
 - Page tours in this scope are limited to: Dashboard, Manage, History.

@@ -38,6 +38,13 @@ Notes:
 - Click the Magic Link from Inbucket
 - Confirm you land in the app without errors
 
+### 3) Invalid/expired link recovery
+
+- From a logged-out state, open a malformed or tampered confirmation URL (e.g., take a valid Magic Link URL from Inbucket and change the token/hash portion before opening it).
+
+Expected:
+- You see a pt-BR error state (e.g., “Link inválido ou expirado”) with an action like “Solicitar novo link” to return to the login screen and request a new Magic Link.
+
 ## Validate User Story 2: No orphaned first login
 
 With a fresh email signup:
@@ -51,9 +58,9 @@ With a fresh email signup:
 Expected:
 - No “missing membership/profile/group” errors.
 - If provisioning fails, you should see a recoverable error with:
-  - Retry
-  - Sign out
-  - Help
+  - “Tentar novamente”
+  - “Sair”
+  - “Ajuda” (com “Copiar detalhes”)
 
 ## Validate User Story 3: Onboarding wizard
 
@@ -83,6 +90,20 @@ Expected:
 - Skip/Close ends the tour and it does not auto-show again on revisit.
 - “Mostrar tour” replays the tour even if previously completed/dismissed.
 - Missing targets (responsive/conditional) are skipped gracefully.
+
+Optional (version bump sanity):
+- In `src/lib/tours/definitions.ts`, increment the `CURRENT_TOUR_VERSION` for one tour (e.g., `dashboard`) and reload.
+- Expected: that page’s tour becomes eligible to auto-start once again (once per page per version).
+
+## Validate cross-device persistence (NFR-003)
+
+Using the same email, across two browsers/profiles (e.g., normal + Incognito, or Browser A + Browser B):
+
+1. On Browser A: dismiss onboarding (or complete it) and dismiss/complete at least one page tour.
+2. On Browser B: sign in with the same email and navigate to the same page(s).
+
+Expected:
+- Onboarding/tour state behaves consistently (no re-auto-show for already dismissed/completed items, unless a tour version was bumped).
 
 ## Validate dev auth bypass (must remain)
 

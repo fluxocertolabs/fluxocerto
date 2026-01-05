@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-**Fluxo Certo** is a personal finance management application for families. It provides cashflow projections, expense tracking, and income management with invite-only authentication.
+**Fluxo Certo** is a personal finance management application for families. It provides cashflow projections, expense tracking, and income management with Magic Link authentication.
 
 ---
 
@@ -88,7 +88,7 @@ interface ContaBancaria { ... }
 ## Authentication
 
 - **Method**: Magic Link (email-based, passwordless)
-- **Access control**: Invite-only via `allowed_emails` table
+- **Access control**: Self-serve signup (no allowlist)
 - **Session**: 7-day duration with auto-refresh
 
 ---
