@@ -1,8 +1,8 @@
-# Specification Quality Checklist: Saldo estimado de hoje
+# Specification Quality Checklist: Self-Serve Signup, Onboarding & Tours
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning  
-**Created**: 2025-12-29  
-**Feature**: [Link to spec.md](../spec.md)
+**Created**: 2026-01-04  
+**Feature**: [spec.md](../spec.md)
 
 ## Content Quality
 
@@ -31,5 +31,6 @@
 
 ## Notes
 
-- Checklist validated on 2025-12-29; no issues found.
+- Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.plan`
+- Validated on 2026-01-04: all checklist items pass.
 
