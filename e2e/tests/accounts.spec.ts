@@ -1,14 +1,26 @@
 /**
  * E2E Tests: User Story 2 - Account Management
  * Tests CRUD operations for bank accounts
+ * 
+ * NOTE: These tests run serially due to flakiness with parallel execution.
+ * The issue is related to Supabase Realtime connections interfering with each other
+ * when multiple browser contexts are active simultaneously. Tests that seed data
+ * and reload the page are particularly affected.
+ * 
+ * TODO: Investigate and fix parallel execution flakiness. Potential solutions:
+ * - Add delay between seeding and reload to allow Realtime to settle
+ * - Disable Realtime during tests
+ * - Use a different data refresh mechanism
  */
 
 import { test, expect } from '../fixtures/test-base';
 import { createAccount } from '../utils/test-data';
 import { formatBRL } from '../utils/format';
 
+// Run tests serially to avoid flakiness with Supabase Realtime
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Account Management', () => {
-  // Tests now run in parallel with per-worker data prefixing for isolation
 
   test('T029: create checking account "Nubank" with balance R$ 1.000,00 → appears in list', async ({
     managePage,
@@ -37,14 +49,20 @@ test.describe('Account Management', () => {
   }) => {
     // Use unique timestamp to avoid collisions with other test runs
     const uniqueId = Date.now();
-    // Seed an account first - the db fixture will add the worker prefix [W{index}]
-    const [seeded] = await db.seedAccounts([createAccount({ name: `Nubank ${uniqueId}`, balance: 100000 })]);
     // Use worker-specific name for the new name to avoid conflicts
     const newName = `[W${workerContext.workerIndex}] Nubank Principal ${uniqueId}`;
 
-    // Navigate and wait for page to be fully ready
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    // Seeding before navigation causes Playwright to hang due to Supabase Realtime interactions.
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.selectAccountsTab();
+
+    // Seed an account - the db fixture will add the worker prefix [W{index}]
+    const [seeded] = await db.seedAccounts([createAccount({ name: `Nubank ${uniqueId}`, balance: 100000 })]);
+
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -62,7 +80,6 @@ test.describe('Account Management', () => {
       if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectAccountsTab();
       }
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       // Check for the new name
       await expect(page.getByText(newName).first()).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
@@ -78,11 +95,17 @@ test.describe('Account Management', () => {
   }) => {
     // Use unique timestamp to avoid collisions with other test runs
     const uniqueId = Date.now();
+
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    // Seeding before navigation causes Playwright to hang due to Supabase Realtime interactions.
+    await managePage.goto();
+    await managePage.selectAccountsTab();
+
     const [seeded] = await db.seedAccounts([createAccount({ name: `Conta Teste ${uniqueId}`, balance: 100000 })]);
 
-    // Navigate and wait for page to be fully ready
-    await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -100,7 +123,6 @@ test.describe('Account Management', () => {
       if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectAccountsTab();
       }
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await expect(page.getByText(formatBRL(250000)).first()).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
@@ -112,11 +134,17 @@ test.describe('Account Management', () => {
   }) => {
     // Use unique timestamp to avoid collisions with other test runs
     const uniqueId = Date.now();
+
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    // Seeding before navigation causes Playwright to hang due to Supabase Realtime interactions.
+    await managePage.goto();
+    await managePage.selectAccountsTab();
+
     const [seeded] = await db.seedAccounts([createAccount({ name: `Conta para Excluir ${uniqueId}`, balance: 50000 })]);
 
-    // Navigate and wait for page to be fully ready
-    await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -134,7 +162,6 @@ test.describe('Account Management', () => {
       if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
         await managePage.selectAccountsTab();
       }
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       // Verify account is no longer visible
       await expect(page.getByText(seeded.name)).not.toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
@@ -147,15 +174,21 @@ test.describe('Account Management', () => {
   }) => {
     // Use unique timestamp to avoid collisions with other test runs
     const uniqueId = Date.now();
+
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    // Seeding before navigation causes Playwright to hang due to Supabase Realtime interactions.
+    await managePage.goto();
+    await managePage.selectAccountsTab();
+
     const seeded = await db.seedAccounts([
       createAccount({ name: `Nubank Multi ${uniqueId}`, type: 'checking', balance: 100000 }),
       createAccount({ name: `Itaú Poupança Multi ${uniqueId}`, type: 'savings', balance: 200000 }),
       createAccount({ name: `XP Investimentos Multi ${uniqueId}`, type: 'investment', balance: 500000 }),
     ]);
 
-    // Navigate and wait for page to be fully ready
-    await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -179,15 +212,21 @@ test.describe('Account Management', () => {
   }) => {
     // Use unique timestamp to avoid collisions with other test runs
     const uniqueId = Date.now();
+
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    // Seeding before navigation causes Playwright to hang due to Supabase Realtime interactions.
+    await managePage.goto();
+    await managePage.selectAccountsTab();
+
     // Note: owner_id would need to be a valid profile ID from the profiles table
     // For this test, we'll check if owner display works when set
     const [seeded] = await db.seedAccounts([
       createAccount({ name: `Conta com Dono ${uniqueId}`, balance: 100000 }),
     ]);
 
-    // Navigate and wait for page to be fully ready
-    await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();

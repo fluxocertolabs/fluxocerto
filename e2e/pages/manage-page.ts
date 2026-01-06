@@ -38,7 +38,14 @@ export class ManagePage {
    * Navigate to manage page and wait for data to fully load
    */
   async goto(): Promise<void> {
-    await this.page.goto('/manage');
+    // Avoid waiting for full page load - SPA routes + long-lived connections (Realtime/WebSockets)
+    // can make `waitUntil: 'load'` slower/flakier than needed for E2E readiness.
+    const start = Date.now();
+    await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
+    const duration = Date.now() - start;
+    if (duration > 5000) {
+      console.warn(`[ManagePage] Slow navigation to /manage: ${duration}ms`);
+    }
     await this.waitForReady();
   }
 
@@ -47,11 +54,13 @@ export class ManagePage {
    * Can be called after page.reload() to ensure the page is ready for interaction.
    * 
    * Note: Internal timeouts are kept under 30s to fit within 45s test timeout.
+   * 
+   * IMPORTANT: Do NOT wait for networkidle here. The app uses Supabase Realtime
+   * which keeps WebSocket connections open, causing networkidle to either hang
+   * or cause subsequent assertions to fail due to timing issues with React's
+   * rendering cycle and the PageLoadingWrapper transitions.
    */
   async waitForReady(): Promise<void> {
-    // Use shorter timeout for networkidle - it may never reach idle in busy environments
-    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(3000)]);
-    
     // Verify we're actually on the manage page (not redirected to login)
     const currentUrl = this.page.url();
     if (!currentUrl.includes('/manage')) {
@@ -81,101 +90,114 @@ export class ManagePage {
       throw new Error(`Expected to be on /manage page, but got: ${currentUrl}`);
     }
     
-    // First, wait for the page heading to be visible - this always renders regardless of loading state
+    // Wait for the page heading to be visible - this always renders regardless of loading state
+    // Auth/session hydration can take a few seconds (useAuth has a 7s safety timeout).
+    // Use a more forgiving timeout here to avoid flaking under parallel load.
+    //
+    // IMPORTANT: Use expect().toBeVisible() instead of waitFor() as the latter can cause
+    // timing issues with React's rendering cycle.
     const pageHeading = this.page.getByRole('heading', { name: /gerenciar dados financeiros/i });
     try {
-      await pageHeading.waitFor({ state: 'visible', timeout: 15000 });
+      await expect(pageHeading).toBeVisible({ timeout: 15000 });
     } catch (error) {
       // Take screenshot for debugging
       const timestamp = Date.now();
       await this.page.screenshot({ path: `debug-manage-heading-timeout-${timestamp}.png`, fullPage: true }).catch(() => {});
       const pageUrl = this.page.url();
+      const title = await this.page.title().catch(() => 'Unable to read title');
       const pageContent = await this.page.textContent('body').catch(() => 'Unable to read');
+      const pageHtml = await this.page.content().catch(() => 'Unable to read HTML');
       console.error(`❌ Manage page heading not found. URL: ${pageUrl}`);
+      console.error(`   Title: ${title}`);
       console.error(`   Page content: ${pageContent?.substring(0, 500)}`);
+      console.error(`   HTML snippet: ${pageHtml?.substring(0, 1000)}`);
       throw error;
     }
     
-    // Wait for the page to be ready - either:
-    // 1. PageLoadingWrapper finishes loading (aria-busy="false")
-    // 2. OR tabs are already visible (page loaded quickly)
-    const loadingWrapper = this.page.locator('[role="status"][aria-live="polite"]').first();
-    const tabsVisible = this.page.getByRole('tab').first();
+    // Wait for the loading wrapper to finish and show content.
+    // The tabs are inside PageLoadingWrapper and only render when showSkeleton is false.
+    //
+    // CRITICAL: Do NOT use page.waitForTimeout(), setTimeout(), or toPass() with intervals here!
+    // When tests seed data before navigation, any explicit wait/sleep causes the browser to hang
+    // due to an interaction between Playwright's event loop and Supabase Realtime subscriptions.
+    //
+    // Instead, we use rapid polling with immediate retries. This allows React to complete
+    // its rendering cycle without blocking the event loop.
+    const firstTab = this.page.getByRole('tab').first();
+    const maxAttempts = 200; // ~200 rapid checks should complete in <1s
+    let tabsFound = false;
     
-    try {
-      // Wait for either: loading wrapper to finish OR tabs to be visible
-      // Use 20s timeout to fit within 45s test timeout (leaving room for assertions)
-      await Promise.race([
-        // Option 1: Wait for loading wrapper to finish
-        this.page.waitForFunction(
-          () => {
-            const wrapper = document.querySelector('[role="status"][aria-live="polite"]');
-            // Either wrapper doesn't exist (fast load) or it's done loading
-            return !wrapper || wrapper.getAttribute('aria-busy') === 'false';
-          },
-          { timeout: 20000 }
-        ),
-        // Option 2: Tabs are already visible (fast load, no skeleton)
-        tabsVisible.waitFor({ state: 'visible', timeout: 20000 }),
-      ]);
-      
-      // Wait for the opacity transition to complete (PageLoadingWrapper uses 250ms transition)
-      // Add extra buffer for slower environments
-      await this.page.waitForTimeout(500);
-    } catch (error) {
-      // Take screenshot and log state for debugging
-      await this.page.screenshot({ path: 'debug-manage-page-timeout.png', fullPage: true }).catch(() => {});
-      const ariaBusy = await loadingWrapper.getAttribute('aria-busy').catch(() => 'N/A');
+    for (let i = 0; i < maxAttempts; i++) {
+      const count = await firstTab.count();
+      if (count > 0) {
+        tabsFound = true;
+        break;
+      }
+    }
+    
+    if (!tabsFound) {
+      // Take screenshot for debugging
+      const timestamp = Date.now();
+      await this.page.screenshot({ path: `debug-manage-tabs-timeout-${timestamp}.png`, fullPage: true }).catch(() => {});
       const pageUrl = this.page.url();
       const pageContent = await this.page.textContent('body').catch(() => 'Unable to read');
-      console.error(`Loading timeout. URL: ${pageUrl}, aria-busy: ${ariaBusy}`);
-      console.error(`Page content: ${pageContent?.substring(0, 500)}`);
-      throw error;
-    }
-    
-    // Now wait for the tabs structure to be visible
-    // Use multiple fallback selectors to be more resilient
-    try {
-      await Promise.race([
-        // Primary: Wait for tabpanel (actual content)
-        this.page.getByRole('tabpanel').first().waitFor({ state: 'visible', timeout: 10000 }),
-        // Fallback 1: Wait for tablist (tabs bar)
-        this.page.getByRole('tablist').first().waitFor({ state: 'visible', timeout: 10000 }),
-        // Fallback 2: Wait for any tab trigger
-        this.page.getByRole('tab').first().waitFor({ state: 'visible', timeout: 10000 }),
-      ]);
-    } catch (error) {
-      // If none appeared, capture diagnostic info and throw
-      const html = await this.page.content();
-      console.error('Tabs structure did not appear after loading.');
-      console.error('HTML snippet:', html.substring(0, 1000));
-      console.error('Checking for specific elements:');
-      console.error('  - Tabs wrapper exists:', await this.page.locator('[role="tablist"]').count());
-      console.error('  - Tab triggers exist:', await this.page.locator('[role="tab"]').count());
-      console.error('  - Tab panels exist:', await this.page.locator('[role="tabpanel"]').count());
+      console.error(`❌ Manage page tabs not found after heading was visible. URL: ${pageUrl}`);
+      console.error(`   Page content: ${pageContent?.substring(0, 500)}`);
       throw new Error('Manage page tabs did not render after loading completed');
     }
   }
 
   /**
    * Helper method to select a tab with retry logic.
-   * Uses expect().toPass() for aggressive retry under heavy parallel load.
-   * This prevents flakiness in CI environments where tab clicks may not register immediately.
+   * Uses rapid polling instead of toPass() with intervals to avoid browser hang issues
+   * when tests seed data before navigation.
    */
   private async selectTabWithRetry(tab: Locator): Promise<void> {
-    await expect(async () => {
-      // Ensure the tab is visible
-      await expect(tab).toBeVisible({ timeout: 5000 });
-      
+    // Wait for tab to be visible using rapid polling (avoid expect().toBeVisible with timeout)
+    const maxVisibilityAttempts = 200;
+    let tabVisible = false;
+    
+    for (let i = 0; i < maxVisibilityAttempts; i++) {
+      const visible = await tab.isVisible();
+      if (visible) {
+        tabVisible = true;
+        break;
+      }
+    }
+    
+    if (!tabVisible) {
+      throw new Error('Tab not visible after rapid polling');
+    }
+    
+    // Check if tab is already active (no need to click)
+    const currentState = await tab.getAttribute('data-state');
+    if (currentState === 'active') {
+      return; // Tab is already selected
+    }
+    
+    // Click the tab and verify it became active using rapid polling
+    const maxAttempts = 50;
+    let success = false;
+    
+    for (let i = 0; i < maxAttempts; i++) {
       // Click the tab
       await tab.click();
       
-      // Wait a moment for tab switch animation
-      await this.page.waitForTimeout(200);
+      // Check if tab became active (rapid poll, no explicit wait)
+      for (let j = 0; j < 20; j++) {
+        const state = await tab.getAttribute('data-state');
+        if (state === 'active') {
+          success = true;
+          break;
+        }
+      }
       
-      // Verify the tab became selected
-      await expect(tab).toHaveAttribute('data-state', 'active', { timeout: 3000 });
-    }).toPass({ timeout: 25000, intervals: [500, 1000, 2000, 3000, 5000] });
+      if (success) break;
+    }
+    
+    if (!success) {
+      throw new Error('Tab did not become active after clicking');
+    }
   }
 
   /**

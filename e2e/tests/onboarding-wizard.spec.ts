@@ -1,6 +1,7 @@
 /**
  * E2E Tests: User Story 3 - Onboarding Wizard
- * Tests auto-show once, skip doesn't re-auto-show, resume after refresh, entry points work
+ * Tests auto-show once, skip doesn't re-auto-show, resume after refresh, entry points work,
+ * validation behavior, and data persistence.
  */
 
 import { test, expect } from '@playwright/test';
@@ -56,23 +57,30 @@ test.describe('Onboarding Wizard', () => {
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
   }
 
+  /**
+   * Helper to get the onboarding wizard dialog locator
+   */
+  function getWizardDialog(page: import('@playwright/test').Page) {
+    return page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+  }
+
   test('T041a: onboarding wizard auto-shows on first login for new user', async ({ page }) => {
     await authenticateUser(page, ONBOARDING_TEST_EMAIL);
 
     // Wait for the page to load
     await page.waitForTimeout(2000);
 
-    // Check if onboarding wizard dialog is visible
-    const wizardDialog = page.locator('[role="dialog"]');
-    const isWizardVisible = await wizardDialog.isVisible().catch(() => false);
-
-    // For a new user with no data, onboarding should auto-show
-    // Note: This depends on the user having no accounts/projects/expenses
-    if (isWizardVisible) {
-      // Verify it's the onboarding wizard by checking for expected content
-      const wizardTitle = page.locator('[role="dialog"]').getByText(/configuração|perfil|conta|setup/i);
-      await expect(wizardTitle.first()).toBeVisible({ timeout: 5000 });
-    }
+    // Check if onboarding wizard dialog is visible - MUST be visible for new user
+    const wizardDialog = getWizardDialog(page);
+    
+    // For a new user with no data, onboarding MUST auto-show (mandatory)
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    
+    // Verify it's the onboarding wizard by checking for expected content
+    const profileHeading = wizardDialog.getByRole('heading', { name: /seu perfil/i });
+    await expect(profileHeading).toBeVisible({ timeout: 5000 });
   });
 
   test('T041b: onboarding wizard cannot be skipped/dismissed', async ({ page }) => {
@@ -81,9 +89,7 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the page to load
     await page.waitForTimeout(2000);
 
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    const wizardDialog = getWizardDialog(page);
     await expect(wizardDialog).toBeVisible({ timeout: 5000 });
 
     // No "Pular" button should exist (onboarding is mandatory)
@@ -110,39 +116,37 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the page to load and wizard to appear
     await page.waitForTimeout(2000);
 
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    const wizardDialog = getWizardDialog(page);
 
     await expect(wizardDialog).toBeVisible({ timeout: 5000 });
-    await expect(wizardDialog.getByText('Seu Perfil')).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
 
     // Advance to the next step (profile -> group)
     await page.locator('#profile-name').fill('Usuário Teste');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByText('Seu Grupo')).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
 
     // Refresh the page - should resume at the same step
     await page.reload();
     await page.waitForTimeout(2000);
     await expect(wizardDialog).toBeVisible({ timeout: 5000 });
-    await expect(wizardDialog.getByText('Seu Grupo')).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
 
     // Finish onboarding to ensure it does not appear again after completion
     await page.locator('#group-name').fill('Grupo Teste');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByText('Conta Bancária')).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
 
     await page.locator('#account-name').fill('Conta Teste');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByText('Renda')).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
 
     // Optional steps: income + expense + credit card (leave blank)
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByText('Despesa')).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByText('Cartão de Crédito')).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
 
     await wizardDialog.getByRole('button', { name: /finalizar/i }).click();
     await expect(wizardDialog).toBeHidden({ timeout: 15000 });
@@ -173,24 +177,9 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the page to load
     await page.waitForTimeout(2000);
 
-    // If the wizard is already showing (mandatory onboarding), the empty state CTA is not actionable.
-    const wizardDialog = page.locator('[role="dialog"]');
-    if (await wizardDialog.isVisible().catch(() => false)) {
-      await expect(wizardDialog).toBeVisible();
-      return;
-    }
-
-    // Look for empty state CTA (e.g., "Começar Configuração" or "Iniciar Configuração")
-    const emptyStateCTA = page.getByRole('button', { name: /começar|iniciar|start/i }).filter({ hasText: /configuração|setup/i });
-    
-    if (await emptyStateCTA.isVisible().catch(() => false)) {
-      await emptyStateCTA.click();
-      await page.waitForTimeout(1000);
-
-      // Wizard should now be open
-      const wizardDialog = page.locator('[role="dialog"]');
-      await expect(wizardDialog).toBeVisible({ timeout: 5000 });
-    }
+    // For a fresh user, the wizard MUST be showing (mandatory onboarding)
+    const wizardDialog = getWizardDialog(page);
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
   });
 
   test('T041f: wizard does not block navigation', async ({ page }) => {
@@ -220,5 +209,298 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/(dashboard)?$/);
   });
-});
 
+  test.describe('Validation Behavior', () => {
+    test('profile step: clicking next with empty name shows validation error', async ({ page }) => {
+      const freshEmail = `onboarding-val-profile-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+      await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
+
+      // Clear the name field (might have default value)
+      await page.locator('#profile-name').fill('');
+      
+      // Click next with empty name
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await page.waitForTimeout(500);
+
+      // Should still be on profile step (validation failed)
+      await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
+      
+      // Input should have error styling (aria-invalid)
+      const nameInput = page.locator('#profile-name');
+      await expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    test('group step: clicking next with empty name shows validation error', async ({ page }) => {
+      const freshEmail = `onboarding-val-group-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Fill profile and advance
+      await page.locator('#profile-name').fill('Usuário Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      // Clear the group name field
+      await page.locator('#group-name').fill('');
+      
+      // Click next with empty name
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await page.waitForTimeout(500);
+
+      // Should still be on group step (validation failed)
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
+      
+      // Input should have error styling
+      const groupInput = page.locator('#group-name');
+      await expect(groupInput).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    test('bank account step: clicking next with empty name shows validation error', async ({ page }) => {
+      const freshEmail = `onboarding-val-bank-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Fill profile and advance
+      await page.locator('#profile-name').fill('Usuário Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      // Fill group and advance
+      await page.locator('#group-name').fill('Grupo Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      // Clear the account name field
+      await page.locator('#account-name').fill('');
+      
+      // Click next with empty name
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await page.waitForTimeout(500);
+
+      // Should still be on bank account step (validation failed)
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible();
+      
+      // Input should have error styling
+      const accountInput = page.locator('#account-name');
+      await expect(accountInput).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    test('income step: partial input (name only) shows validation error', async ({ page }) => {
+      const freshEmail = `onboarding-val-income-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Navigate to income step
+      await page.locator('#profile-name').fill('Usuário Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#group-name').fill('Grupo Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#account-name').fill('Conta Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+
+      // Fill name but leave amount empty/0
+      await page.locator('#income-name').fill('Salário');
+      // Amount input is empty by default
+
+      // Click next
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await page.waitForTimeout(500);
+
+      // Should still be on income step (validation failed - name filled but amount is 0)
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible();
+    });
+
+    test('income step: empty fields allows continuing (optional step)', async ({ page }) => {
+      const freshEmail = `onboarding-val-income-empty-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Navigate to income step
+      await page.locator('#profile-name').fill('Usuário Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#group-name').fill('Grupo Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#account-name').fill('Conta Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+
+      // Leave both fields empty (optional step)
+      // Click next - should advance to expense step
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      
+      // Should advance to expense step (optional step allows empty)
+      await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    });
+
+    test('expense step: partial input (name only) shows validation error', async ({ page }) => {
+      const freshEmail = `onboarding-val-expense-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Navigate to expense step
+      await page.locator('#profile-name').fill('Usuário Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#group-name').fill('Grupo Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#account-name').fill('Conta Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+
+      // Skip income (optional)
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+
+      // Fill name but leave amount empty/0
+      await page.locator('#expense-name').fill('Aluguel');
+
+      // Click next
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await page.waitForTimeout(500);
+
+      // Should still be on expense step (validation failed - name filled but amount is 0)
+      await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible();
+    });
+  });
+
+  test.describe('Data Persistence', () => {
+    test('completed onboarding data persists and shows in manage page', async ({ page }) => {
+      // Increase timeout for this comprehensive test
+      test.setTimeout(120000);
+
+      const freshEmail = `onboarding-persist-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Define test data
+      const testData = {
+        profileName: 'Usuário Persistência',
+        groupName: 'Grupo Persistência',
+        accountName: 'Conta Principal',
+        accountBalance: '5000',
+        incomeName: 'Salário Mensal',
+        incomeAmount: '8000',
+        expenseName: 'Aluguel Apartamento',
+        expenseAmount: '2500',
+        creditCardName: 'Nubank Roxinho',
+        creditCardBalance: '1500',
+      };
+
+      // Step 1: Profile
+      await page.locator('#profile-name').fill(testData.profileName);
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      // Step 2: Group
+      await page.locator('#group-name').fill(testData.groupName);
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      // Step 3: Bank Account
+      await page.locator('#account-name').fill(testData.accountName);
+      await page.locator('#account-balance').fill(testData.accountBalance);
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+
+      // Step 4: Income
+      await page.locator('#income-name').fill(testData.incomeName);
+      await page.locator('#income-amount').fill(testData.incomeAmount);
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+
+      // Step 5: Expense
+      await page.locator('#expense-name').fill(testData.expenseName);
+      await page.locator('#expense-amount').fill(testData.expenseAmount);
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+
+      // Step 6: Credit Card
+      await page.locator('#card-name').fill(testData.creditCardName);
+      await page.locator('#card-balance').fill(testData.creditCardBalance);
+      await wizardDialog.getByRole('button', { name: /finalizar/i }).click();
+
+      // Wait for wizard to close
+      await expect(wizardDialog).toBeHidden({ timeout: 15000 });
+
+      // Navigate to manage page to verify data persisted
+      await page.goto('/manage');
+      await page.waitForTimeout(2000);
+
+      // Verify bank account exists in Accounts tab (should be default tab)
+      await expect(page.getByText(testData.accountName)).toBeVisible({ timeout: 10000 });
+
+      // Switch to Income tab and verify income
+      const incomeTab = page.getByRole('tab', { name: /renda|income/i });
+      await incomeTab.click();
+      await page.waitForTimeout(500);
+      await expect(page.getByText(testData.incomeName)).toBeVisible({ timeout: 10000 });
+
+      // Switch to Expenses tab and verify expense
+      const expenseTab = page.getByRole('tab', { name: /despesa|expense/i });
+      await expenseTab.click();
+      await page.waitForTimeout(500);
+      await expect(page.getByText(testData.expenseName)).toBeVisible({ timeout: 10000 });
+
+      // Switch to Credit Cards tab and verify credit card
+      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      await cardTab.click();
+      await page.waitForTimeout(500);
+      await expect(page.getByText(testData.creditCardName)).toBeVisible({ timeout: 10000 });
+
+      // Switch to Group tab and verify group name
+      const groupTab = page.getByRole('tab', { name: /grupo|group/i });
+      await groupTab.click();
+      await page.waitForTimeout(500);
+      await expect(page.getByText(testData.groupName)).toBeVisible({ timeout: 10000 });
+    });
+  });
+});

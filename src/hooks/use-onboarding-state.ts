@@ -107,9 +107,10 @@ export function useOnboardingState(): UseOnboardingStateReturn {
   }, [isAuthLoading, isAuthenticated, state?.status, minimumSetupComplete, financeLoading, isLoading])
 
   // Current step (from state or computed initial)
+  const stateCurrentStep = state?.currentStep
   const currentStep = useMemo((): OnboardingStep => {
-    if (state?.currentStep) {
-      return state.currentStep
+    if (stateCurrentStep) {
+      return stateCurrentStep
     }
     // Compute initial step based on existing data
     const hasAccount = accounts.length > 0
@@ -118,7 +119,7 @@ export function useOnboardingState(): UseOnboardingStateReturn {
     // For profile/group, we don't have easy access to check if they're set,
     // so we start from the beginning
     return determineInitialStep(false, false, hasAccount, hasIncome, hasExpense)
-  }, [state?.currentStep, accounts.length, projects.length, singleShotIncome.length, fixedExpenses.length, singleShotExpenses.length])
+  }, [stateCurrentStep, accounts.length, projects.length, singleShotIncome.length, fixedExpenses.length, singleShotExpenses.length])
 
   // Progress percentage
   const progress = useMemo(() => calculateProgress(currentStep), [currentStep])

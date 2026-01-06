@@ -53,7 +53,14 @@ export class DashboardPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/');
-    
+    await this.waitForDashboardLoad();
+  }
+
+  /**
+   * Wait for dashboard to finish loading.
+   * Can be called after goto() or after a page reload.
+   */
+  async waitForDashboardLoad(): Promise<void> {
     // Wait for the dashboard heading to be visible - this ALWAYS renders
     // regardless of loading/empty/error state, proving React has mounted
     const dashboardHeading = this.page.getByRole('heading', { name: /painel de fluxo de caixa/i });

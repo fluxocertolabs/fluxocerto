@@ -7,7 +7,8 @@ import { test, expect } from '../fixtures/test-base';
 import { createAccount, createExpense, createCreditCard } from '../utils/test-data';
 
 test.describe('Edge Cases & Error Handling', () => {
-  // Tests now run in parallel with per-worker data prefixing for isolation
+  // Run tests serially to avoid parallel flakiness with realtime connections
+  test.describe.configure({ mode: 'serial' });
 
   test('T062: large monetary values (R$ 21.474.836,47) → account created successfully', async ({
     db,

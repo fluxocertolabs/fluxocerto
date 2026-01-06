@@ -8,7 +8,7 @@
  * - Supports keyboard navigation (Escape to close, Arrow keys to navigate)
  */
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -50,15 +50,10 @@ export function TourRunner({
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition | null>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  const maskIdRef = useRef<string | null>(null)
+  const maskId = useId()
   const currentStep = steps[currentStepIndex]
   const isFirstStep = currentStepIndex === 0
   const isLastStep = currentStepIndex === steps.length - 1
-
-  if (!maskIdRef.current) {
-    maskIdRef.current = `tour-mask-${Math.random().toString(36).slice(2)}`
-  }
-  const maskId = maskIdRef.current
 
   // Find and highlight the target element
   useEffect(() => {

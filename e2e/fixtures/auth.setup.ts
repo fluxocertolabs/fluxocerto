@@ -15,6 +15,7 @@ import {
 } from './db';
 import { getWorkerContext } from './worker-context';
 import { getWorkerCount } from './worker-count';
+import { executeSQL, getUserIdFromEmail } from '../utils/supabase-admin';
 import { existsSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -33,6 +34,11 @@ const __dirname = dirname(__filename);
 setup('setup-parallel-workers', async ({ page, browser }) => {
   const workerCount = getWorkerCount();
   console.log(`Setting up ${workerCount} parallel workers with group isolation...`);
+
+  // This setup test does O(workerCount) real work (group provisioning + full auth flow per worker),
+  // so its runtime scales with the number of workers.
+  // Keep the default 45s for small worker counts, but allow more time for high-core dev machines.
+  setup.setTimeout(Math.max(45000, workerCount * 15000));
 
   // Clear any cached group IDs from previous runs
   clearGroupCache();
@@ -86,9 +92,11 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
     const context = await browser.newContext();
     const authPage = await context.newPage();
 
+    let authenticated = false;
     try {
       // Perform authentication for this worker
       await auth.authenticate(authPage);
+      authenticated = true;
       console.log(`  ✓ Worker ${i} authenticated successfully`);
     } catch (error) {
       console.error(`  ✗ Failed to authenticate worker ${i}:`, error);
@@ -97,10 +105,42 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
       await context.close();
     }
 
-    // Small delay between authentications to avoid rate limiting
-    if (i < workerCount - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (!authenticated) {
+      continue;
     }
+
+    // IMPORTANT: Only mutate server-side onboarding/tour state AFTER closing the browser context.
+    // This prevents the client (still booting post-login) from racing and overwriting these values.
+    const userId = await getUserIdFromEmail(workerContext.email);
+
+    // Mark onboarding as completed for the worker user so the wizard doesn't
+    // aria-hide the app and block the rest of the E2E suite.
+    //
+    // We use direct SQL here (instead of PostgREST) to keep setup deterministic and
+    // avoid any intermittent admin API issues under parallel load.
+    await executeSQL(`
+      INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+      VALUES ('${userId}', '${groupId}', 'completed', 'done', now(), now())
+      ON CONFLICT (user_id, group_id) DO UPDATE
+      SET status = EXCLUDED.status,
+          current_step = EXCLUDED.current_step,
+          auto_shown_at = EXCLUDED.auto_shown_at,
+          completed_at = EXCLUDED.completed_at
+    `);
+
+    // Dismiss page tours for the worker user so tour overlays don't block UI interactions.
+    await executeSQL(`
+      INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+      VALUES
+        ('${userId}', 'dashboard', 'dismissed', 1, now(), NULL),
+        ('${userId}', 'manage', 'dismissed', 1, now(), NULL),
+        ('${userId}', 'history', 'dismissed', 1, now(), NULL)
+      ON CONFLICT (user_id, tour_key) DO UPDATE
+      SET status = EXCLUDED.status,
+          version = EXCLUDED.version,
+          dismissed_at = EXCLUDED.dismissed_at,
+          completed_at = NULL
+    `);
   }
 
   // Phase 3: Verify all auth state files were created
@@ -113,9 +153,6 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
     }
     console.log(`  ✓ Worker ${i} auth state verified: ${authFilePath}`);
   }
-
-  // Small delay to ensure all files are fully flushed to disk
-  await new Promise((resolve) => setTimeout(resolve, 500));
 
   console.log(`✓ All ${workerCount} workers setup complete with group isolation`);
 });

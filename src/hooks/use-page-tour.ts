@@ -29,19 +29,21 @@ function readLocalTourCache(storageKey: string): LocalTourCache | null {
     const raw = window.localStorage.getItem(storageKey)
     if (!raw) return null
     const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return null
+
+    const rec = parsed as Record<string, unknown>
+    const status = rec.status
+    const version = rec.version
+    const updatedAt = rec.updatedAt
+
     if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      'status' in parsed &&
-      'version' in parsed &&
-      'updatedAt' in parsed &&
-      (parsed as any).status &&
-      ((parsed as any).status === 'completed' || (parsed as any).status === 'dismissed') &&
-      typeof (parsed as any).version === 'number' &&
-      typeof (parsed as any).updatedAt === 'number'
+      (status === 'completed' || status === 'dismissed') &&
+      typeof version === 'number' &&
+      typeof updatedAt === 'number'
     ) {
-      return parsed as LocalTourCache
+      return { status, version, updatedAt }
     }
+
     return null
   } catch {
     return null
@@ -103,10 +105,11 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
   const totalSteps = tourDefinition.steps.length
   const currentVersion = getTourVersion(tourKey)
 
+  const userId = user?.id ?? null
   const localStorageKey = useMemo(() => {
-    if (!user?.id) return null
-    return `fluxocerto:tour:${user.id}:${tourKey}`
-  }, [user?.id, tourKey])
+    if (!userId) return null
+    return `fluxocerto:tour:${userId}:${tourKey}`
+  }, [userId, tourKey])
 
   // Read on each render so changes written during this session are reflected immediately.
   const localCache = localStorageKey ? readLocalTourCache(localStorageKey) : null

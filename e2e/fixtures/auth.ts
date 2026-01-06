@@ -5,7 +5,6 @@
  */
 
 import type { Page } from '@playwright/test';
-import { waitForNetworkSettled } from '../utils/wait-helpers';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { InbucketClient } from '../utils/inbucket';
@@ -64,9 +63,6 @@ export class AuthFixture {
       localStorage.clear();
       sessionStorage.clear();
     });
-    
-    // Small delay to ensure storage is cleared
-    await page.waitForTimeout(100);
   }
 
   /**
@@ -172,65 +168,26 @@ export class AuthFixture {
     // Wait for redirect to dashboard (may have hash fragment from auth redirect)
     await page.waitForURL(/\/(dashboard)?#?$/, { timeout: 30000 });
 
-    // Wait for the page to be fully loaded and auth state established
-    // Use a short timeout for networkidle since Supabase realtime keeps connections open
-    await Promise.race([
-      page.waitForLoadState('networkidle'),
-      page.waitForTimeout(5000), // Max 5 seconds for network to settle
-    ]);
-    
-    // Wait for Supabase auth state to be fully established
-    // We need to verify that the session is actually saved in browser storage
+    // Wait for Supabase auth state to be fully established in browser storage.
+    // IMPORTANT: Don't rely on `networkidle` here (Supabase Realtime keeps long-lived connections open).
     console.log(`Verifying auth session for worker ${this.workerIndex}...`);
-    
-    const hasValidAuth = await page.evaluate(() => {
-      // Check for Supabase auth tokens in localStorage
-      const keys = Object.keys(localStorage);
-      const hasAuthToken = keys.some(key => 
-        key.includes('sb-') && key.includes('-auth-token')
-      );
-      
-      // Also check sessionStorage
-      const sessionKeys = Object.keys(sessionStorage);
-      const hasSessionAuth = sessionKeys.some(key => 
-        key.includes('sb-') || key.includes('supabase')
-      );
-      
-      return hasAuthToken || hasSessionAuth;
-    });
-    
-    if (!hasValidAuth) {
-      console.error(`❌ Worker ${this.workerIndex}: No Supabase auth tokens found in storage!`);
-      // Wait a bit more and check again
-      await page.waitForTimeout(3000);
-      
-      const hasValidAuthRetry = await page.evaluate(() => {
-        const keys = Object.keys(localStorage);
-        return keys.some(key => key.includes('sb-') && key.includes('-auth-token'));
-      });
-      
-      if (!hasValidAuthRetry) {
-        console.error(`❌ Worker ${this.workerIndex}: Still no auth tokens after retry`);
-      } else {
-        console.log(`✓ Worker ${this.workerIndex}: Auth tokens found after retry`);
-      }
-    } else {
-      console.log(`✓ Worker ${this.workerIndex}: Auth tokens present in storage`);
-    }
-    
-    // Verify we're actually authenticated by checking for a dashboard element
-    try {
-      await page.getByRole('heading', { name: /painel|dashboard/i }).waitFor({ 
-        state: 'visible', 
-        timeout: 10000 
-      });
-      console.log(`✓ Worker ${this.workerIndex}: Dashboard loaded successfully`);
-    } catch (error) {
-      console.error(`⚠️  Worker ${this.workerIndex}: Dashboard heading not found`);
-    }
 
-    // Final wait to ensure everything is stable
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => {
+      const keys = Object.keys(localStorage);
+      const hasAuthToken = keys.some((key) => key.includes('sb-') && key.includes('-auth-token'));
+
+      const sessionKeys = Object.keys(sessionStorage);
+      const hasSessionAuth = sessionKeys.some((key) => key.includes('sb-') || key.includes('supabase'));
+
+      return hasAuthToken || hasSessionAuth;
+    }, null, { timeout: 10000 });
+
+    console.log(`✓ Worker ${this.workerIndex}: Auth tokens present in storage`);
+
+    // Optional sanity check: we're expected to be past /login at this point.
+    if (/\/login/.test(page.url())) {
+      throw new Error(`Worker ${this.workerIndex}: Authentication completed but still on /login`);
+    }
 
     // Save storage state
     await page.context().storageState({ path: this.storageStatePath });

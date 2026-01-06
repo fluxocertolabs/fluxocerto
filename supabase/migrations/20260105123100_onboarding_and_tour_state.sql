@@ -151,3 +151,5 @@ ALTER PUBLICATION supabase_realtime ADD TABLE onboarding_states;
 ALTER PUBLICATION supabase_realtime ADD TABLE tour_states;
 
 
+
+

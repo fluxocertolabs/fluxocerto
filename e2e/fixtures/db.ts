@@ -4,7 +4,7 @@
  * Uses data prefixing for parallel test isolation (each worker prefixes its data)
  */
 
-import { getAdminClient } from '../utils/supabase-admin';
+import { executeSQL, getAdminClient } from '../utils/supabase-admin';
 import type { IWorkerContext } from './worker-context';
 import { addWorkerPrefix, getWorkerPrefixPattern, ALL_WORKERS_PATTERN } from './worker-context';
 import type {
@@ -1163,6 +1163,48 @@ export async function deleteSnapshotsForGroup(groupId: string): Promise<void> {
 }
 
 /**
+ * Clear onboarding state for a group.
+ * This will cause the onboarding wizard to appear on next page load.
+ */
+export async function clearOnboardingStateForGroup(groupId: string): Promise<void> {
+  const client = getAdminClient();
+  const { error } = await client.from('onboarding_states').delete().eq('group_id', groupId);
+  if (error && !error.message.includes('does not exist')) {
+    throw new Error(`Failed to clear onboarding state: ${error.message}`);
+  }
+}
+
+/**
+ * Clear tour state for a group.
+ * This will cause tours to appear as "not seen" on next page load.
+ */
+export async function clearTourStateForGroup(groupId: string): Promise<void> {
+  const escapedGroupId = groupId.replace(/'/g, "''");
+
+  // NOTE:
+  // - `tour_states` is keyed by (user_id, tour_key) and does NOT have `group_id`.
+  // - `profiles.id` is NOT the auth user id (it originated from `allowed_emails`), so we can't
+  //   map `group_id -> profiles.id -> tour_states.user_id`.
+  //
+  // We instead clear tour states by mapping the group's profile emails -> auth.users ids.
+  try {
+    await executeSQL(`
+      DELETE FROM public.tour_states ts
+      USING public.profiles p, auth.users u
+      WHERE p.group_id = '${escapedGroupId}'
+        AND p.email IS NOT NULL
+        AND u.email = p.email::text
+        AND ts.user_id = u.id
+    `);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes('does not exist')) {
+      throw new Error(`Failed to clear tour state: ${message}`);
+    }
+  }
+}
+
+/**
  * Create a worker-scoped database fixture
  * This returns a fixture object that prefixes all data with the worker identifier
  * and uses the worker's group for data isolation via RLS
@@ -1294,6 +1336,22 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     deleteSnapshots: async () => {
       const groupId = await getWorkerGroupId();
       return deleteSnapshotsForGroup(groupId);
+    },
+    /**
+     * Clear onboarding state for this worker's group.
+     * This will cause the onboarding wizard to appear on next page load.
+     */
+    clearOnboardingState: async () => {
+      const groupId = await getWorkerGroupId();
+      await clearOnboardingStateForGroup(groupId);
+    },
+    /**
+     * Clear tour state for this worker's group.
+     * This will cause tours to appear as "not seen" on next page load.
+     */
+    clearTourState: async () => {
+      const groupId = await getWorkerGroupId();
+      await clearTourStateForGroup(groupId);
     },
     seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
       const groupId = await getWorkerGroupId();

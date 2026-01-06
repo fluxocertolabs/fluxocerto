@@ -45,3 +45,8 @@ e2e/tests/visual/**/*-snapshots/
 *.tsbuildinfo
 *.d.ts
 
+# Debug files and core dumps (generated during test failures)
+core.*
+debug-*.png
+debug-*.jpg
+

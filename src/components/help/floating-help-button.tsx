@@ -196,6 +196,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   return (
     <div
       ref={containerRef}
+      data-testid="floating-help-button"
       className={cn(
         'fixed bottom-6 right-6 z-50',
         className

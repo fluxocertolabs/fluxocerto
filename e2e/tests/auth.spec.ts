@@ -162,7 +162,16 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 10000 });
 
     // Refresh the page
-    await page.reload();
+    try {
+      // Use a lighter waitUntil to avoid flaking on long-lived realtime connections.
+      await page.reload({ waitUntil: 'domcontentloaded' });
+    } catch (err) {
+      // In rare cases reload can be aborted if a navigation is in-flight; fall back to a
+      // regular navigation which still validates session persistence.
+      console.warn('page.reload failed, falling back to page.goto:', err);
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+    }
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
     // Should still be on dashboard (not redirected to login)
     await expect(page).toHaveURL(/\/(dashboard)?$/);

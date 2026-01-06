@@ -17,6 +17,7 @@ import { ManagePage } from '../pages/manage-page';
 import { QuickUpdatePage } from '../pages/quick-update-page';
 import { HistoryPage } from '../pages/history-page';
 import { SnapshotDetailPage } from '../pages/snapshot-detail-page';
+import { executeSQL, getUserIdFromEmail } from '../utils/supabase-admin';
 import { existsSync } from 'fs';
 
 /**
@@ -151,6 +152,35 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
       // Ensure test user exists in worker's group
       await dbFixture.ensureTestUser();
+
+      // Ensure onboarding wizard and page tours don't block the UI for worker users.
+      // Dedicated onboarding/tour specs use fresh emails and don't rely on this fixture.
+      const userId = await getUserIdFromEmail(workerCtx.email);
+      const groupId = await dbFixture.getWorkerGroupId();
+
+      await executeSQL(`
+        INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+        VALUES ('${userId}', '${groupId}', 'completed', 'done', now(), now())
+        ON CONFLICT (user_id, group_id) DO UPDATE
+        SET status = EXCLUDED.status,
+            current_step = EXCLUDED.current_step,
+            auto_shown_at = EXCLUDED.auto_shown_at,
+            completed_at = EXCLUDED.completed_at
+      `);
+
+      await executeSQL(`
+        INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+        VALUES
+          ('${userId}', 'dashboard', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'manage', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'history', 'dismissed', 1, now(), NULL)
+        ON CONFLICT (user_id, tour_key) DO UPDATE
+        SET status = EXCLUDED.status,
+            version = EXCLUDED.version,
+            dismissed_at = EXCLUDED.dismissed_at,
+            completed_at = NULL
+      `);
+
       console.log(`[Fixture] DB setup complete for worker ${workerCtx.workerIndex}`);
 
       await use(dbFixture);

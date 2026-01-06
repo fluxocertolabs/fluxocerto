@@ -84,10 +84,7 @@ export class AccountsSection {
     // Hover to reveal the actions button
     await accountCard.hover();
     
-    // Wait a moment for hover effects
-    await this.page.waitForTimeout(200);
-    
-    // Click the "More options" button (three dots)
+    // Click the "More options" button (three dots) - Playwright auto-waits for actionability
     await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
     
     // Click "Editar" in the dropdown
@@ -139,10 +136,7 @@ export class AccountsSection {
     // Hover to reveal the actions button
     await accountCard.hover();
     
-    // Wait a moment for hover effects
-    await this.page.waitForTimeout(200);
-    
-    // Click the "More options" button (three dots)
+    // Click the "More options" button (three dots) - Playwright auto-waits for actionability
     await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
     
     // Click "Excluir" in the dropdown
@@ -155,41 +149,44 @@ export class AccountsSection {
     
     // Wait for dialog to close
     await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
-    
-    // Wait for UI to update after deletion
-    await this.page.waitForTimeout(500);
   }
 
   /**
    * Wait for accounts to load (either accounts appear or empty state)
+   * Uses Playwright's built-in retry mechanism for stability in parallel execution
    */
   async waitForLoad(): Promise<void> {
-    // Wait for content to appear
-    await Promise.race([
-      // Wait for account cards
-      this.page.locator('div.group.relative').filter({
-        has: this.page.getByRole('heading', { level: 3 })
-      }).first().waitFor({ state: 'visible', timeout: 30000 }),
-      // Or empty state / add button
-      this.page.getByText(/nenhuma conta/i).waitFor({ state: 'visible', timeout: 30000 }),
-      this.page.getByRole('button', { name: /adicionar conta/i }).waitFor({ state: 'visible', timeout: 30000 }),
-    ]).catch(() => {
-      // Content might already be visible
-    });
+    const accountCard = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { level: 3 })
+    }).first();
+    const addButton = this.page.getByRole('button', { name: /adicionar conta/i });
+    
+    // Use Playwright's built-in retry with toPass for parallel execution stability
+    await expect(async () => {
+      const cardCount = await accountCard.count();
+      const buttonCount = await addButton.count();
+      if (cardCount > 0) {
+        console.log(`[waitForLoad] Account card found`);
+        return;
+      }
+      if (buttonCount > 0) {
+        console.log(`[waitForLoad] Add button found`);
+        return;
+      }
+      throw new Error('Neither account cards nor add button visible');
+    }).toPass({ timeout: 15000, intervals: [100, 200, 500] });
   }
 
   /**
    * Verify account appears in the list
    */
   async expectAccountVisible(name: string): Promise<void> {
-    // Use retry logic to handle list loading/refreshing
-    await expect(async () => {
-      // Try to wait for load first (but don't fail if it sees empty state)
-      await this.waitForLoad();
-      await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
-      const account = this.page.getByText(name).first();
-      await expect(account).toBeVisible({ timeout: 10000 });
-    }).toPass({ timeout: 30000 });
+    // Wait for the accounts section to be ready
+    await this.waitForLoad();
+    
+    // Use Playwright's built-in expect with visibility check
+    const account = this.page.getByText(name).first();
+    await expect(account).toBeVisible({ timeout: 10000 });
   }
 
   /**

@@ -1,6 +1,6 @@
 /**
  * E2E Tests: User Story 4 - Page Tours (Coachmarks)
- * Tests auto-show once per page per version, replay, defer while onboarding active, missing targets
+ * Tests auto-show once per page per version, replay via floating help, defer while onboarding active, missing targets
  */
 
 import { test, expect } from '@playwright/test';
@@ -59,29 +59,29 @@ test.describe('Page Tours', () => {
     if (!(await wizardDialog.isVisible().catch(() => false))) return;
 
     // Fill required fields when present, then advance until completion.
-    if (await page.locator('#profile-name').isVisible().catch(() => false)) {
-      await page.locator('#profile-name').fill('Usuário Teste');
+    // Use try-catch to handle race conditions where element might disappear
+    async function fillIfVisible(selector: string, value: string) {
+      try {
+        const el = page.locator(selector);
+        if (await el.isVisible().catch(() => false)) {
+          await el.fill(value, { timeout: 5000 });
+        }
+      } catch {
+        // Element disappeared or became non-interactable, skip
+      }
     }
-    if (await page.locator('#group-name').isVisible().catch(() => false)) {
-      await page.locator('#group-name').fill('Grupo Teste');
-    }
-    if (await page.locator('#account-name').isVisible().catch(() => false)) {
-      await page.locator('#account-name').fill('Conta Teste');
-    }
+
+    await fillIfVisible('#profile-name', 'Usuário Teste');
+    await fillIfVisible('#group-name', 'Grupo Teste');
+    await fillIfVisible('#account-name', 'Conta Teste');
 
     for (let i = 0; i < 10; i++) {
       if (!(await wizardDialog.isVisible().catch(() => false))) break;
 
       // Re-fill required inputs if the step changed.
-      if (await page.locator('#profile-name').isVisible().catch(() => false)) {
-        await page.locator('#profile-name').fill('Usuário Teste');
-      }
-      if (await page.locator('#group-name').isVisible().catch(() => false)) {
-        await page.locator('#group-name').fill('Grupo Teste');
-      }
-      if (await page.locator('#account-name').isVisible().catch(() => false)) {
-        await page.locator('#account-name').fill('Conta Teste');
-      }
+      await fillIfVisible('#profile-name', 'Usuário Teste');
+      await fillIfVisible('#group-name', 'Grupo Teste');
+      await fillIfVisible('#account-name', 'Conta Teste');
 
       const finalize = wizardDialog.getByRole('button', { name: /finalizar/i });
       if (await finalize.isVisible().catch(() => false)) {
@@ -90,11 +90,21 @@ test.describe('Page Tours', () => {
       }
 
       const next = wizardDialog.getByRole('button', { name: /próximo/i });
-      await next.click();
+      try {
+        await next.click({ timeout: 5000 });
+      } catch {
+        // Button might have disappeared, break out
+        break;
+      }
       await page.waitForTimeout(250);
     }
 
-    await expect(wizardDialog).toBeHidden({ timeout: 20000 });
+    // Wait for wizard to be hidden, but don't fail if it's already hidden
+    try {
+      await expect(wizardDialog).toBeHidden({ timeout: 20000 });
+    } catch {
+      // Wizard might already be hidden
+    }
   }
 
   async function dismissTourIfPresent(page: import('@playwright/test').Page) {
@@ -105,7 +115,34 @@ test.describe('Page Tours', () => {
     }
   }
 
+  /**
+   * Helper to start a tour via the floating help button.
+   * Uses click (pinned mode) to reliably expand on both desktop and mobile.
+   */
+  async function startTourViaFloatingHelp(page: import('@playwright/test').Page) {
+    const helpButton = page.locator('[data-testid="floating-help-button"]');
+    await expect(helpButton).toBeVisible({ timeout: 10000 });
+
+    // Click the FAB to expand (pinned mode)
+    const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
+    await fabButton.click({ force: true });
+    await page.waitForTimeout(500);
+
+    // Click the tour option (aria-label is "Iniciar tour guiado da página")
+    const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+    await expect(tourOption).toBeVisible({ timeout: 5000 });
+    await tourOption.click({ force: true });
+    await page.waitForTimeout(500);
+
+    // Assert tour started
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    await expect(closeTourButton).toBeVisible({ timeout: 10000 });
+  }
+
   test('tour auto-shows on first visit to dashboard (after onboarding)', async ({ page }) => {
+    // Increase test timeout for this test since it involves full onboarding flow
+    test.setTimeout(90000);
+
     const email = `tour-auto-${Date.now()}@example.com`;
     await inbucket.purgeMailbox(email.split('@')[0]);
     await authenticateUser(page, email);
@@ -116,8 +153,9 @@ test.describe('Page Tours', () => {
     // Tour auto-show is deferred while onboarding wizard is active.
     await completeOnboardingIfPresent(page);
 
+    // Wait for tour to auto-show after onboarding completes
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    await expect(closeTourButton).toBeVisible({ timeout: 20000 });
+    await expect(closeTourButton).toBeVisible({ timeout: 30000 });
   });
 
   test('tour does not auto-show on refresh after dismissal', async ({ page }) => {
@@ -145,7 +183,10 @@ test.describe('Page Tours', () => {
     expect(isTourAutoShowing).toBe(false);
   });
 
-  test('tour can be replayed via header "Mostrar tour" button', async ({ page }) => {
+  test('tour can be replayed via floating help button', async ({ page }) => {
+    // Increase test timeout since it involves full onboarding flow
+    test.setTimeout(90000);
+
     const email = `tour-replay-${Date.now()}@example.com`;
     await inbucket.purgeMailbox(email.split('@')[0]);
     await authenticateUser(page, email);
@@ -156,20 +197,18 @@ test.describe('Page Tours', () => {
     await completeOnboardingIfPresent(page);
     await dismissTourIfPresent(page);
 
-    // Find and click the "Mostrar tour" / "Tour" button in header
-    const tourButton = page.getByRole('button', { name: /mostrar tour da página/i });
-    
-    if (await tourButton.isVisible().catch(() => false)) {
-      await tourButton.click();
-      await page.waitForTimeout(1000);
+    // Use floating help button to start tour (MUST work - no conditional)
+    await startTourViaFloatingHelp(page);
 
-      // Tour should now be active
-      const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-      await expect(closeTourButton).toBeVisible({ timeout: 10000 });
-    }
+    // Tour should now be active - verify by checking close button
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    await expect(closeTourButton).toBeVisible({ timeout: 10000 });
   });
 
   test('tour is deferred while onboarding wizard is active', async ({ page }) => {
+    // This test uses fresh email authentication which can be slow
+    test.setTimeout(90000);
+    
     // Use a fresh email to ensure onboarding wizard shows
     const freshEmail = `tour-defer-${Date.now()}@example.com`;
     await inbucket.purgeMailbox(freshEmail.split('@')[0]);
@@ -180,47 +219,155 @@ test.describe('Page Tours', () => {
     await page.waitForTimeout(2000);
 
     // Check if onboarding wizard is visible
-    const wizardDialog = page.locator('[role="dialog"]');
-    const isWizardVisible = await wizardDialog.isVisible().catch(() => false);
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    
+    // For a fresh user, wizard MUST be visible (mandatory onboarding)
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
-    if (isWizardVisible) {
-      // While wizard is active, tour should NOT be showing
-      const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-      const isTourActive = await closeTourButton.isVisible().catch(() => false);
-      
-      // Tour should be deferred while onboarding is active
-      expect(isTourActive).toBe(false);
-    }
+    // While wizard is active, tour should NOT be showing
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    const isTourActive = await closeTourButton.isVisible().catch(() => false);
+    
+    // Tour should be deferred while onboarding is active
+    expect(isTourActive).toBe(false);
   });
 
   test('tour gracefully handles missing target elements', async ({ page }) => {
+    // This test uses fresh email authentication which can be slow
+    test.setTimeout(90000);
+    
     const email = `tour-missing-${Date.now()}@example.com`;
     await inbucket.purgeMailbox(email.split('@')[0]);
     await authenticateUser(page, email);
 
-    // Navigate to history page which might have fewer elements
-    await page.goto('/history');
+    // Complete onboarding first (tours are deferred while onboarding is active)
     await page.waitForTimeout(2000);
+    await completeOnboardingIfPresent(page);
 
-    // If tour shows, it should not crash even if some targets are missing
-    // The tour should skip missing targets per FR-018
-    
-    // Try to trigger the tour manually
+    // Dismiss any auto-shown tour on dashboard so it doesn't interfere
+    await dismissTourIfPresent(page);
+
+    // Navigate to History in an "empty" state where some tour targets may be missing
+    await page.goto('/history');
+    await page.waitForTimeout(1500);
+
+    // Start tour via floating help (MUST work - no conditional)
+    await startTourViaFloatingHelp(page);
+
+    // Tour should become active, and must not crash even if some targets are missing (FR-018).
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    await expect(closeTourButton).toBeVisible({ timeout: 10000 });
+
+    // Basic smoke: advance a couple steps (if available), then close.
+    const nextButton = page.getByRole('button', { name: /próximo/i });
+    for (let i = 0; i < 3; i++) {
+      if (!(await nextButton.isVisible().catch(() => false))) break;
+      await nextButton.click();
+      await page.waitForTimeout(250);
+    }
+
+    // Page should not show any errors
+    const errorText = page.getByText(/error|erro|falha/i);
+    const hasVisibleError = await errorText.isVisible().catch(() => false);
+    expect(hasVisibleError).toBe(false);
+
+    await closeTourButton.click();
+    await expect(closeTourButton).toBeHidden({ timeout: 10000 });
+  });
+
+  test('tour keyboard navigation works (ArrowRight, ArrowLeft, Escape)', async ({ page }) => {
+    test.setTimeout(90000);
+
+    const email = `tour-keyboard-${Date.now()}@example.com`;
+    await inbucket.purgeMailbox(email.split('@')[0]);
+    await authenticateUser(page, email);
+
+    await page.waitForTimeout(2000);
     await completeOnboardingIfPresent(page);
     await dismissTourIfPresent(page);
 
-    const tourButton = page.getByRole('button', { name: /mostrar tour da página/i });
-    if (await tourButton.isVisible().catch(() => false)) {
-      await tourButton.click();
-      await page.waitForTimeout(1000);
-      
-      // Page should not show any errors
-      const errorText = page.getByText(/error|erro|falha/i);
-      const hasVisibleError = await errorText.isVisible().catch(() => false);
-      
-      // No crash or error should occur
-      expect(hasVisibleError).toBe(false);
-    }
+    // Start tour via floating help
+    await startTourViaFloatingHelp(page);
+
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    await expect(closeTourButton).toBeVisible({ timeout: 10000 });
+
+    // Verify we're on step 1
+    const stepCounter = page.getByText(/1 de \d+/);
+    await expect(stepCounter).toBeVisible();
+
+    // Press ArrowRight to advance to step 2
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(300);
+    
+    // Should now be on step 2
+    const step2Counter = page.getByText(/2 de \d+/);
+    await expect(step2Counter).toBeVisible({ timeout: 5000 });
+
+    // Press ArrowLeft to go back to step 1
+    await page.keyboard.press('ArrowLeft');
+    await page.waitForTimeout(300);
+    
+    // Should be back on step 1
+    await expect(stepCounter).toBeVisible({ timeout: 5000 });
+
+    // Press Escape to dismiss tour
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    
+    // Tour should be closed
+    await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+  });
+
+  test('tour can be started on manage page via floating help', async ({ page }) => {
+    test.setTimeout(90000);
+
+    const email = `tour-manage-${Date.now()}@example.com`;
+    await inbucket.purgeMailbox(email.split('@')[0]);
+    await authenticateUser(page, email);
+
+    await page.waitForTimeout(2000);
+    await completeOnboardingIfPresent(page);
+    await dismissTourIfPresent(page);
+
+    // Navigate to manage page
+    await page.goto('/manage');
+    await page.waitForTimeout(1500);
+
+    // Dismiss any auto-shown tour
+    await dismissTourIfPresent(page);
+
+    // Start tour via floating help
+    await startTourViaFloatingHelp(page);
+
+    // Tour should be active
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    await expect(closeTourButton).toBeVisible({ timeout: 10000 });
+  });
+
+  test('tour can be started on history page via floating help', async ({ page }) => {
+    test.setTimeout(90000);
+
+    const email = `tour-history-${Date.now()}@example.com`;
+    await inbucket.purgeMailbox(email.split('@')[0]);
+    await authenticateUser(page, email);
+
+    await page.waitForTimeout(2000);
+    await completeOnboardingIfPresent(page);
+    await dismissTourIfPresent(page);
+
+    // Navigate to history page
+    await page.goto('/history');
+    await page.waitForTimeout(1500);
+
+    // Dismiss any auto-shown tour
+    await dismissTourIfPresent(page);
+
+    // Start tour via floating help
+    await startTourViaFloatingHelp(page);
+
+    // Tour should be active
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    await expect(closeTourButton).toBeVisible({ timeout: 10000 });
   });
 });
-

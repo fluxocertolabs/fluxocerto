@@ -39,7 +39,6 @@ function triggerShake(el: HTMLElement | null): void {
   if (!el) return
   el.classList.remove('animate-shake')
   // Force reflow so the animation can replay reliably.
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   void el.offsetWidth
   el.classList.add('animate-shake')
 }
@@ -418,8 +417,9 @@ function ProfileStep({
               setIsDirty(true)
               if (errors.name) {
                 setErrors(prev => {
-                  const { name: _ignored, ...rest } = prev
-                  return rest
+                  const nextErrors = { ...prev }
+                  delete nextErrors.name
+                  return nextErrors
                 })
               }
             }}
@@ -569,8 +569,9 @@ function GroupStep({
               setIsDirty(true)
               if (errors.name) {
                 setErrors(prev => {
-                  const { name: _ignored, ...rest } = prev
-                  return rest
+                  const nextErrors = { ...prev }
+                  delete nextErrors.name
+                  return nextErrors
                 })
               }
             }}
@@ -728,8 +729,9 @@ function BankAccountStep({
               setIsDirty(true)
               if (errors.name) {
                 setErrors(prev => {
-                  const { name: _ignored, ...rest } = prev
-                  return rest
+                  const nextErrors = { ...prev }
+                  delete nextErrors.name
+                  return nextErrors
                 })
               }
             }}
@@ -916,8 +918,9 @@ function IncomeStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showErr
             setName(next)
             if (errors.name) {
               setErrors(prev => {
-                const { name: _ignored, ...rest } = prev
-                return rest
+                const nextErrors = { ...prev }
+                delete nextErrors.name
+                return nextErrors
               })
             }
           }}
@@ -945,8 +948,9 @@ function IncomeStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showErr
                 setAmount(next)
                 if (errors.amount) {
                   setErrors(prev => {
-                    const { amount: _ignored, ...rest } = prev
-                    return rest
+                    const nextErrors = { ...prev }
+                    delete nextErrors.amount
+                    return nextErrors
                   })
                 }
               }}
@@ -1084,8 +1088,9 @@ function ExpenseStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showEr
             setName(next)
             if (errors.name) {
               setErrors(prev => {
-                const { name: _ignored, ...rest } = prev
-                return rest
+                const nextErrors = { ...prev }
+                delete nextErrors.name
+                return nextErrors
               })
             }
           }}
@@ -1113,8 +1118,9 @@ function ExpenseStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showEr
                 setAmount(next)
                 if (errors.amount) {
                   setErrors(prev => {
-                    const { amount: _ignored, ...rest } = prev
-                    return rest
+                    const nextErrors = { ...prev }
+                    delete nextErrors.amount
+                    return nextErrors
                   })
                 }
               }}

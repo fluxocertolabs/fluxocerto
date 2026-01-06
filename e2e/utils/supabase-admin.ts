@@ -57,24 +57,19 @@ export function resetAdminClient(): void {
 
 /**
  * Get user ID from email (for seeding test data with correct user_id)
- * Uses the default admin client since auth.users is in the auth schema (shared)
+ * Uses direct Postgres query to avoid pagination limits in admin.listUsers()
  */
 export async function getUserIdFromEmail(email: string): Promise<string> {
-  const client = getAdminClient();
+  const escapedEmail = email.replace(/'/g, "''");
+  const rows = await executeSQLWithResult<{ id: string }>(
+    `SELECT id FROM auth.users WHERE email = '${escapedEmail}' LIMIT 1`
+  );
 
-  // First, check auth.users
-  const { data: authData, error: authError } = await client.auth.admin.listUsers();
-
-  if (authError) {
-    throw new Error(`Failed to list users: ${authError.message}`);
-  }
-
-  const user = authData.users.find((u) => u.email === email);
-  if (!user) {
+  if (rows.length === 0) {
     throw new Error(`User with email ${email} not found in auth.users`);
   }
 
-  return user.id;
+  return rows[0].id;
 }
 
 /**

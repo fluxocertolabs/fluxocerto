@@ -38,14 +38,26 @@ export class QuickUpdatePage {
     // Wait for the view container and the "Concluir" button which indicate the view is loaded
     await expect(this.dialog).toBeVisible({ timeout: 10000 });
     await expect(this.completeButton).toBeVisible({ timeout: 10000 });
-    // Also wait for the content to load (either balance items or empty state)
-    await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
-    
-    // Wait for loading state to complete (aria-busy becomes false)
-    await this.page.waitForFunction(() => {
-      const statusElement = document.querySelector('[role="status"]');
-      return !statusElement || statusElement.getAttribute('aria-busy') === 'false';
-    }, { timeout: 15000 });
+    // Also wait for the content to load (either balance items or empty state).
+    // IMPORTANT: Scope to the QuickUpdate dialog to avoid matching dashboard status wrappers.
+    const loadingStatus = this.dialog.locator('[role="status"][aria-live="polite"]').first();
+
+    // Give the app a moment to render the status region inside the dialog.
+    await Promise.race([this.page.waitForLoadState('domcontentloaded'), this.page.waitForTimeout(5000)]);
+
+    if (await loadingStatus.count()) {
+      // Wait for loading state to complete (aria-busy becomes "false")
+      await expect(loadingStatus).toHaveAttribute('aria-busy', 'false', { timeout: 20000 });
+    }
+
+    // Ensure we have either:
+    // - at least one balance input (accounts/cards), OR
+    // - the empty state heading
+    await expect(async () => {
+      const hasAnyBalanceInput = (await this.dialog.locator('input[aria-label^="Saldo de"]').count()) > 0;
+      const hasEmptyState = (await this.dialog.getByRole('heading', { name: /nenhuma conta ou cartão de crédito/i }).count()) > 0;
+      expect(hasAnyBalanceInput || hasEmptyState).toBe(true);
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
     
     // Small delay to ensure animations complete
     await this.page.waitForTimeout(500);
