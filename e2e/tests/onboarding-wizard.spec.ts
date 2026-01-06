@@ -405,6 +405,193 @@ test.describe('Onboarding Wizard', () => {
       // Should still be on expense step (validation failed - name filled but amount is 0)
       await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible();
     });
+
+    test('credit card step: name only with empty balance creates card with zero balance', async ({ page }) => {
+      // This test verifies that the credit card step (optional) allows creating a card
+      // with just a name, treating empty/0 balance as valid.
+      const freshEmail = `onboarding-val-card-name-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Navigate to credit card step
+      await page.locator('#profile-name').fill('Usuário Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#group-name').fill('Grupo Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#account-name').fill('Conta Validação');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+
+      // Skip income
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+
+      // Skip expense
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+
+      // Confirm we're on credit card step
+      const cardNameInput = page.locator('#card-name');
+      const cardBalanceInput = page.locator('#card-balance');
+      await expect(cardNameInput).toBeVisible();
+      await expect(cardBalanceInput).toBeVisible();
+
+      // Fill card name but leave balance empty
+      await cardNameInput.fill('Cartão Teste');
+      // Balance is empty by default
+
+      // Click Finalizar - should succeed (credit card step allows name-only with 0 balance)
+      await wizardDialog.getByRole('button', { name: /finalizar/i }).click();
+
+      // Wizard should close (onboarding complete)
+      await expect(wizardDialog).toBeHidden({ timeout: 15000 });
+
+      // Verify the card was created by navigating to manage page
+      await page.goto('/manage');
+      await page.waitForTimeout(2000);
+
+      // Switch to Credit Cards tab
+      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      await cardTab.click();
+      await page.waitForTimeout(500);
+
+      // Card should exist with the name we entered
+      await expect(page.getByText('Cartão Teste')).toBeVisible({ timeout: 10000 });
+    });
+
+    test('credit card step: empty fields allows skipping (fully optional)', async ({ page }) => {
+      // This test verifies that leaving both card name and balance empty
+      // allows completing onboarding without creating a card.
+      const freshEmail = `onboarding-val-card-empty-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Navigate to credit card step
+      await page.locator('#profile-name').fill('Usuário Skip Card');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#group-name').fill('Grupo Skip Card');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#account-name').fill('Conta Skip Card');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+
+      // Skip income
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+
+      // Skip expense
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+
+      // Leave both fields empty and click Finalizar
+      await wizardDialog.getByRole('button', { name: /finalizar/i }).click();
+
+      // Wizard should close (onboarding complete)
+      await expect(wizardDialog).toBeHidden({ timeout: 15000 });
+
+      // Verify no card was created by navigating to manage page
+      await page.goto('/manage');
+      await page.waitForTimeout(2000);
+
+      // Switch to Credit Cards tab
+      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      await cardTab.click();
+      await page.waitForTimeout(500);
+
+      // Should show empty state (no cards created)
+      await expect(page.getByText(/nenhum cartão de crédito ainda/i)).toBeVisible({ timeout: 10000 });
+    });
+
+    test('credit card step: non-numeric balance coerces to zero and card is created', async ({ page }) => {
+      // This test verifies that entering invalid/non-numeric characters in the balance
+      // field results in the card being created with a zero balance.
+      // The CurrencyInput component strips non-digits, so "abc" becomes "" which coerces to 0.
+      const freshEmail = `onboarding-val-card-invalid-${Date.now()}@example.com`;
+      await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+      
+      await authenticateUser(page, freshEmail);
+      await page.waitForTimeout(2000);
+
+      const wizardDialog = getWizardDialog(page);
+      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+      // Navigate to credit card step
+      await page.locator('#profile-name').fill('Usuário Invalid Balance');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#group-name').fill('Grupo Invalid Balance');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+      await page.locator('#account-name').fill('Conta Invalid Balance');
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+
+      // Skip income
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+
+      // Skip expense
+      await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+      await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+
+      // Confirm we're on credit card step
+      const cardNameInput = page.locator('#card-name');
+      const cardBalanceInput = page.locator('#card-balance');
+      await expect(cardNameInput).toBeVisible();
+      await expect(cardBalanceInput).toBeVisible();
+
+      // Fill card name with valid value
+      await cardNameInput.fill('Cartão Balance Inválido');
+
+      // Try to type non-numeric characters in balance field
+      // The CurrencyInput strips non-digits, so this will result in empty value
+      await cardBalanceInput.fill('abc');
+      await page.waitForTimeout(200);
+
+      // Verify the input was sanitized (CurrencyInput strips non-digits)
+      // The displayed value should be empty or "0,00" after sanitization
+      const displayedValue = await cardBalanceInput.inputValue();
+      // Non-digits are stripped, so the value should be empty
+      expect(displayedValue).toBe('');
+
+      // Click Finalizar - should succeed with balance coerced to 0
+      await wizardDialog.getByRole('button', { name: /finalizar/i }).click();
+
+      // Wizard should close (onboarding complete - no validation error)
+      await expect(wizardDialog).toBeHidden({ timeout: 15000 });
+
+      // Verify the card was created by navigating to manage page
+      await page.goto('/manage');
+      await page.waitForTimeout(2000);
+
+      // Switch to Credit Cards tab
+      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      await cardTab.click();
+      await page.waitForTimeout(500);
+
+      // Card should exist with the name we entered (balance will be R$ 0,00)
+      await expect(page.getByText('Cartão Balance Inválido')).toBeVisible({ timeout: 10000 });
+    });
   });
 
   test.describe('Data Persistence', () => {
