@@ -173,6 +173,16 @@ export default defineConfig({
       dependencies: ['setup'],
       fullyParallel: true,
     },
+    // Mobile functional E2E tests - validates core flows work on mobile
+    {
+      name: 'chromium-mobile',
+      testMatch: /mobile\/.*\.mobile\.spec\.ts/,
+      use: {
+        ...devices['Pixel 5'],
+      },
+      dependencies: ['setup'],
+      fullyParallel: true,
+    },
   ],
 
   // Web server configuration - starts the app before tests

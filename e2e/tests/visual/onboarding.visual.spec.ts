@@ -912,4 +912,218 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   });
 });
 
+/**
+ * Validation error states for onboarding wizard.
+ * Tests visual appearance of validation errors (aria-invalid styling).
+ */
+visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
+  let inbucket: InbucketClient;
+
+  visualTest.beforeAll(async () => {
+    inbucket = new InbucketClient();
+  });
+
+  /**
+   * Helper to authenticate a fresh user and get to onboarding wizard
+   */
+  async function authenticateNewUser(page: Page, email: string): Promise<void> {
+    const loginPage = new LoginPage(page);
+    const mailbox = email.split('@')[0];
+
+    await inbucket.purgeMailbox(mailbox);
+    await loginPage.goto();
+    await loginPage.requestMagicLink(email);
+    await loginPage.expectMagicLinkSent();
+
+    let magicLink: string | null = null;
+    for (let i = 0; i < 15; i++) {
+      const message = await inbucket.getLatestMessage(mailbox);
+      if (message) {
+        magicLink = inbucket.extractMagicLink(message);
+        if (magicLink) break;
+      }
+      await page.waitForTimeout(500);
+    }
+
+    expect(magicLink).not.toBeNull();
+    await page.goto(magicLink!);
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
+  }
+
+  visualTest('profile step - validation error - light', async ({ page, visual }) => {
+    const email = `onboarding-val-profile-light-${Date.now()}@example.com`;
+    await authenticateNewUser(page, email);
+    await page.waitForTimeout(2000);
+
+    const wizardDialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+    await visual.setTheme(page, 'light');
+    await visual.disableAnimations(page);
+
+    // Leave profile name empty and try to proceed
+    await page.locator('#profile-name').clear();
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+
+    // Wait for validation error to show
+    await page.waitForTimeout(500);
+    await visual.waitForStableUI(page);
+
+    // The input should have aria-invalid or show error styling
+    await expect(page).toHaveScreenshot('onboarding-profile-validation-error-light.png', {
+      mask: [page.locator('[data-testid="group-badge"]')],
+    });
+  });
+
+  visualTest('profile step - validation error - dark', async ({ page, visual }) => {
+    const email = `onboarding-val-profile-dark-${Date.now()}@example.com`;
+    await authenticateNewUser(page, email);
+    await page.waitForTimeout(2000);
+
+    const wizardDialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+    await visual.setTheme(page, 'dark');
+    await visual.disableAnimations(page);
+
+    // Leave profile name empty and try to proceed
+    await page.locator('#profile-name').clear();
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+
+    await page.waitForTimeout(500);
+    await visual.waitForStableUI(page);
+
+    await expect(page).toHaveScreenshot('onboarding-profile-validation-error-dark.png', {
+      mask: [page.locator('[data-testid="group-badge"]')],
+    });
+  });
+
+  visualTest('group step - validation error - light', async ({ page, visual }) => {
+    const email = `onboarding-val-group-light-${Date.now()}@example.com`;
+    await authenticateNewUser(page, email);
+    await page.waitForTimeout(2000);
+
+    const wizardDialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+    // Fill profile and advance to group step
+    await page.locator('#profile-name').fill('Usuário Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+    await visual.setTheme(page, 'light');
+    await visual.disableAnimations(page);
+
+    // Leave group name empty and try to proceed
+    await page.locator('#group-name').clear();
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+
+    await page.waitForTimeout(500);
+    await visual.waitForStableUI(page);
+
+    await expect(page).toHaveScreenshot('onboarding-group-validation-error-light.png', {
+      mask: [page.locator('[data-testid="group-badge"]')],
+    });
+  });
+
+  visualTest('group step - validation error - dark', async ({ page, visual }) => {
+    const email = `onboarding-val-group-dark-${Date.now()}@example.com`;
+    await authenticateNewUser(page, email);
+    await page.waitForTimeout(2000);
+
+    const wizardDialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+    await page.locator('#profile-name').fill('Usuário Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+    await visual.setTheme(page, 'dark');
+    await visual.disableAnimations(page);
+
+    await page.locator('#group-name').clear();
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+
+    await page.waitForTimeout(500);
+    await visual.waitForStableUI(page);
+
+    await expect(page).toHaveScreenshot('onboarding-group-validation-error-dark.png', {
+      mask: [page.locator('[data-testid="group-badge"]')],
+    });
+  });
+
+  visualTest('bank account step - validation error - light', async ({ page, visual }) => {
+    const email = `onboarding-val-bank-light-${Date.now()}@example.com`;
+    await authenticateNewUser(page, email);
+    await page.waitForTimeout(2000);
+
+    const wizardDialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+    // Navigate to bank account step
+    await page.locator('#profile-name').fill('Usuário Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+    await page.locator('#group-name').fill('Grupo Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+    await visual.setTheme(page, 'light');
+    await visual.disableAnimations(page);
+
+    // Leave account name empty and try to proceed
+    await page.locator('#account-name').clear();
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+
+    await page.waitForTimeout(500);
+    await visual.waitForStableUI(page);
+
+    await expect(page).toHaveScreenshot('onboarding-bank-validation-error-light.png', {
+      mask: [page.locator('[data-testid="group-badge"]')],
+    });
+  });
+
+  visualTest('bank account step - validation error - dark', async ({ page, visual }) => {
+    const email = `onboarding-val-bank-dark-${Date.now()}@example.com`;
+    await authenticateNewUser(page, email);
+    await page.waitForTimeout(2000);
+
+    const wizardDialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+
+    await page.locator('#profile-name').fill('Usuário Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+
+    await page.locator('#group-name').fill('Grupo Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+
+    await visual.setTheme(page, 'dark');
+    await visual.disableAnimations(page);
+
+    await page.locator('#account-name').clear();
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+
+    await page.waitForTimeout(500);
+    await visual.waitForStableUI(page);
+
+    await expect(page).toHaveScreenshot('onboarding-bank-validation-error-dark.png', {
+      mask: [page.locator('[data-testid="group-badge"]')],
+    });
+  });
+});
 
