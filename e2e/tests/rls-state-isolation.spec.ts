@@ -20,8 +20,16 @@ test.describe.configure({ mode: 'serial' });
 test.describe('RLS State Isolation Tests @security', () => {
   let inbucket: InbucketClient;
   const baseApiUrl = process.env.VITE_SUPABASE_URL || 'http://localhost:54321';
+  const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
   test.beforeAll(async () => {
+    // Fail fast if anon key is missing - tests won't work without it
+    if (!anonKey) {
+      throw new Error(
+        'VITE_SUPABASE_ANON_KEY is not set. ' +
+        'Ensure Supabase is running (pnpm db:start) and the config populates this env var.'
+      );
+    }
     inbucket = new InbucketClient();
   });
 
@@ -142,12 +150,12 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // User B tries to read User A's tour_states via PostgREST
     const response = await pageB.evaluate(
-      async ({ baseUrl, accessToken, targetUserId }) => {
+      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
         const res = await fetch(
           `${baseUrl}/rest/v1/tour_states?user_id=eq.${targetUserId}`,
           {
             headers: {
-              apikey: accessToken,
+              apikey: apiKey,
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
@@ -158,7 +166,7 @@ test.describe('RLS State Isolation Tests @security', () => {
           data: await res.json().catch(() => null),
         };
       },
-      { baseUrl: baseApiUrl, accessToken: userB.accessToken, targetUserId: userA.userId }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
     );
 
     // RLS should return empty array (not 401/403) - user can query but sees no data
@@ -185,12 +193,12 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // User B tries to read User A's onboarding_states via PostgREST
     const response = await pageB.evaluate(
-      async ({ baseUrl, accessToken, targetUserId }) => {
+      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
         const res = await fetch(
           `${baseUrl}/rest/v1/onboarding_states?user_id=eq.${targetUserId}`,
           {
             headers: {
-              apikey: accessToken,
+              apikey: apiKey,
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
@@ -201,7 +209,7 @@ test.describe('RLS State Isolation Tests @security', () => {
           data: await res.json().catch(() => null),
         };
       },
-      { baseUrl: baseApiUrl, accessToken: userB.accessToken, targetUserId: userA.userId }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
     );
 
     // RLS should return empty array
@@ -228,11 +236,11 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // User B tries to insert a tour_state for User A
     const response = await pageB.evaluate(
-      async ({ baseUrl, accessToken, targetUserId }) => {
+      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
         const res = await fetch(`${baseUrl}/rest/v1/tour_states`, {
           method: 'POST',
           headers: {
-            apikey: accessToken,
+            apikey: apiKey,
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
             Prefer: 'return=minimal',
@@ -249,7 +257,7 @@ test.describe('RLS State Isolation Tests @security', () => {
           data: await res.json().catch(() => null),
         };
       },
-      { baseUrl: baseApiUrl, accessToken: userB.accessToken, targetUserId: userA.userId }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
     );
 
     // RLS should reject the insert (403 or similar error)
@@ -283,13 +291,13 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // User B tries to update User A's tour_state
     const response = await pageB.evaluate(
-      async ({ baseUrl, accessToken, targetUserId }) => {
+      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
         const res = await fetch(
           `${baseUrl}/rest/v1/tour_states?user_id=eq.${targetUserId}&tour_key=eq.dashboard`,
           {
             method: 'PATCH',
             headers: {
-              apikey: accessToken,
+              apikey: apiKey,
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
               Prefer: 'return=minimal',
@@ -305,7 +313,7 @@ test.describe('RLS State Isolation Tests @security', () => {
           data: await res.json().catch(() => null),
         };
       },
-      { baseUrl: baseApiUrl, accessToken: userB.accessToken, targetUserId: userA.userId }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
     );
 
     // RLS should either reject (403) or return success with 0 rows affected
@@ -314,12 +322,12 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // Verify User A's data was NOT modified
     const verifyResponse = await page.evaluate(
-      async ({ baseUrl, accessToken }) => {
+      async ({ baseUrl, apiKey, accessToken }) => {
         const res = await fetch(
           `${baseUrl}/rest/v1/tour_states?tour_key=eq.dashboard`,
           {
             headers: {
-              apikey: accessToken,
+              apikey: apiKey,
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
@@ -330,7 +338,7 @@ test.describe('RLS State Isolation Tests @security', () => {
           data: await res.json().catch(() => null),
         };
       },
-      { baseUrl: baseApiUrl, accessToken: userA.accessToken }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userA.accessToken }
     );
 
     expect(verifyResponse.status).toBe(200);
@@ -357,10 +365,10 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // User reads their own tour_states
     const response = await page.evaluate(
-      async ({ baseUrl, accessToken }) => {
+      async ({ baseUrl, apiKey, accessToken }) => {
         const res = await fetch(`${baseUrl}/rest/v1/tour_states`, {
           headers: {
-            apikey: accessToken,
+            apikey: apiKey,
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
@@ -370,7 +378,7 @@ test.describe('RLS State Isolation Tests @security', () => {
           data: await res.json().catch(() => null),
         };
       },
-      { baseUrl: baseApiUrl, accessToken: user.accessToken }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: user.accessToken }
     );
 
     expect(response.status).toBe(200);
@@ -393,10 +401,10 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // User reads their own onboarding_states
     const response = await page.evaluate(
-      async ({ baseUrl, accessToken }) => {
+      async ({ baseUrl, apiKey, accessToken }) => {
         const res = await fetch(`${baseUrl}/rest/v1/onboarding_states`, {
           headers: {
-            apikey: accessToken,
+            apikey: apiKey,
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
@@ -406,7 +414,7 @@ test.describe('RLS State Isolation Tests @security', () => {
           data: await res.json().catch(() => null),
         };
       },
-      { baseUrl: baseApiUrl, accessToken: user.accessToken }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: user.accessToken }
     );
 
     expect(response.status).toBe(200);
