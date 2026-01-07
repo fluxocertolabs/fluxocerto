@@ -153,3 +153,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE tour_states;
 
 
 
+

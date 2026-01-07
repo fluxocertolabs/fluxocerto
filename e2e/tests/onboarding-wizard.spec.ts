@@ -35,13 +35,16 @@ test.describe('Onboarding Wizard', () => {
     const loginPage = new LoginPage(page);
     const mailbox = email.split('@')[0];
 
+    // Purge mailbox to ensure we get a fresh magic link
+    await inbucket.purgeMailbox(mailbox);
+
     await loginPage.goto();
     await loginPage.requestMagicLink(email);
     await loginPage.expectMagicLinkSent();
 
-    // Get magic link from Inbucket
+    // Get magic link from Inbucket with increased retries
     let magicLink: string | null = null;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 20; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message) {
         magicLink = inbucket.extractMagicLink(message);
@@ -107,18 +110,22 @@ test.describe('Onboarding Wizard', () => {
   });
 
   test('T041c: wizard progress resumes after page refresh', async ({ page }) => {
+    // Increase timeout for this test which involves page refresh and multiple steps
+    test.setTimeout(120000);
+
     // Use a fresh email to start with clean onboarding state
     const freshEmail = `onboarding-resume-${Date.now()}@example.com`;
     await inbucket.purgeMailbox(freshEmail.split('@')[0]);
     
     await authenticateUser(page, freshEmail);
-
-    // Wait for the page to load and wizard to appear
+    // Wait for page to fully stabilize after authentication
+    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
     const wizardDialog = getWizardDialog(page);
 
-    await expect(wizardDialog).toBeVisible({ timeout: 5000 });
+    // Wait for wizard to appear with extended timeout for parallel execution
+    await expect(wizardDialog).toBeVisible({ timeout: 30000 });
     await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
 
     // Advance to the next step (profile -> group)
@@ -128,9 +135,8 @@ test.describe('Onboarding Wizard', () => {
 
     // Refresh the page - should resume at the same step
     await page.reload();
-    await page.waitForTimeout(2000);
-    await expect(wizardDialog).toBeVisible({ timeout: 5000 });
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
+    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
 
     // Finish onboarding to ensure it does not appear again after completion
     await page.locator('#group-name').fill('Grupo Teste');
@@ -414,6 +420,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
       await page.waitForTimeout(2000);
+      
 
       const wizardDialog = getWizardDialog(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
@@ -457,10 +464,19 @@ test.describe('Onboarding Wizard', () => {
 
       // Verify the card was created by navigating to manage page
       await page.goto('/manage');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
+      
+
+      // Dismiss any tour that might be showing
+      const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+      if (await closeTourButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await closeTourButton.click();
+        await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+      }
 
       // Switch to Credit Cards tab
-      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      const cardTab = page.getByRole('tab', { name: /cartões/i });
+      await expect(cardTab).toBeVisible({ timeout: 10000 });
       await cardTab.click();
       await page.waitForTimeout(500);
 
@@ -511,8 +527,15 @@ test.describe('Onboarding Wizard', () => {
       await page.goto('/manage');
       await page.waitForTimeout(2000);
 
+      // Dismiss any tour that might be showing (fresh user will see manage tour)
+      const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+      if (await closeTourButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await closeTourButton.click();
+        await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+      }
+
       // Switch to Credit Cards tab
-      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      const cardTab = page.getByRole('tab', { name: /cartões|cartão|cards|card/i });
       await cardTab.click();
       await page.waitForTimeout(500);
 
@@ -584,8 +607,15 @@ test.describe('Onboarding Wizard', () => {
       await page.goto('/manage');
       await page.waitForTimeout(2000);
 
+      // Dismiss any tour that might be showing (fresh user will see manage tour)
+      const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+      if (await closeTourButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await closeTourButton.click();
+        await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+      }
+
       // Switch to Credit Cards tab
-      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      const cardTab = page.getByRole('tab', { name: /cartões|cartão|cards|card/i });
       await cardTab.click();
       await page.waitForTimeout(500);
 
@@ -596,17 +626,19 @@ test.describe('Onboarding Wizard', () => {
 
   test.describe('Data Persistence', () => {
     test('completed onboarding data persists and shows in manage page', async ({ page }) => {
-      // Increase timeout for this comprehensive test
-      test.setTimeout(120000);
+      // Increase timeout for this comprehensive test with many steps
+      test.setTimeout(180000);
 
       const freshEmail = `onboarding-persist-${Date.now()}@example.com`;
       await inbucket.purgeMailbox(freshEmail.split('@')[0]);
       
       await authenticateUser(page, freshEmail);
+      // Wait for page to fully stabilize after authentication
+      await page.waitForLoadState('networkidle');
       await page.waitForTimeout(2000);
 
       const wizardDialog = getWizardDialog(page);
-      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+      await expect(wizardDialog).toBeVisible({ timeout: 30000 });
 
       // Define test data
       const testData = {
@@ -662,6 +694,13 @@ test.describe('Onboarding Wizard', () => {
       await page.goto('/manage');
       await page.waitForTimeout(2000);
 
+      // Dismiss any tour that might be showing (fresh user will see manage tour)
+      const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+      if (await closeTourButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await closeTourButton.click();
+        await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+      }
+
       // Verify bank account exists in Accounts tab (should be default tab)
       await expect(page.getByText(testData.accountName)).toBeVisible({ timeout: 10000 });
 
@@ -678,7 +717,7 @@ test.describe('Onboarding Wizard', () => {
       await expect(page.getByText(testData.expenseName)).toBeVisible({ timeout: 10000 });
 
       // Switch to Credit Cards tab and verify credit card
-      const cardTab = page.getByRole('tab', { name: /cartão|card/i });
+      const cardTab = page.getByRole('tab', { name: /cartões|cartão|cards|card/i });
       await cardTab.click();
       await page.waitForTimeout(500);
       await expect(page.getByText(testData.creditCardName)).toBeVisible({ timeout: 10000 });

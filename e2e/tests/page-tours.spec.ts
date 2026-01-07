@@ -29,13 +29,16 @@ test.describe('Page Tours', () => {
     const loginPage = new LoginPage(page);
     const mailbox = email.split('@')[0];
 
+    // Purge mailbox to ensure we get a fresh magic link
+    await inbucket.purgeMailbox(mailbox);
+
     await loginPage.goto();
     await loginPage.requestMagicLink(email);
     await loginPage.expectMagicLinkSent();
 
-    // Get magic link from Inbucket
+    // Get magic link from Inbucket with increased retries
     let magicLink: string | null = null;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 20; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message) {
         magicLink = inbucket.extractMagicLink(message);
@@ -464,9 +467,11 @@ test.describe('Page Tours', () => {
 
     // Wait for page to load
     await page.waitForTimeout(2000);
+    
 
     // Complete onboarding first
     await completeOnboardingIfPresent(page);
+    
 
     // Tour auto-shows for first visit - COMPLETE it (not dismiss) by clicking through all steps
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -538,11 +543,17 @@ test.describe('Page Tours', () => {
     await page.route('**/rest/v1/tour_states*', async (route) => {
       const request = route.request();
       if (request.method() === 'GET') {
-        // Return empty array (no tour state found) so localCache is used
+        // Return PGRST116 error (no rows found) so the hook treats it as null state.
+        // The Supabase client uses .single() which expects this error format for empty results.
         await route.fulfill({
-          status: 200,
+          status: 406,
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify([]),
+          body: JSON.stringify({
+            code: 'PGRST116',
+            message: 'The result contains 0 rows',
+            details: 'Results contain 0 rows, application/vnd.pgrst.object+json requires 1 row',
+            hint: null,
+          }),
         });
       } else {
         // Allow POST/PATCH to proceed normally
@@ -555,10 +566,15 @@ test.describe('Page Tours', () => {
     // - localCache has status='completed' and version=0
     // - isTourUpdated('dashboard', 0) returns true (current version is 1)
     await page.reload();
+    
+    // Wait for page to fully load and tour logic to run
+    await page.waitForLoadState('networkidle');
+    
+    // Wait additional time for React to hydrate and tour logic to execute
     await page.waitForTimeout(2000);
 
     // Tour should auto-show again due to version bump
-    await expect(closeTourButton).toBeVisible({ timeout: 20000 });
+    await expect(closeTourButton).toBeVisible({ timeout: 30000 });
 
     // Remove the route interception for subsequent requests
     await page.unroute('**/rest/v1/tour_states*');

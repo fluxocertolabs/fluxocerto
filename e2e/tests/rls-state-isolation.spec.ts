@@ -48,9 +48,9 @@ test.describe('RLS State Isolation Tests @security', () => {
     await loginPage.requestMagicLink(email);
     await loginPage.expectMagicLinkSent();
 
-    // Get magic link from Inbucket
+    // Get magic link from Inbucket with increased retries
     let magicLink: string | null = null;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 25; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message) {
         magicLink = inbucket.extractMagicLink(message);
@@ -61,7 +61,7 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 20000 });
 
     // Extract access token from localStorage
     const authData = await page.evaluate(() => {
@@ -317,8 +317,9 @@ test.describe('RLS State Isolation Tests @security', () => {
     );
 
     // RLS should either reject (403) or return success with 0 rows affected
-    // PostgREST returns 200 even if no rows match the filter (due to RLS)
-    expect([200, 403, 401]).toContain(response.status);
+    // PostgREST returns 200/204 even if no rows match the filter (due to RLS)
+    // 204 is returned when Prefer: return=minimal is set
+    expect([200, 204, 403, 401]).toContain(response.status);
 
     // Verify User A's data was NOT modified
     const verifyResponse = await page.evaluate(

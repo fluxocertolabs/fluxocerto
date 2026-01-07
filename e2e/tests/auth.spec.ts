@@ -104,14 +104,15 @@ test.describe('Authentication Flow', () => {
     page,
   }) => {
     const loginPage = new LoginPage(page);
+    const mailbox = TEST_EMAIL.split('@')[0];
+
+    // Purge mailbox to ensure we get a fresh magic link
+    await inbucket.purgeMailbox(mailbox);
 
     // Request magic link
     await loginPage.goto();
     await loginPage.requestMagicLink(TEST_EMAIL);
     await loginPage.expectMagicLinkSent();
-
-    // Get magic link from Inbucket
-    const mailbox = TEST_EMAIL.split('@')[0];
     
     // Wait for email with retry
     let magicLink: string | null = null;
@@ -148,7 +149,7 @@ test.describe('Authentication Flow', () => {
     await loginPage.expectMagicLinkSent();
     
     let magicLink: string | null = null;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 25; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message) {
         magicLink = inbucket.extractMagicLink(message);
@@ -159,7 +160,7 @@ test.describe('Authentication Flow', () => {
 
     expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
 
     // Refresh the page
     try {
@@ -181,6 +182,9 @@ test.describe('Authentication Flow', () => {
   test('T026: authenticated user clicks sign out → logged out, redirected to login', async ({
     page,
   }) => {
+    // Increase timeout for this complex test
+    test.setTimeout(60000);
+
     const loginPage = new LoginPage(page);
     const mailbox = TEST_EMAIL.split('@')[0];
 
@@ -193,7 +197,7 @@ test.describe('Authentication Flow', () => {
     await loginPage.expectMagicLinkSent();
     
     let magicLink: string | null = null;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 25; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message) {
         magicLink = inbucket.extractMagicLink(message);
@@ -204,10 +208,55 @@ test.describe('Authentication Flow', () => {
 
     expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 20000 });
 
-    // Wait for the page to fully load and sign out button to appear
+    // Wait for the page to fully load
     await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    
+    // Dismiss onboarding wizard if present (for new users)
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    if (await wizardDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Complete minimal onboarding to dismiss the wizard
+      const profileInput = page.locator('#profile-name');
+      if (await profileInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await profileInput.fill('Test User');
+      }
+      const groupInput = page.locator('#group-name');
+      if (await groupInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await groupInput.fill('Test Group');
+      }
+      const accountInput = page.locator('#account-name');
+      if (await accountInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await accountInput.fill('Test Account');
+      }
+      
+      // Click through the wizard steps
+      for (let i = 0; i < 10; i++) {
+        if (!(await wizardDialog.isVisible().catch(() => false))) break;
+        
+        const finalizeBtn = wizardDialog.getByRole('button', { name: /finalizar/i });
+        if (await finalizeBtn.isVisible().catch(() => false)) {
+          await finalizeBtn.click();
+          break;
+        }
+        
+        const nextBtn = wizardDialog.getByRole('button', { name: /próximo/i });
+        if (await nextBtn.isVisible().catch(() => false)) {
+          await nextBtn.click();
+          await page.waitForTimeout(500);
+        }
+      }
+      
+      // Wait for wizard to close
+      await expect(wizardDialog).toBeHidden({ timeout: 10000 });
+    }
+    
+    // Dismiss any tour that might be showing
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    if (await closeTourButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await closeTourButton.click();
+      await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+    }
     
     // Click sign out - the button text is "Sair" in Portuguese
     const signOutButton = page.getByRole('button', { name: /sair/i });

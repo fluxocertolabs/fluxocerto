@@ -117,25 +117,12 @@ export class ManagePage {
     // Wait for the loading wrapper to finish and show content.
     // The tabs are inside PageLoadingWrapper and only render when showSkeleton is false.
     //
-    // CRITICAL: Do NOT use page.waitForTimeout(), setTimeout(), or toPass() with intervals here!
-    // When tests seed data before navigation, any explicit wait/sleep causes the browser to hang
-    // due to an interaction between Playwright's event loop and Supabase Realtime subscriptions.
-    //
-    // Instead, we use rapid polling with immediate retries. This allows React to complete
-    // its rendering cycle without blocking the event loop.
+    // Use expect().toBeVisible() with a reasonable timeout. This is more reliable than
+    // rapid polling because Playwright's expect() uses auto-waiting with proper retries.
     const firstTab = this.page.getByRole('tab').first();
-    const maxAttempts = 200; // ~200 rapid checks should complete in <1s
-    let tabsFound = false;
-    
-    for (let i = 0; i < maxAttempts; i++) {
-      const count = await firstTab.count();
-      if (count > 0) {
-        tabsFound = true;
-        break;
-      }
-    }
-    
-    if (!tabsFound) {
+    try {
+      await expect(firstTab).toBeVisible({ timeout: 15000 });
+    } catch {
       // Take screenshot for debugging
       const timestamp = Date.now();
       await this.page.screenshot({ path: `debug-manage-tabs-timeout-${timestamp}.png`, fullPage: true }).catch(() => {});
@@ -149,25 +136,11 @@ export class ManagePage {
 
   /**
    * Helper method to select a tab with retry logic.
-   * Uses rapid polling instead of toPass() with intervals to avoid browser hang issues
-   * when tests seed data before navigation.
+   * Uses Playwright's built-in auto-waiting for reliable tab selection.
    */
   private async selectTabWithRetry(tab: Locator): Promise<void> {
-    // Wait for tab to be visible using rapid polling (avoid expect().toBeVisible with timeout)
-    const maxVisibilityAttempts = 200;
-    let tabVisible = false;
-    
-    for (let i = 0; i < maxVisibilityAttempts; i++) {
-      const visible = await tab.isVisible();
-      if (visible) {
-        tabVisible = true;
-        break;
-      }
-    }
-    
-    if (!tabVisible) {
-      throw new Error('Tab not visible after rapid polling');
-    }
+    // Wait for tab to be visible
+    await expect(tab).toBeVisible({ timeout: 10000 });
     
     // Check if tab is already active (no need to click)
     const currentState = await tab.getAttribute('data-state');
@@ -175,29 +148,11 @@ export class ManagePage {
       return; // Tab is already selected
     }
     
-    // Click the tab and verify it became active using rapid polling
-    const maxAttempts = 50;
-    let success = false;
+    // Click the tab
+    await tab.click();
     
-    for (let i = 0; i < maxAttempts; i++) {
-      // Click the tab
-      await tab.click();
-      
-      // Check if tab became active (rapid poll, no explicit wait)
-      for (let j = 0; j < 20; j++) {
-        const state = await tab.getAttribute('data-state');
-        if (state === 'active') {
-          success = true;
-          break;
-        }
-      }
-      
-      if (success) break;
-    }
-    
-    if (!success) {
-      throw new Error('Tab did not become active after clicking');
-    }
+    // Wait for tab to become active
+    await expect(tab).toHaveAttribute('data-state', 'active', { timeout: 5000 });
   }
 
   /**

@@ -404,7 +404,8 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       await managePage.goto();
       await managePage.selectGroupTab();
-      // Wait for members to render (names are masked in screenshots but still need to load)
+      // Wait for group section to fully load (names are masked in screenshots but still need to load)
+      await page.locator('[data-testid="group-name"]').waitFor({ state: 'visible', timeout: 10000 });
       await page.locator('[data-testid="member-name"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
       await visual.setTheme(page, 'light');
@@ -418,6 +419,8 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       await managePage.goto();
       await managePage.selectGroupTab();
+      // Wait for group section to fully load (names are masked in screenshots but still need to load)
+      await page.locator('[data-testid="group-name"]').waitFor({ state: 'visible', timeout: 10000 });
       await page.locator('[data-testid="member-name"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
       await visual.setTheme(page, 'dark');

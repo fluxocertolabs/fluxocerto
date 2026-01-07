@@ -371,6 +371,7 @@ test.describe('Future Statement Validation', () => {
     const [seededCard] = await db.seedCreditCards([
       createCreditCard({ name: `Cartão Dup ${uniqueId}`, statement_balance: 50000, due_day: 15 }),
     ]);
+    
 
     // Calculate next month
     const now = new Date();
@@ -393,6 +394,7 @@ test.describe('Future Statement Validation', () => {
     await managePage.goto();
     await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
+    
 
     // Find the credit card and expand future statements section with retry
     let cardElement = page.locator('div.group.relative').filter({

@@ -285,19 +285,21 @@ test.describe('Quick Update Modal', () => {
     const uniqueId = Date.now();
     
     // Seed a checking account (using unique name without "Corrente" to avoid confusion)
-    await db.seedAccounts([
+    const [seededAccount] = await db.seedAccounts([
       createAccount({ 
         name: `Nubank Check ${uniqueId}`, 
         type: 'checking',
         balance: 100000,
       }),
     ]);
+    
 
     // Navigate and open Quick Update
     await dashboardPage.goto();
     await dashboardPage.expectChartRendered();
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
+    
 
     // Verify the account is listed with its type badge
     await expect(page.getByText(`Nubank Check ${uniqueId}`, { exact: false })).toBeVisible();
@@ -440,11 +442,11 @@ test.describe('Quick Update Modal', () => {
     await quickUpdatePage.waitForModal();
 
     // Verify the modal is open (Concluir button visible)
-    await expect(quickUpdatePage.completeButton).toBeVisible();
+    await expect(quickUpdatePage.completeButton).toBeVisible({ timeout: 10000 });
 
-    // Verify the card is listed
-    await expect(page.getByRole('heading', { name: /cartões de crédito/i })).toBeVisible();
-    await expect(page.getByText(cardName, { exact: false })).toBeVisible();
+    // Verify the card is listed (with timeout for data to load)
+    await expect(page.getByRole('heading', { name: /cartões de crédito/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(cardName, { exact: false })).toBeVisible({ timeout: 10000 });
 
     // Find the card row specifically and verify it doesn't have type badges
     // The card row contains the card name

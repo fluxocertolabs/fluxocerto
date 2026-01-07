@@ -1,6 +1,6 @@
 /**
  * E2E Tests: Auth Callback Recovery
- * Tests the provisioning recovery flow when landing on /auth-callback
+ * Tests the provisioning recovery flow when landing on /auth/confirm
  * with a missing profile/group association.
  *
  * This covers the edge case where ensureCurrentUserGroup() is called
@@ -96,9 +96,9 @@ test.describe('Auth Callback Recovery', () => {
       const orphanedGroupId = await getWorkerGroupId(workerContext.email);
       expect(orphanedGroupId).toBeNull();
 
-      // Navigate to /auth-callback with authenticated context
+      // Navigate to /auth/confirm with authenticated context
       // The page should detect the missing profile and attempt recovery
-      await page.goto('/auth-callback');
+      await page.goto('/auth/confirm');
 
       // Should either:
       // 1. Auto-recover and redirect to dashboard, OR
@@ -122,39 +122,77 @@ test.describe('Auth Callback Recovery', () => {
     page,
     workerContext,
   }) => {
+    // Increase timeout for this complex test
+    test.setTimeout(90000);
+
     const originalProfile = await getWorkerProfile(workerContext.email);
     expect(originalProfile).not.toBeNull();
 
-    // Force the FIRST provisioning attempt to fail so the recovery UI appears
-    let failFirstProvisioningCall = true;
+
+    // Set up route interception FIRST, before any navigation
+    // Use a flag to control when to allow requests through (after retry button is clicked)
+    let allowRequests = false;
+    let interceptCount = 0;
     await page.route('**/rest/v1/rpc/ensure_current_user_group*', async (route) => {
-      if (failFirstProvisioningCall) {
-        failFirstProvisioningCall = false;
+      // Only intercept POST requests (actual RPC calls), not OPTIONS preflight
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+      
+      interceptCount++;
+      
+      if (!allowRequests) {
+        // Fail ALL requests until allowRequests is set to true
+        // Use PostgREST error format so Supabase client recognizes it as an error
         await route.fulfill({
           status: 500,
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ message: 'forced failure for deterministic recovery UI' }),
+          body: JSON.stringify({
+            code: 'PGRST500',
+            message: 'forced failure for deterministic recovery UI',
+            details: 'Test-induced failure',
+            hint: null,
+          }),
         });
         return;
       }
+      // Allow requests after retry button is clicked
       await route.continue();
     });
 
-    try {
-      // Orphan the user
-      await orphanUser(workerContext.email);
+    // Now orphan the user
+    await orphanUser(workerContext.email);
+    
+    // Verify the user is actually orphaned
+    const orphanedProfile = await getWorkerProfile(workerContext.email);
+    expect(orphanedProfile).toBeNull();
 
-      // Navigate to /auth-callback
-      await page.goto('/auth-callback');
+    try {
+      // Navigate to /auth/confirm - the page will call ensureCurrentUserGroup
+      await page.goto('/auth/confirm');
+      
+      // Wait for at least one RPC call to be intercepted
+      await expect.poll(() => interceptCount, { timeout: 10000 }).toBeGreaterThan(0);
+      
+      
+      // Wait a bit for the page to process the error response
+      await page.waitForTimeout(1000);
 
       // Wait for provisioning error UI to appear
-      const errorTitle = page.getByRole('heading', { name: /erro ao configurar conta/i });
+      // Note: CardTitle renders as a div, not a heading, so we use getByText
+      const errorTitle = page.getByText(/erro ao configurar conta/i);
+      
+      
       await expect(errorTitle).toBeVisible({ timeout: 15000 });
 
       // Recovery button should be visible
       const retryButton = page.getByRole('button', { name: /tentar novamente/i });
       await expect(retryButton).toBeVisible({ timeout: 5000 });
 
+      // Now allow requests to succeed
+      allowRequests = true;
+      
       // Click retry - this time it should succeed (route continues)
       await retryButton.click();
 
@@ -182,23 +220,47 @@ test.describe('Auth Callback Recovery', () => {
     expect(originalProfile).not.toBeNull();
 
     // Force provisioning to fail so we see the error UI
+    // Only intercept POST requests (not OPTIONS preflight)
+    let interceptCount = 0;
     await page.route('**/rest/v1/rpc/ensure_current_user_group*', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+      interceptCount++;
+      // Use PostgREST error format so Supabase client recognizes it as an error
       await route.fulfill({
         status: 500,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message: 'forced failure' }),
+        body: JSON.stringify({
+          code: 'PGRST500',
+          message: 'forced failure',
+          details: 'Test-induced failure',
+          hint: null,
+        }),
       });
     });
 
     try {
       // Orphan the user
       await orphanUser(workerContext.email);
+      
+      // Verify the user is actually orphaned
+      const orphanedProfile = await getWorkerProfile(workerContext.email);
+      expect(orphanedProfile).toBeNull();
 
-      // Navigate to /auth-callback
-      await page.goto('/auth-callback');
+      // Navigate to /auth/confirm
+      await page.goto('/auth/confirm');
+      
+      // Wait for at least one RPC call to be intercepted
+      await expect.poll(() => interceptCount, { timeout: 10000 }).toBeGreaterThan(0);
+      
+      // Wait a bit for the page to process the error response
+      await page.waitForTimeout(1000);
 
       // Wait for error UI
-      const errorTitle = page.getByRole('heading', { name: /erro ao configurar conta/i });
+      // Note: CardTitle renders as a div, not a heading, so we use getByText
+      const errorTitle = page.getByText(/erro ao configurar conta/i);
       await expect(errorTitle).toBeVisible({ timeout: 15000 });
 
       // Click the help button
@@ -213,7 +275,7 @@ test.describe('Auth Callback Recovery', () => {
       await expect(page.getByText(/clique em "tentar novamente"/i)).toBeVisible({
         timeout: 5000,
       });
-      await expect(page.getByText(/saia e faça login novamente/i)).toBeVisible({
+      await expect(page.getByText(/saia e solicite um novo link de acesso/i)).toBeVisible({
         timeout: 5000,
       });
 

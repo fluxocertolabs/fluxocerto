@@ -36,9 +36,9 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     await loginPage.requestMagicLink(email);
     await loginPage.expectMagicLinkSent();
 
-    // Get magic link from Inbucket
+    // Get magic link from Inbucket with increased retries
     let magicLink: string | null = null;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 25; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message) {
         magicLink = inbucket.extractMagicLink(message);
@@ -49,7 +49,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
 
     expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 20000 });
   }
 
   /**
@@ -60,8 +60,8 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    // Wait for wizard to appear
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    // Wait for wizard to appear with extended timeout for parallel execution stability
+    await expect(wizardDialog).toBeVisible({ timeout: 30000 });
 
     // Step 1: Profile
     await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
@@ -146,6 +146,13 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
 
       // Wait for dashboard to load
       await expect(page.getByRole('heading', { name: /painel|dashboard/i })).toBeVisible({ timeout: 10000 });
+
+      // Dismiss any auto-shown tour that might be blocking the help button
+      const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+      if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await closeTourButton.tap();
+        await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+      }
 
       // Find and tap the floating help button
       const helpButton = page.getByTestId('floating-help-button');
@@ -299,6 +306,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
       const email = `mobile-nav-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
       await page.waitForTimeout(2000);
+      
 
       await completeOnboardingOnMobile(page);
 

@@ -43,8 +43,8 @@ export class LoginPage {
    * Verify success message is displayed after magic link request
    */
   async expectMagicLinkSent(): Promise<void> {
-    // Wait up to 10 seconds for the success message (email sending can take time)
-    await expect(this.successMessage).toBeVisible({ timeout: 10000 });
+    // Wait up to 15 seconds for the success message (email sending can take time)
+    await expect(this.successMessage).toBeVisible({ timeout: 15000 });
   }
 
   /**

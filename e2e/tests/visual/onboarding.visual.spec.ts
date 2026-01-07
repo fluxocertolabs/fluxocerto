@@ -107,13 +107,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - profile step - light', async ({ page, visual }) => {
     const email = `onboarding-visual-profile-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
-    // Wait for wizard to appear
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Set theme and stabilize
     await visual.setTheme(page, 'light');
@@ -132,12 +131,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - profile step - dark', async ({ page, visual }) => {
     const email = `onboarding-visual-profile-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -153,12 +152,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - group step - light', async ({ page, visual }) => {
     const email = `onboarding-visual-group-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Fill profile and advance to group step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -177,12 +176,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - group step - dark', async ({ page, visual }) => {
     const email = `onboarding-visual-group-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -200,12 +199,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - bank account step - light', async ({ page, visual }) => {
     const email = `onboarding-visual-bank-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to bank account step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -228,12 +227,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - bank account step - dark', async ({ page, visual }) => {
     const email = `onboarding-visual-bank-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -255,12 +254,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - income step - light', async ({ page, visual }) => {
     const email = `onboarding-visual-income-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to income step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -287,12 +286,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - income step - dark', async ({ page, visual }) => {
     const email = `onboarding-visual-income-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -318,12 +317,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - expense step - light', async ({ page, visual }) => {
     const email = `onboarding-visual-expense-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to expense step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -354,12 +353,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - expense step - dark', async ({ page, visual }) => {
     const email = `onboarding-visual-expense-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -388,12 +387,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - credit card step - light', async ({ page, visual }) => {
     const email = `onboarding-visual-card-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to credit card step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -426,12 +425,12 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
   visualTest('onboarding wizard - credit card step - dark', async ({ page, visual }) => {
     const email = `onboarding-visual-card-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -560,12 +559,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - profile step - mobile light', async ({ page, visual }) => {
     const email = `onboarding-mobile-profile-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -581,12 +580,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - profile step - mobile dark', async ({ page, visual }) => {
     const email = `onboarding-mobile-profile-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -602,12 +601,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - bank account step - mobile light', async ({ page, visual }) => {
     const email = `onboarding-mobile-bank-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to bank account step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -630,12 +629,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - bank account step - mobile dark', async ({ page, visual }) => {
     const email = `onboarding-mobile-bank-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -659,12 +658,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - group step - mobile light', async ({ page, visual }) => {
     const email = `onboarding-mobile-group-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to group step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -683,12 +682,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - group step - mobile dark', async ({ page, visual }) => {
     const email = `onboarding-mobile-group-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -706,12 +705,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - income step - mobile light', async ({ page, visual }) => {
     const email = `onboarding-mobile-income-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to income step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -738,12 +737,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - income step - mobile dark', async ({ page, visual }) => {
     const email = `onboarding-mobile-income-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -769,12 +768,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - expense step - mobile light', async ({ page, visual }) => {
     const email = `onboarding-mobile-expense-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to expense step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -805,12 +804,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - expense step - mobile dark', async ({ page, visual }) => {
     const email = `onboarding-mobile-expense-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -839,12 +838,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - credit card step - mobile light', async ({ page, visual }) => {
     const email = `onboarding-mobile-card-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to credit card step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -877,12 +876,12 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
   mobileTest('onboarding wizard - credit card step - mobile dark', async ({ page, visual }) => {
     const email = `onboarding-mobile-card-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -953,12 +952,12 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
   visualTest('profile step - validation error - light', async ({ page, visual }) => {
     const email = `onboarding-val-profile-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -980,12 +979,12 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
   visualTest('profile step - validation error - dark', async ({ page, visual }) => {
     const email = `onboarding-val-profile-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -1005,12 +1004,12 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
   visualTest('group step - validation error - light', async ({ page, visual }) => {
     const email = `onboarding-val-group-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Fill profile and advance to group step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -1035,12 +1034,12 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
   visualTest('group step - validation error - dark', async ({ page, visual }) => {
     const email = `onboarding-val-group-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -1063,12 +1062,12 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
   visualTest('bank account step - validation error - light', async ({ page, visual }) => {
     const email = `onboarding-val-bank-light-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     // Navigate to bank account step
     await page.locator('#profile-name').fill('Usuário Visual Test');
@@ -1097,12 +1096,12 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
   visualTest('bank account step - validation error - dark', async ({ page, visual }) => {
     const email = `onboarding-val-bank-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
-    await page.waitForTimeout(2000);
 
+    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();

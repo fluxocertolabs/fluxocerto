@@ -69,8 +69,8 @@ test.describe('Floating Help Button', () => {
       await fabButton.click({ force: true });
       await page.waitForTimeout(800);
 
-      // Click the tour option (aria-label is "Iniciar tour guiado da página")
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+      // Click the tour option - it has text "Conhecer a página" and aria-label "Iniciar tour guiado da página"
+      const tourOption = page.getByRole('button', { name: /conhecer a página|iniciar tour guiado/i });
       await expect(tourOption).toBeVisible({ timeout: 5000 });
       await tourOption.click({ force: true });
       await page.waitForTimeout(500);
@@ -133,9 +133,11 @@ test.describe('Floating Help Button', () => {
       // Navigate to manage page (no seeding needed for this test)
       await managePage.goto();
       await managePage.waitForReady();
+      
 
       const helpButton = page.locator('[data-testid="floating-help-button"]');
       await expect(helpButton).toBeVisible({ timeout: 10000 });
+
 
       // Click the FAB button to expand - use force to bypass any overlays
       // The FAB button has aria-label "Abrir ajuda" when closed
@@ -143,8 +145,9 @@ test.describe('Floating Help Button', () => {
       await fabButton.click({ force: true });
       await page.waitForTimeout(800);
 
-      // Click the tour option (aria-label is "Iniciar tour guiado da página")
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+
+      // Click the tour option - it has text "Conhecer a página" and aria-label "Iniciar tour guiado da página"
+      const tourOption = page.getByRole('button', { name: /conhecer a página|iniciar tour guiado/i });
       await expect(tourOption).toBeVisible({ timeout: 5000 });
       await tourOption.click({ force: true });
       await page.waitForTimeout(500);
@@ -188,8 +191,8 @@ test.describe('Floating Help Button', () => {
       await fabButton.click({ force: true });
       await page.waitForTimeout(800);
 
-      // Click the tour option (aria-label is "Iniciar tour guiado da página")
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+      // Click the tour option - it has text "Conhecer a página" and aria-label "Iniciar tour guiado da página"
+      const tourOption = page.getByRole('button', { name: /conhecer a página|iniciar tour guiado/i });
       await expect(tourOption).toBeVisible({ timeout: 5000 });
       await tourOption.click({ force: true });
       await page.waitForTimeout(500);
