@@ -27,7 +27,7 @@ test.describe('Tour Selector Contract Tests @contract', () => {
     const tour: TourDefinition = TOURS.dashboard;
 
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for main content to be ready - either the projection selector (with data) or empty state
     // The tour selectors should exist in both states
@@ -61,7 +61,7 @@ test.describe('Tour Selector Contract Tests @contract', () => {
     const tour: TourDefinition = TOURS.manage;
 
     await page.goto('/manage');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for tabs to be ready
     await expect(page.locator('[data-tour="manage-tabs"]')).toBeVisible({ timeout: 15000 });
@@ -84,11 +84,11 @@ test.describe('Tour Selector Contract Tests @contract', () => {
     const tour: TourDefinition = TOURS.history;
 
     await page.goto('/history');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for history page content to load
     // The snapshot list might be empty but the container should exist
-    await page.waitForTimeout(2000); // Allow page to fully render
+    await expect(page.locator('main, [data-tour]').first()).toBeVisible({ timeout: 10000 });
 
     const missingSelectors: string[] = [];
 
@@ -199,7 +199,7 @@ test.describe('Tour Selector Comprehensive Check @contract', () => {
       if (!route) continue;
 
       await page.goto(route);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Wait for page-specific content
       if (tourKey === 'dashboard') {

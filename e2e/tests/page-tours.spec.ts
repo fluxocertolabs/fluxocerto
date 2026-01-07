@@ -4,8 +4,8 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { LoginPage } from '../pages/login-page';
 import { InbucketClient } from '../utils/inbucket';
+import { authenticateNewUser } from '../utils/auth-helper';
 
 test.describe('Page Tours', () => {
   // Run tour tests serially to avoid state conflicts
@@ -23,35 +23,10 @@ test.describe('Page Tours', () => {
   });
 
   /**
-   * Helper to authenticate a user via magic link
+   * Helper to authenticate a user via magic link (wraps shared helper)
    */
   async function authenticateUser(page: import('@playwright/test').Page, email: string) {
-    const loginPage = new LoginPage(page);
-    const mailbox = email.split('@')[0];
-
-    // Purge mailbox to ensure we get a fresh magic link
-    await inbucket.purgeMailbox(mailbox);
-
-    await loginPage.goto();
-    await loginPage.requestMagicLink(email);
-    await loginPage.expectMagicLinkSent();
-
-    // Get magic link from Inbucket with increased retries
-    let magicLink: string | null = null;
-    for (let i = 0; i < 20; i++) {
-      const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
-      }
-      await page.waitForTimeout(500);
-    }
-
-    expect(magicLink).not.toBeNull();
-    await page.goto(magicLink!);
-    
-    // Wait for redirect to dashboard
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
+    await authenticateNewUser(page, email, inbucket);
   }
 
   async function completeOnboardingIfPresent(page: import('@playwright/test').Page) {
@@ -568,10 +543,10 @@ test.describe('Page Tours', () => {
     await page.reload();
     
     // Wait for page to fully load and tour logic to run
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
-    // Wait additional time for React to hydrate and tour logic to execute
-    await page.waitForTimeout(2000);
+    // Wait for app shell to be visible (React hydrated)
+    await expect(page.locator('header, main').first()).toBeVisible({ timeout: 10000 });
 
     // Tour should auto-show again due to version bump
     await expect(closeTourButton).toBeVisible({ timeout: 30000 });

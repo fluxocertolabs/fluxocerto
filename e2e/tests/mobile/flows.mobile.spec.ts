@@ -11,8 +11,8 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { LoginPage } from '../../pages/login-page';
 import { InbucketClient } from '../../utils/inbucket';
+import { authenticateNewUser as sharedAuthenticateNewUser } from '../../utils/auth-helper';
 
 // Mobile tests run serially to avoid email conflicts
 test.describe.configure({ mode: 'serial' });
@@ -25,81 +25,60 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
   });
 
   /**
-   * Helper to authenticate a fresh user via magic link
+   * Helper to authenticate a fresh user via magic link (wraps shared helper)
    */
   async function authenticateNewUser(page: Page, email: string): Promise<void> {
-    const loginPage = new LoginPage(page);
-    const mailbox = email.split('@')[0];
-
-    await inbucket.purgeMailbox(mailbox);
-    await loginPage.goto();
-    await loginPage.requestMagicLink(email);
-    await loginPage.expectMagicLinkSent();
-
-    // Get magic link from Inbucket with increased retries
-    let magicLink: string | null = null;
-    for (let i = 0; i < 25; i++) {
-      const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
-      }
-      await page.waitForTimeout(500);
-    }
-
-    expect(magicLink).not.toBeNull();
-    await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 20000 });
+    await sharedAuthenticateNewUser(page, email, inbucket);
   }
 
   /**
    * Helper to complete onboarding wizard on mobile
+   * Uses proper Playwright auto-waiting between steps
    */
   async function completeOnboardingOnMobile(page: Page): Promise<void> {
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    // Wait for wizard to appear with extended timeout for parallel execution stability
-    await expect(wizardDialog).toBeVisible({ timeout: 30000 });
+    // Wait for wizard to appear
+    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
     // Step 1: Profile
     await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
     await page.locator('#profile-name').fill('Mobile Test User');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
-    // Step 2: Group
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    // Step 2: Group - wait for heading to confirm step transition
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
     await page.locator('#group-name').fill('Mobile Test Group');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 3: Bank Account
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible();
     await page.locator('#account-name').fill('Mobile Test Account');
     await page.locator('#account-balance').fill('1000');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 4: Income (skip - optional)
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 5: Expense (skip - optional)
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 6: Credit Card (skip - optional)
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible();
     await wizardDialog.getByRole('button', { name: /finalizar/i }).click();
 
     // Wizard should close
-    await expect(wizardDialog).toBeHidden({ timeout: 15000 });
+    await expect(wizardDialog).toBeHidden({ timeout: 10000 });
   }
 
   test.describe('Onboarding on Mobile', () => {
     test('onboarding wizard completes successfully on mobile', async ({ page }) => {
       const email = `mobile-onboarding-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
 
       await completeOnboardingOnMobile(page);
 
@@ -113,25 +92,24 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     test('onboarding wizard step navigation works on mobile', async ({ page }) => {
       const email = `mobile-onboarding-nav-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
 
       const wizardDialog = page
         .locator('[role="dialog"]')
         .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-      await expect(wizardDialog).toBeVisible({ timeout: 10000 });
+      await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
       // Fill profile and advance
       await page.locator('#profile-name').fill('Mobile Test User');
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
       // Should be on group step
-      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
 
       // Go back
       await wizardDialog.getByRole('button', { name: /voltar/i }).click();
 
       // Should be back on profile step
-      await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible({ timeout: 10000 });
+      await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
     });
   });
 
@@ -139,7 +117,6 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     test('floating help button opens via tap on mobile', async ({ page }) => {
       const email = `mobile-help-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
 
       // Complete onboarding first
       await completeOnboardingOnMobile(page);
@@ -169,7 +146,6 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     test('tapping "Conhecer a página" starts tour on mobile', async ({ page }) => {
       const email = `mobile-tour-start-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
 
       await completeOnboardingOnMobile(page);
 
@@ -197,7 +173,6 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     test('tour navigation works with tap on mobile', async ({ page }) => {
       const email = `mobile-tour-nav-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
 
       await completeOnboardingOnMobile(page);
 
@@ -234,7 +209,6 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     test('tour can be dismissed via close button on mobile', async ({ page }) => {
       const email = `mobile-tour-dismiss-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
 
       await completeOnboardingOnMobile(page);
 
@@ -259,7 +233,6 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     test('tour can be completed by tapping through all steps on mobile', async ({ page }) => {
       const email = `mobile-tour-complete-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
 
       await completeOnboardingOnMobile(page);
 
@@ -305,7 +278,6 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     test('mobile navigation menu works', async ({ page }) => {
       const email = `mobile-nav-${Date.now()}@example.com`;
       await authenticateNewUser(page, email);
-      await page.waitForTimeout(2000);
       
 
       await completeOnboardingOnMobile(page);

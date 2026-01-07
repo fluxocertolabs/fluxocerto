@@ -215,8 +215,8 @@ test.describe('Quick Update Modal', () => {
     await quickUpdatePage.waitForModal();
 
     // Verify items are listed
-    await expect(page.getByText(seededAccount.name, { exact: false })).toBeVisible();
-    await expect(page.getByText(seededCard.name, { exact: false })).toBeVisible();
+    await expect(page.getByText(seededAccount.name, { exact: false })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(seededCard.name, { exact: false })).toBeVisible({ timeout: 10000 });
 
     // Verify no "Não atribuído" text is shown (OwnerBadge hides by default when null)
     await expect(page.getByText('Não atribuído')).not.toBeVisible();
@@ -467,6 +467,9 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
+    // Increase timeout for this test that involves profile creation and badge verification
+    test.setTimeout(90000);
+
     // Reset for clean state - this test relies on specific badge presence
     await resetForCleanState(db);
     
