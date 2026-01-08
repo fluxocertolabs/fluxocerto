@@ -20,12 +20,22 @@ import { SnapshotDetailPage } from '../pages/snapshot-detail-page';
 import { executeSQL, getUserIdFromEmail } from '../utils/supabase-admin';
 import { existsSync } from 'fs';
 
+const USE_PER_TEST_CONTEXT = process.env.PW_PER_TEST_CONTEXT === '1';
+
 /**
  * Custom test fixtures type
  */
 type TestFixtures = {
   /** Worker context with isolation information */
   workerContext: IWorkerContext;
+  /**
+   * Internal auto fixture: reset this worker's group-scoped financial data before every test.
+   *
+   * Even with per-worker group isolation, data can accumulate across tests within the same worker.
+   * Under full-suite parallelism this can slow down `/manage` (which fetches all finance tables)
+   * enough to cause timeouts and flakes. Resetting group data per test keeps loads deterministic.
+   */
+  _perTestDbReset: void;
   /**
    * Internal auto fixture: keep worker-user UI unblocked across the suite.
    *
@@ -60,6 +70,15 @@ type WorkerFixtures = {
   workerCtx: IWorkerContext;
   /** Worker-scoped browser context with auth state loaded */
   workerBrowserContext: BrowserContext;
+  /**
+   * Worker auth storage for Option B (per-test contexts).
+   * We keep only Supabase keys (sb-*) and carry them forward between tests.
+   */
+  workerAuthState: {
+    origin: string;
+    cookies: any[];
+    localStorage: { name: string; value: string }[];
+  };
 };
 
 /**
@@ -69,7 +88,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   // Worker-scoped context - created once per worker, shared across tests
   workerCtx: [
     async ({}, use, workerInfo) => {
-      const context = getWorkerContext(workerInfo.workerIndex);
+      const context = getWorkerContext(workerInfo.workerIndex, workerInfo.project.name);
       await use(context);
     },
     { scope: 'worker' },
@@ -137,9 +156,99 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: 'worker' },
   ],
 
+  // Worker-scoped auth state (origin + sb-* localStorage) for Option B
+  workerAuthState: [
+    async ({ workerCtx }, use) => {
+      const storageStatePath = workerCtx.authStatePath;
+      if (!existsSync(storageStatePath)) {
+        throw new Error(
+          `❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}. Run setup first.`
+        );
+      }
+
+      const fs = await import('fs/promises');
+      const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
+      const authState = JSON.parse(authStateContent);
+
+      const origin = authState?.origins?.[0]?.origin;
+      const localStorage = Array.isArray(authState?.origins?.[0]?.localStorage)
+        ? authState.origins[0].localStorage.filter((item: any) => typeof item?.name === 'string' && item.name.includes('sb-'))
+        : [];
+
+      const hasAuthToken = localStorage.some((item: any) => item?.name?.includes('auth-token'));
+      if (typeof origin !== 'string' || !origin) {
+        throw new Error(`❌ Worker ${workerCtx.workerIndex}: Auth state origin is missing/invalid`);
+      }
+      if (!hasAuthToken) {
+        throw new Error(`❌ Worker ${workerCtx.workerIndex}: No Supabase auth token found in localStorage!`);
+      }
+
+      await use({
+        origin,
+        cookies: Array.isArray(authState?.cookies) ? authState.cookies : [],
+        localStorage,
+      });
+    },
+    { scope: 'worker' },
+  ],
+
   // Override the default context to use our worker-scoped context with auth
-  context: async ({ workerBrowserContext }, use) => {
-    await use(workerBrowserContext);
+  context: async ({ browser, workerBrowserContext, workerAuthState }, use) => {
+    if (!USE_PER_TEST_CONTEXT) {
+      await use(workerBrowserContext);
+      return;
+    }
+
+    const context = await browser.newContext({
+      storageState: {
+        cookies: workerAuthState.cookies,
+        origins: [{ origin: workerAuthState.origin, localStorage: workerAuthState.localStorage }],
+      },
+    });
+
+    await use(context);
+    await context.close().catch(() => {});
+  },
+
+  // Option B: capture rotated Supabase token(s) between tests (sb-* localStorage).
+  // In default mode, this is a no-op (keeps behavior aligned with worker-scoped contexts).
+  page: async ({ context, workerAuthState }, use, testInfo) => {
+    const page = await context.newPage();
+    // Prevent rare hangs where navigations (reload/goto) wait until the overall test timeout.
+    // In Option B, we still allow longer navigations due to cold-cache behavior.
+    page.setDefaultNavigationTimeout(USE_PER_TEST_CONTEXT ? 45000 : 30000);
+    await use(page);
+
+    if (USE_PER_TEST_CONTEXT && testInfo.status === 'passed') {
+      try {
+        const nextLocalStorage = await Promise.race([
+          page.evaluate(() => {
+            const keys = Object.keys(localStorage);
+            return keys
+              .filter((k) => k.includes('sb-'))
+              .map((name) => ({ name, value: localStorage.getItem(name) ?? '' }))
+              .filter((item) => item.value.length > 0);
+          }),
+          new Promise<[]>(resolve => setTimeout(() => resolve([]), 1000)),
+        ]);
+
+        if (Array.isArray(nextLocalStorage) && nextLocalStorage.length > 0) {
+          workerAuthState.localStorage = nextLocalStorage;
+        }
+      } catch {
+        // ignore (page may already be closed on timeout)
+      }
+    }
+
+    if (!USE_PER_TEST_CONTEXT) {
+      await page.close().catch(() => {});
+      return;
+    }
+
+    await Promise.race([
+      page.close(),
+      new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+    ]).catch(() => {});
   },
 
   // Test-scoped worker context (just passes through the worker-scoped one)
@@ -194,6 +303,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await use(dbFixture);
     },
     { scope: 'worker' },
+  ],
+
+  // Auto-run per test: reset worker group data to prevent cross-test contamination + slowdowns.
+  _perTestDbReset: [
+    async ({ db }, use) => {
+      await db.resetDatabase();
+      await use();
+    },
+    { auto: true },
   ],
 
   // Auto-run per test to ensure onboarding/tour overlays never block interactions

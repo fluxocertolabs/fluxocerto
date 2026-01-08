@@ -37,10 +37,12 @@ function getSupabaseConfig() {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     const status = JSON.parse(output);
+    const anonKey = status.ANON_KEY || status.PUBLISHABLE_KEY || '';
+    const serviceRoleKey = status.SERVICE_ROLE_KEY || status.SECRET_KEY || '';
     return {
       url: status.API_URL || 'http://localhost:54321',
-      anonKey: status.ANON_KEY,
-      serviceRoleKey: status.SERVICE_ROLE_KEY,
+      anonKey,
+      serviceRoleKey,
       inbucketUrl: status.INBUCKET_URL || 'http://localhost:54324',
     };
   } catch {
@@ -57,13 +59,16 @@ function getSupabaseConfig() {
 
 const supabase = getSupabaseConfig();
 const workerCount = getWorkerCount();
+const usePerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
 
 // Set environment variables for test files
 process.env.VITE_SUPABASE_URL = process.env.VITE_SUPABASE_URL || supabase.url;
 process.env.VITE_SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || supabase.anonKey;
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || supabase.serviceRoleKey;
 process.env.INBUCKET_URL = process.env.INBUCKET_URL || supabase.inbucketUrl;
-process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
+process.env.BASE_URL =
+  process.env.BASE_URL ||
+  (usePerTestContext ? 'http://localhost:4173' : 'http://localhost:5173');
 process.env.VITE_DISABLE_THEME_SYNC = 'true';
 // Note: TEST_USER_EMAIL is now per-worker, set dynamically in fixtures
 
@@ -86,8 +91,9 @@ export default defineConfig({
   reporter: process.env.CI 
     ? [['github', { title: process.env.PLAYWRIGHT_TITLE || '🎭 Playwright Run Summary' }]]
     : 'list',
-  // Timeout for test execution - 45s gives buffer for parallel execution resource contention
-  timeout: 45000, // 45s per test
+  // Timeout for test execution.
+  // Option B (per-test browser contexts) starts "cold" each test, so allow extra time.
+  timeout: usePerTestContext ? 90000 : 45000, // 90s for per-test context, 45s otherwise
   expect: {
     timeout: 10000, // 10s for assertions
     toHaveScreenshot: {
@@ -193,10 +199,17 @@ export default defineConfig({
   // the dev auth bypass during E2E tests. This ensures tests use the proper
   // magic link authentication flow instead of auto-login.
   webServer: {
-    command: `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port}`,
+    // Option B (PW_PER_TEST_CONTEXT=1) creates a fresh browser context per test,
+    // which clears the HTTP cache. Running against the Vite dev server would cause
+    // each test to re-fetch a large ESM module graph, overwhelming the server and
+    // producing long stalls/flake. For this mode, run a production build via
+    // `vite preview` (few static assets, much more deterministic).
+    command: usePerTestContext
+      ? `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm exec vite build && pnpm preview --port ${port} --strictPort`
+      : `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port}`,
     url: process.env.BASE_URL,
-    reuseExistingServer: !process.env.CI, // In CI: start fresh; locally: reuse if available
-    timeout: 120000, // 2 minutes to start
+    reuseExistingServer: !process.env.CI && !usePerTestContext, // preview mode should always start fresh
+    timeout: usePerTestContext ? 180000 : 120000, // preview needs time to build
     cwd: resolve(__dirname, '..'),
   },
 });

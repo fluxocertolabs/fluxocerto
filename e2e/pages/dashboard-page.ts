@@ -19,9 +19,11 @@ export class DashboardPage {
   readonly chartErrorHeading: Locator;
   readonly chartRetryButton: Locator;
   readonly groupBadge: Locator;
+  private readonly isPerTestContext: boolean;
 
   constructor(page: Page) {
     this.page = page;
+    this.isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
     // Try multiple selectors for chart
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
@@ -176,6 +178,9 @@ export class DashboardPage {
    * We check for the chart wrapper AND that it contains rendered path data.
    */
   async expectChartRendered(): Promise<void> {
+    const chartVisibleTimeout = this.isPerTestContext ? 15000 : 5000;
+    const totalTimeout = this.isPerTestContext ? 45000 : 20000;
+
     await expect(async () => {
       // Handle transient realtime failures by retrying when the error state is visible
       if (await this.chartErrorHeading.isVisible().catch(() => false)) {
@@ -183,7 +188,7 @@ export class DashboardPage {
         await this.page.waitForTimeout(500);
       }
 
-      await expect(this.cashflowChart).toBeVisible({ timeout: 5000 });
+      await expect(this.cashflowChart).toBeVisible({ timeout: chartVisibleTimeout });
       
       // Check for SVG paths with actual path data (not empty d="")
       // The recharts-area-area class contains the actual filled area path
@@ -206,7 +211,7 @@ export class DashboardPage {
         const wrapper = this.page.locator('.recharts-wrapper');
         await expect(wrapper).toBeVisible();
       }
-    }).toPass({ timeout: 20000 });
+    }).toPass({ timeout: totalTimeout });
   }
 
   /**

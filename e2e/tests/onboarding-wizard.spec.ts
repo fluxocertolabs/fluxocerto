@@ -155,24 +155,47 @@ test.describe('Onboarding Wizard', () => {
     
     await authenticateUser(page, freshEmail);
 
+    // Ensure the wizard is actually present (and the app is settled) before attempting navigations.
+    const wizardDialog = getWizardDialog(page);
+    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
+
     // Even if wizard is showing, navigation should work
     // Try to navigate to /manage
-    await page.goto('/manage');
-    await page.waitForLoadState('domcontentloaded');
+    // Avoid `waitUntil: 'load'` here — the app has long-lived realtime connections
+    // and under parallel load the "load" event can be a flaky wait target.
+    //
+    // Also: navigation can occasionally be aborted if a redirect / route transition
+    // races the goto; do a bounded retry (NOT a tight loop of goto calls).
+    const gotoWithRetry = async (path: string, urlMatcher: RegExp) => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 20000 })
+          await expect(page).toHaveURL(urlMatcher, { timeout: 10000 })
+          return
+        } catch (err) {
+          // If navigation was interrupted but we still ended up on the right route,
+          // treat it as success (Playwright can surface ERR_ABORTED in these cases).
+          if (urlMatcher.test(page.url())) return
+          if (attempt === 3) throw err
+          console.warn(`[Onboarding] page.goto(${path}) failed (attempt ${attempt}); retrying...`, err)
+          await page.waitForTimeout(750)
+        }
+      }
+    }
+
+    await gotoWithRetry('/manage', /\/manage/)
     
     // Should successfully navigate (not blocked)
     await expect(page).toHaveURL(/\/manage/);
 
     // Try to navigate to /history
-    await page.goto('/history');
-    await page.waitForLoadState('domcontentloaded');
+    await gotoWithRetry('/history', /\/history/)
     
     // Should successfully navigate
     await expect(page).toHaveURL(/\/history/);
 
     // Navigate back to dashboard
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    await gotoWithRetry('/', /\/(dashboard)?$/)
     await expect(page).toHaveURL(/\/(dashboard)?$/);
   });
 

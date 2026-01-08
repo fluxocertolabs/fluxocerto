@@ -65,10 +65,12 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
 // Cache for group IDs to avoid repeated queries
 let cachedDefaultGroupId: string | null = null;
 const cachedUserGroupIds: Map<string, string> = new Map();
-const cachedWorkerGroupIds: Map<number, string> = new Map();
+// Keyed by groupName (NOT workerIndex) to avoid cross-project collisions.
+const cachedWorkerGroupIds: Map<string, string> = new Map();
 
 // Mutex to prevent race conditions during worker group creation/lookup
-const workerGroupMutex = new Map<number, Promise<string>>();
+// Keyed by groupName to avoid cross-project collisions.
+const workerGroupMutex = new Map<string, Promise<string>>();
 
 /**
  * Get or create the default test group
@@ -164,13 +166,13 @@ export function clearGroupCache(): void {
  */
 export async function getOrCreateWorkerGroup(workerIndex: number, groupName: string): Promise<string> {
   // Check cache first
-  const cached = cachedWorkerGroupIds.get(workerIndex);
+  const cached = cachedWorkerGroupIds.get(groupName);
   if (cached) {
     return cached;
   }
 
   // Check if there is a pending operation for this worker
-  const pending = workerGroupMutex.get(workerIndex);
+  const pending = workerGroupMutex.get(groupName);
   if (pending) {
     return pending;
   }
@@ -192,7 +194,7 @@ export async function getOrCreateWorkerGroup(workerIndex: number, groupName: str
       }
 
       if (existing) {
-        cachedWorkerGroupIds.set(workerIndex, existing.id);
+        cachedWorkerGroupIds.set(groupName, existing.id);
         return existing.id;
       }
 
@@ -207,15 +209,15 @@ export async function getOrCreateWorkerGroup(workerIndex: number, groupName: str
         throw new Error(`Failed to create worker group: ${insertError.message}`);
       }
 
-      cachedWorkerGroupIds.set(workerIndex, newGroup.id);
+      cachedWorkerGroupIds.set(groupName, newGroup.id);
       return newGroup.id;
     } finally {
       // Clean up mutex entry
-      workerGroupMutex.delete(workerIndex);
+      workerGroupMutex.delete(groupName);
     }
   })();
 
-  workerGroupMutex.set(workerIndex, promise);
+  workerGroupMutex.set(groupName, promise);
   return promise;
 }
 
@@ -278,13 +280,13 @@ export async function ensureTestUser(
 
   // Determine group ID:
   // 1. Use explicit groupId if provided
-  // 2. Otherwise use worker's group if workerIndex provided
-  // 3. Fall back to default group
+  // 2. Fall back to default group
+  //
+  // NOTE: We intentionally do NOT try to infer a worker group from workerIndex here.
+  // workerIndex is per Playwright project, so "worker 0" exists in multiple projects
+  // (chromium, chromium-mobile, visual, etc.). Inferring by index alone would create
+  // cross-project data races.
   let targetGroupId = groupId;
-  if (!targetGroupId && workerIndex !== undefined) {
-    // Check if we have a cached worker group
-    targetGroupId = cachedWorkerGroupIds.get(workerIndex);
-  }
   if (!targetGroupId) {
     targetGroupId = await getDefaultGroupId();
   }

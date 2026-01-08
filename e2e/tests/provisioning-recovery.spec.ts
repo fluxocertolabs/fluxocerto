@@ -56,23 +56,39 @@ test.describe('Provisioning Recovery', () => {
    * Helper to restore a user's group association
    */
   async function restoreUserProfile(userEmail: string, profile: { id: string; group_id: string; name: string }): Promise<void> {
-    // Remove any profile row that may have been recreated by `ensure_current_user_group()`
-    // with a different `id`, then restore the original row exactly.
+    const normalizedEmail = userEmail.toLowerCase()
+
+    // After orphaning, the app usually recreates the profile row during self-heal.
+    // Prefer UPDATE (no triggers) to avoid flaking on auxiliary tables like `allowed_emails`.
+    const existing = await getWorkerProfile(normalizedEmail)
+    if (existing) {
+      await executeSQL(`
+        UPDATE public.profiles
+        SET group_id = '${profile.group_id}',
+            name = '${escapeSqlLiteral(profile.name)}'
+        WHERE email = '${escapeSqlLiteral(normalizedEmail)}'
+      `)
+      return
+    }
+
+    // If the profile row does not exist (e.g. self-heal never ran), insert it.
+    // Some installations have triggers that insert into `allowed_emails` on profile insert;
+    // ensure that insert is not blocked by an existing unique row.
     await executeSQL(`
-      DELETE FROM public.profiles
-      WHERE email = '${escapeSqlLiteral(userEmail.toLowerCase())}'
-    `);
+      DELETE FROM public.allowed_emails
+      WHERE email = '${escapeSqlLiteral(normalizedEmail)}'
+    `)
 
     await executeSQL(`
       INSERT INTO public.profiles (id, email, group_id, name, created_at)
       VALUES (
         '${profile.id}',
-        '${escapeSqlLiteral(userEmail.toLowerCase())}',
+        '${escapeSqlLiteral(normalizedEmail)}',
         '${profile.group_id}',
         '${escapeSqlLiteral(profile.name)}',
         now()
       )
-    `);
+    `)
   }
 
   test('orphaned user auto-heals via ensure_current_user_group on dashboard', async ({

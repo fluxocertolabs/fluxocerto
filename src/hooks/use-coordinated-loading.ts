@@ -10,7 +10,10 @@ import { ERROR_MESSAGES } from '@/types/loading'
 
 const DEFAULT_CONFIG: Required<LoadingConfig> = {
   minDisplayTime: 100,
-  timeoutThreshold: 5000,
+  // 5s was too aggressive in cold-cache scenarios (e.g. first load, mobile, or
+  // under heavy parallel load). A premature timeout flips the UI into an error
+  // state even if data arrives shortly after.
+  timeoutThreshold: 15000,
   enableDevLogging: import.meta.env.DEV,
 }
 
@@ -45,7 +48,23 @@ export function useCoordinatedLoading(
 
   // Handle loading start
   useEffect(() => {
-    if (isLoading && phase !== 'loading') {
+    // Start a new loading cycle only from stable phases.
+    //
+    // IMPORTANT: Do NOT reset `timeout` back to `loading` while `isLoading` remains true.
+    // Otherwise the UI will bounce from "timeout error" → "loading skeleton" immediately,
+    // making it impossible to actually see/click the retry state and causing E2E flakes
+    // where pages appear stuck behind the skeleton forever.
+    if (isLoading && (phase === 'idle' || phase === 'success' || phase === 'error')) {
+      // Clear any in-flight timers from a prior cycle.
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+      if (minTimeRef.current) {
+        clearTimeout(minTimeRef.current)
+        minTimeRef.current = null
+      }
+
       loadingStartRef.current = Date.now()
       setPhase('loading')
       setShowSkeleton(true)
@@ -61,9 +80,9 @@ export function useCoordinatedLoading(
     }
   }, [isLoading, phase, mergedConfig.timeoutThreshold, mergedConfig.enableDevLogging])
 
-  // Handle loading complete
+  // Handle loading complete (including late completion after a timeout)
   useEffect(() => {
-    if (!isLoading && phase === 'loading') {
+    if (!isLoading && (phase === 'loading' || phase === 'timeout')) {
       // Clear timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)

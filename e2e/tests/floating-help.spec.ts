@@ -116,11 +116,12 @@ test.describe('Floating Help Button', () => {
   test.describe('Manage Page', () => {
     test('floating help button is visible on manage page', async ({
       page,
-      managePage,
-      db,
     }) => {
-      await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
-      await managePage.goto();
+      // This test only validates the global FloatingHelpButton (layout-level),
+      // so we deliberately avoid waiting for Manage page data to load (tabs, lists),
+      // which can be slow/flaky under heavy parallel load.
+      await page.goto('/manage', { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/manage/);
 
       const helpButton = page.locator('[data-testid="floating-help-button"]');
       await expect(helpButton).toBeVisible({ timeout: 10000 });

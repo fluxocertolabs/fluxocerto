@@ -33,11 +33,19 @@ test.describe('Edge Cases & Error Handling', () => {
   }) => {
     // Use unique name to avoid collisions
     const uniqueId = Date.now();
-    const [seeded] = await db.seedAccounts([createAccount({ name: `Conta Zerada ${uniqueId}`, balance: 0 })]);
 
-    // Navigate and wait for page to be fully ready
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    // Seeding before navigation has proven flaky with Supabase Realtime interactions under parallel load.
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.selectAccountsTab();
+
+    const [seeded] = await db.seedAccounts([
+      createAccount({ name: `Conta Zerada ${uniqueId}`, balance: 0 }),
+    ]);
+
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -58,14 +66,19 @@ test.describe('Edge Cases & Error Handling', () => {
   }) => {
     // Use unique name to avoid collisions
     const uniqueId = Date.now();
+    
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    await managePage.goto();
+    await managePage.selectCreditCardsTab();
+
     // Credit cards typically show statement balance as positive (amount owed)
     const [seeded] = await db.seedCreditCards([
       createCreditCard({ name: `Cartão Negativo ${uniqueId}`, statement_balance: 150000, due_day: 10 }),
     ]);
 
-    // Navigate and wait for page to be fully ready
-    await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
     
     // Select credit cards tab
     await managePage.selectCreditCardsTab();

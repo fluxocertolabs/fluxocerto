@@ -49,6 +49,13 @@ export const AUTH_RETRY_DELAYS = [1000, 2000, 4000] as const;
 /** SQL LIKE pattern for all worker data */
 export const ALL_WORKERS_PATTERN = '[W%]%';
 
+function normalizeProjectName(projectName?: string): string {
+  const raw = (projectName || 'chromium').toLowerCase();
+  // Keep it filesystem-safe and stable.
+  const slug = raw.replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
+  return slug || 'chromium';
+}
+
 /**
  * Create worker context from worker index.
  *
@@ -63,21 +70,26 @@ export const ALL_WORKERS_PATTERN = '[W%]%';
  * - Worker 3 (retry) → 3 % 2 = 1 (use worker-1.json) ✓
  *
  * @param workerIndex - 0-based index from Playwright (test.info().workerIndex)
+ * @param projectName - Playwright project name (e.g. "chromium", "chromium-mobile")
  * @returns Worker context with isolation information
  */
-export function getWorkerContext(workerIndex: number): IWorkerContext {
+export function getWorkerContext(workerIndex: number, projectName?: string): IWorkerContext {
   // CRITICAL: Map the global worker index to the ACTUAL number of workers
   // we authenticated during setup, not MAX_WORKERS
   const actualWorkerCount = getWorkerCount();
   const normalizedIndex = workerIndex % actualWorkerCount;
+  const project = normalizeProjectName(projectName);
 
   return {
     workerIndex: normalizedIndex,
-    email: `e2e-test-worker-${normalizedIndex}@example.com`,
-    authStatePath: resolve(__dirname, `../.auth/worker-${normalizedIndex}.json`),
+    // IMPORTANT: workerIndex is per-project. We MUST incorporate project name into
+    // email + auth state path so different Playwright projects (chromium vs chromium-mobile)
+    // don't share the same user/group concurrently.
+    email: `e2e-test-${project}-worker-${normalizedIndex}@example.com`,
+    authStatePath: resolve(__dirname, `../.auth/${project}-worker-${normalizedIndex}.json`),
     dataPrefix: `[W${normalizedIndex}] `,
-    schemaName: `test_worker_${normalizedIndex}`,
-    groupName: `Test Worker ${normalizedIndex}`,
+    schemaName: `test_${project}_worker_${normalizedIndex}`,
+    groupName: `Test ${project} Worker ${normalizedIndex}`,
   };
 }
 

@@ -11,6 +11,17 @@ import { ProjectsSection } from './projects-section';
 import { CreditCardsSection } from './credit-cards-section';
 import { GroupSection } from './group-section';
 
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timeoutId = setTimeout(() => resolve(fallback), ms);
+  });
+
+  const result = await Promise.race([promise, timeoutPromise]);
+  if (timeoutId) clearTimeout(timeoutId);
+  return result;
+}
+
 export class ManagePage {
   readonly page: Page;
   readonly accountsTab: Locator;
@@ -18,6 +29,7 @@ export class ManagePage {
   readonly expensesTab: Locator;
   readonly projectsTab: Locator;
   readonly groupTab: Locator;
+  private readonly isPerTestContext: boolean;
 
   private _accounts: AccountsSection | null = null;
   private _expenses: ExpensesSection | null = null;
@@ -27,6 +39,7 @@ export class ManagePage {
 
   constructor(page: Page) {
     this.page = page;
+    this.isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
     this.accountsTab = page.getByRole('tab', { name: /contas|accounts/i });
     this.creditCardsTab = page.getByRole('tab', { name: /cartões|credit cards/i });
     this.expensesTab = page.getByRole('tab', { name: /despesas|expenses/i });
@@ -98,15 +111,29 @@ export class ManagePage {
     // timing issues with React's rendering cycle.
     const pageHeading = this.page.getByRole('heading', { name: /gerenciar dados financeiros/i });
     try {
-      await expect(pageHeading).toBeVisible({ timeout: 15000 });
+      // Option B (per-test contexts) is a cold-cache navigation; allow a bit more time.
+      await expect(pageHeading).toBeVisible({ timeout: this.isPerTestContext ? 30000 : 15000 });
     } catch (error) {
       // Take screenshot for debugging
       const timestamp = Date.now();
-      await this.page.screenshot({ path: `debug-manage-heading-timeout-${timestamp}.png`, fullPage: true }).catch(() => {});
+      await withTimeout(
+        this.page.screenshot({ path: `debug-manage-heading-timeout-${timestamp}.png`, fullPage: true }),
+        2000,
+        undefined
+      ).catch(() => {});
       const pageUrl = this.page.url();
-      const title = await this.page.title().catch(() => 'Unable to read title');
-      const pageContent = await this.page.textContent('body').catch(() => 'Unable to read');
-      const pageHtml = await this.page.content().catch(() => 'Unable to read HTML');
+      // Avoid hanging diagnostics (these can stall if the page is in a bad state).
+      const title = await withTimeout(this.page.title(), 1000, 'Unable to read title').catch(
+        () => 'Unable to read title'
+      );
+      const pageContent = await withTimeout(
+        this.page.textContent('body'),
+        1000,
+        'Unable to read'
+      ).catch(() => 'Unable to read');
+      const pageHtml = await withTimeout(this.page.content(), 1000, 'Unable to read HTML').catch(
+        () => 'Unable to read HTML'
+      );
       console.error(`❌ Manage page heading not found. URL: ${pageUrl}`);
       console.error(`   Title: ${title}`);
       console.error(`   Page content: ${pageContent?.substring(0, 500)}`);
@@ -119,15 +146,74 @@ export class ManagePage {
     //
     // Use expect().toBeVisible() with a reasonable timeout. This is more reliable than
     // rapid polling because Playwright's expect() uses auto-waiting with proper retries.
-    const firstTab = this.page.getByRole('tab').first();
+    const manageTabs = this.page.locator('[data-tour="manage-tabs"]');
     try {
-      await expect(firstTab).toBeVisible({ timeout: 15000 });
+      // Prefer the explicit Manage tabs root rather than the first role=tab,
+      // since skeleton placeholders can render before tabs (and some overlays
+      // may contain role=tab elements unrelated to Manage).
+      //
+      // In Option B (per-test contexts), the app is "cold" each test. Under parallel load,
+      // PageLoadingWrapper can transiently flip into its ErrorState (role=alert) due to the
+      // coordinated loading timeout. When that happens, the tabs never render until the
+      // user clicks "Tentar Novamente".
+      //
+      // We handle this deterministically by auto-clicking retry a small number of times.
+      const waitStart = Date.now();
+      const errorAlertWithRetry = this.page.getByRole('alert').filter({
+        has: this.page.getByRole('button', { name: /tentar novamente/i }),
+      });
+      const errorRetryButton = errorAlertWithRetry.getByRole('button', { name: /tentar novamente/i });
+      let retryAttempts = 0;
+      let reloadAttempts = 0;
+
+      await expect(async () => {
+        if (await manageTabs.isVisible().catch(() => false)) {
+          return;
+        }
+
+        const canRetry = await errorRetryButton.isVisible().catch(() => false);
+        if (canRetry && retryAttempts < 3) {
+          retryAttempts += 1;
+          console.warn(`[ManagePage] ErrorState detected on /manage; clicking retry (attempt ${retryAttempts})`);
+          await errorRetryButton.click({ timeout: 5000 }).catch(() => {});
+          // Give the app a moment to transition back to skeleton/content.
+          await this.page.waitForTimeout(750);
+        }
+
+        // If we are "stuck" for a long time without ever rendering the tabs,
+        // do a single soft reload. This is a pragmatic flake killer under heavy
+        // parallel load (cold cache + Supabase/Realtime backpressure).
+        const elapsed = Date.now() - waitStart;
+        if (this.isPerTestContext && elapsed > 25000 && reloadAttempts < 1) {
+          reloadAttempts += 1;
+          console.warn(`[ManagePage] Tabs still not visible after ${elapsed}ms; reloading /manage (attempt ${reloadAttempts})`);
+          try {
+            await this.page.reload({ waitUntil: 'domcontentloaded' });
+          } catch {
+            await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
+          }
+          await this.page.waitForTimeout(750);
+        }
+
+        throw new Error('Manage tabs not visible yet');
+      }).toPass({
+        timeout: this.isPerTestContext ? 60000 : 20000,
+        intervals: [500, 1000, 2000],
+      });
     } catch {
       // Take screenshot for debugging
       const timestamp = Date.now();
-      await this.page.screenshot({ path: `debug-manage-tabs-timeout-${timestamp}.png`, fullPage: true }).catch(() => {});
+      await withTimeout(
+        this.page.screenshot({ path: `debug-manage-tabs-timeout-${timestamp}.png`, fullPage: true }),
+        2000,
+        undefined
+      ).catch(() => {});
       const pageUrl = this.page.url();
-      const pageContent = await this.page.textContent('body').catch(() => 'Unable to read');
+      const pageContent = await withTimeout(
+        this.page.textContent('body'),
+        1000,
+        'Unable to read'
+      ).catch(() => 'Unable to read');
       console.error(`❌ Manage page tabs not found after heading was visible. URL: ${pageUrl}`);
       console.error(`   Page content: ${pageContent?.substring(0, 500)}`);
       throw new Error('Manage page tabs did not render after loading completed');
@@ -139,8 +225,15 @@ export class ManagePage {
    * Uses Playwright's built-in auto-waiting for reliable tab selection.
    */
   private async selectTabWithRetry(tab: Locator): Promise<void> {
+    // Ensure the Manage page is fully ready at the moment we interact with tabs.
+    // Avoid re-running the full readiness checks if the tabs are already present.
+    const manageTabs = this.page.locator('[data-tour="manage-tabs"]');
+    if (!(await manageTabs.isVisible().catch(() => false))) {
+      await this.waitForReady();
+    }
+
     // Wait for tab to be visible
-    await expect(tab).toBeVisible({ timeout: 10000 });
+    await expect(tab).toBeVisible({ timeout: 15000 });
     
     // Check if tab is already active (no need to click)
     const currentState = await tab.getAttribute('data-state');

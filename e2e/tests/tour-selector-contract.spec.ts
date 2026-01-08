@@ -11,6 +11,7 @@
 
 import { test, expect } from '../fixtures/test-base';
 import { TOURS, type TourDefinition, type TourStep } from '../../src/lib/tours/definitions';
+import { ManagePage } from '../pages/manage-page';
 
 // Map tour keys to their page routes
 const TOUR_ROUTES: Record<string, string> = {
@@ -60,11 +61,10 @@ test.describe('Tour Selector Contract Tests @contract', () => {
   test('all manage tour selectors exist on /manage', async ({ page }) => {
     const tour: TourDefinition = TOURS.manage;
 
-    await page.goto('/manage');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for tabs to be ready
-    await expect(page.locator('[data-tour="manage-tabs"]')).toBeVisible({ timeout: 15000 });
+    // Reuse the same readiness logic as the rest of the suite to avoid flakes
+    // under Option B (per-test contexts) + heavy parallel load.
+    const managePage = new ManagePage(page)
+    await managePage.goto()
 
     const missingSelectors: string[] = [];
 

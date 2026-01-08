@@ -28,7 +28,7 @@ export function useAuth(): AuthState {
       console.warn('Auth session check timed out; continuing unauthenticated.')
       setUser(null)
       setIsLoading(false)
-    }, 7000)
+    }, 15000)
 
     // Get initial session
     client.auth.getSession()

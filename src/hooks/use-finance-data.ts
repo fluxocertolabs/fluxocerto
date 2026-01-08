@@ -287,71 +287,107 @@ export function useFinanceData(): UseFinanceDataReturn {
       return
     }
 
+    const REQUEST_TIMEOUT_MS = 20000
+    const MAX_ATTEMPTS = 2
+
     try {
       setError(null)
 
       const client = getSupabase()
-      // Fetch all tables in parallel - no user_id filter needed (shared family data)
-      const [accountsResult, projectsResult, expensesResult, creditCardsResult, futureStatementsResult, profilesResult] = await Promise.all([
-        client.from('accounts').select(`
-          id, name, type, balance, balance_updated_at, owner_id,
-          owner:profiles!owner_id(id, name),
-          created_at, updated_at
-        `),
-        client.from('projects').select('*'),
-        client.from('expenses').select('*'),
-        client.from('credit_cards').select(`
-          id, name, statement_balance, due_day, balance_updated_at, owner_id,
-          owner:profiles!owner_id(id, name),
-          created_at, updated_at
-        `),
-        client.from('future_statements').select('*')
-          .order('target_year', { ascending: true })
-          .order('target_month', { ascending: true }),
-        client.from('profiles').select('id, name').order('name'),
-      ])
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        const controller = new AbortController()
+        const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
-      // Check for errors
-      if (accountsResult.error) throw accountsResult.error
-      if (projectsResult.error) throw projectsResult.error
-      if (expensesResult.error) throw expensesResult.error
-      if (creditCardsResult.error) throw creditCardsResult.error
-      if (futureStatementsResult.error) throw futureStatementsResult.error
-      if (profilesResult.error) throw profilesResult.error
+        try {
+          // Fetch all tables in parallel - no user_id filter needed (shared family data)
+          const [accountsResult, projectsResult, expensesResult, creditCardsResult, futureStatementsResult, profilesResult] = await Promise.all([
+            client.from('accounts').select(`
+              id, name, type, balance, balance_updated_at, owner_id,
+              owner:profiles!owner_id(id, name),
+              created_at, updated_at
+            `).abortSignal(controller.signal),
+            client.from('projects').select('*').abortSignal(controller.signal),
+            client.from('expenses').select('*').abortSignal(controller.signal),
+            client.from('credit_cards').select(`
+              id, name, statement_balance, due_day, balance_updated_at, owner_id,
+              owner:profiles!owner_id(id, name),
+              created_at, updated_at
+            `).abortSignal(controller.signal),
+            client.from('future_statements').select('*')
+              .order('target_year', { ascending: true })
+              .order('target_month', { ascending: true })
+              .abortSignal(controller.signal),
+            client.from('profiles').select('id, name').order('name').abortSignal(controller.signal),
+          ])
 
-      // Map database rows to TypeScript types
-      // Type assertions needed because Supabase infers complex types from select strings
-      const mappedAccounts = (accountsResult.data ?? []).map((row) =>
-        mapAccountFromDb(row as unknown as AccountRow)
-      )
-      
-      // Separate projects by type: recurring vs single-shot income
-      const allProjects = projectsResult.data ?? []
-      const recurringProjects = allProjects.filter((p) => p.type === 'recurring' || !p.type)
-      const singleShotIncomeRows = allProjects.filter((p) => p.type === 'single_shot')
-      const mappedProjects = recurringProjects.map(mapProjectFromDb)
-      const mappedSingleShotIncome = singleShotIncomeRows.map(mapSingleShotIncomeFromDb)
-      
-      const mappedExpenses = (expensesResult.data ?? []).map(mapExpenseFromDb)
-      const mappedCreditCards = (creditCardsResult.data ?? []).map((row) =>
-        mapCreditCardFromDb(row as unknown as CreditCardRow)
-      )
-      const mappedFutureStatements = (futureStatementsResult.data ?? []).map((row) =>
-        transformFutureStatementRow(row as FutureStatementRow)
-      )
-      const mappedProfiles = (profilesResult.data ?? []).map((row) =>
-        mapProfileFromDb(row as ProfileRow)
-      )
+          // Check for errors
+          if (accountsResult.error) throw accountsResult.error
+          if (projectsResult.error) throw projectsResult.error
+          if (expensesResult.error) throw expensesResult.error
+          if (creditCardsResult.error) throw creditCardsResult.error
+          if (futureStatementsResult.error) throw futureStatementsResult.error
+          if (profilesResult.error) throw profilesResult.error
 
-      setAccounts(mappedAccounts)
-      setProjects(mappedProjects)
-      setSingleShotIncome(mappedSingleShotIncome)
-      setExpenses(mappedExpenses)
-      setCreditCards(mappedCreditCards)
-      setFutureStatements(mappedFutureStatements)
-      setProfiles(mappedProfiles)
+          // Map database rows to TypeScript types
+          // Type assertions needed because Supabase infers complex types from select strings
+          const mappedAccounts = (accountsResult.data ?? []).map((row) =>
+            mapAccountFromDb(row as unknown as AccountRow)
+          )
+          
+          // Separate projects by type: recurring vs single-shot income
+          const allProjects = projectsResult.data ?? []
+          const recurringProjects = allProjects.filter((p) => p.type === 'recurring' || !p.type)
+          const singleShotIncomeRows = allProjects.filter((p) => p.type === 'single_shot')
+          const mappedProjects = recurringProjects.map(mapProjectFromDb)
+          const mappedSingleShotIncome = singleShotIncomeRows.map(mapSingleShotIncomeFromDb)
+          
+          const mappedExpenses = (expensesResult.data ?? []).map(mapExpenseFromDb)
+          const mappedCreditCards = (creditCardsResult.data ?? []).map((row) =>
+            mapCreditCardFromDb(row as unknown as CreditCardRow)
+          )
+          const mappedFutureStatements = (futureStatementsResult.data ?? []).map((row) =>
+            transformFutureStatementRow(row as FutureStatementRow)
+          )
+          const mappedProfiles = (profilesResult.data ?? []).map((row) =>
+            mapProfileFromDb(row as ProfileRow)
+          )
+
+          setAccounts(mappedAccounts)
+          setProjects(mappedProjects)
+          setSingleShotIncome(mappedSingleShotIncome)
+          setExpenses(mappedExpenses)
+          setCreditCards(mappedCreditCards)
+          setFutureStatements(mappedFutureStatements)
+          setProfiles(mappedProfiles)
+
+          // Success
+          window.clearTimeout(timeoutId)
+          break
+        } catch (err) {
+          // Abort any in-flight requests before retrying
+          controller.abort()
+          window.clearTimeout(timeoutId)
+
+          const isAbort =
+            (err instanceof DOMException && err.name === 'AbortError') ||
+            (err instanceof Error && err.name === 'AbortError')
+
+          const isRetryable = isAbort || (err instanceof TypeError && /fetch/i.test(err.message))
+
+          if (attempt < MAX_ATTEMPTS && isRetryable) {
+            console.warn(`[FinanceData] Fetch attempt ${attempt} failed (${isAbort ? 'timeout' : 'network'}); retrying...`)
+            await new Promise((resolve) => setTimeout(resolve, 300))
+            continue
+          }
+
+          throw err
+        }
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Falha ao carregar dados'
+      const isAbort =
+        (err instanceof DOMException && err.name === 'AbortError') ||
+        (err instanceof Error && err.name === 'AbortError')
+      const message = isAbort ? 'A requisição demorou muito. Por favor, tente novamente.' : (err instanceof Error ? err.message : 'Falha ao carregar dados')
       setError(message)
       console.error('Error fetching finance data:', err)
     } finally {
