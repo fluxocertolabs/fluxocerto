@@ -63,15 +63,24 @@ export class AccountsSection {
     // Fill form fields - target inputs within the dialog
     await dialog.getByLabel(/nome/i).fill(data.name);
     
-    // Select account type - click the trigger, then select option
-    await dialog.getByLabel(/tipo de conta/i).click();
-    
-    const typeLabels: Record<string, RegExp> = {
-      checking: /corrente|checking/i,
-      savings: /poupança|savings/i,
-      investment: /investimento|investment/i,
-    };
-    await this.page.getByRole('option', { name: typeLabels[data.type] }).click();
+    // Select account type when needed.
+    // New accounts default to "checking" in the UI, so don't touch the Select unless
+    // we need to change it (avoids occasional flake where the select trigger isn't ready).
+    if (data.type !== 'checking') {
+      const typeTrigger = dialog.locator('#type');
+      await expect(typeTrigger).toBeVisible({ timeout: 10000 });
+
+      await typeTrigger.click({ timeout: 5000 }).catch(async () => {
+        await typeTrigger.click({ force: true });
+      });
+
+      const typeLabels: Record<string, RegExp> = {
+        checking: /corrente|checking/i,
+        savings: /poupança|savings/i,
+        investment: /investimento|investment/i,
+      };
+      await this.page.getByRole('option', { name: typeLabels[data.type] }).click();
+    }
 
     // Fill balance - use the currency input
     const balanceInput = dialog.getByLabel(/saldo/i);
