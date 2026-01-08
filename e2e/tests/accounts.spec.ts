@@ -31,7 +31,8 @@ test.describe('Account Management', () => {
 
     const accounts = managePage.accounts();
     // Use worker-specific name for UI-created data to avoid conflicts
-    const accountName = `Nubank W${workerContext.workerIndex}`;
+    const uniqueId = Date.now();
+    const accountName = `Nubank W${workerContext.workerIndex} ${uniqueId}`;
     await accounts.createAccount({
       name: accountName,
       type: 'checking',

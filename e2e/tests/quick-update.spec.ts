@@ -5,6 +5,7 @@
 
 import { test, expect } from '../fixtures/test-base';
 import { createAccount, createCreditCard } from '../utils/test-data';
+import { executeSQL } from '../utils/supabase-admin';
 
 test.describe('Quick Update Modal', () => {
   // Tests now run in parallel with per-worker data prefixing for isolation
@@ -16,6 +17,27 @@ test.describe('Quick Update Modal', () => {
     await db.resetDatabase()
     await db.ensureTestUser()
   }
+  
+  // Ensure onboarding state is 'completed' before each test.
+  // This is necessary because the provisioning-recovery test (which runs before this suite
+  // in the full test run) can leave the onboarding state in 'in_progress' due to the
+  // self-heal flow triggering the onboarding wizard.
+  test.beforeEach(async ({ db, workerContext }) => {
+    const { executeSQLWithResult } = await import('../utils/supabase-admin');
+    const groupId = await db.getWorkerGroupId();
+    const userIdRows = await executeSQLWithResult<{ id: string }>(
+      `SELECT id FROM auth.users WHERE email = '${workerContext.email.toLowerCase()}' LIMIT 1`
+    );
+    const userId = userIdRows[0]?.id;
+    
+    if (userId && groupId) {
+      await executeSQL(`
+        UPDATE public.onboarding_states 
+        SET status = 'completed', current_step = 'done', completed_at = now()
+        WHERE user_id = '${userId}' AND group_id = '${groupId}'
+      `);
+    }
+  });
 
   test('T071: open Quick Update → all accounts and credit cards listed', async ({
     page,
@@ -587,3 +609,4 @@ test.describe('Quick Update Modal', () => {
     await db.deleteProfileByEmail(`update-owner-${uniqueId}@test.local`);
   });
 });
+

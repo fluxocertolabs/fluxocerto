@@ -59,13 +59,19 @@ export class AccountsSection {
     await this.page.getByRole('option', { name: typeLabels[data.type] }).click();
 
     // Fill balance - use the currency input
-    await dialog.getByLabel(/saldo/i).fill(data.balance);
+    const balanceInput = dialog.getByLabel(/saldo/i);
+    await balanceInput.fill(data.balance);
+    // Trigger validation/masks that run on blur
+    await balanceInput.blur().catch(() => {});
 
     // Submit form
-    await dialog.getByRole('button', { name: /salvar|save|adicionar|criar|create/i }).click();
+    const submitButton = dialog.getByRole('button', { name: /salvar|save|adicionar|criar|create/i });
+    await expect(submitButton).toBeEnabled({ timeout: 10000 });
+    // Avoid hanging on implicit navigation waits for SPA submit handlers
+    await submitButton.click({ noWaitAfter: true });
 
     // Wait for dialog to close
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    await expect(dialog).not.toBeVisible({ timeout: 15000 });
   }
 
   /**

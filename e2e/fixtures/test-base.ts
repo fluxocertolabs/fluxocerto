@@ -26,6 +26,14 @@ import { existsSync } from 'fs';
 type TestFixtures = {
   /** Worker context with isolation information */
   workerContext: IWorkerContext;
+  /**
+   * Internal auto fixture: keep worker-user UI unblocked across the suite.
+   *
+   * Some specs intentionally mutate onboarding/tour state (e.g. recovery/self-heal flows).
+   * Because our DB/auth is worker-scoped, those mutations can leak into subsequent tests
+   * executed by the same worker and cause overlays to block clicks.
+   */
+  _workerUiState: void;
   /** Database fixture scoped to worker (uses group-based isolation) */
   db: WorkerDatabaseFixture;
   /** Auth fixture scoped to worker */
@@ -186,6 +194,40 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await use(dbFixture);
     },
     { scope: 'worker' },
+  ],
+
+  // Auto-run per test to ensure onboarding/tour overlays never block interactions
+  _workerUiState: [
+    async ({ workerCtx, db }, use) => {
+      const userId = await getUserIdFromEmail(workerCtx.email);
+      const groupId = await db.getWorkerGroupId();
+
+      await executeSQL(`
+        INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+        VALUES ('${userId}', '${groupId}', 'completed', 'done', now(), now())
+        ON CONFLICT (user_id, group_id) DO UPDATE
+        SET status = EXCLUDED.status,
+            current_step = EXCLUDED.current_step,
+            auto_shown_at = EXCLUDED.auto_shown_at,
+            completed_at = EXCLUDED.completed_at
+      `);
+
+      await executeSQL(`
+        INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+        VALUES
+          ('${userId}', 'dashboard', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'manage', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'history', 'dismissed', 1, now(), NULL)
+        ON CONFLICT (user_id, tour_key) DO UPDATE
+        SET status = EXCLUDED.status,
+            version = EXCLUDED.version,
+            dismissed_at = EXCLUDED.dismissed_at,
+            completed_at = NULL
+      `);
+
+      await use();
+    },
+    { auto: true },
   ],
 
   // Auth fixture scoped to worker

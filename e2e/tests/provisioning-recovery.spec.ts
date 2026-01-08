@@ -78,9 +78,16 @@ test.describe('Provisioning Recovery', () => {
   test('orphaned user auto-heals via ensure_current_user_group on dashboard', async ({
     dashboardPage,
     workerContext,
+    db,
   }) => {
     const originalProfile = await getWorkerProfile(workerContext.email);
     expect(originalProfile).not.toBeNull();
+    
+    // Get user ID for onboarding state restoration in finally block
+    const userIdRows = await executeSQLWithResult<{ id: string }>(
+      `SELECT id FROM auth.users WHERE email = '${escapeSqlLiteral(workerContext.email.toLowerCase())}' LIMIT 1`
+    );
+    const userId = userIdRows.length > 0 ? userIdRows[0].id : null;
 
     try {
       // Orphan the user (remove group association)
@@ -97,6 +104,54 @@ test.describe('Provisioning Recovery', () => {
       // Restore the user's group association for subsequent tests
       if (originalProfile) {
         await restoreUserProfile(workerContext.email, originalProfile);
+      }
+      
+      // CRITICAL: Clean up ALL onboarding states for this user.
+      // When the user is orphaned and self-heals, a NEW group is created (id = auth.uid()).
+      // The app creates an onboarding state for this new group. We must:
+      // 1. Set the original group's onboarding state to 'completed'
+      // 2. Delete the self-healed group's onboarding state (and the group itself)
+      const groupId = originalProfile?.group_id;
+      
+      if (userId && groupId) {
+        // Delete the self-healed group (id = userId) if it exists and is different from original
+        if (userId !== groupId) {
+          // Delete onboarding state for the self-healed group
+          await executeSQL(`
+            DELETE FROM public.onboarding_states 
+            WHERE user_id = '${userId}' AND group_id = '${userId}'
+          `);
+          
+          // Delete the self-healed group (this cascades to related data)
+          await executeSQL(`
+            DELETE FROM public.groups WHERE id = '${userId}'
+          `);
+        }
+        
+        // Reset the original group's onboarding state to 'completed'
+        await executeSQL(`
+          INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+          VALUES ('${userId}', '${groupId}', 'completed', 'done', now(), now())
+          ON CONFLICT (user_id, group_id) DO UPDATE
+          SET status = 'completed',
+              current_step = 'done',
+              auto_shown_at = COALESCE(onboarding_states.auto_shown_at, now()),
+              completed_at = now()
+        `);
+        
+        // Also reset tour states to dismissed
+        await executeSQL(`
+          INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+          VALUES
+            ('${userId}', 'dashboard', 'dismissed', 1, now(), NULL),
+            ('${userId}', 'manage', 'dismissed', 1, now(), NULL),
+            ('${userId}', 'history', 'dismissed', 1, now(), NULL)
+          ON CONFLICT (user_id, tour_key) DO UPDATE
+          SET status = 'dismissed',
+              version = 1,
+              dismissed_at = now(),
+              completed_at = NULL
+        `);
       }
     }
   });

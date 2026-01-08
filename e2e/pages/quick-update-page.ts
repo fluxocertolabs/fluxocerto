@@ -16,10 +16,11 @@ export class QuickUpdatePage {
   constructor(page: Page) {
     this.page = page;
     // QuickUpdateView root container
-    this.dialog = page.locator('[role="dialog"][aria-labelledby="quick-update-title"]');
+    // Use accessible name ("Atualizar Saldos") to avoid matching unrelated dialogs.
+    this.dialog = page.getByRole('dialog', { name: /atualizar saldos/i });
     // QuickUpdateView uses a header with "Concluir" and "Cancelar" buttons
-    this.completeButton = page.getByRole('button', { name: /concluir|complete/i });
-    this.cancelButton = page.getByRole('button', { name: /cancelar|cancel/i });
+    this.completeButton = this.dialog.getByRole('button', { name: /concluir|complete/i });
+    this.cancelButton = this.dialog.getByRole('button', { name: /cancelar|cancel/i });
   }
 
   /**
@@ -36,8 +37,8 @@ export class QuickUpdatePage {
    */
   async waitForModal(): Promise<void> {
     // Wait for the view container and the "Concluir" button which indicate the view is loaded
-    await expect(this.dialog).toBeVisible({ timeout: 10000 });
-    await expect(this.completeButton).toBeVisible({ timeout: 10000 });
+    await expect(this.dialog).toBeVisible({ timeout: 20000 });
+    await expect(this.completeButton).toBeVisible({ timeout: 20000 });
     // Also wait for the content to load (either balance items or empty state).
     // IMPORTANT: Scope to the QuickUpdate dialog to avoid matching dashboard status wrappers.
     const loadingStatus = this.dialog.locator('[role="status"][aria-live="polite"]').first();

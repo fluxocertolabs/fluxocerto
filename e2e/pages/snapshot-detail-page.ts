@@ -81,11 +81,15 @@ export class SnapshotDetailPage {
 
   /**
    * Check if the historical banner is displayed
-   * Waits briefly for UI to stabilize
+   * Waits for UI to stabilize (navigation to /history/:id can render the URL before data finishes loading)
    */
-  async hasHistoricalBanner(): Promise<boolean> {
-    await this.page.waitForTimeout(500);
-    return this.historicalBanner.isVisible();
+  async hasHistoricalBanner(timeout: number = 10000): Promise<boolean> {
+    try {
+      await this.historicalBanner.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

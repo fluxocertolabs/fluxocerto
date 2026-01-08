@@ -423,7 +423,8 @@ function ProfileStep({
                 })
               }
             }}
-            disabled={isSubmitting || isGroupLoading}
+            // Profile name update does not depend on group data; don't block typing while group loads.
+            disabled={isSubmitting}
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? 'profile-name-error' : undefined}
             className={cn(
@@ -462,7 +463,7 @@ function ProfileStep({
       </div>
       <StepNavigation
         onBack={onBack}
-        isSubmitting={isSubmitting || isGroupLoading}
+        isSubmitting={isSubmitting}
         isFirstStep={isFirstStep}
       />
     </form>
