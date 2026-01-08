@@ -18,17 +18,31 @@ export class AccountsSection {
   /**
    * Get the add button - uses the one in the header (first one), not the empty state
    */
-  private get addButton(): Locator {
-    // Target the button in the header area, not the one in the empty state
-    // The header button is outside the TabsContent area
-    return this.page.getByRole('button', { name: /adicionar conta|add account|nova conta/i }).first();
+  private get addButtons(): Locator {
+    // There can be multiple "Adicionar Conta" buttons (header + empty state).
+    // We intentionally return the *collection* and pick the first visible one at runtime.
+    return this.page.getByRole('button', { name: /adicionar conta|add account|nova conta/i });
   }
 
   /**
    * Click add new account button to open form
    */
   async clickAdd(): Promise<void> {
-    await this.addButton.click();
+    const buttons = this.addButtons;
+    await expect(async () => {
+      const count = await buttons.count();
+      for (let i = 0; i < count; i++) {
+        const btn = buttons.nth(i);
+        if (await btn.isVisible().catch(() => false)) {
+          await btn.scrollIntoViewIfNeeded().catch(() => {});
+          await btn.click({ timeout: 5000, noWaitAfter: true }).catch(async () => {
+            await btn.click({ force: true, noWaitAfter: true });
+          });
+          return;
+        }
+      }
+      throw new Error('No visible "Adicionar Conta" button found yet');
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
   }
 
   /**
@@ -39,17 +53,18 @@ export class AccountsSection {
     type: 'checking' | 'savings' | 'investment';
     balance: string;
   }): Promise<void> {
-    await this.clickAdd();
-
     // Wait for dialog to open
-    const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    const dialog = this.page.getByRole('dialog', { name: /adicionar conta/i });
+    await expect(async () => {
+      await this.clickAdd();
+      await expect(dialog).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
 
     // Fill form fields - target inputs within the dialog
     await dialog.getByLabel(/nome/i).fill(data.name);
     
     // Select account type - click the trigger, then select option
-    await dialog.getByRole('combobox').first().click();
+    await dialog.getByLabel(/tipo de conta/i).click();
     
     const typeLabels: Record<string, RegExp> = {
       checking: /corrente|checking/i,
