@@ -219,8 +219,9 @@ export function useOnboardingState(): UseOnboardingStateReturn {
         if (!mounted) return
         setHasGroupAssociation(false)
       } finally {
-        if (!mounted) return
-        setIsGroupAssociationLoading(false)
+        if (mounted) {
+          setIsGroupAssociationLoading(false)
+        }
       }
     }
 
