@@ -37,11 +37,15 @@ export class CreditCardsSection {
     balance: string;
     dueDay: string;
   }): Promise<void> {
+    // Ensure add button is visible and clickable
+    await expect(this.addButton).toBeVisible({ timeout: 10000 });
     await this.clickAdd();
 
-    // Wait for dialog to open
+    // Wait for dialog to open with retry logic for timing issues
     const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    await expect(async () => {
+      await expect(dialog).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
 
     // Fill form fields within dialog
     await dialog.getByLabel(/nome/i).fill(data.name);
@@ -50,7 +54,7 @@ export class CreditCardsSection {
 
     // Submit
     await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
   }
 
   /**

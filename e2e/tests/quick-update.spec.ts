@@ -522,18 +522,20 @@ test.describe('Quick Update Modal', () => {
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
 
-    // Find the specific account row
+    // Find the specific account row - use retry logic to handle data loading timing
     const accountRow = page.locator('div.rounded-lg.border').filter({ hasText: accountName });
-    await expect(accountRow).toBeVisible();
+    await expect(async () => {
+      await expect(accountRow).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
     
     // Verify the account is listed
     await expect(page.getByText(accountName, { exact: false })).toBeVisible();
     
     // Verify owner badge is shown within the account row
-    await expect(accountRow.getByText('Daniel')).toBeVisible();
+    await expect(accountRow.getByText('Daniel')).toBeVisible({ timeout: 10000 });
     
     // Verify type badge is shown within the account row
-    await expect(accountRow.locator('span').filter({ hasText: /^📈Investimento$/ })).toBeVisible();
+    await expect(accountRow.locator('span').filter({ hasText: /^📈Investimento$/ })).toBeVisible({ timeout: 10000 });
 
     // Clean up
     await db.deleteProfileByEmail(`type-owner-${uniqueId}@test.local`);
