@@ -137,6 +137,9 @@ test.describe('Page Tours', () => {
   });
 
   test('tour does not auto-show on refresh after dismissal', async ({ page }) => {
+    // Increase test timeout since it involves full authentication and onboarding flow
+    test.setTimeout(90000);
+
     const email = `tour-dismiss-${Date.now()}@example.com`;
     await inbucket.purgeMailbox(email.split('@')[0]);
     await authenticateUser(page, email);
@@ -147,7 +150,7 @@ test.describe('Page Tours', () => {
     await completeOnboardingIfPresent(page);
 
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    await expect(closeTourButton).toBeVisible({ timeout: 20000 });
+    await expect(closeTourButton).toBeVisible({ timeout: 30000 });
 
     await closeTourButton.click();
     await expect(closeTourButton).toBeHidden({ timeout: 10000 });

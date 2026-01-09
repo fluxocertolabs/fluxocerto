@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 type PreviewAuthBypassResponse =
   | { accessToken: string; refreshToken: string; email: string }
@@ -106,7 +106,7 @@ export default async function handler(req: PreviewAuthBypassRequest, res: Previe
       return sendJson(res, 500, { error: 'Missing env var: SUPABASE_SERVICE_ROLE_KEY' })
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    const adminClient: SupabaseClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -114,6 +114,8 @@ export default async function handler(req: PreviewAuthBypassRequest, res: Previe
       },
     })
 
+    // Use admin API to generate a magic link for the configured email
+    // Note: This requires service_role key and should only run in trusted server environment
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email,
