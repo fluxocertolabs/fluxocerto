@@ -65,24 +65,23 @@ export class AccountsSection {
       await tourCloseButton.click({ timeout: 2000 }).catch(() => {});
     }
 
-    // Wait for the *account create* dialog to open.
-    // IMPORTANT: The TourRunner tooltip can also be role=dialog. We avoid false positives by
-    // keying off the *form field label* ("Nome da Conta"), which only exists in the real AccountForm.
-    const nameInput = this.page.getByLabel(/nome da conta/i);
-    // Anchor all subsequent selectors to the *actual* dialog that contains the account form,
-    // not just any dialog with a similar accessible name (TourRunner uses role=dialog too).
-    const dialog = nameInput.locator('xpath=ancestor::*[@role="dialog"][1]');
+    // Target the account dialog by its unique title ("Adicionar Conta").
+    // IMPORTANT: Don't use XPath ancestor queries — they're fragile in Playwright.
+    // Instead, use the dialog's accessible name which comes from the DialogTitle.
+    const dialog = this.page.getByRole('dialog', { name: /adicionar conta/i });
+    const nameInput = dialog.getByLabel(/nome da conta/i);
 
     await expect(async () => {
       // If the dialog is already open, don't click anything.
-      if (await nameInput.isVisible().catch(() => false)) return;
+      if (await dialog.isVisible().catch(() => false)) return;
 
       // Clear any open popovers/menus that might intercept clicks (safe no-op when nothing is open).
       await this.page.keyboard.press('Escape').catch(() => {});
+      await this.page.waitForTimeout(100); // Let the UI settle
 
       await this.clickAdd();
-      await expect(nameInput).toBeVisible({ timeout: 5000 });
-    }).toPass({ timeout: 20000, intervals: [250, 500, 1000, 2000] });
+      await expect(dialog).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 30000, intervals: [500, 1000, 2000, 3000] });
 
     // Fill form fields - target inputs within the dialog
     await expect(nameInput).toBeVisible({ timeout: 10000 });

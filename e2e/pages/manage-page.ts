@@ -48,18 +48,38 @@ export class ManagePage {
   }
 
   /**
-   * Navigate to manage page and wait for data to fully load
+   * Navigate to manage page and wait for data to fully load.
+   * Includes retry logic for cases where the page fails to load properly under heavy parallel load.
    */
   async goto(): Promise<void> {
-    // Avoid waiting for full page load - SPA routes + long-lived connections (Realtime/WebSockets)
-    // can make `waitUntil: 'load'` slower/flakier than needed for E2E readiness.
-    const start = Date.now();
-    await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
-    const duration = Date.now() - start;
-    if (duration > 5000) {
-      console.warn(`[ManagePage] Slow navigation to /manage: ${duration}ms`);
+    let attempts = 0;
+    const maxAttempts = 2;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        // Avoid waiting for full page load - SPA routes + long-lived connections (Realtime/WebSockets)
+        // can make `waitUntil: 'load'` slower/flakier than needed for E2E readiness.
+        const start = Date.now();
+        await this.page.goto('/manage', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        const duration = Date.now() - start;
+        if (duration > 5000) {
+          console.warn(`[ManagePage] Slow navigation to /manage: ${duration}ms`);
+        }
+        await this.waitForReady();
+        return; // Success
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`[ManagePage] goto attempt ${attempts}/${maxAttempts} failed: ${errorMsg}`);
+
+        if (attempts >= maxAttempts) {
+          throw error;
+        }
+
+        // Wait before retrying
+        await this.page.waitForTimeout(500).catch(() => {});
+      }
     }
-    await this.waitForReady();
   }
 
   /**
@@ -176,19 +196,21 @@ export class ManagePage {
           console.warn(`[ManagePage] ErrorState detected on /manage; clicking retry (attempt ${retryAttempts})`);
           await errorRetryButton.click({ timeout: 5000 }).catch(() => {});
           // Give the app a moment to transition back to skeleton/content.
-          await this.page.waitForTimeout(750);
+          await this.page.waitForTimeout(1000);
         }
 
         // If we are "stuck" for a long time without ever rendering the tabs,
-        // do a single soft reload. This is a pragmatic flake killer under heavy
+        // do a soft reload. This is a pragmatic flake killer under heavy
         // parallel load (cold cache + Supabase/Realtime backpressure).
         const elapsed = Date.now() - waitStart;
-        // In rare cases (under heavy parallel load), the Manage skeleton can get "stuck"
-        // and tabs never render even though the heading is visible. A single soft reload
-        // is a pragmatic flake killer in BOTH modes; in per-test-context mode we allow
-        // a bit longer before reloading due to cold-cache asset fetching.
-        const reloadThresholdMs = this.isPerTestContext ? 25000 : 12000;
-        if (elapsed > reloadThresholdMs && reloadAttempts < 1) {
+        // Allow up to 2 reload attempts to recover from stuck states.
+        // First reload at 10s, second reload at 25s.
+        const firstReloadThreshold = 10000;
+        const secondReloadThreshold = 25000;
+        if (
+          (elapsed > firstReloadThreshold && reloadAttempts < 1) ||
+          (elapsed > secondReloadThreshold && reloadAttempts < 2)
+        ) {
           reloadAttempts += 1;
           console.warn(`[ManagePage] Tabs still not visible after ${elapsed}ms; reloading /manage (attempt ${reloadAttempts})`);
           try {
@@ -196,12 +218,12 @@ export class ManagePage {
           } catch {
             await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
           }
-          await this.page.waitForTimeout(750);
+          await this.page.waitForTimeout(1000);
         }
 
         throw new Error('Manage tabs not visible yet');
       }).toPass({
-        timeout: this.isPerTestContext ? 60000 : 25000,
+        timeout: 50000,
         intervals: [500, 1000, 2000],
       });
     } catch {
