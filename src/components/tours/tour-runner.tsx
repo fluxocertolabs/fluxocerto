@@ -50,7 +50,10 @@ export function TourRunner({
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition | null>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  const maskId = useId()
+  const instanceId = useId()
+  const maskId = `tour-mask-${instanceId}`
+  const titleId = `tour-title-${instanceId}`
+  const contentId = `tour-content-${instanceId}`
   const currentStep = steps[currentStepIndex]
   const isFirstStep = currentStepIndex === 0
   const isLastStep = currentStepIndex === steps.length - 1
@@ -179,12 +182,19 @@ export function TourRunner({
     if (!isActive) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't hijack keys when user is typing in an input/textarea/contenteditable
+      const el = e.target instanceof Element ? e.target : null
+      const isEditable = !!el?.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]')
+      if (isEditable) return
+
       switch (e.key) {
         case 'Escape':
+          e.preventDefault()
           onDismiss()
           break
         case 'ArrowRight':
         case 'Enter':
+          e.preventDefault()
           if (isLastStep) {
             onComplete()
           } else {
@@ -192,6 +202,7 @@ export function TourRunner({
           }
           break
         case 'ArrowLeft':
+          e.preventDefault()
           if (!isFirstStep) {
             onPrevious()
           }
@@ -275,8 +286,8 @@ export function TourRunner({
         }}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="tour-title"
-        aria-describedby="tour-content"
+        aria-labelledby={titleId}
+        aria-describedby={contentId}
       >
         {/* Arrow */}
         {tooltipPosition && (
@@ -313,10 +324,10 @@ export function TourRunner({
 
         {/* Content */}
         <div className="pr-6">
-          <h3 id="tour-title" className="font-semibold text-base mb-1">
+          <h3 id={titleId} className="font-semibold text-base mb-1">
             {currentStep.title}
           </h3>
-          <p id="tour-content" className="text-sm text-muted-foreground mb-4">
+          <p id={contentId} className="text-sm text-muted-foreground mb-4">
             {currentStep.content}
           </p>
         </div>

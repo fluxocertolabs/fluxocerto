@@ -135,8 +135,13 @@ export function ManagePage() {
       url: window.location.href,
     }, null, 2)
     navigator.clipboard.writeText(payload)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch((err) => {
+        console.error('Failed to copy diagnostics:', err)
+      })
   }, [groupError])
   const store = useFinanceStore()
 

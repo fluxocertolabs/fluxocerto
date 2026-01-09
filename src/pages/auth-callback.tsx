@@ -58,8 +58,13 @@ export function AuthCallbackPage() {
 
   const handleCopyDiagnostics = useCallback((payload: string) => {
     navigator.clipboard.writeText(payload)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch((err) => {
+        console.error('Failed to copy diagnostics:', err)
+      })
   }, [])
 
   useEffect(() => {

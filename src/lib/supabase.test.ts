@@ -401,25 +401,27 @@ describe('injectDevSession', () => {
 // the error mapping logic. Full integration tests are in E2E.
 // The actual RPC calls require a running Supabase instance.
 
-describe('ensureCurrentUserGroup error mapping', () => {
-  // These tests verify the error code to message mapping defined in the function
+describe('handleSupabaseError generic fallback for provisioning codes', () => {
+  // These tests verify that provisioning-specific codes (P0001, P0002) fall through
+  // to generic error handling in handleSupabaseError. The special handling for these
+  // codes exists in ensureCurrentUserGroup, not in handleSupabaseError.
   
-  it('maps P0001 error to authentication message', () => {
+  it('handles P0001 error code via generic fallback', () => {
     // P0001 is raised when user is not authenticated
+    // handleSupabaseError doesn't have special mapping for it
     const result = handleSupabaseError({ code: 'P0001', message: 'not authenticated' })
     
-    // The function should return a failure result
     expect(result.success).toBe(false)
-    // Note: P0001 is handled specially in ensureCurrentUserGroup, not in handleSupabaseError
-    // This test verifies that unknown codes fall through to generic handling
+    // Falls through to message-based handling
   })
 
-  it('maps P0002 error to email not found message', () => {
+  it('handles P0002 error code via generic fallback', () => {
     // P0002 is raised when email is not found
+    // handleSupabaseError doesn't have special mapping for it
     const result = handleSupabaseError({ code: 'P0002', message: 'email not found' })
     
     expect(result.success).toBe(false)
-    // Note: P0002 is handled specially in ensureCurrentUserGroup, not in handleSupabaseError
+    // Falls through to message-based handling
   })
 })
 

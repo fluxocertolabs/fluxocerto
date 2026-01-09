@@ -57,12 +57,12 @@ export function resetAdminClient(): void {
 
 /**
  * Get user ID from email (for seeding test data with correct user_id)
- * Uses direct Postgres query to avoid pagination limits in admin.listUsers()
+ * Uses direct Postgres query with parameterized input to avoid SQL injection
  */
 export async function getUserIdFromEmail(email: string): Promise<string> {
-  const escapedEmail = email.replace(/'/g, "''");
   const rows = await executeSQLWithResult<{ id: string }>(
-    `SELECT id FROM auth.users WHERE email = '${escapedEmail}' LIMIT 1`
+    `SELECT id FROM auth.users WHERE email = $1 LIMIT 1`,
+    [email]
   );
 
   if (rows.length === 0) {
@@ -75,13 +75,15 @@ export async function getUserIdFromEmail(email: string): Promise<string> {
 /**
  * Execute raw SQL using direct postgres connection
  * This is needed for DDL operations and schema-specific queries
+ * @param sql - SQL query string (use $1, $2, etc. for parameterized queries)
+ * @param params - Optional array of parameter values for parameterized queries
  */
-export async function executeSQL(sql: string): Promise<void> {
+export async function executeSQL(sql: string, params?: unknown[]): Promise<void> {
   const pgClient = new PgClient(PG_CONFIG);
 
   try {
     await pgClient.connect();
-    await pgClient.query(sql);
+    await pgClient.query(sql, params);
   } finally {
     await pgClient.end();
   }
@@ -89,13 +91,15 @@ export async function executeSQL(sql: string): Promise<void> {
 
 /**
  * Execute raw SQL and return results
+ * @param sql - SQL query string (use $1, $2, etc. for parameterized queries)
+ * @param params - Optional array of parameter values for parameterized queries
  */
-export async function executeSQLWithResult<T = any>(sql: string): Promise<T[]> {
+export async function executeSQLWithResult<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
   const pgClient = new PgClient(PG_CONFIG);
 
   try {
     await pgClient.connect();
-    const result = await pgClient.query(sql);
+    const result = await pgClient.query(sql, params);
     return result.rows as T[];
   } finally {
     await pgClient.end();

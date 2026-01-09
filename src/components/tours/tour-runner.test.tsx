@@ -478,7 +478,9 @@ describe('TourRunner', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', 'tour-title')
+        const dialog = screen.getByRole('dialog')
+        const labelledBy = dialog.getAttribute('aria-labelledby')
+        expect(labelledBy).toMatch(/^tour-title-/)
       })
     })
 
@@ -492,7 +494,9 @@ describe('TourRunner', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByRole('dialog')).toHaveAttribute('aria-describedby', 'tour-content')
+        const dialog = screen.getByRole('dialog')
+        const describedBy = dialog.getAttribute('aria-describedby')
+        expect(describedBy).toMatch(/^tour-content-/)
       })
     })
   })

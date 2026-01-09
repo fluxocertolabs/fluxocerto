@@ -221,8 +221,7 @@ describe('TOURS record', () => {
     })
   })
 
-  it('all tours have unique versions (can be same if not updated)', () => {
-    // This test ensures versions are positive integers
+  it('all tours have positive integer versions', () => {
     Object.values(TOURS).forEach(tour => {
       expect(Number.isInteger(tour.version)).toBe(true)
       expect(tour.version).toBeGreaterThan(0)
@@ -385,22 +384,24 @@ describe('TourStep structure validation', () => {
       const contentLower = step.content.toLowerCase()
       const titleLower = step.title.toLowerCase()
       
-      // Should not contain common English words
+      // Should not contain common English words (using word boundaries for accurate detection)
       englishWords.forEach(word => {
-        expect(contentLower).not.toContain(` ${word} `)
-        expect(titleLower).not.toContain(` ${word} `)
+        const wordBoundaryRegex = new RegExp(`\\b${word}\\b`, 'i')
+        expect(contentLower).not.toMatch(wordBoundaryRegex)
+        expect(titleLower).not.toMatch(wordBoundaryRegex)
       })
     })
   })
 
   it('all steps have reasonable content length', () => {
+    const MAX_TITLE_LENGTH = 50 // Keep titles concise
+    const MAX_CONTENT_LENGTH = 300 // Descriptive but not overwhelming
+    const MIN_CONTENT_LENGTH = 20 // Ensure meaningful content
+
     allSteps.forEach(step => {
-      // Title should be concise (< 50 chars)
-      expect(step.title.length).toBeLessThan(50)
-      // Content should be descriptive but not too long (< 300 chars)
-      expect(step.content.length).toBeLessThan(300)
-      // Content should be meaningful (> 20 chars)
-      expect(step.content.length).toBeGreaterThan(20)
+      expect(step.title.length).toBeLessThan(MAX_TITLE_LENGTH)
+      expect(step.content.length).toBeLessThan(MAX_CONTENT_LENGTH)
+      expect(step.content.length).toBeGreaterThan(MIN_CONTENT_LENGTH)
     })
   })
 
@@ -456,7 +457,3 @@ describe('Tour definition consistency', () => {
     expect(totalSteps).toBe(11) // 5 + 5 + 1
   })
 })
-
-
-
-

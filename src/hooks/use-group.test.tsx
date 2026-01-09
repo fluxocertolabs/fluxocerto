@@ -10,6 +10,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useGroup } from './use-group'
+import type { AuthState } from '@/types/auth'
+
+// Minimal test user for mocking - only includes fields actually used by tests
+type TestUser = { id: string; email: string }
 
 // Mock dependencies
 vi.mock('@/hooks/use-auth', () => ({
@@ -48,8 +52,8 @@ describe('useGroup', () => {
     mockedUseAuth.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
-      user: { id: 'test-user-id', email: 'test@example.com' } as never,
-    })
+      user: { id: 'test-user-id', email: 'test@example.com' } as TestUser,
+    } as AuthState)
 
     mockIsSupabaseConfigured.mockReturnValue(true)
 

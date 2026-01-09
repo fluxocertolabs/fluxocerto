@@ -1181,8 +1181,6 @@ export async function clearOnboardingStateForGroup(groupId: string): Promise<voi
  * This will cause tours to appear as "not seen" on next page load.
  */
 export async function clearTourStateForGroup(groupId: string): Promise<void> {
-  const escapedGroupId = groupId.replace(/'/g, "''");
-
   // NOTE:
   // - `tour_states` is keyed by (user_id, tour_key) and does NOT have `group_id`.
   // - `profiles.id` is NOT the auth user id (it originated from `allowed_emails`), so we can't
@@ -1193,11 +1191,11 @@ export async function clearTourStateForGroup(groupId: string): Promise<void> {
     await executeSQL(`
       DELETE FROM public.tour_states ts
       USING public.profiles p, auth.users u
-      WHERE p.group_id = '${escapedGroupId}'
+      WHERE p.group_id = $1
         AND p.email IS NOT NULL
         AND u.email = p.email::text
         AND ts.user_id = u.id
-    `);
+    `, [groupId]);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (!message.includes('does not exist')) {

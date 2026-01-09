@@ -325,12 +325,16 @@ export function useOnboardingState(): UseOnboardingStateReturn {
   }, [closeWizardUi])
 
   const dismiss = useCallback(async () => {
+    setError(null)
     const result = await upsertOnboardingState({
       status: 'dismissed',
       dismissedAt: new Date(),
     })
     if (result.success) {
       setState(result.data)
+    } else {
+      // Log error but still close wizard to honor user intent
+      console.warn('Failed to persist onboarding dismissal:', result.error)
     }
     closeWizardUi()
   }, [closeWizardUi])

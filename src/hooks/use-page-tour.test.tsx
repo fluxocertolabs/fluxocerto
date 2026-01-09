@@ -13,6 +13,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { usePageTour } from './use-page-tour'
+import type { AuthState } from '@/types/auth'
+
+// Minimal test user for mocking - only includes fields actually used by tests
+type TestUser = { id: string; email: string }
 
 // Mock dependencies
 vi.mock('@/hooks/use-auth', () => ({
@@ -85,12 +89,12 @@ describe('usePageTour', () => {
     mockedUseAuth.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
-      user: { id: 'test-user-id', email: 'test@example.com' } as never,
-    })
+      user: { id: 'test-user-id', email: 'test@example.com' } as TestUser,
+    } as AuthState)
 
     mockedUseOnboardingStore.mockImplementation((selector) => {
       const state = { isWizardOpen: false, openWizard: vi.fn(), closeWizard: vi.fn() }
-      return selector ? selector(state as never) : state
+      return selector ? selector(state) : state
     })
 
     mockedUseTourStore.mockReturnValue({
@@ -369,7 +373,7 @@ describe('usePageTour', () => {
     it('does not auto-show when onboarding wizard is open', async () => {
       mockedUseOnboardingStore.mockImplementation((selector) => {
         const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn() }
-        return selector ? selector(state as never) : state
+        return selector ? selector(state) : state
       })
 
       mockGetTourState.mockResolvedValue({ success: true, data: null })
@@ -389,7 +393,7 @@ describe('usePageTour', () => {
       // Start with wizard closed
       mockedUseOnboardingStore.mockImplementation((selector) => {
         const state = { isWizardOpen: false, openWizard: vi.fn(), closeWizard: vi.fn() }
-        return selector ? selector(state as never) : state
+        return selector ? selector(state) : state
       })
 
       const { result, rerender } = renderHook(() => usePageTour('dashboard'))
@@ -406,7 +410,7 @@ describe('usePageTour', () => {
       // Now open the wizard
       mockedUseOnboardingStore.mockImplementation((selector) => {
         const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn() }
-        return selector ? selector(state as never) : state
+        return selector ? selector(state) : state
       })
 
       rerender()
@@ -463,7 +467,7 @@ describe('usePageTour', () => {
     it('clears trigger but does not start tour when wizard is open', async () => {
       mockedUseOnboardingStore.mockImplementation((selector) => {
         const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn() }
-        return selector ? selector(state as never) : state
+        return selector ? selector(state) : state
       })
 
       mockGetTourState.mockResolvedValue({
