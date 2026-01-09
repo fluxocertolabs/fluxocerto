@@ -73,8 +73,6 @@ describe('useOnboardingState', () => {
       isAuthenticated: true,
       isLoading: false,
       user: { id: 'test-user-id', email: 'test@example.com' } as never,
-      signIn: vi.fn(),
-      signOut: vi.fn(),
     })
 
     // Default finance data mock (empty - minimum setup not complete)
@@ -82,12 +80,17 @@ describe('useOnboardingState', () => {
       accounts: [],
       projects: [],
       singleShotIncome: [],
+      expenses: [],
       fixedExpenses: [],
       singleShotExpenses: [],
       creditCards: [],
+      futureStatements: [],
+      profiles: [],
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      retry: vi.fn(),
+      refresh: vi.fn(),
+      optimisticallyRemoveExpense: vi.fn(),
     })
 
     // Default onboarding store mock
@@ -142,12 +145,17 @@ describe('useOnboardingState', () => {
         accounts: [{ id: '1', name: 'Account', type: 'checking', balance: 1000, owner: null, createdAt: new Date(), updatedAt: new Date() }] as never,
         projects: [{ id: '1', name: 'Salary', amount: 5000 }] as never,
         singleShotIncome: [],
+        expenses: [],
         fixedExpenses: [{ id: '1', name: 'Rent', amount: 1000 }] as never,
         singleShotExpenses: [],
         creditCards: [],
+        futureStatements: [],
+        profiles: [],
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        retry: vi.fn(),
+        refresh: vi.fn(),
+        optimisticallyRemoveExpense: vi.fn(),
       })
 
       mockGetOnboardingState.mockResolvedValue({ success: true, data: null })
@@ -221,8 +229,6 @@ describe('useOnboardingState', () => {
         isAuthenticated: false,
         isLoading: true,
         user: null,
-        signIn: vi.fn(),
-        signOut: vi.fn(),
       })
 
       const { result } = renderHook(() => useOnboardingState())
@@ -235,8 +241,6 @@ describe('useOnboardingState', () => {
         isAuthenticated: false,
         isLoading: false,
         user: null,
-        signIn: vi.fn(),
-        signOut: vi.fn(),
       })
 
       const { result } = renderHook(() => useOnboardingState())

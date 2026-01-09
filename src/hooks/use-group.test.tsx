@@ -49,8 +49,6 @@ describe('useGroup', () => {
       isAuthenticated: true,
       isLoading: false,
       user: { id: 'test-user-id', email: 'test@example.com' } as never,
-      signIn: vi.fn(),
-      signOut: vi.fn(),
     })
 
     mockIsSupabaseConfigured.mockReturnValue(true)
@@ -122,8 +120,6 @@ describe('useGroup', () => {
         isAuthenticated: false,
         isLoading: false,
         user: null,
-        signIn: vi.fn(),
-        signOut: vi.fn(),
       })
 
       const { result } = renderHook(() => useGroup())

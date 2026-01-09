@@ -430,14 +430,14 @@ describe('ensureCurrentUserGroup error mapping', () => {
 describe('state helper error handling', () => {
   describe('PGRST116 handling (no rows)', () => {
     it('returns not found message for PGRST116 code', () => {
-      const result = handleSupabaseError({ code: 'PGRST116', message: 'no rows' })
+      const result = handleSupabaseError({ code: 'PGRST116', message: 'no rows' }) as ErrorResult
       
       expect(result.success).toBe(false)
       expect(result.error).toBe('Record not found.')
     })
 
     it('detects PGRST116 in error message', () => {
-      const result = handleSupabaseError({ message: 'PGRST116: no rows returned' })
+      const result = handleSupabaseError({ message: 'PGRST116: no rows returned' }) as ErrorResult
       
       expect(result.success).toBe(false)
       expect(result.error).toBe('Record not found.')
@@ -446,7 +446,7 @@ describe('state helper error handling', () => {
 
   describe('PGRST205 handling (table not found)', () => {
     it('returns appropriate message for PGRST205 code', () => {
-      const result = handleSupabaseError({ code: 'PGRST205', message: 'table not found' })
+      const result = handleSupabaseError({ code: 'PGRST205', message: 'table not found' }) as ErrorResult
       
       expect(result.success).toBe(false)
       // In DEV mode, message includes migration hint
@@ -456,7 +456,7 @@ describe('state helper error handling', () => {
 
   describe('permission errors', () => {
     it('returns permission error for code 42501', () => {
-      const result = handleSupabaseError({ code: '42501', message: 'permission denied for table' })
+      const result = handleSupabaseError({ code: '42501', message: 'permission denied for table' }) as ErrorResult
       
       expect(result.success).toBe(false)
       expect(result.error).toBe("You don't have permission to perform this action.")
@@ -469,7 +469,7 @@ describe('state helper error handling', () => {
         code: '23505', 
         message: 'duplicate key value violates unique constraint',
         details: 'Key (user_id, tour_key)=(123, dashboard) already exists',
-      })
+      }) as ErrorResult
       
       expect(result.success).toBe(false)
       expect(result.error).toBe('A record with this ID already exists.')

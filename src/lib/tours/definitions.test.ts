@@ -12,7 +12,6 @@ import {
   getTourDefinition,
   getTourVersion,
   isTourUpdated,
-  type TourDefinition,
   type TourStep,
 } from './definitions'
 import type { TourKey } from '@/types'

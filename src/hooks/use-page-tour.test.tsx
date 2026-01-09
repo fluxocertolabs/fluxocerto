@@ -61,7 +61,7 @@ vi.mock('@/lib/tours/definitions', () => ({
     ],
   })),
   getTourVersion: vi.fn(() => 1),
-  isTourUpdated: vi.fn((key: string, version: number) => version < 1),
+  isTourUpdated: vi.fn((_key: string, version: number) => version < 1),
 }))
 
 // Import mocked modules for manipulation
@@ -86,8 +86,6 @@ describe('usePageTour', () => {
       isAuthenticated: true,
       isLoading: false,
       user: { id: 'test-user-id', email: 'test@example.com' } as never,
-      signIn: vi.fn(),
-      signOut: vi.fn(),
     })
 
     mockedUseOnboardingStore.mockImplementation((selector) => {
@@ -222,8 +220,6 @@ describe('usePageTour', () => {
         isAuthenticated: false,
         isLoading: true,
         user: null,
-        signIn: vi.fn(),
-        signOut: vi.fn(),
       })
 
       const { result } = renderHook(() => usePageTour('dashboard'))
@@ -236,8 +232,6 @@ describe('usePageTour', () => {
         isAuthenticated: false,
         isLoading: false,
         user: null,
-        signIn: vi.fn(),
-        signOut: vi.fn(),
       })
 
       const { result } = renderHook(() => usePageTour('dashboard'))
