@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Implement a first version of a Notifications system (in-app + email) with a minimal Profile settings area"
 
+## Clarifications
+
+### Session 2026-01-09
+
+- Q: For this feature, how should we store the email opt-out? → A: Rename/split preferences: rename current `user_preferences` → `group_preferences`, create a new per-user `user_preferences`, and store the email opt-out in the new per-user table.
+- Q: What should be the canonical recipient identifier for a Notification? → A: `user_id` (UUID) referencing `auth.users(id)`.
+- Q: What should be the default for email notifications? → A: Enabled by default (opt-out).
+- Q: What should the new per-user `user_preferences` table look like? → A: Key-value: `(user_id, key, value, created_at, updated_at)` with `UNIQUE(user_id, key)`.
+- Q: How should we enforce “welcome notification is created at most once per user” (idempotency)? → A: Add a nullable `dedupe_key`/`idempotency_key` on `notifications` and enforce `UNIQUE(user_id, dedupe_key)`; for welcome use `dedupe_key = "welcome-v1"`.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Notifications inbox with unread state (Priority: P1)
@@ -91,13 +101,15 @@ When a welcome notification is created and the user has email notifications enab
 - **FR-004**: The app MUST show an unread indicator that reflects the current number of unread notifications for the signed-in user.
 - **FR-005**: Users MUST be able to mark an individual notification as read, and the unread indicator MUST update accordingly. Read state MUST persist across refreshes/devices for the same user.
 - **FR-006**: The system MUST create the welcome notification at most once per user (no duplicates across refreshes, devices, or retries).
+- **FR-006a**: The system MUST enforce welcome notification idempotency with a database-level uniqueness guarantee using an idempotency/dedupe key (e.g. `dedupe_key = "welcome-v1"`), unique per user.
 - **FR-007**: The notifications system MUST support an optional primary action for a notification (e.g., action label + destination link) so future actionable notifications can be represented without redesigning the data model or UI.
 - **FR-008**: When a new notification is created for an active signed-in user, the inbox and unread indicator MUST update without requiring a full page refresh (best-effort live delivery, with persistence as the source of truth).
 
 **Email notifications:**
 
 - **FR-009**: For notification events that support email delivery (starting with welcome), the system MUST be able to send an email notification to the user’s authenticated email address.
-- **FR-010**: The system MUST enforce a global user preference to opt out of notification emails. If the preference is disabled at send time, the email MUST NOT be sent.
+- **FR-010**: The system MUST enforce a per-user preference to opt out of notification emails stored in `user_preferences` (per-user table; not shared across group members). If the preference is disabled at send time, the email MUST NOT be sent.
+- **FR-010a**: Email notifications MUST default to enabled (opt-out). If the per-user preference is not yet set for a user, the system MUST treat it as enabled.
 - **FR-011**: Notification emails MUST follow the product’s established branding and include a clear call-to-action that returns the user to the app.
 - **FR-012**: Email sending credentials/secrets MUST NOT be exposed to end users; sending MUST occur only in a trusted, server-controlled environment.
 - **FR-013**: The notification email workflow MUST remain testable in development environments without requiring delivery to a real external inbox (e.g., safe preview/logging mechanism).
@@ -120,8 +132,10 @@ When a welcome notification is created and the user has email notifications enab
 
 ### Key Entities *(include if feature involves data)*
 
-- **Notification**: A user-visible message representing an event. Attributes include: event type (e.g., welcome), created time, read/unread state, message content (pt-BR copy), and an optional primary action (label + destination).
-- **Notification Preference**: A per-user setting indicating whether the user wants to receive notification emails (global opt-in/opt-out for this iteration).
+- **Notification**: A user-visible message representing an event, scoped to a single recipient (`user_id` referencing `auth.users.id`). Attributes include: event type (e.g., welcome), created time, read/unread state, message content (pt-BR copy), an optional primary action (label + destination), and an optional idempotency/dedupe key (e.g. `dedupe_key`) for DB-enforced de-duplication.
+- **Notification Email Preference**: A per-user setting stored in the per-user `user_preferences` table indicating whether the user wants to receive notification emails (global opt-in/opt-out for this iteration).
+- **User Preferences**: A per-user key-value table (`user_id`, `key`, `value`, timestamps) with `UNIQUE(user_id, key)`. For this iteration it stores `email_notifications_enabled` as `'true'`/`'false'`.
+- **Group Preferences**: The existing `user_preferences` table is renamed to `group_preferences` and stores group-scoped preferences (e.g., theme) separately from per-user preferences.
 - **User Profile**: User-managed fields (e.g., display name) and read-only display of the authenticated email address.
 
 ## Success Criteria *(mandatory)*
@@ -143,3 +157,5 @@ When a welcome notification is created and the user has email notifications enab
 - Email preference is global (single toggle), not per-notification-type.
 - Email address changes and authentication model changes are out of scope.
 - “Unsubscribe link” compliance flows are out of scope for this iteration; preference control is provided in Profile settings.
+- As part of this feature, preferences are split: rename current `user_preferences` → `group_preferences` (group-scoped) and introduce a new per-user `user_preferences` for user-specific settings (starting with `email_notifications_enabled`).
+- Email notifications are enabled by default; if a user has no explicit `email_notifications_enabled` preference saved yet, it is treated as enabled.
