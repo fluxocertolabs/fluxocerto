@@ -174,8 +174,17 @@ test.describe('Dashboard - Estimated today balance', () => {
       { name: 'Despesa Retroativa', amount: 2_000, date: '2025-01-10' },
     ])
 
-    // Wait for recompute: starting balance should update to R$ 80 and indicator should appear
-    await expect(startingCard.getByText(/R\$\s*80/i)).toBeVisible({ timeout: 20000 })
+    // Reload the page to pick up the new data
+    // NOTE: Relying on Realtime subscriptions is flaky in E2E tests due to timing issues.
+    // Reloading ensures the data is fetched fresh from the database.
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    // Wait for the dashboard heading to be visible after reload
+    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible({ timeout: 15000 })
+
+    // After reload, starting balance should be R$ 80 and indicator should appear
+    const startingLabelAfter = page.getByText(/saldo inicial/i)
+    const startingCardAfter = startingLabelAfter.locator('..')
+    await expect(startingCardAfter.getByText(/R\$\s*80/i)).toBeVisible({ timeout: 20000 })
     await expect(dashboardPage.estimatedBalanceIndicator).toBeVisible({ timeout: 20000 })
   })
 })

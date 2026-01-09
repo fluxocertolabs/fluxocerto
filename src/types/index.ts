@@ -348,3 +348,140 @@ export {
   type CreateSnapshotInput,
   type SnapshotListItem,
 } from './snapshot'
+
+// === Onboarding ===
+
+/**
+ * Onboarding wizard step identifiers.
+ * Steps are completed in order during the onboarding flow.
+ */
+export const OnboardingStepSchema = z.enum([
+  'profile',
+  'group',
+  'bank_account',
+  'income',
+  'expense',
+  'credit_card',
+  'done',
+])
+export type OnboardingStep = z.infer<typeof OnboardingStepSchema>
+
+/**
+ * Onboarding status values.
+ */
+export const OnboardingStatusSchema = z.enum(['in_progress', 'dismissed', 'completed'])
+export type OnboardingStatus = z.infer<typeof OnboardingStatusSchema>
+
+/**
+ * Onboarding state row shape (matches database table).
+ */
+export interface OnboardingStateRow {
+  id: string
+  user_id: string
+  group_id: string
+  status: OnboardingStatus
+  current_step: OnboardingStep
+  auto_shown_at: string | null
+  dismissed_at: string | null
+  completed_at: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Onboarding state for client use (camelCase).
+ */
+export interface OnboardingState {
+  id: string
+  userId: string
+  groupId: string
+  status: OnboardingStatus
+  currentStep: OnboardingStep
+  autoShownAt: Date | null
+  dismissedAt: Date | null
+  completedAt: Date | null
+  metadata: Record<string, unknown> | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+// === Page Tours ===
+
+/**
+ * Tour key identifiers for each page with a tour.
+ */
+export const TourKeySchema = z.enum(['dashboard', 'manage', 'history'])
+export type TourKey = z.infer<typeof TourKeySchema>
+
+/**
+ * Tour status values.
+ */
+export const TourStatusSchema = z.enum(['completed', 'dismissed'])
+export type TourStatus = z.infer<typeof TourStatusSchema>
+
+/**
+ * Tour state row shape (matches database table).
+ */
+export interface TourStateRow {
+  id: string
+  user_id: string
+  tour_key: TourKey
+  status: TourStatus
+  version: number
+  completed_at: string | null
+  dismissed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Tour state for client use (camelCase).
+ */
+export interface TourState {
+  id: string
+  userId: string
+  tourKey: TourKey
+  status: TourStatus
+  version: number
+  completedAt: Date | null
+  dismissedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Transform onboarding state row to client format.
+ */
+export function transformOnboardingStateRow(row: OnboardingStateRow): OnboardingState {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    groupId: row.group_id,
+    status: row.status,
+    currentStep: row.current_step,
+    autoShownAt: row.auto_shown_at ? new Date(row.auto_shown_at) : null,
+    dismissedAt: row.dismissed_at ? new Date(row.dismissed_at) : null,
+    completedAt: row.completed_at ? new Date(row.completed_at) : null,
+    metadata: row.metadata,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }
+}
+
+/**
+ * Transform tour state row to client format.
+ */
+export function transformTourStateRow(row: TourStateRow): TourState {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    tourKey: row.tour_key,
+    status: row.status,
+    version: row.version,
+    completedAt: row.completed_at ? new Date(row.completed_at) : null,
+    dismissedAt: row.dismissed_at ? new Date(row.dismissed_at) : null,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }
+}

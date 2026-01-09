@@ -13,6 +13,8 @@ interface ExpenseSectionProps {
   onDeleteFixed: (id: string) => void
   onDeleteSingleShot: (id: string) => void
   onToggleFixedActive: (id: string) => void
+  /** Optional callback to open the onboarding wizard */
+  onStartSetup?: () => void
 }
 
 export function ExpenseSection({
@@ -25,6 +27,7 @@ export function ExpenseSection({
   onDeleteFixed,
   onDeleteSingleShot,
   onToggleFixedActive,
+  onStartSetup,
 }: ExpenseSectionProps) {
   return (
     <Tabs defaultValue="fixed" className="w-full">
@@ -40,6 +43,7 @@ export function ExpenseSection({
           onEdit={onEditFixed}
           onDelete={onDeleteFixed}
           onToggleActive={onToggleFixedActive}
+          onStartSetup={onStartSetup}
         />
       </TabsContent>
 

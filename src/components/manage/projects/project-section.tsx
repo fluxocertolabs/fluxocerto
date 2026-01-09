@@ -13,6 +13,8 @@ interface ProjectSectionProps {
   onDeleteRecurring: (id: string) => void
   onDeleteSingleShot: (id: string) => void
   onToggleRecurringActive: (id: string) => void
+  /** Optional callback to open the onboarding wizard */
+  onStartSetup?: () => void
 }
 
 export function ProjectSection({
@@ -25,6 +27,7 @@ export function ProjectSection({
   onDeleteRecurring,
   onDeleteSingleShot,
   onToggleRecurringActive,
+  onStartSetup,
 }: ProjectSectionProps) {
   return (
     <Tabs defaultValue="recurring" className="w-full">
@@ -40,6 +43,7 @@ export function ProjectSection({
           onEdit={onEditRecurring}
           onDelete={onDeleteRecurring}
           onToggleActive={onToggleRecurringActive}
+          onStartSetup={onStartSetup}
         />
       </TabsContent>
 

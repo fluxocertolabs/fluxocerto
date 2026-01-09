@@ -24,6 +24,8 @@ import { HistoryPage } from '../pages/history-page';
 import { SnapshotDetailPage } from '../pages/snapshot-detail-page';
 import { existsSync } from 'fs';
 
+const USE_PER_TEST_CONTEXT = process.env.PW_PER_TEST_CONTEXT === '1';
+
 /**
  * Fixed date for visual tests - ensures deterministic screenshots
  * Using January 15, 2025 at noon to avoid timezone edge cases
@@ -84,6 +86,11 @@ type VisualTestFixtures = {
 type WorkerFixtures = {
   workerCtx: IWorkerContext;
   workerBrowserContext: BrowserContext;
+  workerAuthState: {
+    origin: string;
+    cookies: any[];
+    localStorage: { name: string; value: string }[];
+  };
 };
 
 /**
@@ -249,7 +256,7 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
   // Worker-scoped context - same as test-base.ts
   workerCtx: [
     async ({}, use, workerInfo) => {
-      const context = getWorkerContext(workerInfo.workerIndex);
+      const context = getWorkerContext(workerInfo.workerIndex, workerInfo.project.name);
       await use(context);
     },
     { scope: 'worker' },
@@ -314,14 +321,63 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
     { scope: 'worker' },
   ],
 
-  // Override the default context to use our worker-scoped context with auth
-  context: async ({ workerBrowserContext }, use) => {
-    await use(workerBrowserContext);
+  workerAuthState: [
+    async ({ workerCtx }, use) => {
+      const storageStatePath = workerCtx.authStatePath;
+      if (!existsSync(storageStatePath)) {
+        throw new Error(
+          `❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}. Run setup first.`
+        );
+      }
+
+      const fs = await import('fs/promises');
+      const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
+      const authState = JSON.parse(authStateContent);
+
+      const origin = authState?.origins?.[0]?.origin;
+      const localStorage = Array.isArray(authState?.origins?.[0]?.localStorage)
+        ? authState.origins[0].localStorage.filter((item: any) => typeof item?.name === 'string' && item.name.includes('sb-'))
+        : [];
+
+      const hasAuthToken = localStorage.some((item: any) => item?.name?.includes('auth-token'));
+      if (typeof origin !== 'string' || !origin) {
+        throw new Error(`❌ Worker ${workerCtx.workerIndex}: Auth state origin is missing/invalid`);
+      }
+      if (!hasAuthToken) {
+        throw new Error(`❌ Worker ${workerCtx.workerIndex}: No Supabase auth token found in localStorage!`);
+      }
+
+      await use({
+        origin,
+        cookies: Array.isArray(authState?.cookies) ? authState.cookies : [],
+        localStorage,
+      });
+    },
+    { scope: 'worker' },
+  ],
+
+  // Override the default context to use our worker-scoped context with auth (default),
+  // or Option B per-test contexts when PW_PER_TEST_CONTEXT=1.
+  context: async ({ browser, workerBrowserContext, workerAuthState }, use) => {
+    if (!USE_PER_TEST_CONTEXT) {
+      await use(workerBrowserContext);
+      return;
+    }
+
+    const context = await browser.newContext({
+      storageState: {
+        cookies: workerAuthState.cookies,
+        origins: [{ origin: workerAuthState.origin, localStorage: workerAuthState.localStorage }],
+      },
+    });
+
+    await use(context);
+    await context.close().catch(() => {});
   },
 
   // Override page to install clock mock before any navigation
   // Note: Clock mock is installed AFTER page creation to avoid conflicts with mobile emulation
-  page: async ({ context }, use) => {
+  page: async ({ context, workerAuthState }, use, testInfo) => {
     const page = await context.newPage();
 
     // Install clock mock with fixed date for deterministic visual tests
@@ -329,7 +385,37 @@ export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
     await page.clock.setFixedTime(VISUAL_TEST_FIXED_DATE);
 
     await use(page);
-    await page.close();
+
+    if (USE_PER_TEST_CONTEXT && testInfo.status === 'passed') {
+      try {
+        const nextLocalStorage = await Promise.race([
+          page.evaluate(() => {
+            const keys = Object.keys(localStorage);
+            return keys
+              .filter((k) => k.includes('sb-'))
+              .map((name) => ({ name, value: localStorage.getItem(name) ?? '' }))
+              .filter((item) => item.value.length > 0);
+          }),
+          new Promise<[]>(resolve => setTimeout(() => resolve([]), 1000)),
+        ]);
+
+        if (Array.isArray(nextLocalStorage) && nextLocalStorage.length > 0) {
+          workerAuthState.localStorage = nextLocalStorage;
+        }
+      } catch {
+        // ignore (page may already be closed on timeout)
+      }
+    }
+
+    if (!USE_PER_TEST_CONTEXT) {
+      await page.close().catch(() => {});
+      return;
+    }
+
+    await Promise.race([
+      page.close(),
+      new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+    ]).catch(() => {});
   },
 
   // Test-scoped worker context

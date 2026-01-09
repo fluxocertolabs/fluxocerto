@@ -404,7 +404,8 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       await managePage.goto();
       await managePage.selectGroupTab();
-      // Wait for members to render (names are masked in screenshots but still need to load)
+      // Wait for group section to fully load (names are masked in screenshots but still need to load)
+      await page.locator('[data-testid="group-name"]').waitFor({ state: 'visible', timeout: 10000 });
       await page.locator('[data-testid="member-name"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
       await visual.setTheme(page, 'light');
@@ -418,6 +419,8 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       await managePage.goto();
       await managePage.selectGroupTab();
+      // Wait for group section to fully load (names are masked in screenshots but still need to load)
+      await page.locator('[data-testid="group-name"]').waitFor({ state: 'visible', timeout: 10000 });
       await page.locator('[data-testid="member-name"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
       await visual.setTheme(page, 'dark');
@@ -608,6 +611,215 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'snapshot-detail-mobile-dark-not-found.png');
+    });
+  });
+
+  // Note: Onboarding wizard mobile tests are in onboarding.visual.spec.ts
+  // because they require fresh user authentication via magic link to ensure
+  // the wizard auto-shows (existing worker users have completed onboarding).
+
+  visualTest.describe('Floating Help Button Mobile', () => {
+    visualTest('floating help - collapsed - mobile light', async ({
+      page,
+      dashboardPage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      // Floating help button should be visible
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.waitFor({ state: 'visible', timeout: 5000 });
+
+      await visual.takeScreenshot(page, 'floating-help-collapsed-mobile-light.png');
+    });
+
+    visualTest('floating help - collapsed - mobile dark', async ({
+      page,
+      dashboardPage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.waitFor({ state: 'visible', timeout: 5000 });
+
+      await visual.takeScreenshot(page, 'floating-help-collapsed-mobile-dark.png');
+    });
+
+    visualTest('floating help - expanded - mobile light', async ({
+      page,
+      dashboardPage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      // Click to expand
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.click();
+      await page.waitForTimeout(500);
+
+      // Wait for expanded menu
+      await page.getByRole('button', { name: /iniciar tour guiado/i }).waitFor({ state: 'visible', timeout: 5000 });
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'floating-help-expanded-mobile-light.png');
+    });
+
+    visualTest('floating help - expanded - mobile dark', async ({
+      page,
+      dashboardPage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.click();
+      await page.waitForTimeout(500);
+
+      await page.getByRole('button', { name: /iniciar tour guiado/i }).waitFor({ state: 'visible', timeout: 5000 });
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'floating-help-expanded-mobile-dark.png');
+    });
+  });
+
+  visualTest.describe('Page Tours Mobile', () => {
+    visualTest('dashboard tour - step 1 - mobile light', async ({
+      page,
+      dashboardPage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      // Start tour via floating help
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.click();
+      await page.waitForTimeout(300);
+
+      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await tourOption.click();
+        await page.waitForTimeout(500);
+
+        // Check if tour started
+        const tourOverlay = page.locator('[data-tour-active="true"]');
+        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await visual.waitForStableUI(page);
+          await visual.takeScreenshot(page, 'dashboard-tour-step1-mobile-light.png');
+        }
+      }
+    });
+
+    visualTest('dashboard tour - step 1 - mobile dark', async ({
+      page,
+      dashboardPage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
+
+      await dashboardPage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.click();
+      await page.waitForTimeout(300);
+
+      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await tourOption.click();
+        await page.waitForTimeout(500);
+
+        const tourOverlay = page.locator('[data-tour-active="true"]');
+        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await visual.waitForStableUI(page);
+          await visual.takeScreenshot(page, 'dashboard-tour-step1-mobile-dark.png');
+        }
+      }
+    });
+
+    visualTest('manage tour - step 1 - mobile light', async ({
+      page,
+      managePage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
+
+      await managePage.goto();
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.click();
+      await page.waitForTimeout(300);
+
+      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await tourOption.click();
+        await page.waitForTimeout(500);
+
+        const tourOverlay = page.locator('[data-tour-active="true"]');
+        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await visual.waitForStableUI(page);
+          await visual.takeScreenshot(page, 'manage-tour-step1-mobile-light.png');
+        }
+      }
+    });
+
+    visualTest('manage tour - step 1 - mobile dark', async ({
+      page,
+      managePage,
+      db,
+      visual,
+    }) => {
+      await db.clear();
+      await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
+
+      await managePage.goto();
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      const helpButton = page.getByTestId('floating-help-button');
+      await helpButton.click();
+      await page.waitForTimeout(300);
+
+      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await tourOption.click();
+        await page.waitForTimeout(500);
+
+        const tourOverlay = page.locator('[data-tour-active="true"]');
+        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await visual.waitForStableUI(page);
+          await visual.takeScreenshot(page, 'manage-tour-step1-mobile-dark.png');
+        }
+      }
     });
   });
 });

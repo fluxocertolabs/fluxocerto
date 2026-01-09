@@ -15,6 +15,20 @@ const mockGroup = {
   isLoading: false,
 }
 
+const mockOnboarding = {
+  isMinimumSetupComplete: true,
+  openWizard: vi.fn(),
+  isLoading: false,
+}
+
+const mockTourStore = {
+  activeTourKey: null,
+  isManuallyTriggered: false,
+  startTour: vi.fn(),
+  stopTour: vi.fn(),
+  reset: vi.fn(),
+}
+
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => mockAuth,
 }))
@@ -23,8 +37,17 @@ vi.mock('@/hooks/use-group', () => ({
   useGroup: () => mockGroup,
 }))
 
+vi.mock('@/hooks/use-onboarding-state', () => ({
+  useOnboardingState: () => mockOnboarding,
+}))
+
+vi.mock('@/stores/tour-store', () => ({
+  useTourStore: () => mockTourStore,
+}))
+
 vi.mock('@/lib/supabase', () => ({
   signOut: vi.fn(async () => ({ error: null })),
+  isSupabaseConfigured: vi.fn(() => true),
 }))
 
 vi.mock('@/components/theme', () => ({
@@ -72,6 +95,8 @@ describe('Header - Mobile Navigation', () => {
     expect(vi.mocked(signOut)).toHaveBeenCalledTimes(1)
   })
 })
+
+
 
 
 

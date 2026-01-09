@@ -57,36 +57,33 @@ export function resetAdminClient(): void {
 
 /**
  * Get user ID from email (for seeding test data with correct user_id)
- * Uses the default admin client since auth.users is in the auth schema (shared)
+ * Uses direct Postgres query with parameterized input to avoid SQL injection
  */
 export async function getUserIdFromEmail(email: string): Promise<string> {
-  const client = getAdminClient();
+  const rows = await executeSQLWithResult<{ id: string }>(
+    `SELECT id FROM auth.users WHERE email = $1 LIMIT 1`,
+    [email]
+  );
 
-  // First, check auth.users
-  const { data: authData, error: authError } = await client.auth.admin.listUsers();
-
-  if (authError) {
-    throw new Error(`Failed to list users: ${authError.message}`);
-  }
-
-  const user = authData.users.find((u) => u.email === email);
-  if (!user) {
+  if (rows.length === 0) {
     throw new Error(`User with email ${email} not found in auth.users`);
   }
 
-  return user.id;
+  return rows[0].id;
 }
 
 /**
  * Execute raw SQL using direct postgres connection
  * This is needed for DDL operations and schema-specific queries
+ * @param sql - SQL query string (use $1, $2, etc. for parameterized queries)
+ * @param params - Optional array of parameter values for parameterized queries
  */
-export async function executeSQL(sql: string): Promise<void> {
+export async function executeSQL(sql: string, params?: unknown[]): Promise<void> {
   const pgClient = new PgClient(PG_CONFIG);
 
   try {
     await pgClient.connect();
-    await pgClient.query(sql);
+    await pgClient.query(sql, params);
   } finally {
     await pgClient.end();
   }
@@ -94,13 +91,15 @@ export async function executeSQL(sql: string): Promise<void> {
 
 /**
  * Execute raw SQL and return results
+ * @param sql - SQL query string (use $1, $2, etc. for parameterized queries)
+ * @param params - Optional array of parameter values for parameterized queries
  */
-export async function executeSQLWithResult<T = any>(sql: string): Promise<T[]> {
+export async function executeSQLWithResult<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
   const pgClient = new PgClient(PG_CONFIG);
 
   try {
     await pgClient.connect();
-    const result = await pgClient.query(sql);
+    const result = await pgClient.query(sql, params);
     return result.rows as T[];
   } finally {
     await pgClient.end();

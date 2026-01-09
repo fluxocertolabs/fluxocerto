@@ -19,9 +19,11 @@ export class DashboardPage {
   readonly chartErrorHeading: Locator;
   readonly chartRetryButton: Locator;
   readonly groupBadge: Locator;
+  private readonly isPerTestContext: boolean;
 
   constructor(page: Page) {
     this.page = page;
+    this.isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
     // Try multiple selectors for chart
     this.cashflowChart = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
     this.summaryPanel = page.locator('[data-testid="summary-panel"], .summary-panel').first();
@@ -53,7 +55,14 @@ export class DashboardPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/');
-    
+    await this.waitForDashboardLoad();
+  }
+
+  /**
+   * Wait for dashboard to finish loading.
+   * Can be called after goto() or after a page reload.
+   */
+  async waitForDashboardLoad(): Promise<void> {
     // Wait for the dashboard heading to be visible - this ALWAYS renders
     // regardless of loading/empty/error state, proving React has mounted
     const dashboardHeading = this.page.getByRole('heading', { name: /painel de fluxo de caixa/i });
@@ -169,37 +178,60 @@ export class DashboardPage {
    * We check for the chart wrapper AND that it contains rendered path data.
    */
   async expectChartRendered(): Promise<void> {
-    await expect(async () => {
-      // Handle transient realtime failures by retrying when the error state is visible
-      if (await this.chartErrorHeading.isVisible().catch(() => false)) {
-        await this.chartRetryButton.click();
-        await this.page.waitForTimeout(500);
-      }
+    const totalTimeout = this.isPerTestContext ? 45000 : 30000;
 
-      await expect(this.cashflowChart).toBeVisible({ timeout: 5000 });
-      
-      // Check for SVG paths with actual path data (not empty d="")
-      // The recharts-area-area class contains the actual filled area path
-      const areaPath = this.page.locator('.recharts-area-area path[d]').first();
-      const linePath = this.page.locator('.recharts-line path[d]').first();
-      
-      // At least one should exist and have a non-trivial path
-      const hasAreaPath = await areaPath.count() > 0;
-      const hasLinePath = await linePath.count() > 0;
-      
-      if (hasAreaPath) {
-        const d = await areaPath.getAttribute('d');
-        // A valid path should have more than just "M0,0" or similar trivial paths
-        expect(d && d.length > 20).toBe(true);
-      } else if (hasLinePath) {
-        const d = await linePath.getAttribute('d');
-        expect(d && d.length > 20).toBe(true);
-      } else {
-        // Fallback: check that the recharts-wrapper has content
-        const wrapper = this.page.locator('.recharts-wrapper');
-        await expect(wrapper).toBeVisible();
+    const assertChartReady = async () => {
+      await expect(async () => {
+        // Handle transient realtime failures by retrying when the error state is visible
+        if (await this.chartErrorHeading.isVisible().catch(() => false)) {
+          await this.chartRetryButton.click();
+          await this.page.waitForTimeout(500);
+        }
+
+        // In tests that call expectChartRendered(), we expect seeded data to exist.
+        // If the dashboard is in empty state, the chart will never mount.
+        if (await this.emptyState.isVisible().catch(() => false)) {
+          throw new Error('Dashboard is in empty state (no financial data).');
+        }
+
+        const chartVisible = await this.cashflowChart.isVisible().catch(() => false);
+        if (!chartVisible) {
+          throw new Error('Cashflow chart not visible yet.');
+        }
+
+        const wrapper = this.page.locator('.recharts-wrapper').first();
+        if (!(await wrapper.isVisible().catch(() => false))) {
+          throw new Error('Recharts wrapper not visible yet.');
+        }
+
+        // If paths exist, ensure they look non-trivial (helps catch "mounted but empty" regressions).
+        const areaPath = this.page.locator('.recharts-area-area path[d]').first();
+        const linePath = this.page.locator('.recharts-line path[d]').first();
+
+        if ((await areaPath.count()) > 0) {
+          const d = await areaPath.getAttribute('d');
+          expect(d && d.length > 20).toBe(true);
+        } else if ((await linePath.count()) > 0) {
+          const d = await linePath.getAttribute('d');
+          expect(d && d.length > 20).toBe(true);
+        }
+      }).toPass({ timeout: totalTimeout, intervals: [250, 500, 1000, 2000] });
+    };
+
+    try {
+      await assertChartReady();
+    } catch (err) {
+      // One-time recovery: sometimes the dashboard can transiently render empty state while auth/group/data hydrate.
+      // A reload forces a clean fetch without masking real failures (we only do this if empty state is visible).
+      const inEmptyState = await this.emptyState.isVisible().catch(() => false);
+      if (inEmptyState) {
+        await this.page.reload({ waitUntil: 'domcontentloaded' });
+        await this.waitForDashboardLoad();
+        await assertChartReady();
+        return;
       }
-    }).toPass({ timeout: 20000 });
+      throw err;
+    }
   }
 
   /**

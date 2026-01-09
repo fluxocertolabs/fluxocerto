@@ -81,11 +81,15 @@ export class SnapshotDetailPage {
 
   /**
    * Check if the historical banner is displayed
-   * Waits briefly for UI to stabilize
+   * Waits for UI to stabilize (navigation to /history/:id can render the URL before data finishes loading)
    */
-  async hasHistoricalBanner(): Promise<boolean> {
-    await this.page.waitForTimeout(500);
-    return this.historicalBanner.isVisible();
+  async hasHistoricalBanner(timeout: number = 10000): Promise<boolean> {
+    try {
+      await this.historicalBanner.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -117,10 +121,19 @@ export class SnapshotDetailPage {
     // Confirm the deletion in the dialog (scoped to the alert dialog)
     const dialog = this.page.getByRole('alertdialog');
     const confirmButton = dialog.getByRole('button', { name: /excluir/i });
-    await confirmButton.click();
-    
-    // Wait for redirect to history page
-    await this.page.waitForURL('/history');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(confirmButton).toBeVisible({ timeout: 10000 });
+    await expect(confirmButton).toBeEnabled({ timeout: 10000 });
+
+    // In SPAs, the click can trigger a client-side navigation. Waiting for it sequentially
+    // can occasionally hang under load; wait for URL change concurrently and prevent the
+    // click from waiting on navigation by itself.
+    const isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
+    const redirectTimeout = isPerTestContext ? 45000 : 20000;
+    await Promise.all([
+      this.page.waitForURL(/\/history$/, { timeout: redirectTimeout }),
+      confirmButton.click({ noWaitAfter: true }),
+    ]);
   }
 
   /**

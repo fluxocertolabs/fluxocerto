@@ -4,7 +4,6 @@
  */
 
 import { useEffect } from 'react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { CheckCircledIcon, CrossCircledIcon, Cross2Icon } from '@radix-ui/react-icons'
@@ -34,48 +33,69 @@ export function Toast({
   const isError = type === 'error'
 
   return (
-    <Card
+    <div
       className={cn(
-        'fixed bottom-4 right-4 z-50',
-        'flex items-center gap-3 p-4 max-w-sm',
+        'fixed bottom-4 right-4 z-[9999]',
+        'w-[360px] max-w-[calc(100vw-2rem)]',
+        'rounded-lg shadow-lg',
+        'flex items-center gap-3 p-4',
         'animate-in slide-in-from-bottom-5',
         isError
-          ? 'bg-destructive/10 border-destructive/20'
-          : 'bg-emerald-500/10 border-emerald-500/20'
+          ? 'bg-destructive text-destructive-foreground'
+          : 'bg-emerald-600 text-white'
       )}
+      role="status"
+      aria-live={isError ? 'assertive' : 'polite'}
     >
-      {isError ? (
-        <CrossCircledIcon className="h-5 w-5 text-destructive flex-shrink-0" />
-      ) : (
-        <CheckCircledIcon className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-      )}
-      <div className="flex-1">
+      <div
+        className={cn(
+          'flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0',
+          isError ? 'bg-white/15 text-white' : 'bg-white/15 text-white'
+        )}
+        aria-hidden="true"
+      >
+        {isError ? (
+          <CrossCircledIcon className="h-5 w-5" />
+        ) : (
+          <CheckCircledIcon className="h-5 w-5" />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
         <p
           className={cn(
-            'text-sm font-medium',
-            isError ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-400'
+            'text-sm font-medium leading-snug text-white'
           )}
         >
           {message}
         </p>
       </div>
+
       <div className="flex items-center gap-1">
         {onRetry && isError && (
-          <Button variant="outline" size="sm" onClick={onRetry}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
+          >
             Tentar novamente
           </Button>
         )}
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={onDismiss}
-          className="h-6 w-6 p-0"
+          className={cn(
+            'h-8 w-8 text-white/90 hover:text-white',
+            isError ? 'hover:bg-white/10' : 'hover:bg-white/10'
+          )}
         >
           <Cross2Icon className="h-4 w-4" />
           <span className="sr-only">Fechar</span>
         </Button>
       </div>
-    </Card>
+    </div>
   )
 }
 

@@ -245,9 +245,13 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
       await dashboardPage.goto();
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
+      await dashboardPage.expectChartRendered();
 
       // Open the save snapshot dialog
       const saveButton = page.getByRole('button', { name: /salvar projeção/i });
+      await expect(saveButton).toBeVisible({ timeout: 20000 });
+      await saveButton.scrollIntoViewIfNeeded();
+      await expect(saveButton).toBeEnabled({ timeout: 20000 });
       await saveButton.click();
 
       // Wait for dialog to appear (don't rely on text matching the button itself)
@@ -270,9 +274,13 @@ visualTest.describe('Save Snapshot Dialog Visual Regression @visual', () => {
       await dashboardPage.goto();
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
+      await dashboardPage.expectChartRendered();
 
       // Open the save snapshot dialog
       const saveButton = page.getByRole('button', { name: /salvar projeção/i });
+      await expect(saveButton).toBeVisible({ timeout: 20000 });
+      await saveButton.scrollIntoViewIfNeeded();
+      await expect(saveButton).toBeEnabled({ timeout: 20000 });
       await saveButton.click();
 
       // Wait for dialog to appear (don't rely on text matching the button itself)

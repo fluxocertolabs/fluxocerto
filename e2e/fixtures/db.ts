@@ -4,7 +4,7 @@
  * Uses data prefixing for parallel test isolation (each worker prefixes its data)
  */
 
-import { getAdminClient } from '../utils/supabase-admin';
+import { executeSQL, getAdminClient } from '../utils/supabase-admin';
 import type { IWorkerContext } from './worker-context';
 import { addWorkerPrefix, getWorkerPrefixPattern, ALL_WORKERS_PATTERN } from './worker-context';
 import type {
@@ -65,10 +65,12 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
 // Cache for group IDs to avoid repeated queries
 let cachedDefaultGroupId: string | null = null;
 const cachedUserGroupIds: Map<string, string> = new Map();
-const cachedWorkerGroupIds: Map<number, string> = new Map();
+// Keyed by groupName (NOT workerIndex) to avoid cross-project collisions.
+const cachedWorkerGroupIds: Map<string, string> = new Map();
 
 // Mutex to prevent race conditions during worker group creation/lookup
-const workerGroupMutex = new Map<number, Promise<string>>();
+// Keyed by groupName to avoid cross-project collisions.
+const workerGroupMutex = new Map<string, Promise<string>>();
 
 /**
  * Get or create the default test group
@@ -164,13 +166,13 @@ export function clearGroupCache(): void {
  */
 export async function getOrCreateWorkerGroup(workerIndex: number, groupName: string): Promise<string> {
   // Check cache first
-  const cached = cachedWorkerGroupIds.get(workerIndex);
+  const cached = cachedWorkerGroupIds.get(groupName);
   if (cached) {
     return cached;
   }
 
   // Check if there is a pending operation for this worker
-  const pending = workerGroupMutex.get(workerIndex);
+  const pending = workerGroupMutex.get(groupName);
   if (pending) {
     return pending;
   }
@@ -192,7 +194,7 @@ export async function getOrCreateWorkerGroup(workerIndex: number, groupName: str
       }
 
       if (existing) {
-        cachedWorkerGroupIds.set(workerIndex, existing.id);
+        cachedWorkerGroupIds.set(groupName, existing.id);
         return existing.id;
       }
 
@@ -207,15 +209,15 @@ export async function getOrCreateWorkerGroup(workerIndex: number, groupName: str
         throw new Error(`Failed to create worker group: ${insertError.message}`);
       }
 
-      cachedWorkerGroupIds.set(workerIndex, newGroup.id);
+      cachedWorkerGroupIds.set(groupName, newGroup.id);
       return newGroup.id;
     } finally {
       // Clean up mutex entry
-      workerGroupMutex.delete(workerIndex);
+      workerGroupMutex.delete(groupName);
     }
   })();
 
-  workerGroupMutex.set(workerIndex, promise);
+  workerGroupMutex.set(groupName, promise);
   return promise;
 }
 
@@ -278,13 +280,13 @@ export async function ensureTestUser(
 
   // Determine group ID:
   // 1. Use explicit groupId if provided
-  // 2. Otherwise use worker's group if workerIndex provided
-  // 3. Fall back to default group
+  // 2. Fall back to default group
+  //
+  // NOTE: We intentionally do NOT try to infer a worker group from workerIndex here.
+  // workerIndex is per Playwright project, so "worker 0" exists in multiple projects
+  // (chromium, chromium-mobile, visual, etc.). Inferring by index alone would create
+  // cross-project data races.
   let targetGroupId = groupId;
-  if (!targetGroupId && workerIndex !== undefined) {
-    // Check if we have a cached worker group
-    targetGroupId = cachedWorkerGroupIds.get(workerIndex);
-  }
   if (!targetGroupId) {
     targetGroupId = await getDefaultGroupId();
   }
@@ -1163,6 +1165,46 @@ export async function deleteSnapshotsForGroup(groupId: string): Promise<void> {
 }
 
 /**
+ * Clear onboarding state for a group.
+ * This will cause the onboarding wizard to appear on next page load.
+ */
+export async function clearOnboardingStateForGroup(groupId: string): Promise<void> {
+  const client = getAdminClient();
+  const { error } = await client.from('onboarding_states').delete().eq('group_id', groupId);
+  if (error && !error.message.includes('does not exist')) {
+    throw new Error(`Failed to clear onboarding state: ${error.message}`);
+  }
+}
+
+/**
+ * Clear tour state for a group.
+ * This will cause tours to appear as "not seen" on next page load.
+ */
+export async function clearTourStateForGroup(groupId: string): Promise<void> {
+  // NOTE:
+  // - `tour_states` is keyed by (user_id, tour_key) and does NOT have `group_id`.
+  // - `profiles.id` is NOT the auth user id (it originated from `allowed_emails`), so we can't
+  //   map `group_id -> profiles.id -> tour_states.user_id`.
+  //
+  // We instead clear tour states by mapping the group's profile emails -> auth.users ids.
+  try {
+    await executeSQL(`
+      DELETE FROM public.tour_states ts
+      USING public.profiles p, auth.users u
+      WHERE p.group_id = $1
+        AND p.email IS NOT NULL
+        AND u.email = p.email::text
+        AND ts.user_id = u.id
+    `, [groupId]);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes('does not exist')) {
+      throw new Error(`Failed to clear tour state: ${message}`);
+    }
+  }
+}
+
+/**
  * Create a worker-scoped database fixture
  * This returns a fixture object that prefixes all data with the worker identifier
  * and uses the worker's group for data isolation via RLS
@@ -1294,6 +1336,22 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     deleteSnapshots: async () => {
       const groupId = await getWorkerGroupId();
       return deleteSnapshotsForGroup(groupId);
+    },
+    /**
+     * Clear onboarding state for this worker's group.
+     * This will cause the onboarding wizard to appear on next page load.
+     */
+    clearOnboardingState: async () => {
+      const groupId = await getWorkerGroupId();
+      await clearOnboardingStateForGroup(groupId);
+    },
+    /**
+     * Clear tour state for this worker's group.
+     * This will cause tours to appear as "not seen" on next page load.
+     */
+    clearTourState: async () => {
+      const groupId = await getWorkerGroupId();
+      await clearTourStateForGroup(groupId);
     },
     seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
       const groupId = await getWorkerGroupId();

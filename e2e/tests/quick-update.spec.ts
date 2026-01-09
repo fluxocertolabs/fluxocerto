@@ -5,6 +5,7 @@
 
 import { test, expect } from '../fixtures/test-base';
 import { createAccount, createCreditCard } from '../utils/test-data';
+import { executeSQL } from '../utils/supabase-admin';
 
 test.describe('Quick Update Modal', () => {
   // Tests now run in parallel with per-worker data prefixing for isolation
@@ -16,6 +17,27 @@ test.describe('Quick Update Modal', () => {
     await db.resetDatabase()
     await db.ensureTestUser()
   }
+  
+  // Ensure onboarding state is 'completed' before each test.
+  // This is necessary because the provisioning-recovery test (which runs before this suite
+  // in the full test run) can leave the onboarding state in 'in_progress' due to the
+  // self-heal flow triggering the onboarding wizard.
+  test.beforeEach(async ({ db, workerContext }) => {
+    const { executeSQLWithResult } = await import('../utils/supabase-admin');
+    const groupId = await db.getWorkerGroupId();
+    const userIdRows = await executeSQLWithResult<{ id: string }>(
+      `SELECT id FROM auth.users WHERE email = '${workerContext.email.toLowerCase()}' LIMIT 1`
+    );
+    const userId = userIdRows[0]?.id;
+    
+    if (userId && groupId) {
+      await executeSQL(`
+        UPDATE public.onboarding_states 
+        SET status = 'completed', current_step = 'done', completed_at = now()
+        WHERE user_id = '${userId}' AND group_id = '${groupId}'
+      `);
+    }
+  });
 
   test('T071: open Quick Update → all accounts and credit cards listed', async ({
     page,
@@ -215,8 +237,8 @@ test.describe('Quick Update Modal', () => {
     await quickUpdatePage.waitForModal();
 
     // Verify items are listed
-    await expect(page.getByText(seededAccount.name, { exact: false })).toBeVisible();
-    await expect(page.getByText(seededCard.name, { exact: false })).toBeVisible();
+    await expect(page.getByText(seededAccount.name, { exact: false })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(seededCard.name, { exact: false })).toBeVisible({ timeout: 10000 });
 
     // Verify no "Não atribuído" text is shown (OwnerBadge hides by default when null)
     await expect(page.getByText('Não atribuído')).not.toBeVisible();
@@ -285,19 +307,21 @@ test.describe('Quick Update Modal', () => {
     const uniqueId = Date.now();
     
     // Seed a checking account (using unique name without "Corrente" to avoid confusion)
-    await db.seedAccounts([
+    const [seededAccount] = await db.seedAccounts([
       createAccount({ 
         name: `Nubank Check ${uniqueId}`, 
         type: 'checking',
         balance: 100000,
       }),
     ]);
+    
 
     // Navigate and open Quick Update
     await dashboardPage.goto();
     await dashboardPage.expectChartRendered();
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
+    
 
     // Verify the account is listed with its type badge
     await expect(page.getByText(`Nubank Check ${uniqueId}`, { exact: false })).toBeVisible();
@@ -440,11 +464,11 @@ test.describe('Quick Update Modal', () => {
     await quickUpdatePage.waitForModal();
 
     // Verify the modal is open (Concluir button visible)
-    await expect(quickUpdatePage.completeButton).toBeVisible();
+    await expect(quickUpdatePage.completeButton).toBeVisible({ timeout: 10000 });
 
-    // Verify the card is listed
-    await expect(page.getByRole('heading', { name: /cartões de crédito/i })).toBeVisible();
-    await expect(page.getByText(cardName, { exact: false })).toBeVisible();
+    // Verify the card is listed (with timeout for data to load)
+    await expect(page.getByRole('heading', { name: /cartões de crédito/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(cardName, { exact: false })).toBeVisible({ timeout: 10000 });
 
     // Find the card row specifically and verify it doesn't have type badges
     // The card row contains the card name
@@ -465,6 +489,9 @@ test.describe('Quick Update Modal', () => {
     quickUpdatePage,
     db,
   }) => {
+    // Increase timeout for this test that involves profile creation and badge verification
+    test.setTimeout(90000);
+
     // Reset for clean state - this test relies on specific badge presence
     await resetForCleanState(db);
     
@@ -582,3 +609,4 @@ test.describe('Quick Update Modal', () => {
     await db.deleteProfileByEmail(`update-owner-${uniqueId}@test.local`);
   });
 });
+

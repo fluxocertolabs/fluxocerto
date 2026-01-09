@@ -8,6 +8,8 @@ import { useCashflowProjection } from '@/hooks/use-cashflow-projection'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { useHealthIndicator } from '@/hooks/use-health-indicator'
 import { useFinanceData } from '@/hooks/use-finance-data'
+import { usePageTour } from '@/hooks/use-page-tour'
+import { useOnboardingStore } from '@/stores/onboarding-store'
 import { usePreferencesStore } from '@/stores/preferences-store'
 import { useSnapshotsStore } from '@/stores/snapshots-store'
 import { CashflowChart } from '@/components/cashflow/cashflow-chart'
@@ -19,10 +21,12 @@ import { EstimatedBalanceIndicator } from '@/components/cashflow'
 import { PageLoadingWrapper, DashboardSkeleton } from '@/components/loading'
 import { QuickUpdateView } from '@/components/quick-update'
 import { SaveSnapshotDialog } from '@/components/snapshots'
+import { TourRunner } from '@/components/tours'
 import { Button } from '@/components/ui/button'
 import { Toast } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { getTourDefinition } from '@/lib/tours/definitions'
 import type { ProjectionDays } from '@/types'
 import { DEFAULT_LINE_VISIBILITY, type LineVisibility } from '@/components/cashflow/types'
 
@@ -31,7 +35,12 @@ export function Dashboard() {
   const [showSaveSnapshot, setShowSaveSnapshot] = useState(false)
   const [chartVisibility, setChartVisibility] = useState<LineVisibility>(DEFAULT_LINE_VISIBILITY)
   const { projectionDays, setProjectionDays } = usePreferencesStore()
+  const { openWizard } = useOnboardingStore()
   const { toast, showSuccess, showError, hideToast } = useToast()
+  
+  // Page tour
+  const dashboardTour = usePageTour('dashboard')
+  const tourDefinition = getTourDefinition('dashboard')
 
   // Get finance data for snapshot input state
   const financeData = useFinanceData()
@@ -104,7 +113,7 @@ export function Dashboard() {
         <h1 className="text-2xl font-bold text-foreground mb-6">
           Painel de Fluxo de Caixa
         </h1>
-        <EmptyState />
+        <EmptyState onStartSetup={openWizard} />
       </div>
     )
   }
@@ -119,15 +128,18 @@ export function Dashboard() {
           {/* Projection + snapshot controls depend on projection data; keep them hidden while loading/error */}
           {!loadingState.showSkeleton && !loadingState.showError && (
             <>
-              <ProjectionSelector
-                value={projectionDays}
-                onChange={setProjectionDays}
-              />
+              <div data-tour="projection-selector">
+                <ProjectionSelector
+                  value={projectionDays}
+                  onChange={setProjectionDays}
+                />
+              </div>
               <Button
                 variant="outline"
                 onClick={() => setShowSaveSnapshot(true)}
                 disabled={!projection}
                 className="w-full sm:w-auto"
+                data-tour="save-snapshot"
               >
                 Salvar Projeção
               </Button>
@@ -135,7 +147,11 @@ export function Dashboard() {
           )}
 
           {/* Quick Update is a safe action even while the chart is (re)loading or in an error state. */}
-          <Button onClick={() => setShowQuickUpdate(true)} className="w-full sm:w-auto">
+          <Button
+            onClick={() => setShowQuickUpdate(true)}
+            className="w-full sm:w-auto"
+            data-tour="quick-update"
+          >
             Atualizar Saldos
           </Button>
         </div>
@@ -185,14 +201,20 @@ export function Dashboard() {
           )}
 
           {/* Summary Panel */}
-          {summaryStats && <SummaryPanel stats={summaryStats} />}
+          {summaryStats && (
+            <div data-tour="summary-panel">
+              <SummaryPanel stats={summaryStats} />
+            </div>
+          )}
 
           {/* Cashflow Chart */}
-          <CashflowChart
-            chartData={chartData}
-            dangerRanges={dangerRanges}
-            onVisibilityChange={setChartVisibility}
-          />
+          <div data-tour="cashflow-chart">
+            <CashflowChart
+              chartData={chartData}
+              dangerRanges={dangerRanges}
+              onVisibilityChange={setChartVisibility}
+            />
+          </div>
         </div>
       </PageLoadingWrapper>
 
@@ -221,6 +243,17 @@ export function Dashboard() {
           onRetry={toast.onRetry}
         />
       )}
+
+      {/* Page Tour */}
+      <TourRunner
+        steps={tourDefinition.steps}
+        currentStepIndex={dashboardTour.currentStepIndex}
+        onNext={dashboardTour.nextStep}
+        onPrevious={dashboardTour.previousStep}
+        onComplete={dashboardTour.completeTour}
+        onDismiss={dashboardTour.dismissTour}
+        isActive={dashboardTour.isTourActive}
+      />
     </div>
   )
 }

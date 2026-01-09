@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
+import { getSupabase, isSupabaseConfigured, ensureCurrentUserGroup } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import type { Profile } from '@/types'
 
@@ -17,25 +17,44 @@ export interface UseGroupReturn {
   members: GroupMember[]
   isLoading: boolean
   error: string | null
-  refetch: () => void
+  /** Whether the error is recoverable via retry */
+  isRecoverable: boolean
+  /** Retry fetching group data (includes self-heal attempt) */
+  retry: () => void
+  /** Explicitly trigger provisioning recovery */
+  recoverProvisioning: () => Promise<boolean>
 }
 
 /**
  * Hook to fetch and manage group data.
  * Returns the current user's group and all members.
+ * 
+ * Includes self-heal logic: if the group query returns "no rows" (PGRST116),
+ * automatically attempts to provision the user via ensure_current_user_group RPC.
  */
 export function useGroup(): UseGroupReturn {
   const [group, setGroup] = useState<GroupInfo | null>(null)
   const [members, setMembers] = useState<GroupMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRecoverable, setIsRecoverable] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   
   const { isAuthenticated, user } = useAuth()
   
-  const refetch = useCallback(() => {
+  const retry = useCallback(() => {
     setRetryCount(c => c + 1)
   }, [])
+
+  const recoverProvisioning = useCallback(async (): Promise<boolean> => {
+    const result = await ensureCurrentUserGroup()
+    if (result.success) {
+      // Trigger a refetch after successful provisioning
+      retry()
+      return true
+    }
+    return false
+  }, [retry])
 
   useEffect(() => {
     if (!isSupabaseConfigured() || !isAuthenticated) {
@@ -47,7 +66,10 @@ export function useGroup(): UseGroupReturn {
 
     async function fetchGroupData() {
       try {
-        if (mounted) setError(null)
+        if (mounted) {
+          setError(null)
+          setIsRecoverable(false)
+        }
         const client = getSupabase()
         
         // Fetch group via RLS (returns only user's group)
@@ -59,20 +81,52 @@ export function useGroup(): UseGroupReturn {
         if (!mounted) return
         
         if (groupError) {
-          // PGRST116 means no rows - user is orphaned
+          // PGRST116 means no rows - user might be orphaned
           if (groupError.code === 'PGRST116') {
-            setError('Sua conta está desassociada. Entre em contato com o administrador.')
-            setGroup(null)
-            setMembers([])
-            return
+            // Attempt self-heal via provisioning RPC
+            const provisionResult = await ensureCurrentUserGroup()
+            
+            if (!mounted) return
+            
+            if (provisionResult.success) {
+              // Retry fetching group after successful provisioning
+              const { data: retryGroupData, error: retryGroupError } = await client
+                .from('groups')
+                .select('id, name')
+                .single()
+              
+              if (!mounted) return
+              
+              if (retryGroupError) {
+                setError('Sua conta está desassociada. Use "Tentar novamente" ou entre em contato com o suporte.')
+                setIsRecoverable(true)
+                setGroup(null)
+                setMembers([])
+                return
+              }
+              
+              // Self-heal succeeded
+              setGroup({
+                id: retryGroupData.id,
+                name: retryGroupData.name,
+              })
+            } else {
+              // Provisioning failed - show recoverable error
+              setError('Sua conta está desassociada. Use "Tentar novamente" ou entre em contato com o suporte.')
+              setIsRecoverable(true)
+              setGroup(null)
+              setMembers([])
+              return
+            }
+          } else {
+            throw groupError
           }
-          throw groupError
+        } else {
+          setGroup({
+            id: groupData.id,
+            name: groupData.name,
+          })
         }
-        
-        setGroup({
-          id: groupData.id,
-          name: groupData.name,
-        })
         
         // Fetch members (RLS filters to same group)
         const { data: membersData, error: membersError } = await client
@@ -99,6 +153,7 @@ export function useGroup(): UseGroupReturn {
         if (!mounted) return
         const message = err instanceof Error ? err.message : 'Falha ao carregar grupo'
         setError(message)
+        setIsRecoverable(false)
       } finally {
         if (mounted) setIsLoading(false)
       }
@@ -111,8 +166,5 @@ export function useGroup(): UseGroupReturn {
     }
   }, [isAuthenticated, user?.id, user?.email, retryCount])
 
-  return { group, members, isLoading, error, refetch }
+  return { group, members, isLoading, error, isRecoverable, retry, recoverProvisioning }
 }
-
-
-

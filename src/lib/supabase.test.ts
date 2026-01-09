@@ -392,3 +392,90 @@ describe('injectDevSession', () => {
     expect(result.error).toContain('configured')
   })
 })
+
+// =============================================================================
+// PROVISIONING HELPER TESTS (ensureCurrentUserGroup)
+// =============================================================================
+
+// Note: These tests verify the behavior of ensureCurrentUserGroup by testing
+// the error mapping logic. Full integration tests are in E2E.
+// The actual RPC calls require a running Supabase instance.
+
+describe('handleSupabaseError generic fallback for provisioning codes', () => {
+  // These tests verify that provisioning-specific codes (P0001, P0002) fall through
+  // to generic error handling in handleSupabaseError. The special handling for these
+  // codes exists in ensureCurrentUserGroup, not in handleSupabaseError.
+  
+  it('handles P0001 error code via generic fallback', () => {
+    // P0001 is raised when user is not authenticated
+    // handleSupabaseError doesn't have special mapping for it
+    const result = handleSupabaseError({ code: 'P0001', message: 'not authenticated' })
+    
+    expect(result.success).toBe(false)
+    // Falls through to message-based handling
+  })
+
+  it('handles P0002 error code via generic fallback', () => {
+    // P0002 is raised when email is not found
+    // handleSupabaseError doesn't have special mapping for it
+    const result = handleSupabaseError({ code: 'P0002', message: 'email not found' })
+    
+    expect(result.success).toBe(false)
+    // Falls through to message-based handling
+  })
+})
+
+// =============================================================================
+// STATE HELPER ERROR HANDLING TESTS
+// =============================================================================
+
+describe('state helper error handling', () => {
+  describe('PGRST116 handling (no rows)', () => {
+    it('returns not found message for PGRST116 code', () => {
+      const result = handleSupabaseError({ code: 'PGRST116', message: 'no rows' }) as ErrorResult
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Record not found.')
+    })
+
+    it('detects PGRST116 in error message', () => {
+      const result = handleSupabaseError({ message: 'PGRST116: no rows returned' }) as ErrorResult
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Record not found.')
+    })
+  })
+
+  describe('PGRST205 handling (table not found)', () => {
+    it('returns appropriate message for PGRST205 code', () => {
+      const result = handleSupabaseError({ code: 'PGRST205', message: 'table not found' }) as ErrorResult
+      
+      expect(result.success).toBe(false)
+      // In DEV mode, message includes migration hint
+      expect(result.error).toContain('desatualizado')
+    })
+  })
+
+  describe('permission errors', () => {
+    it('returns permission error for code 42501', () => {
+      const result = handleSupabaseError({ code: '42501', message: 'permission denied for table' }) as ErrorResult
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("You don't have permission to perform this action.")
+    })
+  })
+
+  describe('duplicate key errors', () => {
+    it('returns duplicate error for code 23505', () => {
+      const result = handleSupabaseError({ 
+        code: '23505', 
+        message: 'duplicate key value violates unique constraint',
+        details: 'Key (user_id, tour_key)=(123, dashboard) already exists',
+      }) as ErrorResult
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('A record with this ID already exists.')
+      expect(result.details).toBe('Key (user_id, tour_key)=(123, dashboard) already exists')
+    })
+  })
+})

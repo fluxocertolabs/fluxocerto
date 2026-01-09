@@ -17,7 +17,10 @@ import { ManagePage } from '../pages/manage-page';
 import { QuickUpdatePage } from '../pages/quick-update-page';
 import { HistoryPage } from '../pages/history-page';
 import { SnapshotDetailPage } from '../pages/snapshot-detail-page';
+import { executeSQL, getUserIdFromEmail } from '../utils/supabase-admin';
 import { existsSync } from 'fs';
+
+const USE_PER_TEST_CONTEXT = process.env.PW_PER_TEST_CONTEXT === '1';
 
 /**
  * Custom test fixtures type
@@ -25,6 +28,22 @@ import { existsSync } from 'fs';
 type TestFixtures = {
   /** Worker context with isolation information */
   workerContext: IWorkerContext;
+  /**
+   * Internal auto fixture: reset this worker's group-scoped financial data before every test.
+   *
+   * Even with per-worker group isolation, data can accumulate across tests within the same worker.
+   * Under full-suite parallelism this can slow down `/manage` (which fetches all finance tables)
+   * enough to cause timeouts and flakes. Resetting group data per test keeps loads deterministic.
+   */
+  _perTestDbReset: void;
+  /**
+   * Internal auto fixture: keep worker-user UI unblocked across the suite.
+   *
+   * Some specs intentionally mutate onboarding/tour state (e.g. recovery/self-heal flows).
+   * Because our DB/auth is worker-scoped, those mutations can leak into subsequent tests
+   * executed by the same worker and cause overlays to block clicks.
+   */
+  _workerUiState: void;
   /** Database fixture scoped to worker (uses group-based isolation) */
   db: WorkerDatabaseFixture;
   /** Auth fixture scoped to worker */
@@ -51,6 +70,15 @@ type WorkerFixtures = {
   workerCtx: IWorkerContext;
   /** Worker-scoped browser context with auth state loaded */
   workerBrowserContext: BrowserContext;
+  /**
+   * Worker auth storage for Option B (per-test contexts).
+   * We keep only Supabase keys (sb-*) and carry them forward between tests.
+   */
+  workerAuthState: {
+    origin: string;
+    cookies: any[];
+    localStorage: { name: string; value: string }[];
+  };
 };
 
 /**
@@ -60,7 +88,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   // Worker-scoped context - created once per worker, shared across tests
   workerCtx: [
     async ({}, use, workerInfo) => {
-      const context = getWorkerContext(workerInfo.workerIndex);
+      const context = getWorkerContext(workerInfo.workerIndex, workerInfo.project.name);
       await use(context);
     },
     { scope: 'worker' },
@@ -128,9 +156,99 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: 'worker' },
   ],
 
+  // Worker-scoped auth state (origin + sb-* localStorage) for Option B
+  workerAuthState: [
+    async ({ workerCtx }, use) => {
+      const storageStatePath = workerCtx.authStatePath;
+      if (!existsSync(storageStatePath)) {
+        throw new Error(
+          `❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}. Run setup first.`
+        );
+      }
+
+      const fs = await import('fs/promises');
+      const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
+      const authState = JSON.parse(authStateContent);
+
+      const origin = authState?.origins?.[0]?.origin;
+      const localStorage = Array.isArray(authState?.origins?.[0]?.localStorage)
+        ? authState.origins[0].localStorage.filter((item: any) => typeof item?.name === 'string' && item.name.includes('sb-'))
+        : [];
+
+      const hasAuthToken = localStorage.some((item: any) => item?.name?.includes('auth-token'));
+      if (typeof origin !== 'string' || !origin) {
+        throw new Error(`❌ Worker ${workerCtx.workerIndex}: Auth state origin is missing/invalid`);
+      }
+      if (!hasAuthToken) {
+        throw new Error(`❌ Worker ${workerCtx.workerIndex}: No Supabase auth token found in localStorage!`);
+      }
+
+      await use({
+        origin,
+        cookies: Array.isArray(authState?.cookies) ? authState.cookies : [],
+        localStorage,
+      });
+    },
+    { scope: 'worker' },
+  ],
+
   // Override the default context to use our worker-scoped context with auth
-  context: async ({ workerBrowserContext }, use) => {
-    await use(workerBrowserContext);
+  context: async ({ browser, workerBrowserContext, workerAuthState }, use) => {
+    if (!USE_PER_TEST_CONTEXT) {
+      await use(workerBrowserContext);
+      return;
+    }
+
+    const context = await browser.newContext({
+      storageState: {
+        cookies: workerAuthState.cookies,
+        origins: [{ origin: workerAuthState.origin, localStorage: workerAuthState.localStorage }],
+      },
+    });
+
+    await use(context);
+    await context.close().catch(() => {});
+  },
+
+  // Option B: capture rotated Supabase token(s) between tests (sb-* localStorage).
+  // In default mode, this is a no-op (keeps behavior aligned with worker-scoped contexts).
+  page: async ({ context, workerAuthState }, use, testInfo) => {
+    const page = await context.newPage();
+    // Prevent rare hangs where navigations (reload/goto) wait until the overall test timeout.
+    // In Option B, we still allow longer navigations due to cold-cache behavior.
+    page.setDefaultNavigationTimeout(USE_PER_TEST_CONTEXT ? 45000 : 30000);
+    await use(page);
+
+    if (USE_PER_TEST_CONTEXT && testInfo.status === 'passed') {
+      try {
+        const nextLocalStorage = await Promise.race([
+          page.evaluate(() => {
+            const keys = Object.keys(localStorage);
+            return keys
+              .filter((k) => k.includes('sb-'))
+              .map((name) => ({ name, value: localStorage.getItem(name) ?? '' }))
+              .filter((item) => item.value.length > 0);
+          }),
+          new Promise<[]>(resolve => setTimeout(() => resolve([]), 1000)),
+        ]);
+
+        if (Array.isArray(nextLocalStorage) && nextLocalStorage.length > 0) {
+          workerAuthState.localStorage = nextLocalStorage;
+        }
+      } catch {
+        // ignore (page may already be closed on timeout)
+      }
+    }
+
+    if (!USE_PER_TEST_CONTEXT) {
+      await page.close().catch(() => {});
+      return;
+    }
+
+    await Promise.race([
+      page.close(),
+      new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+    ]).catch(() => {});
   },
 
   // Test-scoped worker context (just passes through the worker-scoped one)
@@ -151,11 +269,83 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
       // Ensure test user exists in worker's group
       await dbFixture.ensureTestUser();
+
+      // Ensure onboarding wizard and page tours don't block the UI for worker users.
+      // Dedicated onboarding/tour specs use fresh emails and don't rely on this fixture.
+      const userId = await getUserIdFromEmail(workerCtx.email);
+      const groupId = await dbFixture.getWorkerGroupId();
+
+      await executeSQL(`
+        INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+        VALUES ('${userId}', '${groupId}', 'completed', 'done', now(), now())
+        ON CONFLICT (user_id, group_id) DO UPDATE
+        SET status = EXCLUDED.status,
+            current_step = EXCLUDED.current_step,
+            auto_shown_at = EXCLUDED.auto_shown_at,
+            completed_at = EXCLUDED.completed_at
+      `);
+
+      await executeSQL(`
+        INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+        VALUES
+          ('${userId}', 'dashboard', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'manage', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'history', 'dismissed', 1, now(), NULL)
+        ON CONFLICT (user_id, tour_key) DO UPDATE
+        SET status = EXCLUDED.status,
+            version = EXCLUDED.version,
+            dismissed_at = EXCLUDED.dismissed_at,
+            completed_at = NULL
+      `);
+
       console.log(`[Fixture] DB setup complete for worker ${workerCtx.workerIndex}`);
 
       await use(dbFixture);
     },
     { scope: 'worker' },
+  ],
+
+  // Auto-run per test: reset worker group data to prevent cross-test contamination + slowdowns.
+  _perTestDbReset: [
+    async ({ db }, use) => {
+      await db.resetDatabase();
+      await use();
+    },
+    { auto: true },
+  ],
+
+  // Auto-run per test to ensure onboarding/tour overlays never block interactions
+  _workerUiState: [
+    async ({ workerCtx, db }, use) => {
+      const userId = await getUserIdFromEmail(workerCtx.email);
+      const groupId = await db.getWorkerGroupId();
+
+      await executeSQL(`
+        INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+        VALUES ('${userId}', '${groupId}', 'completed', 'done', now(), now())
+        ON CONFLICT (user_id, group_id) DO UPDATE
+        SET status = EXCLUDED.status,
+            current_step = EXCLUDED.current_step,
+            auto_shown_at = EXCLUDED.auto_shown_at,
+            completed_at = EXCLUDED.completed_at
+      `);
+
+      await executeSQL(`
+        INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+        VALUES
+          ('${userId}', 'dashboard', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'manage', 'dismissed', 1, now(), NULL),
+          ('${userId}', 'history', 'dismissed', 1, now(), NULL)
+        ON CONFLICT (user_id, tour_key) DO UPDATE
+        SET status = EXCLUDED.status,
+            version = EXCLUDED.version,
+            dismissed_at = EXCLUDED.dismissed_at,
+            completed_at = NULL
+      `);
+
+      await use();
+    },
+    { auto: true },
   ],
 
   // Auth fixture scoped to worker

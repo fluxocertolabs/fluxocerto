@@ -1,5 +1,4 @@
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0'
 
 interface BeforeUserCreatedPayload {
   metadata: {
@@ -26,6 +25,18 @@ interface BeforeUserCreatedPayload {
   }
 }
 
+/**
+ * Before User Created Auth Hook
+ * 
+ * This hook runs before a new user is created in Supabase Auth.
+ * 
+ * SELF-SERVE SIGNUPS: This hook now allows all signups with valid emails.
+ * User provisioning (group + profile creation) is handled by:
+ * 1. The on_auth_user_created trigger (best-effort)
+ * 2. The ensure_current_user_group() RPC (client-side recovery)
+ * 
+ * The hook still validates the webhook signature for security.
+ */
 Deno.serve(async (req) => {
   // Get the webhook secret from environment
   const hookSecret = Deno.env.get('BEFORE_USER_CREATED_HOOK_SECRET')
@@ -59,7 +70,7 @@ Deno.serve(async (req) => {
     const email = verifiedPayload.user.email?.toLowerCase() || ''
     
     if (!email) {
-      // No email provided - block signup
+      // No email provided - block signup (email is required for Magic Link auth)
       return new Response(
         JSON.stringify({
           error: {
@@ -71,65 +82,17 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Create Supabase admin client to check allowed_emails
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Supabase environment variables not set')
-      // Fail closed on configuration error
-      return new Response(
-        JSON.stringify({
-          error: {
-            http_code: 500,
-            message: 'System error during signup validation',
-          },
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
-    // Check if email is in allowed list (profiles table, formerly allowed_emails)
-    // citext handles case-insensitivity
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
-
-    if (error || !data) {
-      // Email not in allowed list - block signup
-      // Return 400 to prevent user creation
-      // Note: Not logging email to avoid PII in logs
-      console.log('Blocked signup attempt for non-approved email')
-      return new Response(
-        JSON.stringify({
-          error: {
-            http_code: 400,
-            message: 'Signup not allowed',
-          },
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Email is allowed - permit signup
-    // Note: Not logging email to avoid PII in logs
-    console.log('Allowed signup for approved email')
+    // Self-serve signups: Allow all valid emails
+    // User provisioning is handled by the on_auth_user_created trigger
+    // and the ensure_current_user_group() RPC for recovery
+    console.log('Allowed self-serve signup')
     return new Response('{}', { 
       status: 200, 
       headers: { 'Content-Type': 'application/json' } 
     })
     
   } catch (error) {
-    // Fail closed on any error (signature verification, network, etc.)
+    // Fail closed on any error (signature verification, etc.)
     console.error('Error in before-user-created hook:', error)
     return new Response(
       JSON.stringify({
@@ -142,4 +105,3 @@ Deno.serve(async (req) => {
     )
   }
 })
-

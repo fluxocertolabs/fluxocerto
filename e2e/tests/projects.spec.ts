@@ -7,7 +7,8 @@ import { test, expect } from '../fixtures/test-base';
 import { createProject, createSingleShotIncome } from '../utils/test-data';
 
 test.describe('Project (Income) Management', () => {
-  // Tests now run in parallel with per-worker data prefixing for isolation
+  // Run tests serially to avoid parallel flakiness with realtime connections
+  test.describe.configure({ mode: 'serial' });
 
   test.describe('Recurring Projects', () => {
     test('T044: create recurring project "Salário" R$ 8.000,00 monthly guaranteed → appears in recurring list', async ({
@@ -161,25 +162,32 @@ test.describe('Project (Income) Management', () => {
     }) => {
       // Use unique name to avoid collisions
       const uniqueId = Date.now();
+
+      // IMPORTANT: Navigate FIRST, then seed data, then reload.
+      // Seeding before navigation causes Playwright to hang due to Supabase Realtime interactions.
+      await managePage.goto();
+      await managePage.selectProjectsTab();
+
       const [seeded] = await db.seedSingleShotIncome([
         createSingleShotIncome({ name: `Receita Avulsa ${uniqueId}`, certainty: 'guaranteed' }),
       ]);
 
-      // Update certainty using admin client (bypasses RLS issues in parallel tests)
+      // Update certainty using admin client
       await db.updateProjectCertainty(seeded.id!, 'uncertain');
 
-      // Navigate and verify the UI displays the updated certainty
-      await expect(async () => {
-        await managePage.goto();
-        await page.waitForSelector('[role="status"][aria-busy="false"]', { timeout: 15000 }).catch(() => {});
-        await managePage.selectProjectsTab();
-        const projects = managePage.projects();
-        await projects.selectSingleShot();
-        const incomeNameEl = page.getByText(seeded.name, { exact: true }).first();
-        await expect(incomeNameEl).toBeVisible({ timeout: 5000 });
-        const container = incomeNameEl.locator('..');
-        await expect(container.getByText(/incert/i)).toBeVisible({ timeout: 3000 });
-      }).toPass({ timeout: 45000, intervals: [3000, 5000, 8000] });
+      // Reload to pick up the seeded and updated data
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await managePage.waitForReady();
+      await managePage.selectProjectsTab();
+
+      const projects = managePage.projects();
+      await projects.selectSingleShot();
+
+      // Verify the certainty badge shows "Incerta"
+      const incomeNameEl = page.getByText(seeded.name, { exact: true }).first();
+      await expect(incomeNameEl).toBeVisible({ timeout: 10000 });
+      const container = incomeNameEl.locator('..');
+      await expect(container.getByText(/incert/i)).toBeVisible({ timeout: 10000 });
     });
 
     test('T050: delete project confirmation dialog → opens and closes correctly', async ({

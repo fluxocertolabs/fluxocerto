@@ -1,21 +1,81 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
+import { getSupabase, isSupabaseConfigured, ensureCurrentUserGroup, signOut } from '@/lib/supabase'
 import { getAuthErrorMessage, isExpiredLinkError } from '@/lib/auth-errors'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+
+type CallbackState = 
+  | { type: 'loading' }
+  | { type: 'provisioning' }
+  | { type: 'auth_error'; message: string; isExpired: boolean }
+  | { type: 'provisioning_error'; message: string; diagnosticPayload: string }
 
 export function AuthCallbackPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [error, setError] = useState<string | null>(null)
-  const [isExpired, setIsExpired] = useState(false)
+  const [state, setState] = useState<CallbackState>({ type: 'loading' })
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleProvisioningRetry = useCallback(async () => {
+    setIsRetrying(true)
+    setState({ type: 'provisioning' })
+    
+    const result = await ensureCurrentUserGroup()
+    
+    if (result.success) {
+      navigate('/', { replace: true })
+    } else {
+      const diagnosticPayload = JSON.stringify({
+        error: result.error,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+      }, null, 2)
+      
+      setState({
+        type: 'provisioning_error',
+        message: result.error ?? 'Erro ao configurar sua conta',
+        diagnosticPayload,
+      })
+    }
+    setIsRetrying(false)
+  }, [navigate])
+
+  const handleSignOut = useCallback(async () => {
+    await signOut()
+    navigate('/login', { replace: true })
+  }, [navigate])
+
+  const handleCopyDiagnostics = useCallback((payload: string) => {
+    navigator.clipboard.writeText(payload)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch((err) => {
+        console.error('Failed to copy diagnostics:', err)
+      })
+  }, [])
 
   useEffect(() => {
     const handleCallback = async () => {
       // Guard against unconfigured Supabase
       if (!isSupabaseConfigured()) {
-        setError('Aplicação não está configurada corretamente. Entre em contato com o suporte.')
+        setState({
+          type: 'auth_error',
+          message: 'Aplicação não está configurada corretamente. Entre em contato com o suporte.',
+          isExpired: false,
+        })
         return
       }
 
@@ -27,9 +87,11 @@ export function AuthCallbackPage() {
       
       if (errorParam) {
         const errorObj = new Error(errorDescription || errorParam)
-        setError(getAuthErrorMessage(errorObj))
-        setIsExpired(isExpiredLinkError(errorObj))
-
+        setState({
+          type: 'auth_error',
+          message: getAuthErrorMessage(errorObj),
+          isExpired: isExpiredLinkError(errorObj),
+        })
         return
       }
 
@@ -37,26 +99,54 @@ export function AuthCallbackPage() {
       const { data: { session }, error: sessionError } = await client.auth.getSession()
 
       if (sessionError) {
-        setError(getAuthErrorMessage(sessionError))
-        setIsExpired(isExpiredLinkError(sessionError))
-
+        setState({
+          type: 'auth_error',
+          message: getAuthErrorMessage(sessionError),
+          isExpired: isExpiredLinkError(sessionError),
+        })
         return
       }
 
-      if (session) {
-        // Successfully authenticated, redirect to dashboard
+      if (!session) {
+        // No session and no error - might be a stale callback
+        setState({
+          type: 'auth_error',
+          message: 'Não foi possível completar o login. Por favor, solicite um novo link de acesso.',
+          isExpired: true,
+        })
+        return
+      }
+
+      // Successfully authenticated - now ensure user has group/profile
+      setState({ type: 'provisioning' })
+      
+      const result = await ensureCurrentUserGroup()
+      
+      if (result.success) {
+        // Provisioning successful, redirect to dashboard
         navigate('/', { replace: true })
       } else {
-        // No session and no error - might be a stale callback
-        setError('Não foi possível completar o login. Por favor, solicite um novo link de acesso.')
-
+        // Provisioning failed - show recoverable error
+        const diagnosticPayload = JSON.stringify({
+          error: result.error,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+        }, null, 2)
+        
+        setState({
+          type: 'provisioning_error',
+          message: result.error ?? 'Erro ao configurar sua conta',
+          diagnosticPayload,
+        })
       }
     }
 
     handleCallback()
   }, [navigate, searchParams])
 
-  if (error) {
+  // Auth error state (expired/invalid link)
+  if (state.type === 'auth_error') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
@@ -78,15 +168,15 @@ export function AuthCallbackPage() {
               </svg>
             </div>
             <CardTitle>
-              {isExpired ? 'Link Expirado' : 'Erro ao Entrar'}
+              {state.isExpired ? 'Link Inválido ou Expirado' : 'Erro ao Entrar'}
             </CardTitle>
             <CardDescription className="text-destructive">
-              {error}
+              {state.message}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <Button onClick={() => navigate('/login', { replace: true })}>
-              {isExpired ? 'Solicitar Novo Link' : 'Voltar para Login'}
+              Solicitar Novo Link
             </Button>
           </CardContent>
         </Card>
@@ -94,7 +184,82 @@ export function AuthCallbackPage() {
     )
   }
 
-  // Loading state while processing callback
+  // Provisioning error state (recoverable)
+  if (state.type === 'provisioning_error') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="rounded-full bg-destructive/10 w-16 h-16 mx-auto flex items-center justify-center mb-4">
+              <svg
+                className="w-8 h-8 text-destructive"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <CardTitle>Erro ao Configurar Conta</CardTitle>
+            <CardDescription className="text-destructive">
+              {state.message}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Button onClick={handleProvisioningRetry} disabled={isRetrying}>
+              {isRetrying ? 'Tentando...' : 'Tentar Novamente'}
+            </Button>
+            <Button variant="outline" onClick={handleSignOut}>
+              Sair
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  Ajuda
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Precisa de Ajuda?</DialogTitle>
+                  <DialogDescription className="space-y-4">
+                    <p>
+                      Ocorreu um erro ao configurar sua conta. Tente as seguintes soluções:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Verifique sua conexão com a internet</li>
+                      <li>Clique em "Tentar Novamente"</li>
+                      <li>Se o problema persistir, saia e solicite um novo link de acesso</li>
+                    </ul>
+                    <p className="text-sm text-muted-foreground">
+                      Se precisar de suporte, copie os detalhes abaixo e entre em contato conosco.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleCopyDiagnostics(state.diagnosticPayload)}
+                  >
+                    {copied ? 'Copiado!' : 'Copiar Detalhes'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Loading/provisioning state
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -121,13 +286,16 @@ export function AuthCallbackPage() {
               />
             </svg>
           </div>
-          <CardTitle>Completando login...</CardTitle>
+          <CardTitle>
+            {state.type === 'provisioning' ? 'Configurando sua conta...' : 'Completando login...'}
+          </CardTitle>
           <CardDescription>
-            Por favor, aguarde enquanto verificamos seu link de acesso.
+            {state.type === 'provisioning'
+              ? 'Estamos preparando tudo para você.'
+              : 'Por favor, aguarde enquanto verificamos seu link de acesso.'}
           </CardDescription>
         </CardHeader>
       </Card>
     </div>
   )
 }
-

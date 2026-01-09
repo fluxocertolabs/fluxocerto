@@ -19,7 +19,7 @@ import { useGroup } from '@/hooks/use-group'
 
 export function Header() {
   const navigate = useNavigate()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated } = useAuth()
   const { group, isLoading: groupLoading } = useGroup()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const prefersReducedMotion =
@@ -94,21 +94,14 @@ export function Header() {
             </NavLink>
             <ThemeToggle />
             {isAuthenticated && (
-              <div className="flex items-center gap-3 ml-4 pl-4 border-l">
-                {user?.email && (
-                  <span className="text-xs text-muted-foreground hidden lg:inline">
-                    {user.email}
-                  </span>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Sair
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                className="text-muted-foreground hover:text-foreground ml-2"
+              >
+                Sair
+              </Button>
             )}
           </div>
 

@@ -155,16 +155,26 @@ export class InbucketClient {
   }
 
   /**
-   * Purge all messages (Mailpit doesn't have per-mailbox purge)
+   * Purge messages for a specific mailbox (email address)
+   * Since Mailpit doesn't have per-mailbox purge, we list and delete individually
    */
-  async purgeMailbox(_mailbox: string): Promise<void> {
-    // Mailpit DELETE /api/v1/messages with no body deletes all messages
+  async purgeMailbox(mailbox: string): Promise<void> {
+    const messages = await this.listMessages(mailbox);
+    if (messages.length === 0) {
+      return;
+    }
+    
+    // Delete only messages for this specific mailbox
+    const messageIds = messages.map((m) => m.id);
     const response = await fetch(`${this.baseUrl}/api/v1/messages`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ IDs: messageIds }),
     });
+    
     // 200 is success, ignore errors for empty mailbox
     if (!response.ok && response.status !== 404) {
-      console.warn(`Failed to purge mailbox: ${response.statusText}`);
+      console.warn(`Failed to purge mailbox ${mailbox}: ${response.statusText}`);
     }
   }
 

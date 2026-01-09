@@ -47,7 +47,7 @@ Dual-income households with variable income streams (freelancers, contractors, p
 
 ### ✅ Cloud-Powered Architecture
 - **Supabase backend**: Secure PostgreSQL database with real-time sync
-- **Anonymous authentication**: No sign-up required, data tied to your browser session
+- **Magic Link authentication (self-serve)**: Passwordless sign-in/sign-up via email link
 - **Real-time updates**: Changes sync instantly across tabs
 - **Row-level security**: Your data is isolated and protected
 
@@ -97,9 +97,9 @@ cp .env.example .env
    - **anon public** key → `VITE_SUPABASE_ANON_KEY`
 4. Add these values to your `.env` file
 5. Go to **SQL Editor** and run the migration from `supabase/migrations/001_initial_schema.sql`
-6. Enable **Anonymous Sign-Ins** in **Authentication → Providers**
+6. Enable **Email (Magic Link)** sign-ins in **Authentication → Providers**
 
-See `specs/008-supabase-migration/quickstart.md` for detailed setup instructions.
+See `.specify/specs/008-supabase-migration/quickstart.md` for detailed setup instructions.
 
 ### Local Development (with Auth Bypass)
 
@@ -114,7 +114,7 @@ pnpm run gen:token
 #    Script will write VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN to .env
 
 # 3. Start the dev server
-pnpm dev:app
+pnpm dev:app -- --port 5174
 ```
 
 **The dashboard loads immediately—no login required!**
@@ -129,10 +129,12 @@ The token generation script creates:
 ### Start Development Server (Standard)
 
 ```bash
-pnpm dev
+pnpm dev -- --port 5174
 ```
 
-The app will be available at `http://localhost:5173`
+The app will be available at `http://localhost:5174`
+
+> **Note:** Local Supabase auth redirects are configured for `http://localhost:5174` (see `supabase/config.toml`). If you want a different port, update `auth.site_url` and `auth.additional_redirect_urls`.
 
 ### Available Scripts
 
@@ -152,7 +154,7 @@ pnpm test:coverage # Run tests with coverage report
 
 ### Initial Setup (One-time, ~10 minutes)
 
-1. **Open the app** (no login required)
+1. **Sign in** via Magic Link (email link)
 2. **Add your bank accounts** via Manage → Accounts
    - Add checking accounts (used for cashflow calculation)
    - Add savings/investment accounts (for reference)

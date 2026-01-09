@@ -140,9 +140,8 @@ test.describe('Historical Projection Snapshots', () => {
       // Wait for navigation to detail page
       await page.waitForURL(/\/history\/[a-f0-9-]+/);
 
-      // Verify historical banner is shown
-      const hasBanner = await snapshotDetailPage.hasHistoricalBanner();
-      expect(hasBanner).toBe(true);
+    // Verify historical banner is shown (URL can change before snapshot data finishes loading)
+    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: 15000 });
     });
 
     test('delete snapshot from history list → snapshot removed', async ({

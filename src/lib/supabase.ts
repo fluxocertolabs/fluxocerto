@@ -1,5 +1,16 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import type { Result } from '@/stores/finance-store'
+import type {
+  OnboardingStateRow,
+  OnboardingState,
+  OnboardingStep,
+  OnboardingStatus,
+  TourStateRow,
+  TourState,
+  TourKey,
+  TourStatus,
+} from '@/types'
+import { transformOnboardingStateRow, transformTourStateRow } from '@/types'
 
 // Database row types for type-safe responses
 
@@ -375,7 +386,7 @@ export async function getCurrentUser(): Promise<User | null> {
 /**
  * Request a Magic Link for email authentication.
  * Always shows success message to prevent email enumeration.
- * The before-user-created hook handles invite validation.
+ * Self-serve signups are allowed for any email address.
  */
 export async function signInWithMagicLink(email: string): Promise<{ error: Error | null }> {
   if (!isSupabaseConfigured()) {
@@ -520,6 +531,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   '54000': 'Storage limit reached. Please upgrade your Supabase plan or delete unused data.',
   // PostgREST error codes
   'PGRST116': 'Record not found.',
+  // PGRST205: table/view not found in schema cache (usually means migrations not applied or API schema not refreshed)
+  'PGRST205': import.meta.env.DEV
+    ? 'Banco de dados local desatualizado: tabela não encontrada. Rode `pnpm db:reset` e reinicie o app.'
+    : 'Banco de dados desatualizado: recurso indisponível no momento.',
   // Network errors
   'NETWORK_ERROR': 'Unable to connect. Please check your internet connection.',
   'TIMEOUT': 'Request timed out. Please try again.',
@@ -593,5 +608,257 @@ export function handleSupabaseError<T = never>(error: unknown): Result<T> {
   return {
     success: false,
     error: 'Ocorreu um erro inesperado.',
+  }
+}
+
+// ============================================================================
+// PROVISIONING HELPERS
+// ============================================================================
+
+/**
+ * Ensure the current user has a valid group and profile membership.
+ * Calls the ensure_current_user_group RPC function.
+ * 
+ * This is idempotent and safe to call multiple times.
+ * For self-serve signups, creates a new group with id = auth.uid().
+ * For invited users, uses their existing group membership.
+ * 
+ * @returns Result with group_id and created flag, or error
+ */
+export async function ensureCurrentUserGroup(): Promise<Result<{ groupId: string; created: boolean }>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { data, error } = await client.rpc('ensure_current_user_group')
+
+    if (error) {
+      // Handle specific error codes
+      if (error.code === 'P0001') {
+        return { success: false, error: 'Você precisa estar autenticado para continuar' }
+      }
+      if (error.code === 'P0002') {
+        return { success: false, error: 'Email não encontrado. Por favor, faça login novamente.' }
+      }
+      return handleSupabaseError(error)
+    }
+
+    const result = data as { group_id: string; created: boolean }
+    return {
+      success: true,
+      data: {
+        groupId: result.group_id,
+        created: result.created,
+      },
+    }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+// ============================================================================
+// ONBOARDING STATE HELPERS
+// ============================================================================
+
+/**
+ * Get the current user's onboarding state for their group.
+ * Returns null if no onboarding state exists.
+ */
+export async function getOnboardingState(): Promise<Result<OnboardingState | null>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { data, error } = await client
+      .from('onboarding_states')
+      .select('*')
+      .single()
+
+    if (error) {
+      // PGRST116 means no rows - this is expected for new users
+      if (error.code === 'PGRST116') {
+        return { success: true, data: null }
+      }
+      return handleSupabaseError(error)
+    }
+
+    return { success: true, data: transformOnboardingStateRow(data as OnboardingStateRow) }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * Create or update the onboarding state for the current user.
+ */
+export async function upsertOnboardingState(
+  state: Partial<{
+    status: OnboardingStatus
+    currentStep: OnboardingStep
+    autoShownAt: Date | null
+    dismissedAt: Date | null
+    completedAt: Date | null
+    metadata: Record<string, unknown> | null
+  }>
+): Promise<Result<OnboardingState>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+  const { data: { user } } = await client.auth.getUser()
+  
+  if (!user) {
+    return { success: false, error: 'Você precisa estar autenticado' }
+  }
+
+  const groupId = await getGroupId()
+  if (!groupId) {
+    return { success: false, error: 'Grupo não encontrado' }
+  }
+
+  try {
+    const row: Partial<OnboardingStateRow> = {
+      user_id: user.id,
+      group_id: groupId,
+    }
+
+    if (state.status !== undefined) row.status = state.status
+    if (state.currentStep !== undefined) row.current_step = state.currentStep
+    if (state.autoShownAt !== undefined) row.auto_shown_at = state.autoShownAt?.toISOString() ?? null
+    if (state.dismissedAt !== undefined) row.dismissed_at = state.dismissedAt?.toISOString() ?? null
+    if (state.completedAt !== undefined) row.completed_at = state.completedAt?.toISOString() ?? null
+    if (state.metadata !== undefined) row.metadata = state.metadata
+
+    const { data, error } = await client
+      .from('onboarding_states')
+      .upsert(row, { onConflict: 'user_id,group_id' })
+      .select()
+      .single()
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    return { success: true, data: transformOnboardingStateRow(data as OnboardingStateRow) }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+// ============================================================================
+// TOUR STATE HELPERS
+// ============================================================================
+
+/**
+ * Get all tour states for the current user.
+ */
+export async function getTourStates(): Promise<Result<TourState[]>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { data, error } = await client
+      .from('tour_states')
+      .select('*')
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    return {
+      success: true,
+      data: (data as TourStateRow[]).map(transformTourStateRow),
+    }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * Get a specific tour state for the current user.
+ */
+export async function getTourState(tourKey: TourKey): Promise<Result<TourState | null>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { data, error } = await client
+      .from('tour_states')
+      .select('*')
+      .eq('tour_key', tourKey)
+      .single()
+
+    if (error) {
+      // PGRST116 means no rows - tour not yet seen
+      if (error.code === 'PGRST116') {
+        return { success: true, data: null }
+      }
+      return handleSupabaseError(error)
+    }
+
+    return { success: true, data: transformTourStateRow(data as TourStateRow) }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * Create or update a tour state for the current user.
+ */
+export async function upsertTourState(
+  tourKey: TourKey,
+  state: {
+    status: TourStatus
+    version: number
+  }
+): Promise<Result<TourState>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+  const { data: { user } } = await client.auth.getUser()
+  
+  if (!user) {
+    return { success: false, error: 'Você precisa estar autenticado' }
+  }
+
+  try {
+    const now = new Date().toISOString()
+    const row: Partial<TourStateRow> = {
+      user_id: user.id,
+      tour_key: tourKey,
+      status: state.status,
+      version: state.version,
+      completed_at: state.status === 'completed' ? now : null,
+      dismissed_at: state.status === 'dismissed' ? now : null,
+    }
+
+    const { data, error } = await client
+      .from('tour_states')
+      .upsert(row, { onConflict: 'user_id,tour_key' })
+      .select()
+      .single()
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    return { success: true, data: transformTourStateRow(data as TourStateRow) }
+  } catch (err) {
+    return handleSupabaseError(err)
   }
 }

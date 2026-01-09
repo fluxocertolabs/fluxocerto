@@ -1,7 +1,7 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # CodeRabbit configuration
 # See: https://docs.coderabbit.ai/configuration
 
-version: "2"
 reviews:
   path_filters:
     - "!.specify/**"

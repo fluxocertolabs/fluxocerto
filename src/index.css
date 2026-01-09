@@ -70,8 +70,7 @@
 /* Smooth transitions for theme changes (200ms per spec) */
 * {
   transition: background-color 200ms ease-in-out,
-              border-color 200ms ease-in-out,
-              color 200ms ease-in-out;
+              border-color 200ms ease-in-out;
 }
 
 /* Disable transitions during initial load to prevent FOUC animation */
@@ -87,4 +86,191 @@
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Micro-interactions                                                          */
+/* -------------------------------------------------------------------------- */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 180ms ease-in-out;
+}
+
+/* Floating help button animations */
+@keyframes help-pulse {
+  0%, 100% {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+  50% {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+}
+
+@keyframes help-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.animate-help-pulse {
+  animation: help-pulse 3s ease-in-out infinite;
+}
+
+.animate-help-ring {
+  animation: help-ring 2s ease-out infinite;
+}
+
+.animate-help-ring-delayed {
+  animation: help-ring 2s ease-out infinite;
+  animation-delay: 0.5s;
+}
+
+/* Floating help button swap animations (FAB <-> menu) */
+@keyframes help-fab-out {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(7rem, 0, 0) scale(0.6) rotate(14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes help-fab-in {
+  0% {
+    transform: translate3d(7rem, 0, 0) scale(0.6) rotate(14deg);
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes help-menu-in {
+  0% {
+    transform: translate3d(2rem, 0.25rem, 0) scale(0.96);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes help-menu-out {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(1.5rem, 0.25rem, 0) scale(0.96);
+    opacity: 0;
+  }
+}
+
+@keyframes help-pill-in {
+  from {
+    transform: translate3d(1.5rem, 0, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes help-pill-out {
+  from {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(1.5rem, 0, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes help-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes help-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-help-fab-out {
+  animation: help-fab-out 420ms cubic-bezier(0.18, 1, 0.32, 1) both;
+}
+
+.animate-help-fab-in {
+  animation: help-fab-in 340ms cubic-bezier(0.18, 1, 0.32, 1) both;
+  animation-delay: 80ms;
+}
+
+.animate-help-menu-in {
+  animation: help-menu-in 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0ms;
+}
+
+.animate-help-menu-out {
+  animation: help-menu-out 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-help-pill-in {
+  animation: help-pill-in 240ms ease-out both;
+  animation-delay: 140ms;
+}
+
+.animate-help-pill-out {
+  animation: help-pill-out 200ms ease-in both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake,
+  .animate-help-pulse,
+  .animate-help-ring,
+  .animate-help-ring-delayed {
+    animation: none;
+  }
+
+  /* Keep the swap readable with a minimal fade (no travel/blur) */
+  .animate-help-fab-out,
+  .animate-help-menu-out,
+  .animate-help-pill-out {
+    animation: help-fade-out 120ms ease-out both;
+    animation-delay: 0ms;
+  }
+
+  .animate-help-fab-in,
+  .animate-help-menu-in,
+  .animate-help-pill-in {
+    animation: help-fade-in 120ms ease-out both;
+    animation-delay: 0ms;
+  }
 }

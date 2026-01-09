@@ -157,15 +157,23 @@ test.describe('Mobile Navigation & Layout', () => {
 
     // Navigate via mobile menu to History
     await page.getByRole('button', { name: /abrir menu/i }).click();
-    await page.getByRole('link', { name: 'Histórico' }).click();
-    await expect(page).toHaveURL(/\/history$/);
+    const historyLink = page.getByRole('link', { name: 'Histórico' });
+    await expect(historyLink).toBeVisible({ timeout: 10000 });
+    await Promise.all([
+      page.waitForURL(/\/history$/, { timeout: 30000 }),
+      historyLink.click({ noWaitAfter: true }),
+    ]);
     await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     // Navigate via mobile menu to Manage
     await page.getByRole('button', { name: /abrir menu/i }).click();
-    await page.getByRole('link', { name: 'Gerenciar' }).click();
-    await expect(page).toHaveURL(/\/manage$/);
+    const manageLink = page.getByRole('link', { name: 'Gerenciar' });
+    await expect(manageLink).toBeVisible({ timeout: 10000 });
+    await Promise.all([
+      page.waitForURL(/\/manage$/, { timeout: 30000 }),
+      manageLink.click({ noWaitAfter: true }),
+    ]);
     await expect(page.getByRole('heading', { name: /gerenciar dados financeiros/i })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 

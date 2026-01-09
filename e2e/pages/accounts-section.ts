@@ -18,17 +18,36 @@ export class AccountsSection {
   /**
    * Get the add button - uses the one in the header (first one), not the empty state
    */
-  private get addButton(): Locator {
-    // Target the button in the header area, not the one in the empty state
-    // The header button is outside the TabsContent area
-    return this.page.getByRole('button', { name: /adicionar conta|add account|nova conta/i }).first();
+  private get addButtons(): Locator {
+    // There can be multiple "Adicionar Conta" buttons (header + empty state).
+    // We intentionally return the *collection* and pick the first visible one at runtime.
+    return this.page.getByRole('button', { name: /adicionar conta|add account|nova conta/i });
   }
 
   /**
    * Click add new account button to open form
    */
   async clickAdd(): Promise<void> {
-    await this.addButton.click();
+    const buttons = this.addButtons;
+    const count = await buttons.count();
+    for (let i = 0; i < count; i++) {
+      const btn = buttons.nth(i);
+      if (!(await btn.isVisible().catch(() => false))) continue;
+
+      // Avoid clicking buttons inside dialogs (e.g. the form submit button is also named
+      // "Adicionar Conta" and would match this locator).
+      const isInsideDialog = await btn
+        .evaluate((el) => !!el.closest('[role="dialog"], [role="alertdialog"]'))
+        .catch(() => false);
+      if (isInsideDialog) continue;
+
+      await btn.scrollIntoViewIfNeeded().catch(() => {});
+      await btn.click({ timeout: 5000, noWaitAfter: true }).catch(async () => {
+        await btn.click({ force: true, noWaitAfter: true });
+      });
+      return;
+    }
+    throw new Error('No visible "Adicionar Conta" button found');
   }
 
   /**
@@ -39,33 +58,69 @@ export class AccountsSection {
     type: 'checking' | 'savings' | 'investment';
     balance: string;
   }): Promise<void> {
-    await this.clickAdd();
+    // If a tour tooltip is visible, it can match role=dialog and block interactions.
+    // Close it proactively to keep the flow deterministic.
+    const tourCloseButton = this.page.getByRole('button', { name: /fechar tour/i });
+    if (await tourCloseButton.isVisible().catch(() => false)) {
+      await tourCloseButton.click({ timeout: 2000 }).catch(() => {});
+    }
 
-    // Wait for dialog to open
-    const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    // Target the account dialog by its unique title ("Adicionar Conta").
+    // IMPORTANT: Don't use XPath ancestor queries — they're fragile in Playwright.
+    // Instead, use the dialog's accessible name which comes from the DialogTitle.
+    const dialog = this.page.getByRole('dialog', { name: /adicionar conta/i });
+    const nameInput = dialog.getByLabel(/nome da conta/i);
+
+    await expect(async () => {
+      // If the dialog is already open, don't click anything.
+      if (await dialog.isVisible().catch(() => false)) return;
+
+      // Clear any open popovers/menus that might intercept clicks (safe no-op when nothing is open).
+      await this.page.keyboard.press('Escape').catch(() => {});
+      await this.page.waitForTimeout(100); // Let the UI settle
+
+      await this.clickAdd();
+      await expect(dialog).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 30000, intervals: [500, 1000, 2000, 3000] });
 
     // Fill form fields - target inputs within the dialog
-    await dialog.getByLabel(/nome/i).fill(data.name);
+    await expect(nameInput).toBeVisible({ timeout: 10000 });
+    await nameInput.fill(data.name);
     
-    // Select account type - click the trigger, then select option
-    await dialog.getByRole('combobox').first().click();
-    
-    const typeLabels: Record<string, RegExp> = {
-      checking: /corrente|checking/i,
-      savings: /poupança|savings/i,
-      investment: /investimento|investment/i,
-    };
-    await this.page.getByRole('option', { name: typeLabels[data.type] }).click();
+    // Select account type when needed.
+    // New accounts default to "checking" in the UI, so don't touch the Select unless
+    // we need to change it (avoids occasional flake where the select trigger isn't ready).
+    if (data.type !== 'checking') {
+      const typeTrigger = dialog.locator('#type');
+      await expect(typeTrigger).toBeVisible({ timeout: 10000 });
+
+      await typeTrigger.click({ timeout: 5000 }).catch(async () => {
+        await typeTrigger.click({ force: true });
+      });
+
+      const typeLabels: Record<string, RegExp> = {
+        checking: /corrente|checking/i,
+        savings: /poupança|savings/i,
+        investment: /investimento|investment/i,
+      };
+      await this.page.getByRole('option', { name: typeLabels[data.type] }).click();
+    }
 
     // Fill balance - use the currency input
-    await dialog.getByLabel(/saldo/i).fill(data.balance);
+    const balanceInput = dialog.locator('#balance');
+    await expect(balanceInput).toBeVisible({ timeout: 10000 });
+    await balanceInput.fill(data.balance);
+    // Trigger validation/masks that run on blur
+    await balanceInput.blur().catch(() => {});
 
     // Submit form
-    await dialog.getByRole('button', { name: /salvar|save|adicionar|criar|create/i }).click();
+    const submitButton = dialog.locator('button[type="submit"]').first();
+    await expect(submitButton).toBeEnabled({ timeout: 10000 });
+    // Avoid hanging on implicit navigation waits for SPA submit handlers
+    await submitButton.click({ noWaitAfter: true });
 
     // Wait for dialog to close
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    await expect(dialog).not.toBeVisible({ timeout: 15000 });
   }
 
   /**
@@ -84,10 +139,7 @@ export class AccountsSection {
     // Hover to reveal the actions button
     await accountCard.hover();
     
-    // Wait a moment for hover effects
-    await this.page.waitForTimeout(200);
-    
-    // Click the "More options" button (three dots)
+    // Click the "More options" button (three dots) - Playwright auto-waits for actionability
     await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
     
     // Click "Editar" in the dropdown
@@ -139,10 +191,7 @@ export class AccountsSection {
     // Hover to reveal the actions button
     await accountCard.hover();
     
-    // Wait a moment for hover effects
-    await this.page.waitForTimeout(200);
-    
-    // Click the "More options" button (three dots)
+    // Click the "More options" button (three dots) - Playwright auto-waits for actionability
     await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
     
     // Click "Excluir" in the dropdown
@@ -155,41 +204,44 @@ export class AccountsSection {
     
     // Wait for dialog to close
     await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
-    
-    // Wait for UI to update after deletion
-    await this.page.waitForTimeout(500);
   }
 
   /**
    * Wait for accounts to load (either accounts appear or empty state)
+   * Uses Playwright's built-in retry mechanism for stability in parallel execution
    */
   async waitForLoad(): Promise<void> {
-    // Wait for content to appear
-    await Promise.race([
-      // Wait for account cards
-      this.page.locator('div.group.relative').filter({
-        has: this.page.getByRole('heading', { level: 3 })
-      }).first().waitFor({ state: 'visible', timeout: 30000 }),
-      // Or empty state / add button
-      this.page.getByText(/nenhuma conta/i).waitFor({ state: 'visible', timeout: 30000 }),
-      this.page.getByRole('button', { name: /adicionar conta/i }).waitFor({ state: 'visible', timeout: 30000 }),
-    ]).catch(() => {
-      // Content might already be visible
-    });
+    const accountCard = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { level: 3 })
+    }).first();
+    const addButton = this.page.getByRole('button', { name: /adicionar conta/i });
+    
+    // Use Playwright's built-in retry with toPass for parallel execution stability
+    await expect(async () => {
+      const cardCount = await accountCard.count();
+      const buttonCount = await addButton.count();
+      if (cardCount > 0) {
+        console.log(`[waitForLoad] Account card found`);
+        return;
+      }
+      if (buttonCount > 0) {
+        console.log(`[waitForLoad] Add button found`);
+        return;
+      }
+      throw new Error('Neither account cards nor add button visible');
+    }).toPass({ timeout: 15000, intervals: [100, 200, 500] });
   }
 
   /**
    * Verify account appears in the list
    */
   async expectAccountVisible(name: string): Promise<void> {
-    // Use retry logic to handle list loading/refreshing
-    await expect(async () => {
-      // Try to wait for load first (but don't fail if it sees empty state)
-      await this.waitForLoad();
-      await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
-      const account = this.page.getByText(name).first();
-      await expect(account).toBeVisible({ timeout: 10000 });
-    }).toPass({ timeout: 30000 });
+    // Wait for the accounts section to be ready
+    await this.waitForLoad();
+    
+    // Use Playwright's built-in expect with visibility check
+    const account = this.page.getByText(name).first();
+    await expect(account).toBeVisible({ timeout: 10000 });
   }
 
   /**
