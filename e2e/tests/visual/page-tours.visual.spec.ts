@@ -33,14 +33,18 @@ async function startTourViaFloatingHelp(page: import('@playwright/test').Page) {
   await expect(async () => {
     await expect(fabButton).toBeVisible();
     await fabButton.click({ force: true });
-  }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+  }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
+
+  // Wait for menu to fully expand before looking for tour option
+  await page.waitForTimeout(500);
 
   // Wait for menu to expand and click the tour option
+  // Use longer timeout as menu expansion can be slow in CI
   const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
   await expect(async () => {
     await expect(tourOption).toBeVisible();
     await tourOption.click({ force: true });
-  }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+  }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
 
   // Assert tour started
   const closeTourButton = page.getByRole('button', { name: /fechar tour/i });

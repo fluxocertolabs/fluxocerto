@@ -63,9 +63,10 @@ async function followRedirectsForSession(
   let current = actionLink
   for (let i = 0; i < maxRedirects; i++) {
     // Use globalThis.fetch to ensure we use the Node.js fetch API
-    const response = await globalThis.fetch(current, { redirect: 'manual' })
-    // Headers.get() is available on the standard Response type
-    const location = (response.headers as Headers).get('location')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await globalThis.fetch(current, { redirect: 'manual' })
+    // Access headers.get() - works in both Node.js and browser environments
+    const location: string | null = response.headers?.get?.('location') ?? null
     if (!location) return null
     const next = new URL(location, current).toString()
 
