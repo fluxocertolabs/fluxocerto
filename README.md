@@ -114,7 +114,7 @@ pnpm run gen:token
 #    Script will write VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN to .env
 
 # 3. Start the dev server
-pnpm dev:app -- --port 5174
+pnpm dev:app -- --port 5173
 ```
 
 **The dashboard loads immediately—no login required!**
@@ -129,12 +129,12 @@ The token generation script creates:
 ### Start Development Server (Standard)
 
 ```bash
-pnpm dev -- --port 5174
+pnpm dev
 ```
 
-The app will be available at `http://localhost:5174`
+The app will be available at `http://localhost:5173`
 
-> **Note:** Local Supabase auth redirects are configured for `http://localhost:5174` (see `supabase/config.toml`). If you want a different port, update `auth.site_url` and `auth.additional_redirect_urls`.
+> **Note:** Local Supabase auth redirects are configured for `http://localhost:5173` (see `supabase/config.toml`). If you want a different port, update `auth.site_url` and `auth.additional_redirect_urls`.
 
 ### Available Scripts
 

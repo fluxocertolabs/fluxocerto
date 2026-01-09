@@ -562,7 +562,7 @@ function GroupStep({
             ref={nameInputRef}
             id="group-name"
             type="text"
-            placeholder={isGroupLoading ? 'Carregando...' : 'ex: Família Silva, Meu Orçamento'}
+            placeholder={isGroupLoading ? 'Carregando...' : 'ex: Grupo Silva, Meu Orçamento'}
             value={name}
             onChange={(e) => {
               const next = e.target.value

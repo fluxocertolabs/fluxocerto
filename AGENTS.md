@@ -2,7 +2,8 @@
 
 **Universal collaboration protocols for AI agents**
 
-> **Project-specific facts**: see `.specify/memory/constitution.md`
+> **Project-specific facts**: see `.specify/memory/constitution.md`  
+> **Durable repo knowledge**: see `docs/reference/KNOWLEDGE_BASE.md` (keep it updated)
 
 ---
 
@@ -64,6 +65,8 @@ pnpm dev:app           # Dashboard loads immediately - no login!
 - Read relevant files completely - don't skim
 - Use `.aid` folder if it exists
 - Understand **why** current code works the way it does
+- Read `docs/reference/KNOWLEDGE_BASE.md` to bootstrap repo context
+- When you learn durable repo knowledge, update `docs/reference/KNOWLEDGE_BASE.md`
 
 ### 3. REUSE FIRST
 - Extend existing patterns before creating new
@@ -95,6 +98,19 @@ pnpm dev:app           # Dashboard loads immediately - no login!
 **Error Handling:**
 - ✅ Fail fast, specific errors, include context
 - ❌ Generic catch-alls, silent failures, swallowed errors
+
+---
+
+## NO WORKAROUNDS
+
+**NEVER implement workarounds unless explicitly requested.**
+
+- **Find root cause first** - Understand why the problem exists
+- **Fix properly** - Address the actual issue, not symptoms
+- **Follow best practices** - Use correct, maintainable solutions
+- **Ask if stuck** - Don't hack around problems silently
+
+Workarounds create tech debt, hide real issues, and compound over time. If a proper fix seems too complex, stop and discuss—don't band-aid.
 
 ---
 
@@ -157,6 +173,7 @@ Query latest via: Context7 → BrightData → web_search
 - ❌ Loop >3 attempts without asking
 - ❌ Breaking changes without approval
 - ❌ Auto-commit without explicit request
+- ❌ **Workarounds/hacks** (fix root cause properly)
 
 ### Decision Thresholds
 
@@ -175,4 +192,5 @@ Query latest via: Context7 → BrightData → web_search
 ---
 
 > **AGENTS.md**: Universal "how to work" protocols
-> **constitution.md**: Project-specific "what it is" facts
+> **constitution.md**: Project-specific "what it is" facts  
+> **KNOWLEDGE_BASE.md**: Durable repo knowledge
