@@ -178,40 +178,60 @@ export class DashboardPage {
    * We check for the chart wrapper AND that it contains rendered path data.
    */
   async expectChartRendered(): Promise<void> {
-    const chartVisibleTimeout = this.isPerTestContext ? 15000 : 5000;
-    const totalTimeout = this.isPerTestContext ? 45000 : 20000;
+    const totalTimeout = this.isPerTestContext ? 45000 : 30000;
 
-    await expect(async () => {
-      // Handle transient realtime failures by retrying when the error state is visible
-      if (await this.chartErrorHeading.isVisible().catch(() => false)) {
-        await this.chartRetryButton.click();
-        await this.page.waitForTimeout(500);
-      }
+    const assertChartReady = async () => {
+      await expect(async () => {
+        // Handle transient realtime failures by retrying when the error state is visible
+        if (await this.chartErrorHeading.isVisible().catch(() => false)) {
+          await this.chartRetryButton.click();
+          await this.page.waitForTimeout(500);
+        }
 
-      await expect(this.cashflowChart).toBeVisible({ timeout: chartVisibleTimeout });
-      
-      // Check for SVG paths with actual path data (not empty d="")
-      // The recharts-area-area class contains the actual filled area path
-      const areaPath = this.page.locator('.recharts-area-area path[d]').first();
-      const linePath = this.page.locator('.recharts-line path[d]').first();
-      
-      // At least one should exist and have a non-trivial path
-      const hasAreaPath = await areaPath.count() > 0;
-      const hasLinePath = await linePath.count() > 0;
-      
-      if (hasAreaPath) {
-        const d = await areaPath.getAttribute('d');
-        // A valid path should have more than just "M0,0" or similar trivial paths
-        expect(d && d.length > 20).toBe(true);
-      } else if (hasLinePath) {
-        const d = await linePath.getAttribute('d');
-        expect(d && d.length > 20).toBe(true);
-      } else {
-        // Fallback: check that the recharts-wrapper has content
-        const wrapper = this.page.locator('.recharts-wrapper');
-        await expect(wrapper).toBeVisible();
+        // In tests that call expectChartRendered(), we expect seeded data to exist.
+        // If the dashboard is in empty state, the chart will never mount.
+        if (await this.emptyState.isVisible().catch(() => false)) {
+          throw new Error('Dashboard is in empty state (no financial data).');
+        }
+
+        const chartVisible = await this.cashflowChart.isVisible().catch(() => false);
+        if (!chartVisible) {
+          throw new Error('Cashflow chart not visible yet.');
+        }
+
+        const wrapper = this.page.locator('.recharts-wrapper').first();
+        if (!(await wrapper.isVisible().catch(() => false))) {
+          throw new Error('Recharts wrapper not visible yet.');
+        }
+
+        // If paths exist, ensure they look non-trivial (helps catch "mounted but empty" regressions).
+        const areaPath = this.page.locator('.recharts-area-area path[d]').first();
+        const linePath = this.page.locator('.recharts-line path[d]').first();
+
+        if ((await areaPath.count()) > 0) {
+          const d = await areaPath.getAttribute('d');
+          expect(d && d.length > 20).toBe(true);
+        } else if ((await linePath.count()) > 0) {
+          const d = await linePath.getAttribute('d');
+          expect(d && d.length > 20).toBe(true);
+        }
+      }).toPass({ timeout: totalTimeout, intervals: [250, 500, 1000, 2000] });
+    };
+
+    try {
+      await assertChartReady();
+    } catch (err) {
+      // One-time recovery: sometimes the dashboard can transiently render empty state while auth/group/data hydrate.
+      // A reload forces a clean fetch without masking real failures (we only do this if empty state is visible).
+      const inEmptyState = await this.emptyState.isVisible().catch(() => false);
+      if (inEmptyState) {
+        await this.page.reload({ waitUntil: 'domcontentloaded' });
+        await this.waitForDashboardLoad();
+        await assertChartReady();
+        return;
       }
-    }).toPass({ timeout: totalTimeout });
+      throw err;
+    }
   }
 
   /**

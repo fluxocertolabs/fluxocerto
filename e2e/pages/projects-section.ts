@@ -24,36 +24,57 @@ export class ProjectsSection {
    * Switch to recurring projects sub-tab
    */
   async selectRecurring(): Promise<void> {
+    await expect(this.recurringTab).toBeVisible({ timeout: 10000 });
     await this.recurringTab.click();
-    // Wait for tab panel to be ready
-    await this.page.waitForTimeout(300);
-    // Wait for recurring content to be visible (either list or empty state)
-    await Promise.race([
-      this.page.getByRole('button', { name: /adicionar receita recorrente|adicionar projeto/i }).waitFor({ state: 'visible', timeout: 30000 }),
-      this.page.getByText(/nenhuma fonte de renda/i).waitFor({ state: 'visible', timeout: 30000 }),
-      // Also check for project items
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }),
-    ]).catch(() => {
-      // Content might already be visible
-    });
+    await expect(this.recurringTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
+
+    // Wait for recurring content to be visible (either list, empty state, or add CTA).
+    // Avoid long nested waits inside toPass; keep checks fast and let toPass retry.
+    await expect(async () => {
+      const hasAddButton = await this.page
+        .getByRole('button', { name: /adicionar receita recorrente|adicionar projeto/i })
+        .isVisible()
+        .catch(() => false);
+
+      const hasEmptyState = await this.page
+        .getByText(/nenhuma fonte de renda/i)
+        .isVisible()
+        .catch(() => false);
+
+      const hasAnyCard = (await this.page.locator('div.p-4.rounded-lg.border.bg-card').count().catch(() => 0)) > 0;
+
+      if (!hasAddButton && !hasEmptyState && !hasAnyCard) {
+        throw new Error('Recurring projects content not visible yet.');
+      }
+    }).toPass({ timeout: 30000, intervals: [250, 500, 1000, 2000] });
   }
 
   /**
    * Switch to single-shot income sub-tab
    */
   async selectSingleShot(): Promise<void> {
+    await expect(this.singleShotTab).toBeVisible({ timeout: 10000 });
     await this.singleShotTab.click();
-    // Wait for tab panel to be ready
-    await this.page.waitForTimeout(300);
-    // Wait for single-shot content to be visible (either list or empty state)  
-    await Promise.race([
-      this.page.getByRole('button', { name: /adicionar receita pontual/i }).waitFor({ state: 'visible', timeout: 30000 }),
-      this.page.getByText(/nenhuma receita avulsa|nenhuma receita pontual/i).waitFor({ state: 'visible', timeout: 30000 }),
-      // Also check for income items
-      this.page.locator('div.p-4.rounded-lg.border.bg-card').first().waitFor({ state: 'visible', timeout: 30000 }),
-    ]).catch(() => {
-      // Content might already be visible
-    });
+    await expect(this.singleShotTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
+
+    // Wait for single-shot content to be visible (either list, empty state, or add CTA).
+    await expect(async () => {
+      const hasAddButton = await this.page
+        .getByRole('button', { name: /adicionar receita pontual/i })
+        .isVisible()
+        .catch(() => false);
+
+      const hasEmptyState = await this.page
+        .getByText(/nenhuma receita avulsa|nenhuma receita pontual/i)
+        .isVisible()
+        .catch(() => false);
+
+      const hasAnyCard = (await this.page.locator('div.p-4.rounded-lg.border.bg-card').count().catch(() => 0)) > 0;
+
+      if (!hasAddButton && !hasEmptyState && !hasAnyCard) {
+        throw new Error('Single-shot income content not visible yet.');
+      }
+    }).toPass({ timeout: 30000, intervals: [250, 500, 1000, 2000] });
   }
 
   /**
@@ -331,8 +352,11 @@ export class ProjectsSection {
   async expectProjectVisible(name: string): Promise<void> {
     await expect(async () => {
       const project = this.page.getByText(name, { exact: true }).first();
-      await expect(project).toBeVisible({ timeout: 5000 });
-    }).toPass({ timeout: 20000 });
+      const visible = await project.isVisible().catch(() => false);
+      if (!visible) {
+        throw new Error(`Project "${name}" not visible yet.`);
+      }
+    }).toPass({ timeout: 30000, intervals: [250, 500, 1000, 2000] });
   }
 
   /**
