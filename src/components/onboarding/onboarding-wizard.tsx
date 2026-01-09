@@ -371,21 +371,17 @@ function ProfileStep({
 
     try {
       const client = getSupabase()
-      // Prefer the local session to avoid an extra network roundtrip.
-      // Fall back to getUser() to preserve behavior if session isn't ready yet.
-      let email = (await client.auth.getSession()).data.session?.user?.email ?? null
-      if (!email) {
-        const { data: { user } } = await client.auth.getUser()
-        email = user?.email ?? null
+      const { data: { user } } = await client.auth.getUser()
+      
+      if (!user?.email) {
+        throw new Error('Usuário não encontrado')
       }
-
-      if (!email) throw new Error('Usuário não encontrado')
 
       // Update profile name
       const { error: updateError } = await client
         .from('profiles')
         .update({ name: trimmedName })
-        .eq('email', email.toLowerCase())
+        .eq('email', user.email.toLowerCase())
 
       if (updateError) {
         throw updateError

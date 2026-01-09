@@ -440,20 +440,16 @@ export async function getGroupId(): Promise<string | null> {
   }
 
   const client = getSupabase()
-  // Prefer the local session to avoid an extra network roundtrip.
-  // Fall back to getUser() to preserve behavior if session isn't ready yet.
-  let email = (await client.auth.getSession()).data.session?.user?.email ?? null
-  if (!email) {
-    const { data: { user } } = await client.auth.getUser()
-    email = user?.email ?? null
+  const { data: { user } } = await client.auth.getUser()
+  
+  if (!user?.email) {
+    return null
   }
-
-  if (!email) return null
 
   const { data: profile, error } = await client
     .from('profiles')
     .select('group_id')
-    .eq('email', email.toLowerCase())
+    .eq('email', user.email.toLowerCase())
     .single()
 
   if (error || !profile) {
@@ -716,13 +712,11 @@ export async function upsertOnboardingState(
   }
 
   const client = getSupabase()
-  // Prefer session user (local) and fall back to a server fetch only when needed.
-  let user = (await client.auth.getSession()).data.session?.user ?? null
+  const { data: { user } } = await client.auth.getUser()
+  
   if (!user) {
-    const result = await client.auth.getUser()
-    user = result.data.user ?? null
+    return { success: false, error: 'Você precisa estar autenticado' }
   }
-  if (!user) return { success: false, error: 'Você precisa estar autenticado' }
 
   const groupId = await getGroupId()
   if (!groupId) {
@@ -836,13 +830,11 @@ export async function upsertTourState(
   }
 
   const client = getSupabase()
-  // Prefer session user (local) and fall back to a server fetch only when needed.
-  let user = (await client.auth.getSession()).data.session?.user ?? null
+  const { data: { user } } = await client.auth.getUser()
+  
   if (!user) {
-    const result = await client.auth.getUser()
-    user = result.data.user ?? null
+    return { success: false, error: 'Você precisa estar autenticado' }
   }
-  if (!user) return { success: false, error: 'Você precisa estar autenticado' }
 
   try {
     const now = new Date().toISOString()

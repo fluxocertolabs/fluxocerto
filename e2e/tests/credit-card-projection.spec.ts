@@ -92,9 +92,6 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     dashboardPage,
     db,
   }) => {
-    // Increase timeout for this test that involves future statements and chart re-rendering
-    test.setTimeout(90000);
-    
     // Calculate a distant future month (3 months ahead)
     const now = new Date();
     let targetMonth = now.getMonth() + 4; // 3 months ahead (1-indexed will be +4)
@@ -136,8 +133,8 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     // Set projection to 90 days to include the distant future month
     await dashboardPage.selectProjectionDays(90);
     
-    // Wait for chart to update with increased timeout for data re-fetch
-    await page.waitForTimeout(1000);
+    // Wait for chart to update
+    await page.waitForTimeout(500);
     
     // The chart should render without errors
     await dashboardPage.expectChartRendered();

@@ -20,19 +20,6 @@ type GenerateLinkData = {
   action_link?: string
 }
 
-// Type for admin client with generateLink capability
-// Using explicit interface to avoid Vercel build type resolution issues
-interface AdminAuthClient {
-  auth: {
-    admin: {
-      generateLink: (params: { type: string; email: string }) => Promise<{
-        data: GenerateLinkData | null
-        error: { message: string } | null
-      }>
-    }
-  }
-}
-
 function sendJson(res: PreviewAuthBypassResponseWriter, status: number, body: PreviewAuthBypassResponse): void {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -62,11 +49,8 @@ async function followRedirectsForSession(
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
   let current = actionLink
   for (let i = 0; i < maxRedirects; i++) {
-    // Use globalThis.fetch to ensure we use the Node.js fetch API
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response: any = await globalThis.fetch(current, { redirect: 'manual' })
-    // Access headers.get() - works in both Node.js and browser environments
-    const location: string | null = response.headers?.get?.('location') ?? null
+    const response = await fetch(current, { redirect: 'manual' })
+    const location = response.headers.get('location')
     if (!location) return null
     const next = new URL(location, current).toString()
 
@@ -122,18 +106,14 @@ export default async function handler(req: PreviewAuthBypassRequest, res: Previe
       return sendJson(res, 500, { error: 'Missing env var: SUPABASE_SERVICE_ROLE_KEY' })
     }
 
-    // Create Supabase client with service role key for admin operations
-    // Cast to AdminAuthClient to avoid Vercel build type resolution issues
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false,
       },
-    }) as unknown as AdminAuthClient
+    })
 
-    // Use admin API to generate a magic link for the configured email
-    // Note: This requires service_role key and should only run in trusted server environment
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email,

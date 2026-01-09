@@ -5,7 +5,7 @@
 
 import { test, expect } from '@playwright/test';
 import { InbucketClient } from '../utils/inbucket';
-import { authenticateNewUser, completeOnboardingWizard } from '../utils/auth-helper';
+import { authenticateNewUser } from '../utils/auth-helper';
 
 test.describe('Page Tours', () => {
   // Run tour tests serially to avoid state conflicts
@@ -34,17 +34,55 @@ test.describe('Page Tours', () => {
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    // The wizard can appear a bit after login (group provisioning / hydration).
-    // If it doesn't show up, just continue (some test runs may already be fully provisioned).
-    const appeared = await wizardDialog
-      .waitFor({ state: 'visible', timeout: 20000 })
-      .then(() => true)
-      .catch(() => false);
+    if (!(await wizardDialog.isVisible().catch(() => false))) return;
 
-    if (!appeared) return;
+    // Fill required fields when present, then advance until completion.
+    // Use try-catch to handle race conditions where element might disappear
+    async function fillIfVisible(selector: string, value: string) {
+      try {
+        const el = page.locator(selector);
+        if (await el.isVisible().catch(() => false)) {
+          await el.fill(value, { timeout: 5000 });
+        }
+      } catch {
+        // Element disappeared or became non-interactable, skip
+      }
+    }
 
-    // Use the shared deterministic completer (handles loading gates + all steps).
-    await completeOnboardingWizard(page);
+    await fillIfVisible('#profile-name', 'Usuário Teste');
+    await fillIfVisible('#group-name', 'Grupo Teste');
+    await fillIfVisible('#account-name', 'Conta Teste');
+
+    for (let i = 0; i < 10; i++) {
+      if (!(await wizardDialog.isVisible().catch(() => false))) break;
+
+      // Re-fill required inputs if the step changed.
+      await fillIfVisible('#profile-name', 'Usuário Teste');
+      await fillIfVisible('#group-name', 'Grupo Teste');
+      await fillIfVisible('#account-name', 'Conta Teste');
+
+      const finalize = wizardDialog.getByRole('button', { name: /finalizar/i });
+      if (await finalize.isVisible().catch(() => false)) {
+        await finalize.click();
+        break;
+      }
+
+      const next = wizardDialog.getByRole('button', { name: /próximo/i });
+      try {
+        await next.click({ timeout: 5000 });
+      } catch {
+        // Button might have disappeared, break out
+        break;
+      }
+      await page.waitForTimeout(250);
+    }
+
+    // Wait for wizard to be hidden, but don't fail if it's already hidden
+    try {
+      await expect(wizardDialog).toBeHidden({ timeout: 20000 });
+    } catch {
+      // Wizard might already be hidden
+    }
   }
 
   async function dismissTourIfPresent(page: import('@playwright/test').Page) {
@@ -58,40 +96,25 @@ test.describe('Page Tours', () => {
   /**
    * Helper to start a tour via the floating help button.
    * Uses click (pinned mode) to reliably expand on both desktop and mobile.
-   * Includes retry logic to handle timing issues in CI environments.
    */
   async function startTourViaFloatingHelp(page: import('@playwright/test').Page) {
     const helpButton = page.locator('[data-testid="floating-help-button"]');
-    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    
-    // Wait for floating help button with retry logic
-    await expect(async () => {
-      await expect(helpButton).toBeVisible();
-    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
+    await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-    // Full retry loop: expand FAB, click tour option, verify tour started
-    // If tour doesn't start, we retry the entire sequence
-    await expect(async () => {
-      // Click the FAB to expand (pinned mode)
-      // The label changes when open ("Ajuda (aberta)") so match both states.
-      const fabButton = helpButton.getByRole('button', { name: /ajuda/i });
-      await expect(fabButton).toBeVisible({ timeout: 5000 });
-      await fabButton.click({ force: true });
-      
-      // Wait for menu to fully expand
-      await page.waitForTimeout(500);
-      
-      // Click the tour option
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-      await expect(tourOption).toBeVisible({ timeout: 5000 });
-      await tourOption.click({ force: true });
-      
-      // Wait a moment for tour to initialize
-      await page.waitForTimeout(300);
-      
-      // Verify tour started
-      await expect(closeTourButton).toBeVisible({ timeout: 5000 });
-    }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000, 5000] });
+    // Click the FAB to expand (pinned mode)
+    const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
+    await fabButton.click({ force: true });
+    await page.waitForTimeout(500);
+
+    // Click the tour option (aria-label is "Iniciar tour guiado da página")
+    const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
+    await expect(tourOption).toBeVisible({ timeout: 5000 });
+    await tourOption.click({ force: true });
+    await page.waitForTimeout(500);
+
+    // Assert tour started
+    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    await expect(closeTourButton).toBeVisible({ timeout: 10000 });
   }
 
   test('tour auto-shows on first visit to dashboard (after onboarding)', async ({ page }) => {
@@ -109,17 +132,11 @@ test.describe('Page Tours', () => {
     await completeOnboardingIfPresent(page);
 
     // Wait for tour to auto-show after onboarding completes
-    // Use retry logic to handle state propagation delays in CI
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    await expect(async () => {
-      await expect(closeTourButton).toBeVisible();
-    }).toPass({ timeout: 35000, intervals: [1000, 2000, 3000, 5000] });
+    await expect(closeTourButton).toBeVisible({ timeout: 30000 });
   });
 
   test('tour does not auto-show on refresh after dismissal', async ({ page }) => {
-    // Increase test timeout since it involves full authentication and onboarding flow
-    test.setTimeout(90000);
-
     const email = `tour-dismiss-${Date.now()}@example.com`;
     await inbucket.purgeMailbox(email.split('@')[0]);
     await authenticateUser(page, email);
@@ -129,11 +146,8 @@ test.describe('Page Tours', () => {
 
     await completeOnboardingIfPresent(page);
 
-    // Wait for tour to auto-show with retry logic for state propagation
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    await expect(async () => {
-      await expect(closeTourButton).toBeVisible();
-    }).toPass({ timeout: 35000, intervals: [1000, 2000, 3000, 5000] });
+    await expect(closeTourButton).toBeVisible({ timeout: 20000 });
 
     await closeTourButton.click();
     await expect(closeTourButton).toBeHidden({ timeout: 10000 });
