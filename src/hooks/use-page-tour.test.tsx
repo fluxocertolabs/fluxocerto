@@ -93,7 +93,7 @@ describe('usePageTour', () => {
     } as AuthState)
 
     mockedUseOnboardingStore.mockImplementation((selector) => {
-      const state = { isWizardOpen: false, openWizard: vi.fn(), closeWizard: vi.fn() }
+      const state = { isWizardOpen: false, openWizard: vi.fn(), closeWizard: vi.fn(), toggleWizard: vi.fn() }
       return selector ? selector(state) : state
     })
 
@@ -372,7 +372,7 @@ describe('usePageTour', () => {
   describe('deferral during onboarding', () => {
     it('does not auto-show when onboarding wizard is open', async () => {
       mockedUseOnboardingStore.mockImplementation((selector) => {
-        const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn() }
+        const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn(), toggleWizard: vi.fn() }
         return selector ? selector(state) : state
       })
 
@@ -392,7 +392,7 @@ describe('usePageTour', () => {
 
       // Start with wizard closed
       mockedUseOnboardingStore.mockImplementation((selector) => {
-        const state = { isWizardOpen: false, openWizard: vi.fn(), closeWizard: vi.fn() }
+        const state = { isWizardOpen: false, openWizard: vi.fn(), closeWizard: vi.fn(), toggleWizard: vi.fn() }
         return selector ? selector(state) : state
       })
 
@@ -409,7 +409,7 @@ describe('usePageTour', () => {
 
       // Now open the wizard
       mockedUseOnboardingStore.mockImplementation((selector) => {
-        const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn() }
+        const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn(), toggleWizard: vi.fn() }
         return selector ? selector(state) : state
       })
 
@@ -466,7 +466,7 @@ describe('usePageTour', () => {
 
     it('clears trigger but does not start tour when wizard is open', async () => {
       mockedUseOnboardingStore.mockImplementation((selector) => {
-        const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn() }
+        const state = { isWizardOpen: true, openWizard: vi.fn(), closeWizard: vi.fn(), toggleWizard: vi.fn() }
         return selector ? selector(state) : state
       })
 
