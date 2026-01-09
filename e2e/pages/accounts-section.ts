@@ -29,27 +29,25 @@ export class AccountsSection {
    */
   async clickAdd(): Promise<void> {
     const buttons = this.addButtons;
-    await expect(async () => {
-      const count = await buttons.count();
-      for (let i = 0; i < count; i++) {
-        const btn = buttons.nth(i);
-        if (await btn.isVisible().catch(() => false)) {
-          // Avoid clicking buttons inside dialogs (e.g. the form submit button is also named
-          // "Adicionar Conta" and would match this locator).
-          const isInsideDialog = await btn
-            .evaluate((el) => !!el.closest('[role="dialog"], [role="alertdialog"]'))
-            .catch(() => false);
-          if (isInsideDialog) continue;
+    const count = await buttons.count();
+    for (let i = 0; i < count; i++) {
+      const btn = buttons.nth(i);
+      if (!(await btn.isVisible().catch(() => false))) continue;
 
-          await btn.scrollIntoViewIfNeeded().catch(() => {});
-          await btn.click({ timeout: 5000, noWaitAfter: true }).catch(async () => {
-            await btn.click({ force: true, noWaitAfter: true });
-          });
-          return;
-        }
-      }
-      throw new Error('No visible "Adicionar Conta" button found yet');
-    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
+      // Avoid clicking buttons inside dialogs (e.g. the form submit button is also named
+      // "Adicionar Conta" and would match this locator).
+      const isInsideDialog = await btn
+        .evaluate((el) => !!el.closest('[role="dialog"], [role="alertdialog"]'))
+        .catch(() => false);
+      if (isInsideDialog) continue;
+
+      await btn.scrollIntoViewIfNeeded().catch(() => {});
+      await btn.click({ timeout: 5000, noWaitAfter: true }).catch(async () => {
+        await btn.click({ force: true, noWaitAfter: true });
+      });
+      return;
+    }
+    throw new Error('No visible "Adicionar Conta" button found');
   }
 
   /**
@@ -68,20 +66,25 @@ export class AccountsSection {
     }
 
     // Wait for the *account create* dialog to open.
-    // IMPORTANT: Don't key off only role+name ("Adicionar Conta") because the TourRunner tooltip
-    // is also role=dialog and can have a step title matching that text.
-    const dialog = this.page
-      .getByRole('dialog')
-      .filter({ has: this.page.getByRole('button', { name: /cancelar/i }) })
-      .filter({ has: this.page.getByRole('button', { name: /^adicionar conta$/i }) })
-      .first();
+    // IMPORTANT: The TourRunner tooltip can also be role=dialog. We avoid false positives by
+    // keying off the *form field label* ("Nome da Conta"), which only exists in the real AccountForm.
+    const nameInput = this.page.getByLabel(/nome da conta/i);
+    // Anchor all subsequent selectors to the *actual* dialog that contains the account form,
+    // not just any dialog with a similar accessible name (TourRunner uses role=dialog too).
+    const dialog = nameInput.locator('xpath=ancestor::*[@role="dialog"][1]');
+
     await expect(async () => {
+      // If the dialog is already open, don't click anything.
+      if (await nameInput.isVisible().catch(() => false)) return;
+
+      // Clear any open popovers/menus that might intercept clicks (safe no-op when nothing is open).
+      await this.page.keyboard.press('Escape').catch(() => {});
+
       await this.clickAdd();
-      await expect(dialog).toBeVisible({ timeout: 5000 });
-    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
+      await expect(nameInput).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 20000, intervals: [250, 500, 1000, 2000] });
 
     // Fill form fields - target inputs within the dialog
-    const nameInput = dialog.locator('#name');
     await expect(nameInput).toBeVisible({ timeout: 10000 });
     await nameInput.fill(data.name);
     

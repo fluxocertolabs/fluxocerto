@@ -167,11 +167,10 @@ export class ManagePage {
       let reloadAttempts = 0;
 
       await expect(async () => {
-        if (await manageTabs.isVisible().catch(() => false)) {
-          return;
-        }
+        const tabsVisible = await withTimeout(manageTabs.isVisible(), 1000, false).catch(() => false);
+        if (tabsVisible) return;
 
-        const canRetry = await errorRetryButton.isVisible().catch(() => false);
+        const canRetry = await withTimeout(errorRetryButton.isVisible(), 1000, false).catch(() => false);
         if (canRetry && retryAttempts < 3) {
           retryAttempts += 1;
           console.warn(`[ManagePage] ErrorState detected on /manage; clicking retry (attempt ${retryAttempts})`);
@@ -184,7 +183,12 @@ export class ManagePage {
         // do a single soft reload. This is a pragmatic flake killer under heavy
         // parallel load (cold cache + Supabase/Realtime backpressure).
         const elapsed = Date.now() - waitStart;
-        if (this.isPerTestContext && elapsed > 25000 && reloadAttempts < 1) {
+        // In rare cases (under heavy parallel load), the Manage skeleton can get "stuck"
+        // and tabs never render even though the heading is visible. A single soft reload
+        // is a pragmatic flake killer in BOTH modes; in per-test-context mode we allow
+        // a bit longer before reloading due to cold-cache asset fetching.
+        const reloadThresholdMs = this.isPerTestContext ? 25000 : 12000;
+        if (elapsed > reloadThresholdMs && reloadAttempts < 1) {
           reloadAttempts += 1;
           console.warn(`[ManagePage] Tabs still not visible after ${elapsed}ms; reloading /manage (attempt ${reloadAttempts})`);
           try {
@@ -197,7 +201,7 @@ export class ManagePage {
 
         throw new Error('Manage tabs not visible yet');
       }).toPass({
-        timeout: this.isPerTestContext ? 60000 : 20000,
+        timeout: this.isPerTestContext ? 60000 : 25000,
         intervals: [500, 1000, 2000],
       });
     } catch {
