@@ -12,10 +12,12 @@
 import { test, expect } from '../fixtures/test-base';
 import { TOURS, type TourDefinition, type TourStep } from '../../src/lib/tours/definitions';
 import { ManagePage } from '../pages/manage-page';
+import { createAccount, createExpense, createProject } from '../utils/test-data';
 
 // Map tour keys to their page routes
 const TOUR_ROUTES: Record<string, string> = {
-  dashboard: '/dashboard',
+  // The dashboard route is `/` (we keep `/dashboard` as an alias in the app by redirect).
+  dashboard: '/',
   manage: '/manage',
   history: '/history',
 };
@@ -24,25 +26,19 @@ test.describe('Tour Selector Contract Tests @contract', () => {
   // Run in parallel since each test is independent after setup
   test.describe.configure({ mode: 'parallel' });
 
-  test('all dashboard tour selectors exist on /dashboard', async ({ page }) => {
+  test('all dashboard tour selectors exist on /', async ({ page, db, dashboardPage }) => {
     const tour: TourDefinition = TOURS.dashboard;
 
-    await page.goto('/dashboard');
-    await page.waitForLoadState('domcontentloaded');
+    // Ensure dashboard is NOT in empty state. The dashboard tour targets elements that only
+    // render when `hasData` is true (see `src/pages/dashboard.tsx`).
+    await db.seedAccounts([createAccount({ name: 'Tour Contract - Account', balance: 100000 })]);
+    await db.seedProjects([createProject({ name: 'Tour Contract - Income', amount: 800000 })]);
+    await db.seedExpenses([createExpense({ name: 'Tour Contract - Expense', amount: 200000 })]);
 
-    // Wait for main content to be ready - either the projection selector (with data) or empty state
-    // The tour selectors should exist in both states
-    const projectionSelector = page.locator('[data-tour="projection-selector"]');
-    const emptyState = page.locator('text=Nenhum Dado Financeiro Ainda');
-    
-    // Wait for either state to be visible
-    await expect(projectionSelector.or(emptyState)).toBeVisible({ timeout: 15000 });
-    
-    // If we're in empty state, skip this test as tour selectors won't be present
-    if (await emptyState.isVisible()) {
-      test.skip(true, 'Dashboard is in empty state - tour selectors not present');
-      return;
-    }
+    await dashboardPage.goto();
+
+    // Wait for the first tour selector to render (means we're out of empty/skeleton states).
+    await expect(page.locator(tour.steps[0].target)).toBeVisible({ timeout: 20000 });
 
     const missingSelectors: string[] = [];
 

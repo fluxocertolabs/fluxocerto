@@ -46,10 +46,12 @@ vi.mock('@/stores/onboarding-store', () => ({
 
 const mockGetOnboardingState = vi.fn()
 const mockUpsertOnboardingState = vi.fn()
+const mockGetGroupId = vi.fn()
 
 vi.mock('@/lib/supabase', () => ({
   getOnboardingState: () => mockGetOnboardingState(),
   upsertOnboardingState: (...args: unknown[]) => mockUpsertOnboardingState(...args),
+  getGroupId: () => mockGetGroupId(),
 }))
 
 // Import mocked modules for manipulation
@@ -97,6 +99,7 @@ describe('useOnboardingState', () => {
 
     // Default supabase mocks
     mockGetOnboardingState.mockResolvedValue({ success: true, data: null })
+    mockGetGroupId.mockResolvedValue('group-id')
     mockUpsertOnboardingState.mockResolvedValue({
       success: true,
       data: {

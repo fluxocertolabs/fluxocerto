@@ -179,7 +179,7 @@ test.describe('Provisioning Recovery', () => {
   // 1. Modify the app to not auto-show onboarding when there's a group error
   // 2. Test this scenario on a different page that doesn't trigger onboarding
   // 3. Complete the onboarding wizard in the test before checking the error UI
-  test.skip('when auto-heal fails, manage group tab shows recovery UI and retry recovers', async ({
+  test('when auto-heal fails, manage group tab shows recovery UI and retry recovers', async ({
     page,
     managePage,
     workerContext,

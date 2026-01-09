@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useFinanceData } from '@/hooks/use-finance-data'
 import { useOnboardingStore } from '@/stores/onboarding-store'
-import { getOnboardingState, upsertOnboardingState } from '@/lib/supabase'
+import { getGroupId, getOnboardingState, upsertOnboardingState } from '@/lib/supabase'
 import {
   canAutoShow,
   isMinimumSetupComplete,
@@ -63,7 +63,7 @@ export interface UseOnboardingStateReturn {
 }
 
 export function useOnboardingState(): UseOnboardingStateReturn {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
+  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth()
   const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, isLoading: financeLoading } = useFinanceData()
   const { isWizardOpen, openWizard: openWizardUi, closeWizard: closeWizardUi } = useOnboardingStore()
   
@@ -72,6 +72,8 @@ export function useOnboardingState(): UseOnboardingStateReturn {
   const [error, setError] = useState<string | null>(null)
   const [hasAutoShown, setHasAutoShown] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+  const [hasGroupAssociation, setHasGroupAssociation] = useState<boolean | null>(null)
+  const [isGroupAssociationLoading, setIsGroupAssociationLoading] = useState(true)
 
   // Compute minimum setup status from finance data
   const minimumSetupComplete = useMemo(() => {
@@ -87,6 +89,10 @@ export function useOnboardingState(): UseOnboardingStateReturn {
     if (isAuthLoading) return false
     // Never auto-show when unauthenticated.
     if (!isAuthenticated) return false
+    // If the user is not associated with a group/profile yet (or provisioning is failing),
+    // do not auto-open the onboarding wizard. In that state, the app should instead
+    // surface recovery UI ("Tentar Novamente") and avoid blocking it with a non-dismissable wizard.
+    if (isGroupAssociationLoading || hasGroupAssociation !== true) return false
     if (financeLoading || isLoading) return false
     if (hasAutoShown) return false
     return canAutoShow(
@@ -94,17 +100,38 @@ export function useOnboardingState(): UseOnboardingStateReturn {
       state?.autoShownAt ?? null,
       minimumSetupComplete
     )
-  }, [isAuthLoading, isAuthenticated, state?.status, state?.autoShownAt, minimumSetupComplete, financeLoading, isLoading, hasAutoShown])
+  }, [
+    isAuthLoading,
+    isAuthenticated,
+    isGroupAssociationLoading,
+    hasGroupAssociation,
+    state?.status,
+    state?.autoShownAt,
+    minimumSetupComplete,
+    financeLoading,
+    isLoading,
+    hasAutoShown,
+  ])
 
   // Resume the wizard if onboarding is in progress and minimum setup is still incomplete.
   // This prevents bypassing onboarding via refresh when we're mid-flow.
   const shouldResume = useMemo(() => {
     if (isAuthLoading) return false
     if (!isAuthenticated) return false
+    if (isGroupAssociationLoading || hasGroupAssociation !== true) return false
     if (financeLoading || isLoading) return false
     if (minimumSetupComplete) return false
     return state?.status === 'in_progress'
-  }, [isAuthLoading, isAuthenticated, state?.status, minimumSetupComplete, financeLoading, isLoading])
+  }, [
+    isAuthLoading,
+    isAuthenticated,
+    isGroupAssociationLoading,
+    hasGroupAssociation,
+    state?.status,
+    minimumSetupComplete,
+    financeLoading,
+    isLoading,
+  ])
 
   // Current step (from state or computed initial)
   const stateCurrentStep = state?.currentStep
@@ -129,11 +156,15 @@ export function useOnboardingState(): UseOnboardingStateReturn {
     if (isAuthLoading) {
       // Keep loading until auth resolves so we don't mistakenly auto-start.
       setIsLoading(true)
+      setIsGroupAssociationLoading(true)
+      setHasGroupAssociation(null)
       return
     }
     if (!isAuthenticated) {
       setIsLoading(false)
       setState(null)
+      setIsGroupAssociationLoading(false)
+      setHasGroupAssociation(null)
       return
     }
 
@@ -160,6 +191,45 @@ export function useOnboardingState(): UseOnboardingStateReturn {
       mounted = false
     }
   }, [isAuthLoading, isAuthenticated, retryCount])
+
+  // Detect whether the authenticated user has a profile/group association.
+  // This is critical to avoid auto-opening the wizard for orphaned users (no `profiles` row),
+  // where the correct UX is to show provisioning recovery UI instead.
+  useEffect(() => {
+    if (isAuthLoading) {
+      setIsGroupAssociationLoading(true)
+      setHasGroupAssociation(null)
+      return
+    }
+    if (!isAuthenticated) {
+      setIsGroupAssociationLoading(false)
+      setHasGroupAssociation(null)
+      return
+    }
+
+    let mounted = true
+
+    async function fetchGroupAssociation() {
+      setIsGroupAssociationLoading(true)
+      try {
+        const groupId = await getGroupId()
+        if (!mounted) return
+        setHasGroupAssociation(!!groupId)
+      } catch {
+        if (!mounted) return
+        setHasGroupAssociation(false)
+      } finally {
+        if (!mounted) return
+        setIsGroupAssociationLoading(false)
+      }
+    }
+
+    fetchGroupAssociation()
+
+    return () => {
+      mounted = false
+    }
+  }, [isAuthLoading, isAuthenticated, user?.email])
 
   // Auto-open the wizard when eligible or when resuming an in-progress onboarding
   useEffect(() => {
