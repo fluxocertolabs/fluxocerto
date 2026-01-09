@@ -26,13 +26,15 @@ async function openFloatingHelpMenu(page: import('@playwright/test').Page) {
   const helpButton = page.locator('[data-testid="floating-help-button"]');
   await expect(helpButton).toBeVisible({ timeout: 15000 });
 
-  const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-  await expect(fabButton).toBeVisible({ timeout: 15000 });
-  await fabButton.click();
-
-  // When the menu is open, the option becomes accessible (aria-hidden=false on the menu container).
   const tourOption = helpButton.getByRole('button', { name: /iniciar tour guiado da página/i });
-  await expect(tourOption).toBeVisible({ timeout: 15000 });
+
+  // Desktop behavior: the menu opens on hover and the FAB becomes `pointer-events: none`.
+  // Playwright's `click()` moves the mouse first, which triggers hover-open and can cause
+  // the menu pill to intercept the click (flake). Use hover + state assertion instead.
+  if (!(await tourOption.isVisible().catch(() => false))) {
+    await helpButton.hover();
+    await expect(tourOption).toBeVisible({ timeout: 15000 });
+  }
 
   return { helpButton, tourOption };
 }
