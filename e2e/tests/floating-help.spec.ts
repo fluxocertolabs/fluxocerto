@@ -10,6 +10,33 @@ import {
   createExpense,
 } from '../utils/test-data';
 
+async function dismissTourIfVisible(page: import('@playwright/test').Page): Promise<void> {
+  const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+  if (await closeTourButton.isVisible().catch(() => false)) {
+    await closeTourButton.click({ timeout: 5000 }).catch(() => {});
+    await expect(closeTourButton).toBeHidden({ timeout: 10000 }).catch(() => {});
+  }
+}
+
+async function openFloatingHelpMenu(page: import('@playwright/test').Page) {
+  // If a tour is already open (auto-show / leakage), it sits above the FAB (higher z-index) and
+  // prevents real clicks from reaching the help button. Close it first to keep behavior deterministic.
+  await dismissTourIfVisible(page);
+
+  const helpButton = page.locator('[data-testid="floating-help-button"]');
+  await expect(helpButton).toBeVisible({ timeout: 15000 });
+
+  const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
+  await expect(fabButton).toBeVisible({ timeout: 15000 });
+  await fabButton.click();
+
+  // When the menu is open, the option becomes accessible (aria-hidden=false on the menu container).
+  const tourOption = helpButton.getByRole('button', { name: /iniciar tour guiado da página/i });
+  await expect(tourOption).toBeVisible({ timeout: 15000 });
+
+  return { helpButton, tourOption };
+}
+
 test.describe('Floating Help Button', () => {
   // Run tests serially to avoid parallel flakiness with realtime connections
   test.describe.configure({ mode: 'serial' });
@@ -38,13 +65,14 @@ test.describe('Floating Help Button', () => {
       const helpButton = page.locator('[data-testid="floating-help-button"]');
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
+      await dismissTourIfVisible(page);
+
       // Hover over the help button
       await helpButton.hover();
-      await page.waitForTimeout(500);
 
-      // The "Conhecer a página" text should be visible when expanded
-      const tourLabel = page.getByText(/conhecer a página/i);
-      await expect(tourLabel).toBeVisible({ timeout: 5000 });
+      // The menu option should be visible when expanded
+      const tourOption = helpButton.getByRole('button', { name: /iniciar tour guiado da página/i });
+      await expect(tourOption).toBeVisible({ timeout: 15000 });
     });
 
     test('clicking tour option starts the dashboard tour', async ({
@@ -63,17 +91,8 @@ test.describe('Floating Help Button', () => {
       const helpButton = page.locator('[data-testid="floating-help-button"]');
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      // Click the FAB button to expand (pinned mode) - use force to bypass any overlays
-      // The FAB button has aria-label "Abrir ajuda" when closed
-      const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-      await fabButton.click({ force: true });
-      await page.waitForTimeout(800);
-
-      // Click the tour option - it has text "Conhecer a página" and aria-label "Iniciar tour guiado da página"
-      const tourOption = page.getByRole('button', { name: /conhecer a página|iniciar tour guiado/i });
-      await expect(tourOption).toBeVisible({ timeout: 5000 });
-      await tourOption.click({ force: true });
-      await page.waitForTimeout(500);
+      const { tourOption } = await openFloatingHelpMenu(page);
+      await tourOption.click();
 
       // Tour should be active
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -94,19 +113,10 @@ test.describe('Floating Help Button', () => {
       const helpButton = page.locator('[data-testid="floating-help-button"]');
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      // Click to expand (pinned mode) - use force to bypass any overlays
-      // The FAB button has aria-label "Abrir ajuda" when closed
-      const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-      await fabButton.click({ force: true });
-      await page.waitForTimeout(800);
-
-      // Verify it's expanded - look for the tour option button (aria-label is "Iniciar tour guiado da página")
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-      await expect(tourOption).toBeVisible({ timeout: 5000 });
+      const { tourOption } = await openFloatingHelpMenu(page);
 
       // Click outside - click on the page body area
       await page.click('body', { position: { x: 50, y: 50 }, force: true });
-      await page.waitForTimeout(1000);
 
       // Should be collapsed (tour option hidden)
       await expect(tourOption).toBeHidden({ timeout: 10000 });
@@ -139,19 +149,8 @@ test.describe('Floating Help Button', () => {
       const helpButton = page.locator('[data-testid="floating-help-button"]');
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-
-      // Click the FAB button to expand - use force to bypass any overlays
-      // The FAB button has aria-label "Abrir ajuda" when closed
-      const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-      await fabButton.click({ force: true });
-      await page.waitForTimeout(800);
-
-
-      // Click the tour option - it has text "Conhecer a página" and aria-label "Iniciar tour guiado da página"
-      const tourOption = page.getByRole('button', { name: /conhecer a página|iniciar tour guiado/i });
-      await expect(tourOption).toBeVisible({ timeout: 5000 });
-      await tourOption.click({ force: true });
-      await page.waitForTimeout(500);
+      const { tourOption } = await openFloatingHelpMenu(page);
+      await tourOption.click();
 
       // Tour should be active
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -186,17 +185,8 @@ test.describe('Floating Help Button', () => {
       const helpButton = page.locator('[data-testid="floating-help-button"]');
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      // Click the FAB button to expand (pinned mode) - use force to bypass any overlays
-      // The FAB button has aria-label "Abrir ajuda" when closed
-      const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-      await fabButton.click({ force: true });
-      await page.waitForTimeout(800);
-
-      // Click the tour option - it has text "Conhecer a página" and aria-label "Iniciar tour guiado da página"
-      const tourOption = page.getByRole('button', { name: /conhecer a página|iniciar tour guiado/i });
-      await expect(tourOption).toBeVisible({ timeout: 5000 });
-      await tourOption.click({ force: true });
-      await page.waitForTimeout(500);
+      const { tourOption } = await openFloatingHelpMenu(page);
+      await tourOption.click();
 
       // Tour should be active
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });

@@ -34,6 +34,13 @@ export class AccountsSection {
       for (let i = 0; i < count; i++) {
         const btn = buttons.nth(i);
         if (await btn.isVisible().catch(() => false)) {
+          // Avoid clicking buttons inside dialogs (e.g. the form submit button is also named
+          // "Adicionar Conta" and would match this locator).
+          const isInsideDialog = await btn
+            .evaluate((el) => !!el.closest('[role="dialog"], [role="alertdialog"]'))
+            .catch(() => false);
+          if (isInsideDialog) continue;
+
           await btn.scrollIntoViewIfNeeded().catch(() => {});
           await btn.click({ timeout: 5000, noWaitAfter: true }).catch(async () => {
             await btn.click({ force: true, noWaitAfter: true });
@@ -53,15 +60,30 @@ export class AccountsSection {
     type: 'checking' | 'savings' | 'investment';
     balance: string;
   }): Promise<void> {
-    // Wait for dialog to open
-    const dialog = this.page.getByRole('dialog', { name: /adicionar conta/i });
+    // If a tour tooltip is visible, it can match role=dialog and block interactions.
+    // Close it proactively to keep the flow deterministic.
+    const tourCloseButton = this.page.getByRole('button', { name: /fechar tour/i });
+    if (await tourCloseButton.isVisible().catch(() => false)) {
+      await tourCloseButton.click({ timeout: 2000 }).catch(() => {});
+    }
+
+    // Wait for the *account create* dialog to open.
+    // IMPORTANT: Don't key off only role+name ("Adicionar Conta") because the TourRunner tooltip
+    // is also role=dialog and can have a step title matching that text.
+    const dialog = this.page
+      .getByRole('dialog')
+      .filter({ has: this.page.getByRole('button', { name: /cancelar/i }) })
+      .filter({ has: this.page.getByRole('button', { name: /^adicionar conta$/i }) })
+      .first();
     await expect(async () => {
       await this.clickAdd();
       await expect(dialog).toBeVisible({ timeout: 5000 });
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
 
     // Fill form fields - target inputs within the dialog
-    await dialog.getByLabel(/nome/i).fill(data.name);
+    const nameInput = dialog.locator('#name');
+    await expect(nameInput).toBeVisible({ timeout: 10000 });
+    await nameInput.fill(data.name);
     
     // Select account type when needed.
     // New accounts default to "checking" in the UI, so don't touch the Select unless
@@ -83,13 +105,14 @@ export class AccountsSection {
     }
 
     // Fill balance - use the currency input
-    const balanceInput = dialog.getByLabel(/saldo/i);
+    const balanceInput = dialog.locator('#balance');
+    await expect(balanceInput).toBeVisible({ timeout: 10000 });
     await balanceInput.fill(data.balance);
     // Trigger validation/masks that run on blur
     await balanceInput.blur().catch(() => {});
 
     // Submit form
-    const submitButton = dialog.getByRole('button', { name: /salvar|save|adicionar|criar|create/i });
+    const submitButton = dialog.locator('button[type="submit"]').first();
     await expect(submitButton).toBeEnabled({ timeout: 10000 });
     // Avoid hanging on implicit navigation waits for SPA submit handlers
     await submitButton.click({ noWaitAfter: true });
