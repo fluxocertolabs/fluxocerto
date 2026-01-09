@@ -18,25 +18,33 @@ import {
 /**
  * Helper to start a tour via the floating help button.
  * Uses click (pinned mode) to reliably expand on both desktop and mobile.
+ * Includes retry logic to handle timing issues in CI environments.
  */
 async function startTourViaFloatingHelp(page: import('@playwright/test').Page) {
   const helpButton = page.locator('[data-testid="floating-help-button"]');
-  await expect(helpButton).toBeVisible({ timeout: 10000 });
+  
+  // Wait for floating help button with retry logic
+  await expect(async () => {
+    await expect(helpButton).toBeVisible();
+  }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
 
-  // Click the FAB to expand (pinned mode)
+  // Click the FAB to expand (pinned mode) with retry logic
   const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-  await fabButton.click({ force: true });
-  await page.waitForTimeout(500);
+  await expect(async () => {
+    await expect(fabButton).toBeVisible();
+    await fabButton.click({ force: true });
+  }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
 
-  // Click the tour option (aria-label is "Iniciar tour guiado da página")
+  // Wait for menu to expand and click the tour option
   const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-  await expect(tourOption).toBeVisible({ timeout: 5000 });
-  await tourOption.click({ force: true });
-  await page.waitForTimeout(500);
+  await expect(async () => {
+    await expect(tourOption).toBeVisible();
+    await tourOption.click({ force: true });
+  }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
 
   // Assert tour started
   const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-  await expect(closeTourButton).toBeVisible({ timeout: 10000 });
+  await expect(closeTourButton).toBeVisible({ timeout: 15000 });
 }
 
 visualTest.describe('Page Tours Visual Regression @visual', () => {

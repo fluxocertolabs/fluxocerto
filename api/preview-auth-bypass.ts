@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
 type PreviewAuthBypassResponse =
   | { accessToken: string; refreshToken: string; email: string }
@@ -18,6 +18,19 @@ type PreviewAuthBypassResponseWriter = {
 type GenerateLinkData = {
   properties?: { action_link?: string; actionLink?: string }
   action_link?: string
+}
+
+// Type for admin client with generateLink capability
+// Using explicit interface to avoid Vercel build type resolution issues
+interface AdminAuthClient {
+  auth: {
+    admin: {
+      generateLink: (params: { type: string; email: string }) => Promise<{
+        data: GenerateLinkData | null
+        error: { message: string } | null
+      }>
+    }
+  }
 }
 
 function sendJson(res: PreviewAuthBypassResponseWriter, status: number, body: PreviewAuthBypassResponse): void {
@@ -49,8 +62,10 @@ async function followRedirectsForSession(
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
   let current = actionLink
   for (let i = 0; i < maxRedirects; i++) {
-    const response = await fetch(current, { redirect: 'manual' })
-    const location = response.headers.get('location')
+    // Use globalThis.fetch to ensure we use the Node.js fetch API
+    const response = await globalThis.fetch(current, { redirect: 'manual' })
+    // Headers.get() is available on the standard Response type
+    const location = (response.headers as Headers).get('location')
     if (!location) return null
     const next = new URL(location, current).toString()
 
@@ -106,13 +121,15 @@ export default async function handler(req: PreviewAuthBypassRequest, res: Previe
       return sendJson(res, 500, { error: 'Missing env var: SUPABASE_SERVICE_ROLE_KEY' })
     }
 
-    const adminClient: SupabaseClient = createClient(supabaseUrl, serviceRoleKey, {
+    // Create Supabase client with service role key for admin operations
+    // Cast to AdminAuthClient to avoid Vercel build type resolution issues
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false,
       },
-    })
+    }) as unknown as AdminAuthClient
 
     // Use admin API to generate a magic link for the configured email
     // Note: This requires service_role key and should only run in trusted server environment

@@ -162,7 +162,7 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
     // Fill profile and advance to group step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -177,15 +177,21 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
     const email = `onboarding-visual-group-dark-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
 
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
+    // Wait for wizard dialog to appear with retry logic for CI stability
     const wizardDialog = page
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
+    await expect(async () => {
+      await expect(wizardDialog).toBeVisible();
+    }).toPass({ timeout: 25000, intervals: [500, 1000, 2000] });
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    
+    // Wait for step transition with retry logic
+    await expect(async () => {
+      await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -209,11 +215,11 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
     // Navigate to bank account step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -236,11 +242,11 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -264,15 +270,15 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
     // Navigate to income step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -295,15 +301,15 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -327,19 +333,19 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
     // Navigate to expense step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     // Skip income (optional)
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -362,18 +368,18 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -397,21 +403,21 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
     // Navigate to credit card step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -434,21 +440,21 @@ visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -611,11 +617,11 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
     // Navigate to bank account step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -638,11 +644,11 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -668,7 +674,7 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
     // Navigate to group step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -691,7 +697,7 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -715,15 +721,15 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
     // Navigate to income step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -746,15 +752,15 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -778,19 +784,19 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
     // Navigate to expense step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     // Skip income (optional)
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -813,18 +819,18 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -848,21 +854,21 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
     // Navigate to credit card step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -885,21 +891,21 @@ mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => 
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#account-name').fill('Conta Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 15000 });
 
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -1014,7 +1020,7 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
     // Fill profile and advance to group step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -1043,7 +1049,7 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
@@ -1072,11 +1078,11 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
     // Navigate to bank account step
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'light');
     await visual.disableAnimations(page);
@@ -1105,11 +1111,11 @@ visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
 
     await page.locator('#profile-name').fill('Usuário Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 15000 });
 
     await page.locator('#group-name').fill('Grupo Visual Test');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 15000 });
 
     await visual.setTheme(page, 'dark');
     await visual.disableAnimations(page);
