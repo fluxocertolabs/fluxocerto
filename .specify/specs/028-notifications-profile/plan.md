@@ -45,6 +45,12 @@ Implement the first version of a Notifications system (**in-app + email**) and a
 - ✅ **Privacy (RLS)**: notifications are scoped to `auth.uid()`; other users (including same group members) cannot read or mutate them.
 - ✅ **Reuse patterns / minimal change**: follow existing Supabase (PostgREST/RPC + Realtime) usage patterns and repo conventions.
 
+**Design artifacts (this plan)**:
+- Phase 0: [research.md](./research.md)
+- Phase 1: [data-model.md](./data-model.md)
+- Phase 1: `contracts/` (OpenAPI)
+- Phase 1: `quickstart.md` (local verification guide)
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -91,9 +97,4 @@ e2e/
 
 ## Complexity Tracking
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
-
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+No constitution violations requiring justification were identified for this feature.
