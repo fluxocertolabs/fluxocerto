@@ -43,7 +43,8 @@ Persistent, user-scoped notifications inbox (source-of-truth) with unread/read s
 ### RLS (required)
 
 - **SELECT**: `USING (user_id = auth.uid())`
-- **UPDATE** (mark read): `USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid())`
+- **UPDATE**: prefer **no direct client update**; implement mark-read via `SECURITY DEFINER` RPC `mark_notification_read(notification_id uuid)` that sets `read_at = now()` for the invoker’s row only.
+  - If direct client UPDATE is allowed, ensure it is **least-privilege** (e.g., restrict UPDATE privileges to `read_at` only) and keep `email_sent_at` server-controlled.
 - **INSERT**: prefer **no direct client insert**; welcome creation via `SECURITY DEFINER` RPC.
 
 ### State transitions

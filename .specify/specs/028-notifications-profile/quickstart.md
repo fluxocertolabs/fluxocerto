@@ -23,7 +23,7 @@ pnpm dev:app
 
 Notes:
 - `pnpm run gen:token` writes `VITE_DEV_ACCESS_TOKEN` + `VITE_DEV_REFRESH_TOKEN` into `.env` for the **dev auth bypass** (DEV-only).
-- Supabase local includes **Inbucket** (email capture UI) at `http://localhost:54324`.
+- Supabase local includes **Mailpit** (email capture UI) at `http://localhost:54324`.
 
 ## Scenario verification (P1)
 
@@ -80,7 +80,7 @@ Notes:
 ### 9) Dev/test email behavior (FR-013)
 
 In local/dev environments:
-- Use **Inbucket** (`http://localhost:54324`) to inspect captured emails when using local SMTP-based flows.
+- Use **Mailpit** (`http://localhost:54324`) to inspect captured emails when using local SMTP-based flows.
 - If the welcome email sender is implemented via provider API and credentials are not set, the Edge Function should return a **safe preview** (subject + HTML) and must not attempt external delivery.
 
 ## Contracts

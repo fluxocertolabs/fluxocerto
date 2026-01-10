@@ -66,7 +66,7 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 ### Setup
 ```bash
 pnpm install
-pnpm db:start          # starts local Supabase (Postgres + Auth + Studio + Inbucket)
+pnpm db:start          # starts local Supabase (Postgres + Auth + Studio + Mailpit email UI/API on :54324)
 ```
 
 ### Run (dev)
@@ -154,7 +154,7 @@ Deployment notes:
 - **Auth hook**:
   - The `before-user-created` Edge Function currently allows self-serve signups but fails closed if `BEFORE_USER_CREATED_HOOK_SECRET` is missing.
 - **Ports (local Supabase)**:
-  - API: `54321`, DB: `54322`, Studio: `54323`, Inbucket: `54324` (see `supabase/config.toml`).
+  - API: `54321`, DB: `54322`, Studio: `54323`, Mailpit email UI/API: `54324` (configured under `[inbucket]` in `supabase/config.toml`; E2E uses `InbucketClient` + `INBUCKET_URL` for backwards compatibility).
 
 ---
 

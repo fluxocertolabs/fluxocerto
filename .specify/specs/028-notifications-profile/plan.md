@@ -16,24 +16,21 @@ Implement the first version of a Notifications system (**in-app + email**) and a
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
 **Language/Version**: TypeScript 5.9.3 (Node >= 20), React 19.2.0, Vite 7.2.4  
 **Primary Dependencies**: `@supabase/supabase-js@2.86.0`, Zustand 5.0.8, React Router 7.9.6, shadcn/ui + Tailwind  
-**Storage**: Supabase (PostgreSQL + Auth + Realtime). Data isolation via RLS (`group_id` for shared finance data; this feature adds user-scoped notifications).  
-**Testing**: Vitest (unit), Playwright (E2E + visual). Local email capture via Inbucket (Supabase local).  
+**Storage**: Supabase (PostgreSQL + Auth + Realtime). Data isolation via RLS (`group_id` for shared finance data; this feature adds user-scoped notifications). Realtime live updates require adding `public.notifications` to the `supabase_realtime` publication (repo standard).  
+**Testing**: Vitest (unit) and Playwright (E2E + visual, including desktop + mobile projects). Local email capture uses Supabase local **Mailpit** (configured under `[inbucket]` in `supabase/config.toml`; E2E uses `InbucketClient` + `INBUCKET_URL` for backwards compatibility). For CI/dev without provider credentials, the welcome email Edge Function must return a deterministic, safe `{ preview: { subject, html } }` payload (FR-013).  
 **Target Platform**: Web app (Vercel deployment) + Supabase Edge Functions for trusted server-side work (email sending).  
 **Project Type**: Web application (single Vite/React frontend; Supabase backend).  
-**Performance Goals**: New notifications appear in-app within ~5s under normal connectivity (SC-003); unread count updates within ~2s after marking read (SC-004).  
+**Performance Goals**: New notifications appear in-app within ~5s under normal connectivity (SC-003); unread count updates within ~2s after marking read (SC-004). On reconnect, the inbox converges via refetch within the same SC-003 window under normal connectivity.  
 **Constraints**:
 - All new UI copy must be pt-BR (placeholders acceptable).
 - No secrets in the browser; email sending must be server-controlled (FR-012).
+- Notifications initialization: `src/App.tsx` renders `<Header />` inside `AuthenticatedLayout` for all protected routes; initialize notifications (welcome ensure + initial fetch + subscription) on authenticated app entry from that layout surface.
+- Email (v1 welcome) must meet the minimum testable contract from `spec.md` (subject contains "Fluxo Certo", email body includes the notification title/body, CTA routes to `/notifications`).
 - Privacy: notifications are per-user; must never leak across users (FR-019).
 **Scale/Scope**: First iteration: one notification type (“welcome”), inbox + read state, one email preference toggle, minimal Profile page.
+**Data Sources**: Profile display name is stored in `profiles.name` (existing), and email is read-only from the authenticated session; notification email preference is stored per-user in the new `user_preferences` table.
 
 ## Constitution Check
 
@@ -75,10 +72,12 @@ src/
 │   └── profile/                # profile settings form (new)
 ├── hooks/
 │   ├── use-notifications.ts    # fetch + realtime subscription + unread count (new)
-│   └── use-profile.ts          # profile + email pref read/write helpers (new)
+│   ├── use-profile.ts          # profile + email pref read/write helpers (new)
+│   └── use-group.ts            # listen for group data invalidation events (update existing)
 ├── lib/
 │   ├── supabase.ts             # add RPC/helper wrappers (e.g., ensure welcome)
-│   └── theme-service.ts        # update to use `group_preferences` table (rename)
+│   ├── theme-service.ts        # update to use `group_preferences` table (rename)
+│   └── group-data-events.ts    # notify/listen to refetch group-scoped data after profile updates (new)
 ├── pages/
 │   ├── notifications.tsx       # inbox route (new)
 │   └── profile.tsx             # profile settings route (new)

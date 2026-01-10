@@ -67,15 +67,15 @@ A signed-in user can manage basic Profile settings: update their display name, v
 
 ### User Story 4 - Welcome email delivery (Priority: P2)
 
-When a welcome notification is created and the user has email notifications enabled, the user receives a welcome email shortly after, with consistent branding and a clear call-to-action to return to the app.
+When a welcome notification is created and the user has email notifications enabled, the user receives a welcome email shortly after (target: within 2 minutes), meeting the FR-011 minimum contract (considered sufficient branding for v1) including a clear call-to-action back to the app.
 
 **Why this priority**: Email increases the chance a user sees important notifications even when they are not actively in the app, while remaining user-controlled via preferences.
 
-**Independent Test**: Ensure email notifications are enabled, trigger welcome notification creation for a test user, verify that an email is generated/sent in live environments; disable email notifications and verify that no email is sent for future notification events.
+**Independent Test**: Ensure email notifications are enabled, trigger welcome notification creation for a test user, verify that an email is generated/sent in live environments within 2 minutes; disable email notifications and verify that no email is sent for future notification events.
 
 **Acceptance Scenarios**:
 
-1. **Given** a welcome notification is created for a user and email notifications are enabled at send time, **When** the email is sent, **Then** the user receives a welcome email shortly after with brand-consistent formatting and a clear call-to-action back to the app.
+1. **Given** a welcome notification is created for a user and email notifications are enabled at send time, **When** the email is sent, **Then** the user receives a welcome email within 2 minutes that meets the FR-011 minimum contract (subject/body/CTA) including a clear call-to-action back to the app.
 2. **Given** the user has email notifications disabled at send time, **When** a notification email would otherwise be sent, **Then** no email is sent (email opt-out is enforced).
 3. **Given** a user disables email notifications immediately before or after a notification is created, **When** the system attempts to send a notification email, **Then** the send decision honors the user’s current preference at the time of sending.
 
@@ -101,7 +101,7 @@ When a welcome notification is created and the user has email notifications enab
 - **FR-004**: The app MUST show an unread indicator that reflects the current number of unread notifications for the signed-in user.
 - **FR-005**: Users MUST be able to mark an individual notification as read, and the unread indicator MUST update accordingly. Read state MUST persist across refreshes/devices for the same user.
 - **FR-006**: The system MUST create the welcome notification at most once per user (no duplicates across refreshes, devices, or retries).
-- **FR-006a**: The system MUST enforce welcome notification idempotency with a database-level uniqueness guarantee using an idempotency/dedupe key (e.g. `dedupe_key = "welcome-v1"`), unique per user.
+- **FR-006a**: The system MUST enforce **FR-006** using a database-level uniqueness guarantee via an idempotency/dedupe key (e.g. `dedupe_key = "welcome-v1"`), unique per user.
 - **FR-007**: The notifications system MUST support an optional primary action for a notification (e.g., action label + destination link) so future actionable notifications can be represented without redesigning the data model or UI.
 - **FR-008**: When a new notification is created for an active signed-in user, the inbox and unread indicator MUST update without requiring a full page refresh (best-effort live delivery, with persistence as the source of truth).
 
@@ -110,7 +110,10 @@ When a welcome notification is created and the user has email notifications enab
 - **FR-009**: For notification events that support email delivery (starting with welcome), the system MUST be able to send an email notification to the user’s authenticated email address.
 - **FR-010**: The system MUST enforce a per-user preference to opt out of notification emails stored in `user_preferences` (per-user table; not shared across group members). If the preference is disabled at send time, the email MUST NOT be sent.
 - **FR-010a**: Email notifications MUST default to enabled (opt-out). If the per-user preference is not yet set for a user, the system MUST treat it as enabled.
-- **FR-011**: Notification emails MUST follow the product’s established branding and include a clear call-to-action that returns the user to the app.
+- **FR-011**: Notification emails MUST follow the product’s established branding and include a clear call-to-action that returns the user to the app. **For the v1 welcome email, the minimum testable contract below is considered sufficient branding for this iteration**:
+  - subject is pt-BR, non-empty, and contains **"Fluxo Certo"**
+  - body includes the notification `title` and `body` (pt-BR placeholders acceptable)
+  - a primary CTA link/button is present with pt-BR label and an `href` back to the app (base URL configurable) that routes to **`/notifications`**
 - **FR-012**: Email sending credentials/secrets MUST NOT be exposed to end users; sending MUST occur only in a trusted, server-controlled environment.
 - **FR-013**: The notification email workflow MUST remain testable in development environments without requiring delivery to a real external inbox (e.g., safe preview/logging mechanism).
 
@@ -120,6 +123,7 @@ When a welcome notification is created and the user has email notifications enab
 - **FR-015**: Users MUST be able to update their display name in Profile settings, and the updated name MUST be reflected anywhere the app shows that user’s name.
 - **FR-016**: Profile settings MUST display the user’s authenticated email address, but MUST NOT allow the user to change it in this feature (disabled input + explanatory hint).
 - **FR-017**: Profile settings MUST allow the user to toggle notification emails on or off, and the preference MUST persist.
+- **FR-017a**: As part of this feature, preferences MUST be split by scope: rename the existing group-scoped `user_preferences` table to `group_preferences` (preserving existing group preferences and behavior, such as theme sync), and introduce a new per-user `user_preferences` table for user-specific preferences (starting with `email_notifications_enabled`).
 
 **Localization:**
 
@@ -130,13 +134,17 @@ When a welcome notification is created and the user has email notifications enab
 - **FR-019**: A user’s notifications MUST NOT be visible to other users (including other members of the same group) unless a future notification is explicitly designed as group-wide.
 - **FR-020**: Notification read/unread state MUST be user-specific and consistent across tabs/devices for the same signed-in user.
 
+### Non-Functional Requirements
+
+- **NFR-001 (Automated coverage)**: Automated tests MUST cover all **P1** acceptance scenarios and edge cases across **unit (Vitest)**, **E2E (Playwright desktop + mobile)**, and **visual regression (Playwright screenshots)**. For **P2 welcome email** (US4), automated tests MUST validate **send decision (opt-out enforced at send time)**, **idempotency**, and the **dev-safe preview/logging path** (FR-013). The “deliver within 2 minutes in live environments” aspect is verified manually via `quickstart.md`.
+
 ### Key Entities *(include if feature involves data)*
 
-- **Notification**: A user-visible message representing an event, scoped to a single recipient (`user_id` referencing `auth.users.id`). Attributes include: event type (e.g., welcome), created time, read/unread state, message content (pt-BR copy), an optional primary action (label + destination), and an optional idempotency/dedupe key (e.g. `dedupe_key`) for DB-enforced de-duplication.
+- **Notification**: A user-visible message representing an event, scoped to a single recipient (`user_id` referencing `auth.users.id`). Attributes include: event type (e.g., welcome), created time, read/unread state, message content (pt-BR copy), an optional primary action (label + destination), an optional idempotency/dedupe key (e.g. `dedupe_key`) for DB-enforced de-duplication, and an optional `email_sent_at` timestamp set by the trusted email sender after a successful send (for idempotent email delivery).
 - **Notification Email Preference**: A per-user setting stored in the per-user `user_preferences` table indicating whether the user wants to receive notification emails (global opt-in/opt-out for this iteration).
 - **User Preferences**: A per-user key-value table (`user_id`, `key`, `value`, timestamps) with `UNIQUE(user_id, key)`. For this iteration it stores `email_notifications_enabled` as `'true'`/`'false'`.
 - **Group Preferences**: The existing `user_preferences` table is renamed to `group_preferences` and stores group-scoped preferences (e.g., theme) separately from per-user preferences.
-- **User Profile**: User-managed fields (e.g., display name) and read-only display of the authenticated email address.
+- **User Profile**: User-managed fields (e.g., display name stored in `profiles.name`) and read-only display of the authenticated email address.
 
 ## Success Criteria *(mandatory)*
 

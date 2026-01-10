@@ -13,7 +13,7 @@ This document captures key technical decisions and rationale for implementing **
 - **Profiles are keyed by email**: `profiles.email` is the stable identity; `profiles.id` may not match `auth.uid()` for invited users. Updates to “my profile” use email-based RLS.
 - **Realtime consumption pattern exists**: `src/hooks/use-finance-data.ts` subscribes to `postgres_changes` and treats persistence as source-of-truth, refetching on reconnect/reload.
 - **Preferences table is currently group-scoped**: `user_preferences` is used for **theme** and is unique by `(group_id, key)`; it includes `user_id` but uniqueness is per-group.
-- **Local email testing exists**: Supabase local runs with **Inbucket** (web UI at `http://localhost:54324`) for capturing auth emails; E2E uses `InbucketClient` to read mailbox content.
+- **Local email testing exists**: Supabase local runs with **Mailpit** (web UI at `http://localhost:54324`) for capturing emails; E2E uses `InbucketClient` (Mailpit-backed) to read mailbox content.
 
 ## Decisions
 
