@@ -28,7 +28,7 @@ export async function getThemePreference(): Promise<ThemeValue | null> {
 
   try {
     const { data, error } = await supabase
-      .from('user_preferences')
+      .from('group_preferences')
       .select('value')
       .eq('key', 'theme')
       .single()
@@ -86,7 +86,7 @@ export async function saveThemePreference(theme: ThemeValue): Promise<void> {
 
   for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
     try {
-      const { error } = await supabase.from('user_preferences').upsert(
+      const { error } = await supabase.from('group_preferences').upsert(
         {
           user_id: user.id,
           group_id: groupId,
@@ -134,7 +134,7 @@ export async function deleteThemePreference(): Promise<void> {
 
   try {
     const { error } = await supabase
-      .from('user_preferences')
+      .from('group_preferences')
       .delete()
       .eq('key', 'theme')
 

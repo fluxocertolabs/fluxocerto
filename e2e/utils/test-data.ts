@@ -77,6 +77,25 @@ export interface TestProfile {
   group_id: string;
 }
 
+export interface TestNotification {
+  id?: string;
+  user_id: string;
+  type: 'welcome';
+  title: string;
+  body: string;
+  primary_action_label?: string | null;
+  primary_action_href?: string | null;
+  dedupe_key?: string | null;
+  read_at?: string | null;
+  email_sent_at?: string | null;
+}
+
+export interface TestUserPreference {
+  user_id: string;
+  key: string;
+  value: string;
+}
+
 /**
  * Create test account with defaults
  */
@@ -206,6 +225,44 @@ export function createGroup(
 ): TestGroup {
   return {
     name: 'Grupo Teste',
+    ...overrides,
+  };
+}
+
+/**
+ * Create test notification with defaults (pt-BR content)
+ */
+export function createNotification(
+  userId: string,
+  overrides: Partial<Omit<TestNotification, 'user_id'>> = {}
+): TestNotification {
+  // Generate unique dedupe_key to avoid conflicts with automatically-created notifications
+  const uniqueKey = `test:${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  return {
+    user_id: userId,
+    type: 'welcome',
+    title: 'Bem-vindo ao Fluxo Certo! 🎉',
+    body: 'Estamos felizes em ter você aqui. O Fluxo Certo vai te ajudar a organizar suas finanças pessoais e familiares de forma simples e eficiente.',
+    primary_action_label: 'Começar a usar',
+    primary_action_href: '/manage',
+    dedupe_key: uniqueKey,
+    read_at: null,
+    email_sent_at: null,
+    ...overrides,
+  };
+}
+
+/**
+ * Create test user preference with defaults
+ */
+export function createUserPreference(
+  userId: string,
+  overrides: Partial<Omit<TestUserPreference, 'user_id'>> = {}
+): TestUserPreference {
+  return {
+    user_id: userId,
+    key: 'email_notifications_enabled',
+    value: 'true',
     ...overrides,
   };
 }

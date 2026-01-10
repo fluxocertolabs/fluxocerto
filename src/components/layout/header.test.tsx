@@ -29,6 +29,18 @@ const mockTourStore = {
   reset: vi.fn(),
 }
 
+const mockNotificationsStore = {
+  items: [],
+  unreadCount: 0,
+  isLoading: false,
+  isInitialized: false,
+  error: null,
+  initialize: vi.fn(),
+  refresh: vi.fn(),
+  markAsRead: vi.fn(),
+  reset: vi.fn(),
+}
+
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => mockAuth,
 }))
@@ -43,6 +55,15 @@ vi.mock('@/hooks/use-onboarding-state', () => ({
 
 vi.mock('@/stores/tour-store', () => ({
   useTourStore: () => mockTourStore,
+}))
+
+vi.mock('@/stores/notifications-store', () => ({
+  useNotificationsStore: (selector?: (state: typeof mockNotificationsStore) => unknown) => {
+    if (selector) {
+      return selector(mockNotificationsStore)
+    }
+    return mockNotificationsStore
+  },
 }))
 
 vi.mock('@/lib/supabase', () => ({
@@ -93,6 +114,66 @@ describe('Header - Mobile Navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Sair' }))
 
     expect(vi.mocked(signOut)).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Header - Notifications Navigation', () => {
+  it('displays Notificações link in mobile menu', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+
+    expect(screen.getByRole('link', { name: /notificações/i })).toBeInTheDocument()
+  })
+
+  it('displays unread badge when unreadCount > 0', async () => {
+    mockNotificationsStore.unreadCount = 5
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+
+    // Badge should be visible with count (may appear in both mobile and desktop nav)
+    const badges = screen.getAllByText('5')
+    expect(badges.length).toBeGreaterThanOrEqual(1)
+
+    // Reset
+    mockNotificationsStore.unreadCount = 0
+  })
+
+  it('does not display unread badge when unreadCount is 0', async () => {
+    mockNotificationsStore.unreadCount = 0
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+
+    // Link should be present but no badge
+    expect(screen.getByRole('link', { name: /notificações/i })).toBeInTheDocument()
+    // No badge element with "0" should be visible
+    expect(screen.queryByText(/^0$/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Header - Profile Navigation', () => {
+  it('displays Perfil link in mobile menu', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+
+    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument()
+  })
+
+  it('navigates to /profile when Perfil link is clicked', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+
+    const profileLink = screen.getByRole('link', { name: /perfil/i })
+    expect(profileLink).toHaveAttribute('href', '/profile')
   })
 })
 
