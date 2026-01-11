@@ -92,6 +92,7 @@ describe('Header - Mobile Navigation', () => {
     expect(screen.getByRole('link', { name: 'Painel' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Histórico' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Gerenciar' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument()
   })
 
@@ -118,23 +119,19 @@ describe('Header - Mobile Navigation', () => {
 })
 
 describe('Header - Notifications Navigation', () => {
-  it('displays Notificações link in mobile menu', async () => {
-    const user = userEvent.setup()
+  it('displays Notificações icon link in header', () => {
     renderHeader()
 
-    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
-
-    expect(screen.getByRole('link', { name: /notificações/i })).toBeInTheDocument()
+    // Notifications icon link should be visible in the header (not in hamburger menu)
+    const notificationLinks = screen.getAllByRole('link', { name: /notificações/i })
+    expect(notificationLinks.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('displays unread badge when unreadCount > 0', async () => {
+  it('displays unread badge when unreadCount > 0', () => {
     mockNotificationsStore.unreadCount = 5
-    const user = userEvent.setup()
     renderHeader()
 
-    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
-
-    // Badge should be visible with count (may appear in both mobile and desktop nav)
+    // Badge should be visible with count (appears in both mobile and desktop nav icons)
     const badges = screen.getAllByText('5')
     expect(badges.length).toBeGreaterThanOrEqual(1)
 
@@ -142,38 +139,43 @@ describe('Header - Notifications Navigation', () => {
     mockNotificationsStore.unreadCount = 0
   })
 
-  it('does not display unread badge when unreadCount is 0', async () => {
+  it('does not display unread badge when unreadCount is 0', () => {
     mockNotificationsStore.unreadCount = 0
-    const user = userEvent.setup()
     renderHeader()
 
-    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
-
     // Link should be present but no badge
-    expect(screen.getByRole('link', { name: /notificações/i })).toBeInTheDocument()
+    const notificationLinks = screen.getAllByRole('link', { name: /notificações/i })
+    expect(notificationLinks.length).toBeGreaterThanOrEqual(1)
     // No badge element with "0" should be visible
     expect(screen.queryByText(/^0$/)).not.toBeInTheDocument()
   })
 })
 
 describe('Header - Profile Navigation', () => {
+  it('displays Perfil as a text link in desktop navigation', () => {
+    renderHeader()
+
+    // Profile should be a text link in the navigation (like Painel, Histórico, Gerenciar)
+    const profileLinks = screen.getAllByRole('link', { name: /perfil/i })
+    expect(profileLinks.length).toBeGreaterThanOrEqual(1)
+  })
+
   it('displays Perfil link in mobile menu', async () => {
     const user = userEvent.setup()
     renderHeader()
 
     await user.click(screen.getByRole('button', { name: /abrir menu/i }))
 
-    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument()
+    // Profile should be in the mobile hamburger menu
+    expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument()
   })
 
-  it('navigates to /profile when Perfil link is clicked', async () => {
-    const user = userEvent.setup()
+  it('navigates to /profile when Perfil link is clicked', () => {
     renderHeader()
 
-    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
-
-    const profileLink = screen.getByRole('link', { name: /perfil/i })
-    expect(profileLink).toHaveAttribute('href', '/profile')
+    // Profile links should point to /profile
+    const profileLinks = screen.getAllByRole('link', { name: /perfil/i })
+    expect(profileLinks[0]).toHaveAttribute('href', '/profile')
   })
 })
 

@@ -157,6 +157,44 @@ test.describe('Notifications Inbox', () => {
       await expect(page).toHaveURL(/\/manage/);
     }
   });
+
+  test('clicking primary action marks notification as read', async ({
+    page,
+    dashboardPage,
+  }) => {
+    await dashboardPage.goto();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    await page.goto('/notifications');
+    await page.waitForLoadState('networkidle');
+
+    // Verify notification is unread (has "Marcar como lida" button)
+    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+    await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
+
+    // Click the primary action button
+    const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
+    await expect(primaryActionButton).toBeVisible({ timeout: 5000 });
+    await primaryActionButton.click();
+
+    // Should navigate to /manage
+    await expect(page).toHaveURL(/\/manage/);
+
+    // Navigate back to notifications
+    await page.goto('/notifications');
+    await page.waitForLoadState('networkidle');
+
+    // Verify the notification is now marked as read (no "Marcar como lida" button)
+    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+
+    // Reload to verify persistence
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Still should be marked as read
+    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+  });
 });
 
 test.describe('Notifications Live Updates', () => {

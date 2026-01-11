@@ -56,6 +56,13 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
     }
   }
 
+  const handlePrimaryActionClick = () => {
+    // Mark as read when clicking the primary action button
+    if (isUnread) {
+      onMarkAsRead(notification.id)
+    }
+  }
+
   return (
     <Card
       className={cn(
@@ -111,7 +118,7 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
                 size="sm"
                 variant={isUnread ? 'default' : 'outline'}
               >
-                <Link to={notification.primaryActionHref}>
+                <Link to={notification.primaryActionHref} onClick={handlePrimaryActionClick}>
                   {notification.primaryActionLabel}
                 </Link>
               </Button>

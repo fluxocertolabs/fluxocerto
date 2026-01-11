@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Bell, Menu, User } from 'lucide-react'
+import { Bell, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -98,38 +98,40 @@ export function Header() {
               Gerenciar
             </NavLink>
             <NavLink
-              to="/notifications"
-              className={({ isActive }) =>
-                cn(
-                  'relative text-sm font-medium transition-colors hover:text-foreground cursor-pointer inline-flex items-center gap-1',
-                  isActive ? 'text-foreground' : 'text-muted-foreground'
-                )
-              }
-            >
-              <Bell className="h-4 w-4" />
-              <span className="sr-only md:not-sr-only">Notificações</span>
-              {unreadCount > 0 && (
-                <span
-                  className="absolute -top-1 -right-1 md:relative md:top-0 md:right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground px-1"
-                  aria-label={`${unreadCount} notificações não lidas`}
-                >
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </NavLink>
-            <NavLink
               to="/profile"
               className={({ isActive }) =>
                 cn(
-                  'text-sm font-medium transition-colors hover:text-foreground cursor-pointer inline-flex items-center gap-1',
+                  'text-sm font-medium transition-colors hover:text-foreground cursor-pointer',
                   isActive ? 'text-foreground' : 'text-muted-foreground'
                 )
               }
             >
-              <User className="h-4 w-4" />
-              <span className="sr-only md:not-sr-only">Perfil</span>
+              Perfil
             </NavLink>
-            <ThemeToggle />
+            <div className="flex items-center gap-1 ml-2">
+              <NavLink
+                to="/notifications"
+                aria-label="Notificações"
+                className={({ isActive }) =>
+                  cn(
+                    'relative p-2 rounded-md transition-colors hover:bg-muted cursor-pointer',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                  )
+                }
+              >
+                <Bell className="h-5 w-5" />
+                <span className="sr-only">Notificações</span>
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground px-1"
+                    aria-label={`${unreadCount} notificações não lidas`}
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </NavLink>
+              <ThemeToggle />
+            </div>
             {isAuthenticated && (
               <Button
                 variant="ghost"
@@ -144,6 +146,29 @@ export function Header() {
 
           {/* Mobile actions */}
           <div className="flex items-center gap-1 md:hidden">
+            {isAuthenticated && (
+              <NavLink
+                to="/notifications"
+                aria-label="Notificações"
+                className={({ isActive }) =>
+                  cn(
+                    'relative p-2 rounded-md transition-colors hover:bg-muted cursor-pointer',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                  )
+                }
+              >
+                <Bell className="h-5 w-5" />
+                <span className="sr-only">Notificações</span>
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground px-1"
+                    aria-label={`${unreadCount} notificações não lidas`}
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </NavLink>
+            )}
             <ThemeToggle />
             {isAuthenticated && (
               <Button
@@ -220,43 +245,17 @@ export function Header() {
               Gerenciar
             </NavLink>
             <NavLink
-              to="/notifications"
-              onClick={() => setMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-lg px-3 py-2 text-base font-medium transition-colors flex items-center justify-between',
-                  isActive
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                )
-              }
-            >
-              <span className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notificações
-              </span>
-              {unreadCount > 0 && (
-                <span
-                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground px-1.5"
-                  aria-label={`${unreadCount} notificações não lidas`}
-                >
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </NavLink>
-            <NavLink
               to="/profile"
               onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  'rounded-lg px-3 py-2 text-base font-medium transition-colors flex items-center gap-2',
+                  'rounded-lg px-3 py-2 text-base font-medium transition-colors',
                   isActive
                     ? 'bg-muted text-foreground'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 )
               }
             >
-              <User className="h-4 w-4" />
               Perfil
             </NavLink>
           </div>
