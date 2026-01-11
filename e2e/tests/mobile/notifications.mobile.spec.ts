@@ -173,6 +173,9 @@ test.describe('Mobile Notifications @mobile', () => {
 
     // Should navigate to /manage
     await expect(page).toHaveURL(/\/manage/);
+    
+    // Wait a bit for the mark-as-read API call to complete in the background
+    await page.waitForTimeout(1000);
 
     // Navigate back to notifications
     await page.goto('/notifications');

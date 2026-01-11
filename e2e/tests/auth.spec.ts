@@ -7,10 +7,47 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/login-page';
 import { InbucketClient } from '../utils/inbucket';
 import { ensureTestUser } from '../fixtures/db';
+import { executeSQL, executeSQLWithResult, getUserIdFromEmail } from '../utils/supabase-admin';
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
 // For self-serve signup testing: generate unique email per test run
 const SELF_SERVE_EMAIL = `self-serve-${Date.now()}@example.com`;
+
+/**
+ * Supabase magic links often route through the Auth service with a `redirect_to` query param.
+ * In local environments, that redirect host can differ (e.g. `127.0.0.1` vs `localhost`),
+ * which can break session persistence assertions when the app navigates/reloads on another host.
+ *
+ * We normalize the `redirect_to` host to match Playwright's `BASE_URL` for deterministic behavior.
+ */
+function normalizeSupabaseMagicLink(magicLink: string): string {
+  const baseUrl = process.env.BASE_URL;
+  if (!baseUrl) return magicLink;
+
+  try {
+    const url = new URL(magicLink);
+    const key = url.searchParams.has('redirect_to')
+      ? 'redirect_to'
+      : url.searchParams.has('redirectTo')
+        ? 'redirectTo'
+        : null;
+
+    if (!key) return magicLink;
+
+    const redirectTo = url.searchParams.get(key);
+    if (!redirectTo) return magicLink;
+
+    const base = new URL(baseUrl);
+    const redirect = new URL(redirectTo);
+    redirect.protocol = base.protocol;
+    redirect.host = base.host;
+
+    url.searchParams.set(key, redirect.toString());
+    return url.toString();
+  } catch {
+    return magicLink;
+  }
+}
 
 test.describe('Authentication Flow', () => {
   // Run auth tests serially to avoid rate limiting and mailbox conflicts
@@ -71,6 +108,7 @@ test.describe('Authentication Flow', () => {
 
     // Purge mailbox to ensure clean state
     await inbucket.purgeMailbox(mailbox);
+    const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Request magic link for a never-before-seen email
     await loginPage.goto();
@@ -81,7 +119,7 @@ test.describe('Authentication Flow', () => {
     let magicLink: string | null = null;
     for (let i = 0; i < 10; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
+      if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
         if (magicLink) break;
       }
@@ -108,6 +146,7 @@ test.describe('Authentication Flow', () => {
 
     // Purge mailbox to ensure we get a fresh magic link
     await inbucket.purgeMailbox(mailbox);
+    const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Request magic link
     await loginPage.goto();
@@ -118,7 +157,7 @@ test.describe('Authentication Flow', () => {
     let magicLink: string | null = null;
     for (let i = 0; i < 10; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
+      if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
         if (magicLink) break;
       }
@@ -128,7 +167,7 @@ test.describe('Authentication Flow', () => {
     expect(magicLink).not.toBeNull();
 
     // Click magic link
-    await page.goto(magicLink!);
+    await page.goto(normalizeSupabaseMagicLink(magicLink!));
 
     // Verify redirected to dashboard
     await expect(page).toHaveURL(/\/(dashboard)?$/);
@@ -140,15 +179,16 @@ test.describe('Authentication Flow', () => {
     // This test can be a bit slower in Option B mode (PW_PER_TEST_CONTEXT=1) because
     // the app runs behind `vite preview` (prod build) and cold-start hydration can take longer.
     const isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
-    if (isPerTestContext) {
-      test.setTimeout(120000);
-    }
+    // In the full suite, auth-tests run alongside heavy parallel projects (chromium + mobile).
+    // Give this test extra headroom to avoid timeouts under load, while keeping assertions strict.
+    test.setTimeout(isPerTestContext ? 120000 : 90000);
 
     const loginPage = new LoginPage(page);
     const mailbox = TEST_EMAIL.split('@')[0];
 
     // Purge mailbox to ensure we get a fresh magic link
     await inbucket.purgeMailbox(mailbox);
+    const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Authenticate first
     await loginPage.goto();
@@ -158,7 +198,7 @@ test.describe('Authentication Flow', () => {
     let magicLink: string | null = null;
     for (let i = 0; i < 25; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
+      if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
         if (magicLink) break;
       }
@@ -166,8 +206,20 @@ test.describe('Authentication Flow', () => {
     }
 
     expect(magicLink).not.toBeNull();
-    await page.goto(magicLink!);
+    await page.goto(normalizeSupabaseMagicLink(magicLink!));
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
+
+    // Ensure Supabase session is fully persisted before attempting a hard reload.
+    // Under heavy suite load, the UI can render while auth tokens are still being written.
+    await page.waitForFunction(() => {
+      const keys = Object.keys(localStorage);
+      const hasAuthToken = keys.some((key) => key.includes('sb-') && key.includes('-auth-token'));
+
+      const sessionKeys = Object.keys(sessionStorage);
+      const hasSessionAuth = sessionKeys.some((key) => key.includes('sb-') || key.includes('supabase'));
+
+      return hasAuthToken || hasSessionAuth;
+    }, null, { timeout: isPerTestContext ? 30000 : 20000 });
 
     // Ensure the app is fully mounted before attempting a hard reload.
     // Reloads can be aborted if a redirect/hydration navigation is still in-flight.
@@ -198,21 +250,31 @@ test.describe('Authentication Flow', () => {
     await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
     // Should still be on dashboard (not redirected to login)
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: isPerTestContext ? 20000 : 10000 });
-    await expect(page.getByText(/login|entrar/i)).not.toBeVisible();
+    const dashboardUrl = /\/(dashboard)?$/;
+    const loginUrl = /\/login(?:\/|$)/;
+    const outcome = await Promise.race([
+      page.waitForURL(dashboardUrl, { timeout: isPerTestContext ? 30000 : 30000 }).then(() => 'dashboard' as const),
+      page.waitForURL(loginUrl, { timeout: isPerTestContext ? 30000 : 30000 }).then(() => 'login' as const),
+    ]);
+    if (outcome === 'login') {
+      throw new Error(`Expected session to persist after reload, but was redirected to login. url=${page.url()}`);
+    }
+    // Prefer asserting the absence of the actual login form (more deterministic than generic text).
+    await expect(page.locator('#email')).toBeHidden({ timeout: isPerTestContext ? 30000 : 20000 });
   });
 
   test('T026: authenticated user clicks sign out → logged out, redirected to login', async ({
     page,
   }) => {
     // Increase timeout for this complex test
-    test.setTimeout(60000);
+    test.setTimeout(90000);
 
     const loginPage = new LoginPage(page);
     const mailbox = TEST_EMAIL.split('@')[0];
 
     // Purge mailbox to ensure we get a fresh magic link
     await inbucket.purgeMailbox(mailbox);
+    const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Authenticate first
     await loginPage.goto();
@@ -222,7 +284,7 @@ test.describe('Authentication Flow', () => {
     let magicLink: string | null = null;
     for (let i = 0; i < 25; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
+      if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
         if (magicLink) break;
       }
@@ -230,51 +292,71 @@ test.describe('Authentication Flow', () => {
     }
 
     expect(magicLink).not.toBeNull();
-    await page.goto(magicLink!);
+    await page.goto(normalizeSupabaseMagicLink(magicLink!));
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 20000 });
+
+    // Ensure Supabase session is fully persisted before interacting with authenticated UI.
+    await page.waitForFunction(() => {
+      const keys = Object.keys(localStorage);
+      const hasAuthToken = keys.some((key) => key.includes('sb-') && key.includes('-auth-token'));
+
+      const sessionKeys = Object.keys(sessionStorage);
+      const hasSessionAuth = sessionKeys.some((key) => key.includes('sb-') || key.includes('supabase'));
+
+      return hasAuthToken || hasSessionAuth;
+    }, null, { timeout: 20000 });
 
     // Wait for the page to fully load
     await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     
-    // Dismiss onboarding wizard if present (for new users)
-    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    if (await wizardDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
-      // Complete minimal onboarding to dismiss the wizard
-      const profileInput = page.locator('#profile-name');
-      if (await profileInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await profileInput.fill('Test User');
-      }
-      const groupInput = page.locator('#group-name');
-      if (await groupInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await groupInput.fill('Test Group');
-      }
-      const accountInput = page.locator('#account-name');
-      if (await accountInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await accountInput.fill('Test Account');
-      }
-      
-      // Click through the wizard steps
-      for (let i = 0; i < 10; i++) {
-        if (!(await wizardDialog.isVisible().catch(() => false))) break;
-        
-        const finalizeBtn = wizardDialog.getByRole('button', { name: /finalizar/i });
-        if (await finalizeBtn.isVisible().catch(() => false)) {
-          await finalizeBtn.click();
-          break;
-        }
-        
-        const nextBtn = wizardDialog.getByRole('button', { name: /próximo/i });
-        if (await nextBtn.isVisible().catch(() => false)) {
-          await nextBtn.click();
-          await page.waitForTimeout(500);
-        }
-      }
-      
-      // Wait for wizard to close
-      await expect(wizardDialog).toBeHidden({ timeout: 10000 });
+    // Ensure onboarding/tour overlays never block the sign-out flow in this auth-only spec.
+    // We mark onboarding as completed + dismiss tours via admin SQL and then reload.
+    const userId = await getUserIdFromEmail(TEST_EMAIL);
+    const groupRows = await executeSQLWithResult<{ group_id: string | null }>(
+      `SELECT group_id FROM public.profiles WHERE email = $1 LIMIT 1`,
+      [TEST_EMAIL]
+    );
+    const groupId = groupRows[0]?.group_id ?? null;
+    if (!groupId) {
+      throw new Error(`Expected profiles.group_id for ${TEST_EMAIL} but none found`);
     }
-    
-    // Dismiss any tour that might be showing
+
+    await executeSQL(
+      `
+        INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+        VALUES ($1, $2, 'completed', 'done', now(), now())
+        ON CONFLICT (user_id, group_id) DO UPDATE
+        SET status = EXCLUDED.status,
+            current_step = EXCLUDED.current_step,
+            auto_shown_at = EXCLUDED.auto_shown_at,
+            completed_at = EXCLUDED.completed_at
+      `,
+      [userId, groupId]
+    );
+
+    await executeSQL(
+      `
+        INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+        VALUES
+          ($1, 'dashboard', 'dismissed', 1, now(), NULL),
+          ($1, 'manage', 'dismissed', 1, now(), NULL),
+          ($1, 'history', 'dismissed', 1, now(), NULL)
+        ON CONFLICT (user_id, tour_key) DO UPDATE
+        SET status = EXCLUDED.status,
+            version = EXCLUDED.version,
+            dismissed_at = EXCLUDED.dismissed_at,
+            completed_at = NULL
+      `,
+      [userId]
+    );
+
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 });
+    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeHidden({ timeout: 20000 });
+
+    // Dismiss any tour that might still be showing (best-effort)
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
     if (await closeTourButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await closeTourButton.click();

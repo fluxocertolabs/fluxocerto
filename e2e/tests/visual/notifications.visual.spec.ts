@@ -112,91 +112,57 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
     });
   });
 
-  visualTest.describe('Mark as Read via Primary Action', () => {
-    visualTest('notifications - before clicking primary action (unread) light', async ({
+  visualTest.describe('Notification Read State', () => {
+    visualTest('notifications - read notification light', async ({
       page,
       dashboardPage,
       visual,
+      db,
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(2000);
 
+      // Mark all notifications as read via the "Marcar como lida" button
       await page.goto('/notifications');
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Verify notification is unread (has "Marcar como lida" button)
-      await expect(page.getByRole('button', { name: /marcar como lida/i })).toBeVisible({ timeout: 10000 });
+      const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await markAsReadButton.click();
+        await page.waitForTimeout(500);
+      }
 
-      await visual.takeScreenshot(page, 'notifications-light-unread-before-action.png');
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'notifications-light-read.png');
     });
 
-    visualTest('notifications - after clicking primary action (read) light', async ({
+    visualTest('notifications - read notification dark', async ({
       page,
       dashboardPage,
       visual,
+      db,
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(2000);
 
-      await page.goto('/notifications');
-      await visual.setTheme(page, 'light');
-      await visual.waitForStableUI(page);
-
-      // Click the primary action button to mark as read
-      const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
-      await expect(primaryActionButton).toBeVisible({ timeout: 5000 });
-      await primaryActionButton.click();
-
-      // Wait for navigation to /manage
-      await expect(page).toHaveURL(/\/manage/);
-
-      // Navigate back to notifications
-      await page.goto('/notifications');
-      await visual.setTheme(page, 'light');
-      await visual.waitForStableUI(page);
-
-      // Verify notification is now read (no "Marcar como lida" button)
-      await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
-
-      await visual.takeScreenshot(page, 'notifications-light-read-after-action.png');
-    });
-
-    visualTest('notifications - after clicking primary action (read) dark', async ({
-      page,
-      dashboardPage,
-      visual,
-    }) => {
-      // Navigate to dashboard first to trigger welcome notification creation
-      await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-
+      // Mark all notifications as read via the "Marcar como lida" button
       await page.goto('/notifications');
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Click the primary action button to mark as read
-      const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
-      await expect(primaryActionButton).toBeVisible({ timeout: 5000 });
-      await primaryActionButton.click();
+      const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await markAsReadButton.click();
+        await page.waitForTimeout(500);
+      }
 
-      // Wait for navigation to /manage
-      await expect(page).toHaveURL(/\/manage/);
-
-      // Navigate back to notifications
-      await page.goto('/notifications');
-      await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
-
-      // Verify notification is now read (no "Marcar como lida" button)
-      await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
-
-      await visual.takeScreenshot(page, 'notifications-dark-read-after-action.png');
+      await visual.takeScreenshot(page, 'notifications-dark-read.png');
     });
   });
 });

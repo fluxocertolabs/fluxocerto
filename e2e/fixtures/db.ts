@@ -300,6 +300,24 @@ export async function resetGroupData(groupId: string): Promise<void> {
         continue;
       }
 
+      if (table === 'notifications') {
+        // notifications is per-user and does NOT have group_id (see migrations/20260109120100_notifications.sql).
+        // Clear notifications for users belonging to this group by mapping:
+        // profiles (group_id) -> auth.users (email) -> notifications (user_id).
+        await executeSQL(
+          `
+            DELETE FROM public.notifications n
+            USING public.profiles p, auth.users u
+            WHERE p.group_id = $1
+              AND p.email IS NOT NULL
+              AND u.email = p.email::text
+              AND n.user_id = u.id
+          `,
+          [groupId]
+        );
+        continue;
+      }
+
       const start = Date.now();
       const { error } = await client.from(table).delete().eq('group_id', groupId);
       const duration = Date.now() - start;

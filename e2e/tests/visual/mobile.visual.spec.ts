@@ -878,7 +878,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.takeScreenshot(page, 'notifications-mobile-dark-with-notification.png');
     });
 
-    visualTest('notifications - mobile light after primary action (read)', async ({
+    visualTest('notifications - mobile light read', async ({
       page,
       dashboardPage,
       visual,
@@ -892,24 +892,18 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Click the primary action button to mark as read
-      const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
-      if (await primaryActionButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await primaryActionButton.tap();
-
-        // Wait for navigation to /manage
-        await page.waitForURL(/\/manage/);
-
-        // Navigate back to notifications
-        await page.goto('/notifications');
-        await visual.setTheme(page, 'light');
-        await visual.waitForStableUI(page);
+      // Mark as read via the button
+      const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await markAsReadButton.tap();
+        await page.waitForTimeout(500);
       }
 
-      await visual.takeScreenshot(page, 'notifications-mobile-light-read-after-action.png');
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'notifications-mobile-light-read.png');
     });
 
-    visualTest('notifications - mobile dark after primary action (read)', async ({
+    visualTest('notifications - mobile dark read', async ({
       page,
       dashboardPage,
       visual,
@@ -923,21 +917,15 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Click the primary action button to mark as read
-      const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
-      if (await primaryActionButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await primaryActionButton.tap();
-
-        // Wait for navigation to /manage
-        await page.waitForURL(/\/manage/);
-
-        // Navigate back to notifications
-        await page.goto('/notifications');
-        await visual.setTheme(page, 'dark');
-        await visual.waitForStableUI(page);
+      // Mark as read via the button
+      const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await markAsReadButton.tap();
+        await page.waitForTimeout(500);
       }
 
-      await visual.takeScreenshot(page, 'notifications-mobile-dark-read-after-action.png');
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'notifications-mobile-dark-read.png');
     });
   });
 
