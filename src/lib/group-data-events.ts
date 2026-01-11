@@ -18,7 +18,12 @@ const listeners = new Set<GroupDataInvalidatedListener>()
  * Components listening should refetch their group-related data.
  */
 export function notifyGroupDataInvalidated(): void {
-  listeners.forEach((listener) => {
+  // Snapshot listeners before iterating to make notifications robust against
+  // mid-notify subscribe/unsubscribe. A listener might remove itself (or add
+  // another listener) during notification; iterating a snapshot avoids subtle
+  // iteration semantics.
+  const snapshot = Array.from(listeners)
+  snapshot.forEach((listener) => {
     try {
       listener()
     } catch (err) {

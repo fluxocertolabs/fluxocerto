@@ -26,6 +26,7 @@ test.describe('Mobile Profile Settings @mobile', () => {
 
   /**
    * Helper to complete onboarding wizard on mobile
+   * Consider extracting duplicated helper functions to shared utility (e.g., e2e/utils/mobile-helpers.ts)
    */
   async function completeOnboardingOnMobile(page: Page): Promise<void> {
     const wizardDialog = page
@@ -69,6 +70,7 @@ test.describe('Mobile Profile Settings @mobile', () => {
 
   /**
    * Helper to dismiss any auto-shown tour
+   * Consider extracting duplicated helper functions to shared utility (e.g., e2e/utils/mobile-helpers.ts)
    */
   async function dismissTourIfVisible(page: Page): Promise<void> {
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -80,12 +82,14 @@ test.describe('Mobile Profile Settings @mobile', () => {
 
   /**
    * Helper to open mobile navigation menu
+   * Consider extracting duplicated helper functions to shared utility (e.g., e2e/utils/mobile-helpers.ts)
    */
   async function openMobileMenu(page: Page): Promise<void> {
     const menuButton = page.getByRole('button', { name: /menu/i });
     if (await menuButton.isVisible().catch(() => false)) {
       await menuButton.tap();
-      await page.waitForTimeout(300);
+      // Wait for menu dialog to appear
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
     }
   }
 
@@ -149,7 +153,8 @@ test.describe('Mobile Profile Settings @mobile', () => {
 
     // Toggle it
     await toggle.tap();
-    await page.waitForTimeout(1000);
+    // Wait for the toggle state to change (optimistic update)
+    await expect(toggle).not.toHaveAttribute('aria-checked', initialState!, { timeout: 5000 });
 
     // Verify state changed
     const newState = await toggle.getAttribute('aria-checked');

@@ -82,9 +82,6 @@ test.describe('Notifications Inbox', () => {
     const navLink = page.getByRole('link', { name: /notificações/i });
     await expect(navLink).toBeVisible({ timeout: 10000 });
     
-    // Look for badge with count
-    const badge = navLink.locator('span').filter({ hasText: /^\d+$/ });
-    
     // Navigate to notifications page
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');

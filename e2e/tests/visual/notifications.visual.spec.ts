@@ -20,7 +20,8 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       // Navigate to dashboard first to ensure app is initialized
       await dashboardPage.goto();
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      // Wait for notifications to initialize by checking for stable UI
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'light');
@@ -40,7 +41,8 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      // Wait for notifications to initialize by checking for stable UI
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'light');
@@ -61,7 +63,8 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
     }) => {
       await dashboardPage.goto();
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      // Wait for notifications to initialize by checking for stable UI
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'dark');
@@ -79,7 +82,8 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
     }) => {
       await dashboardPage.goto();
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      // Wait for notifications to initialize by checking for stable UI
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'dark');
@@ -100,8 +104,7 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       await dashboardPage.goto();
       await visual.setTheme(page, 'light');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-
+      // Wait for notifications to initialize by checking for stable UI
       await visual.waitForStableUI(page);
 
       // Just verify the notifications link is visible

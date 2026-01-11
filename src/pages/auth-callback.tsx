@@ -227,8 +227,8 @@ export function AuthCallbackPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Precisa de Ajuda?</DialogTitle>
-                  <DialogDescription asChild className="space-y-4">
-                    <div>
+                  <DialogDescription asChild>
+                    <div className="space-y-4 text-sm text-muted-foreground">
                       <p>
                         Ocorreu um erro ao configurar sua conta. Tente as seguintes soluções:
                       </p>

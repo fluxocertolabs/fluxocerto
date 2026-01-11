@@ -284,7 +284,9 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
         }
         if (status === 'SUBSCRIBED') {
           // On successful subscription (including reconnection), refetch to ensure consistency
-          // This handles the case where we missed events during disconnection
+          // This handles the case where we missed events during disconnection.
+          // Consider adding a flag to distinguish initial subscription from reconnections
+          // to avoid unnecessary API calls on every SUBSCRIBED event.
           get().refresh()
         }
       })

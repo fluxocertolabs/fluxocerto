@@ -21,6 +21,11 @@ interface NotificationItemProps {
 
 /**
  * Format a date as a relative time string in pt-BR.
+ *
+ * Note: This is a simple implementation with proper pt-BR pluralization.
+ * If relative time formatting is needed elsewhere, consider:
+ * - Extracting to src/lib/format.ts for reuse
+ * - Using date-fns/formatDistanceToNow with pt-BR locale
  */
 function formatRelativeTime(date: Date): string {
   const now = new Date()

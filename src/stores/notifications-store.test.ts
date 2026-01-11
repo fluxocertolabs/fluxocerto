@@ -444,6 +444,12 @@ describe('useNotificationsStore', () => {
   // REALTIME CONVERGENCE TESTS
   // =============================================================================
 
+  // Note: These tests use useNotificationsStore.setState() to simulate what the
+  // realtime handler would do. This validates the store's state management but
+  // doesn't test the actual handler code in subscribeToRealtime that transforms
+  // payload.new using transformNotificationRow. The handler transformation logic
+  // is covered by the "realtime subscription wiring" tests below.
+
   describe('realtime convergence', () => {
     it('handles INSERT event by adding new notification', async () => {
       await useNotificationsStore.getState().initialize()

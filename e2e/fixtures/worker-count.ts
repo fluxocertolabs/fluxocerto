@@ -23,9 +23,12 @@ export function getWorkerCount(): number {
   // Keep this in one place so auth setup, worker context and Playwright config stay consistent.
   const overrideRaw = process.env.PW_WORKERS || process.env.PLAYWRIGHT_WORKERS;
   if (overrideRaw) {
-    const parsed = Number.parseInt(overrideRaw, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return clampInt(parsed, 1, MAX_WORKERS);
+    // Validate that the override is a clean integer string (e.g., "4" not "4oops")
+    if (/^\d+$/.test(overrideRaw)) {
+      const parsed = Number.parseInt(overrideRaw, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return clampInt(parsed, 1, MAX_WORKERS);
+      }
     }
   }
 

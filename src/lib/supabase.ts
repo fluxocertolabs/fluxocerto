@@ -926,6 +926,9 @@ export async function listNotifications(options?: {
   }
 
   const client = getSupabase()
+  // Clamp/validate limit to avoid accidental expensive queries.
+  // Consider bounding to a sane max (e.g., 1–100) and rejecting <= 0
+  // to avoid surprising load and edge-case behavior.
   const limit = options?.limit ?? 50
   const unreadOnly = options?.unreadOnly ?? false
 

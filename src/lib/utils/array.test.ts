@@ -2,6 +2,15 @@ import { describe, it, expect } from 'vitest'
 import { upsertUniqueById } from './array'
 
 describe('upsertUniqueById', () => {
+  it('does not mutate the previous list', () => {
+    const prev = [{ id: 'a', value: 1 }]
+    const next = upsertUniqueById(prev, { id: 'a', value: 2 })
+
+    expect(prev).toEqual([{ id: 'a', value: 1 }])
+    expect(next).toEqual([{ id: 'a', value: 2 }])
+    expect(next).not.toBe(prev)
+  })
+
   it('appends when the list is empty', () => {
     const next = upsertUniqueById([], { id: 'a', value: 1 })
     expect(next).toEqual([{ id: 'a', value: 1 }])

@@ -77,6 +77,21 @@ CREATE TRIGGER update_notifications_updated_at
 -- REALTIME PUBLICATION
 -- ============================================================================
 
+-- Make the realtime publication change resilient to re-apply.
+-- ALTER PUBLICATION ... ADD TABLE ... can fail if the table is already in the publication
+-- (depending on Postgres/Supabase behavior). If you frequently re-run migrations in dev,
+-- consider guarding it with a DO block check:
+--
+-- DO $$
+-- BEGIN
+--   IF NOT EXISTS (
+--     SELECT 1 FROM pg_publication_tables
+--     WHERE pubname = 'supabase_realtime' AND tablename = 'notifications'
+--   ) THEN
+--     ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+--   END IF;
+-- END $$;
+
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 
 -- ============================================================================

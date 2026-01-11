@@ -38,6 +38,8 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
 
   /**
    * Helper to authenticate a user and get their access token
+   * Significant code duplication with other test files.
+   * Consider extracting these to a shared test utility module (e.g., e2e/utils/auth-helpers.ts).
    */
   async function authenticateAndGetToken(
     page: Page,
@@ -92,6 +94,8 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
 
   /**
    * Helper to complete onboarding for a user
+   * Significant code duplication with other test files.
+   * Consider extracting these to a shared test utility module (e.g., e2e/utils/auth-helpers.ts).
    */
   async function completeOnboarding(page: Page): Promise<void> {
     const wizardDialog = page

@@ -29,8 +29,8 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
       // Create profiles to use as owners - use workerIndex to avoid email conflicts across parallel workers
       const groupId = await db.getWorkerGroupId();
       const uniqueId = `${db.workerIndex}-${Date.now()}`;
-      const email1 = `visual-owner1-${uniqueId}@test.local`;
-      const email2 = `visual-owner2-${uniqueId}@test.local`;
+      const email1 = `visual-owner1-light-${uniqueId}@test.local`;
+      const email2 = `visual-owner2-light-${uniqueId}@test.local`;
       
       const owner1 = await db.createProfileInGroup(
         email1,

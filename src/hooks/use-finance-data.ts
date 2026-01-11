@@ -241,6 +241,9 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [futureStatements, setFutureStatements] = useState<FutureStatement[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const profilesRef = useRef<Profile[]>([])
+  // Note: groupIdRef is captured at subscription setup time. If the user's group
+  // changes mid-session, subscriptions won't automatically update. This is acceptable
+  // for current usage patterns where group switching is not a feature.
   const groupIdRef = useRef<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

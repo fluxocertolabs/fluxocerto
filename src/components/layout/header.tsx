@@ -258,6 +258,20 @@ export function Header() {
             >
               Perfil
             </NavLink>
+            <NavLink
+              to="/notifications"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'rounded-lg px-3 py-2 text-base font-medium transition-colors',
+                  isActive
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                )
+              }
+            >
+              Notificações
+            </NavLink>
           </div>
 
           <div className="mt-auto pt-4 border-t">

@@ -562,11 +562,13 @@ export type UserPreferenceKey = z.infer<typeof UserPreferenceKeySchema>
 
 /**
  * User preference row shape (matches database table).
+ * Note: key is typed as UserPreferenceKey for compile-time safety.
+ * If arbitrary keys are needed for future extensibility, consider using a string union type.
  */
 export interface UserPreferenceRow {
   id: string
   user_id: string
-  key: string
+  key: UserPreferenceKey
   value: string
   created_at: string
   updated_at: string
@@ -574,11 +576,12 @@ export interface UserPreferenceRow {
 
 /**
  * User preference for client use (camelCase).
+ * Note: key is typed as UserPreferenceKey for compile-time safety.
  */
 export interface UserPreference {
   id: string
   userId: string
-  key: string
+  key: UserPreferenceKey
   value: string
   createdAt: Date
   updatedAt: Date

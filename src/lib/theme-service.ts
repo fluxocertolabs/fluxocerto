@@ -27,28 +27,37 @@ export async function getThemePreference(): Promise<ThemeValue | null> {
   const supabase = getSupabase()
 
   try {
+    // Explicitly filter by group_id for defensive consistency.
+    // This ensures we only get preferences for the current user's group,
+    // even though RLS should already enforce this.
+    const groupId = await getGroupId()
+    if (!groupId) {
+      return null
+    }
+
     const { data, error } = await supabase
       .from('group_preferences')
       .select('value')
+      .eq('group_id', groupId)
       .eq('key', 'theme')
-      .single()
+      .maybeSingle()
 
     if (error) {
-      // PGRST116 means no rows returned - this is expected for new users
-      if (error.code === 'PGRST116') {
-        return null
-      }
       console.warn('Failed to get theme preference:', error.message)
       return null
     }
 
+    if (!data) {
+      return null
+    }
+
     // Validate the theme value
-    const result = themeValueSchema.safeParse(data?.value)
+    const result = themeValueSchema.safeParse(data.value)
     if (result.success) {
       return result.data
     }
 
-    console.warn('Invalid theme value in database:', data?.value)
+    console.warn('Invalid theme value in database:', data.value)
     return null
   } catch (error) {
     console.warn('Error fetching theme preference:', error)
@@ -133,9 +142,17 @@ export async function deleteThemePreference(): Promise<void> {
   const supabase = getSupabase()
 
   try {
+    // Explicitly filter by group_id for defensive consistency.
+    // This ensures we only delete preferences for the current user's group.
+    const groupId = await getGroupId()
+    if (!groupId) {
+      return
+    }
+
     const { error } = await supabase
       .from('group_preferences')
       .delete()
+      .eq('group_id', groupId)
       .eq('key', 'theme')
 
     if (error) {

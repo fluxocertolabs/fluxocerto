@@ -30,6 +30,7 @@ test.describe('Welcome Email Delivery @email', () => {
 
   /**
    * Helper to authenticate a user and get their access token
+   * Consider extracting shared test helpers to reduce duplication (e.g., e2e/utils/auth-helper.ts)
    */
   async function authenticateAndGetToken(
     page: Page,
@@ -79,6 +80,7 @@ test.describe('Welcome Email Delivery @email', () => {
 
   /**
    * Helper to complete onboarding for a user
+   * Consider extracting shared test helpers to reduce duplication (e.g., e2e/utils/auth-helper.ts)
    */
   async function completeOnboarding(page: Page): Promise<void> {
     const wizardDialog = page

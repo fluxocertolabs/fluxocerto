@@ -75,6 +75,9 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       // Wait for validation error to appear
       await expect(page.getByText(/nome.*obrigatório/i)).toBeVisible({ timeout: 10000 });
 
+      // Wait for stable UI after error appears to reduce animation/layout timing diffs
+      await visual.waitForStableUI(page);
+
       await visual.takeScreenshot(page, 'profile-light-validation-error.png');
     });
 
@@ -176,6 +179,9 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       await page.getByRole('button', { name: /salvar/i }).click();
 
       await expect(page.getByText(/nome.*obrigatório/i)).toBeVisible({ timeout: 10000 });
+
+      // Wait for stable UI after error appears to reduce animation/layout timing diffs
+      await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'profile-dark-validation-error.png');
     });

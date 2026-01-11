@@ -178,9 +178,10 @@ export class AccountsSection {
     // Wait for dialog to close (Supabase insert + invalidation can be slow under full-suite load).
     // Fail fast if the Manage page surfaces an error message instead.
     const pageError = this.page.locator('div.bg-destructive\\/10.text-destructive').first();
-    const deadline = Date.now() + 45000;
-    while (Date.now() < deadline) {
-      if (!(await dialog.isVisible().catch(() => false))) return;
+
+    // Use Playwright's built-in polling with expect.poll() for better retry semantics
+    await expect(async () => {
+      // Check for error first
       if (await pageError.isVisible().catch(() => false)) {
         const message = (await pageError.textContent().catch(() => null))?.trim() || 'Unknown error';
         await this.page
@@ -188,13 +189,12 @@ export class AccountsSection {
           .catch(() => {});
         throw new Error(`Account submit failed: ${message}`);
       }
-      await this.page.waitForTimeout(250);
-    }
-
-    await this.page
-      .screenshot({ path: `test-results/debug-accounts-submit-timeout-${Date.now()}.png`, fullPage: true })
-      .catch(() => {});
-    throw new Error('Account dialog did not close after submit');
+      // Check if dialog is closed
+      const isDialogVisible = await dialog.isVisible().catch(() => false);
+      if (isDialogVisible) {
+        throw new Error('Dialog still visible');
+      }
+    }).toPass({ timeout: 45000, intervals: [250, 500, 1000] });
   }
 
   /**

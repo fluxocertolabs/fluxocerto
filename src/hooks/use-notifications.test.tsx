@@ -195,6 +195,11 @@ describe('useNotifications', () => {
   // UNREAD COUNT TESTS
   // =============================================================================
 
+  // Note: These tests set both items and unreadCount independently on the mock.
+  // This is appropriate for testing the hook's pass-through behavior.
+  // The store's derived unreadCount logic (calculating from items) is tested
+  // separately in src/stores/notifications-store.test.ts.
+
   describe('unread count', () => {
     it('returns 0 when no notifications', () => {
       mockStoreState.items = []

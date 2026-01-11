@@ -10,10 +10,12 @@ describe('notifyFinanceDataInvalidated', () => {
     const handler = vi.fn()
     window.addEventListener(FINANCE_DATA_INVALIDATED_EVENT, handler)
 
-    notifyFinanceDataInvalidated()
-
-    expect(handler).toHaveBeenCalledTimes(1)
-    window.removeEventListener(FINANCE_DATA_INVALIDATED_EVENT, handler)
+    try {
+      notifyFinanceDataInvalidated()
+      expect(handler).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener(FINANCE_DATA_INVALIDATED_EVENT, handler)
+    }
   })
 
   it('no-ops when window is undefined (SSR/test safety)', () => {

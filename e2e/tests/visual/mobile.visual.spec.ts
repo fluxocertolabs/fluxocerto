@@ -960,7 +960,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       // Clear name field and submit to trigger validation
       const nameInput = page.getByLabel(/^nome$/i);
       await nameInput.clear();
-      await page.getByRole('button', { name: /salvar/i }).click();
+      await page.getByRole('button', { name: /salvar nome/i }).click();
 
       await page.waitForTimeout(500);
       await visual.waitForStableUI(page);
@@ -977,7 +977,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       const nameInput = page.getByLabel(/^nome$/i);
       await nameInput.clear();
-      await page.getByRole('button', { name: /salvar/i }).click();
+      await page.getByRole('button', { name: /salvar nome/i }).click();
 
       await page.waitForTimeout(500);
       await visual.waitForStableUI(page);

@@ -305,26 +305,28 @@ test.describe('Quick Update Modal', () => {
     db,
   }) => {
     const uniqueId = Date.now();
+    const accountName = `Nubank Check ${uniqueId}`;
     
     // Seed a checking account (using unique name without "Corrente" to avoid confusion)
     const [seededAccount] = await db.seedAccounts([
       createAccount({ 
-        name: `Nubank Check ${uniqueId}`, 
+        name: accountName, 
         type: 'checking',
         balance: 100000,
       }),
     ]);
     
-
     // Navigate and open Quick Update
     await dashboardPage.goto();
     await dashboardPage.expectChartRendered();
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
     
+    // Wait for accounts section to load in the modal
+    await expect(page.getByRole('heading', { name: /contas bancárias/i })).toBeVisible({ timeout: 15000 });
 
     // Verify the account is listed with its type badge
-    await expect(page.getByText(`Nubank Check ${uniqueId}`, { exact: false })).toBeVisible();
+    await expect(page.getByText(accountName, { exact: false })).toBeVisible({ timeout: 10000 });
     // Use the badge with emoji to be more specific
     await expect(page.getByText('🏦').first()).toBeVisible();
     await expect(page.locator('span').filter({ hasText: /^🏦Corrente$/ }).first()).toBeVisible();

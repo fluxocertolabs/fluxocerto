@@ -29,17 +29,19 @@ const mockTourStore = {
   reset: vi.fn(),
 }
 
-const mockNotificationsStore = {
-  items: [],
+const getDefaultMockNotificationsStore = () => ({
+  items: [] as unknown[],
   unreadCount: 0,
   isLoading: false,
   isInitialized: false,
-  error: null,
+  error: null as string | null,
   initialize: vi.fn(),
   refresh: vi.fn(),
   markAsRead: vi.fn(),
   reset: vi.fn(),
-}
+})
+
+let mockNotificationsStore = getDefaultMockNotificationsStore()
 
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => mockAuth,
@@ -80,6 +82,11 @@ function renderHeader() {
     wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter>,
   })
 }
+
+// Reset mock state to default values before each test across all describe blocks
+beforeEach(() => {
+  mockNotificationsStore = getDefaultMockNotificationsStore()
+})
 
 describe('Header - Mobile Navigation', () => {
   it('opens the mobile menu with navigation links', async () => {
@@ -134,9 +141,6 @@ describe('Header - Notifications Navigation', () => {
     // Badge should be visible with count (appears in both mobile and desktop nav icons)
     const badges = screen.getAllByText('5')
     expect(badges.length).toBeGreaterThanOrEqual(1)
-
-    // Reset
-    mockNotificationsStore.unreadCount = 0
   })
 
   it('does not display unread badge when unreadCount is 0', () => {

@@ -105,27 +105,35 @@ test.describe('Profile Settings', () => {
 
     // Toggle it
     await toggle.click();
-    await page.waitForTimeout(1000);
+    
+    // Wait for the toggle state to change (optimistic update)
+    await expect(toggle).not.toHaveAttribute('aria-checked', initialState!, { timeout: 5000 });
 
     // Verify state changed
     const newState = await toggle.getAttribute('aria-checked');
     expect(newState).not.toBe(initialState);
+
+    // Wait for the API call to complete before reloading
+    // The toggle triggers an async upsert to user_preferences
+    await page.waitForLoadState('networkidle');
+    
+    // Additional wait to ensure the database write is committed
+    // This is necessary because networkidle may fire before the DB transaction completes
+    await page.waitForTimeout(500);
 
     // Reload and verify state persisted
     await page.reload();
     await page.waitForLoadState('networkidle');
 
     const toggleAfterReload = page.getByRole('switch', { name: /ativar notificações por email/i });
-    await expect(toggleAfterReload).toHaveAttribute('aria-checked', newState!);
+    await expect(toggleAfterReload).toHaveAttribute('aria-checked', newState!, { timeout: 10000 });
   });
 
   test('email notifications defaults to enabled when no preference row exists', async ({
     page,
     dashboardPage,
-    db,
   }) => {
-    // Ensure no user preferences exist (clean state)
-    await db.resetDatabase();
+    // Note: db.resetDatabase() is already called in beforeEach, ensuring clean state
 
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');

@@ -70,6 +70,26 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
         continue;
       }
 
+      if (table === 'notifications') {
+        // notifications is keyed by auth user_id (no group_id / name / email columns).
+        // Best-effort cleanup for legacy prefixed test data via auth.users email pattern.
+        const emailPattern =
+          workerIndex !== undefined
+            ? `%e2e-test-%-worker-${workerIndex}@example.com`
+            : `%e2e-test-%-worker-%@example.com`;
+
+        await executeSQL(
+          `
+            DELETE FROM public.notifications n
+            USING auth.users u
+            WHERE u.email LIKE $1
+              AND n.user_id = u.id
+          `,
+          [emailPattern]
+        );
+        continue;
+      }
+
       if (table === 'group_preferences') {
         // group_preferences no longer has a `name` column; preferences are keyed by (group_id, key).
         // Delete any pref rows created by legacy prefixed tests by matching key/value.
