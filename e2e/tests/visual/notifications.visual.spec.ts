@@ -130,7 +130,9 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
-      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      // Use waitFor to actually wait for visibility - isVisible({ timeout }) doesn't wait
+      const isButtonVisible = await markAsReadButton.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+      if (isButtonVisible) {
         await markAsReadButton.click();
         await page.waitForTimeout(500);
       }
@@ -156,7 +158,9 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
-      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      // Use waitFor to actually wait for visibility - isVisible({ timeout }) doesn't wait
+      const isButtonVisible = await markAsReadButton.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+      if (isButtonVisible) {
         await markAsReadButton.click();
         await page.waitForTimeout(500);
       }

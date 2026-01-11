@@ -10,6 +10,7 @@
 
 import { test, expect } from '../fixtures/test-base';
 import { createAccount, createCreditCard, createFutureStatement } from '../utils/test-data';
+import { parseBRL } from '../utils/format';
 
 test.describe('Credit Card Projection - Next Month Bug Fix', () => {
   test('credit card due in next month shows statementBalance (not 0)', async ({
@@ -173,10 +174,13 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     await dashboardPage.selectProjectionDays(60);
 
     // Wait for the summary to converge (it can briefly render partial totals while data hydrates).
+    // Use parseBRL helper for proper BRL currency parsing (handles "R$ 800,00" format correctly)
+    // Expected: At least R$ 800,00 (80000 cents = card1Balance + card2Balance)
+    const expectedMinCents = 80000; // R$ 800,00
     await expect(async () => {
       const expenseTotal = await dashboardPage.getExpenseTotal();
-      const numericValue = parseInt(expenseTotal.replace(/[^\d]/g, ''), 10);
-      expect(numericValue).toBeGreaterThanOrEqual(800);
+      const numericValueCents = parseBRL(expenseTotal);
+      expect(numericValueCents).toBeGreaterThanOrEqual(expectedMinCents);
     }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 

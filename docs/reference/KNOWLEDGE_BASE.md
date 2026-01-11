@@ -55,7 +55,8 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 - **Entry point(s)**: `src/main.tsx`, `src/App.tsx`
 - **Core domain logic**: `src/lib/cashflow/calculate.ts` (+ `src/lib/cashflow/*`), `src/hooks/use-cashflow-projection.ts`
 - **Supabase client + auth**: `src/lib/supabase.ts`
-- **DB schema + RLS**: `supabase/migrations/*.sql` (notably `20251220222000_rename_household_to_group.sql`, `20260105123000_self_serve_signup_provisioning.sql`, `20260105123100_onboarding_and_tour_state.sql`)
+- **DB schema + RLS**: `supabase/migrations/*.sql` (notably `20251220222000_rename_household_to_group.sql`, `20260105123000_self_serve_signup_provisioning.sql`, `20260105123100_onboarding_and_tour_state.sql`, `20260109120000_group_and_user_preferences_split.sql`)
+- **Notifications**: `src/stores/notifications-store.ts`, `src/components/notifications/`, `supabase/functions/send-welcome-email/`
 - **Dev auth bypass**: `scripts/generate-dev-token.ts`, `src/main.tsx`, `src/lib/supabase.ts`
 - **E2E auth flow**: `e2e/fixtures/auth.setup.ts`, `e2e/fixtures/auth.ts`, `e2e/playwright.config.ts`
 
@@ -125,6 +126,10 @@ Deployment notes:
 - **Testing strategy**:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
   - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
+- **E2E test parallelism**:
+  - Auth tests (`auth.spec.ts`) run **serially** with 1 worker to avoid email rate limiting (`fullyParallel: false`).
+  - All other tests (visual, functional E2E, mobile) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
+  - Worker count is controlled via `e2e/fixtures/worker-count.ts`; override with `PW_WORKERS` env var.
 
 ---
 
@@ -148,6 +153,9 @@ Deployment notes:
 - **Onboarding + tours are persisted server-side**:
   - `onboarding_states` (per user + group) and `tour_states` (per user + tour key) are real tables with RLS (see `20260105123100_onboarding_and_tour_state.sql`).
   - E2E setup often marks onboarding completed and tours dismissed to avoid overlays blocking tests.
+- **Preferences are split into two tables**:
+  - `group_preferences`: group-scoped settings (keyed by `group_id` + `key`). Examples: default time horizon, display preferences.
+  - `user_preferences`: user-scoped settings (keyed by `user_id` + `key`). Examples: email notification preferences.
   - **E2E DB cleanup gotcha**: `user_preferences` is **per-user** (no `group_id`). Group-scoped cleanup must delete by mapping
     `profiles.group_id` → `profiles.email` → `auth.users.id` → `user_preferences.user_id`. `group_preferences` is group-scoped and can be deleted by `group_id`.
 - **Expense/income types**:
@@ -155,8 +163,25 @@ Deployment notes:
   - `projects.type ∈ {recurring, single_shot}`; recurring uses frequency + schedule, single-shot uses `date`.
 - **Auth hook**:
   - The `before-user-created` Edge Function currently allows self-serve signups but fails closed if `BEFORE_USER_CREATED_HOOK_SECRET` is missing.
+- **Edge Functions and RLS**:
+  - Edge Functions using `supabaseServiceKey` bypass RLS entirely. When querying user-specific data, always add explicit filters (e.g., `.eq('user_id', user.id)`) to enforce data isolation.
+  - The `send-welcome-email` function demonstrates this pattern for `user_preferences` queries.
 - **Ports (local Supabase)**:
   - API: `54321`, DB: `54322`, Studio: `54323`, Mailpit email UI/API: `54324` (configured under `[inbucket]` in `supabase/config.toml`; E2E uses `InbucketClient` + `INBUCKET_URL` for backwards compatibility).
+
+### E2E test patterns and gotchas
+
+- **Test isolation**: Each test should call `db.clear()` or `db.reset()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value).
+- **Visual test state**: Visual regression tests for toggles/switches must reset state before capturing screenshots to avoid order-dependent failures.
+- **Playwright element waiting**:
+  - ❌ `element.isVisible({ timeout })` - The timeout parameter is deprecated and ineffective for waiting.
+  - ✅ `element.waitFor({ state: 'visible', timeout })` - Properly waits for element visibility.
+  - ✅ `expect(element).toBeVisible()` - Use explicit assertions instead of conditionals to catch missing elements.
+- **Currency parsing in tests**:
+  - Use the `parseBRL()` helper from `e2e/utils/format.ts` to convert BRL strings to cents.
+  - ❌ `parseInt(text.replace(/[^\d]/g, ''))` - Strips decimals incorrectly (e.g., "R$ 800,00" → 80000 instead of 80000 cents = R$ 800).
+  - ✅ `parseBRL(text)` - Correctly handles Brazilian format with comma as decimal separator.
+- **Idempotency testing**: When testing idempotent operations (e.g., email sending), account for dev/preview modes where side effects may be skipped. Use conditional assertions based on environment.
 
 ---
 
@@ -175,6 +200,8 @@ Deployment notes:
 - **Projection snapshot**: saved historical projection payload (`projection_snapshots.data`) for later inspection.
 - **Onboarding wizard**: guided setup flow persisted via `onboarding_states`.
 - **Page tour**: per-page guided tour persisted via `tour_states`.
+- **Notification**: in-app message stored in `notifications` table. Has `type`, `title`, `message`, `read_at`, `email_sent_at`. Types include `welcome`, `system`, etc.
+- **Welcome notification**: auto-created notification for new users; can trigger a welcome email via `send-welcome-email` Edge Function.
 
 ---
 

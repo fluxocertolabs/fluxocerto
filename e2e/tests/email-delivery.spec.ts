@@ -423,9 +423,21 @@ test.describe('Welcome Email Delivery @email', () => {
     // Verify notification exists and has email_sent_at set (either from send or preview)
     expect(Array.isArray(dbCheckResponse)).toBe(true);
     expect(dbCheckResponse.length).toBe(1);
-    // In dev mode without email provider, email_sent_at may be null (preview mode)
-    // but if any call "sent", email_sent_at should be set
-    // This verifies the DB reflects the idempotency state
+    
+    // Verify idempotency based on mode:
+    // - In dev mode without email provider: email_sent_at is null (preview mode doesn't set it)
+    // - In prod mode with credentials: email_sent_at should be set after actual send
+    const notification = dbCheckResponse[0] as { email_sent_at: string | null };
+    const hadActualSend = responses.some((r) => {
+      const data = r.data as { sent?: boolean };
+      return data.sent === true;
+    });
+    
+    if (hadActualSend) {
+      // If any response indicated actual send, email_sent_at must be set
+      expect(notification.email_sent_at).not.toBeNull();
+    }
+    // In dev/preview mode, email_sent_at may be null - that's expected behavior
   });
 
   // =============================================================================

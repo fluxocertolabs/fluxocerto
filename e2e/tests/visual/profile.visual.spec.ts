@@ -98,13 +98,17 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
 
     visualTest('profile - email notifications disabled light', async ({
       page,
+      db,
       visual,
     }) => {
+      // Reset state to ensure toggle starts in a known state (enabled by default)
+      await db.clear();
+
       await page.goto('/profile');
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Toggle the switch to disabled state (it starts enabled by default)
+      // Toggle the switch to disabled state (it starts enabled by default after db.clear())
       const toggle = page.getByRole('switch');
       await expect(toggle).toBeVisible({ timeout: 10000 });
       
@@ -195,13 +199,17 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
 
     visualTest('profile - email notifications disabled dark', async ({
       page,
+      db,
       visual,
     }) => {
+      // Reset state to ensure toggle starts in a known state (enabled by default)
+      await db.clear();
+
       await page.goto('/profile');
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Toggle the switch to disabled state (it starts enabled by default)
+      // Toggle the switch to disabled state (it starts enabled by default after db.clear())
       const toggle = page.getByRole('switch');
       await expect(toggle).toBeVisible({ timeout: 10000 });
       

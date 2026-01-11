@@ -118,8 +118,12 @@ ALTER TABLE user_preferences ADD CONSTRAINT group_preferences_group_id_key_key U
 
 ALTER TABLE user_preferences RENAME TO group_preferences;
 
--- Rename index to match new table name
-ALTER INDEX IF EXISTS user_preferences_user_id_idx RENAME TO group_preferences_user_id_idx;
+-- Drop the vestigial user_id column - group_preferences are group-scoped, not user-scoped
+-- The user_id was only used for the old per-user semantics; now we use group_id
+ALTER TABLE group_preferences DROP COLUMN IF EXISTS user_id;
+
+-- Drop the old user_id index (now obsolete)
+DROP INDEX IF EXISTS user_preferences_user_id_idx;
 
 -- Add index on group_id for RLS performance
 CREATE INDEX IF NOT EXISTS group_preferences_group_id_idx ON group_preferences(group_id);

@@ -631,7 +631,10 @@ describe('useNotificationsStore', () => {
 
       await useNotificationsStore.getState().initialize()
 
-      // Should not throw, but won't fetch data
+      // Note: initialize() does not check isSupabaseConfigured() - it always attempts to fetch.
+      // The isSupabaseConfigured() check only exists in subscribeToRealtime().
+      // This test passes because mocked functions return empty data, not due to config validation.
+      // Items remain empty because mocks return empty arrays.
       expect(useNotificationsStore.getState().items).toEqual([])
     })
   })

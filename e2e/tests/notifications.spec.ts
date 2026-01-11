@@ -91,22 +91,22 @@ test.describe('Notifications Inbox', () => {
 
     // Find the "Marcar como lida" button
     const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
-    
-    if (await markAsReadButton.isVisible()) {
-      await markAsReadButton.click();
-      await page.waitForTimeout(500);
 
-      // Verify the button is no longer visible (notification is now read)
-      await expect(markAsReadButton).not.toBeVisible({ timeout: 5000 });
+    // Assert button is visible before clicking - this ensures test fails if button doesn't render
+    await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
+    await markAsReadButton.click();
+    await page.waitForTimeout(500);
 
-      // Reload and verify read state persists
-      await page.reload();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(1000);
+    // Verify the button is no longer visible (notification is now read)
+    await expect(markAsReadButton).not.toBeVisible({ timeout: 5000 });
 
-      // The "Marcar como lida" button should still not be visible
-      await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible();
-    }
+    // Reload and verify read state persists
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // The "Marcar como lida" button should still not be visible
+    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible();
   });
 
   test('marking read is idempotent - repeated clicks do not cause errors', async ({

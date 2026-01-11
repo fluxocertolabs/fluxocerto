@@ -308,9 +308,11 @@ Deno.serve(async (req) => {
     }
 
     // Check email notifications preference at send time (opt-out enforcement)
+    // Note: userClient uses service key, so we must explicitly filter by user_id for RLS-like security
     const { data: prefData } = await userClient
       .from('user_preferences')
       .select('value')
+      .eq('user_id', user.id)
       .eq('key', 'email_notifications_enabled')
       .single()
 
