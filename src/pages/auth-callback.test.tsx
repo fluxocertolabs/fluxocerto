@@ -272,6 +272,11 @@ describe('AuthCallbackPage', () => {
 
       // Resolve the retry
       resolveRetry?.({ success: true, data: { groupId: 'group-id', created: false } })
+
+      // Ensure async state updates are flushed (prevents act warnings)
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
+      })
     })
   })
 
@@ -457,6 +462,11 @@ describe('AuthCallbackPage', () => {
 
       // Resolve provisioning
       resolveProvisioning?.({ success: true, data: { groupId: 'group-id', created: false } })
+
+      // Flush navigation side-effect to avoid act warnings
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
+      })
     })
   })
 

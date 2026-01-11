@@ -60,6 +60,11 @@ function getSupabaseConfig() {
 const supabase = getSupabaseConfig();
 const workerCount = getWorkerCount();
 const usePerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
+const reuseExistingServer =
+  (process.env.PW_REUSE_EXISTING_SERVER === '1' ||
+    process.env.PW_REUSE_EXISTING_SERVER === 'true') &&
+  !process.env.CI &&
+  !usePerTestContext;
 
 // Set environment variables for test files
 process.env.VITE_SUPABASE_URL = process.env.VITE_SUPABASE_URL || supabase.url;
@@ -206,9 +211,11 @@ export default defineConfig({
     // `vite preview` (few static assets, much more deterministic).
     command: usePerTestContext
       ? `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm exec vite build && pnpm preview --port ${port} --strictPort`
-      : `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port}`,
+      : `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port} --strictPort`,
     url: process.env.BASE_URL,
-    reuseExistingServer: !process.env.CI && !usePerTestContext, // preview mode should always start fresh
+    // Default to starting a fresh server for determinism.
+    // Opt into reuse for local iteration by setting PW_REUSE_EXISTING_SERVER=1.
+    reuseExistingServer, // preview mode should always start fresh
     timeout: usePerTestContext ? 180000 : 120000, // preview needs time to build
     cwd: resolve(__dirname, '..'),
   },

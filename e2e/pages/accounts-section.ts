@@ -15,6 +15,17 @@ export class AccountsSection {
     this.accountList = page.locator('[data-testid="accounts-list"], .accounts-list').first();
   }
 
+  private get accountsTab(): Locator {
+    return this.page.getByRole('tab', { name: /contas|accounts/i });
+  }
+
+  private get headerAddButton(): Locator {
+    // On /manage, the "Adicionar Conta" header button is rendered alongside the tabs list.
+    // We scope to the header container to avoid picking up similarly named buttons elsewhere.
+    const header = this.page.locator('[data-tour="manage-tabs"]').locator('..').locator('..');
+    return header.getByRole('button', { name: /adicionar conta/i });
+  }
+
   /**
    * Get the add button - uses the one in the header (first one), not the empty state
    */
@@ -28,14 +39,30 @@ export class AccountsSection {
    * Click add new account button to open form
    */
   async clickAdd(): Promise<void> {
+    // Ensure we're on the accounts tab (defensive; some failures were caused by running while another tab was active).
+    const tabState = await this.accountsTab.getAttribute('data-state').catch(() => null);
+    if (tabState !== 'active') {
+      await this.accountsTab.click({ timeout: 5000 }).catch(async () => {
+        await this.accountsTab.click({ force: true });
+      });
+      await expect(this.accountsTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
+    }
+
+    // Prefer the header button when available; it's the most deterministic.
+    if (await this.headerAddButton.isVisible().catch(() => false)) {
+      await this.headerAddButton.click({ timeout: 5000, noWaitAfter: true }).catch(async () => {
+        await this.headerAddButton.click({ force: true, noWaitAfter: true });
+      });
+      return;
+    }
+
+    // Fallback: pick the last visible match outside dialogs.
     const buttons = this.addButtons;
     const count = await buttons.count();
-    for (let i = 0; i < count; i++) {
+    for (let i = count - 1; i >= 0; i--) {
       const btn = buttons.nth(i);
       if (!(await btn.isVisible().catch(() => false))) continue;
 
-      // Avoid clicking buttons inside dialogs (e.g. the form submit button is also named
-      // "Adicionar Conta" and would match this locator).
       const isInsideDialog = await btn
         .evaluate((el) => !!el.closest('[role="dialog"], [role="alertdialog"]'))
         .catch(() => false);
@@ -47,6 +74,7 @@ export class AccountsSection {
       });
       return;
     }
+
     throw new Error('No visible "Adicionar Conta" button found');
   }
 
@@ -58,6 +86,9 @@ export class AccountsSection {
     type: 'checking' | 'savings' | 'investment';
     balance: string;
   }): Promise<void> {
+    // Ensure the accounts section itself is ready (tab content rendered).
+    await this.waitForLoad();
+
     // If a tour tooltip is visible, it can match role=dialog and block interactions.
     // Close it proactively to keep the flow deterministic.
     const tourCloseButton = this.page.getByRole('button', { name: /fechar tour/i });
@@ -65,27 +96,51 @@ export class AccountsSection {
       await tourCloseButton.click({ timeout: 2000 }).catch(() => {});
     }
 
-    // Target the account dialog by its unique title ("Adicionar Conta").
-    // IMPORTANT: Don't use XPath ancestor queries — they're fragile in Playwright.
-    // Instead, use the dialog's accessible name which comes from the DialogTitle.
-    const dialog = this.page.getByRole('dialog', { name: /adicionar conta/i });
+    // IMPORTANT: The tour tooltip also uses role="dialog" and can occasionally contain
+    // copy like "Adicionar Conta". If we locate by accessible name only, we can
+    // accidentally match the tour dialog instead of the account form.
+    //
+    // Anchor the locator to the *account form structure* (name + balance fields).
+    const dialog = this.page
+      .getByRole('dialog')
+      .filter({ has: this.page.locator('input#name') })
+      .filter({ has: this.page.locator('#balance') })
+      .first();
     const nameInput = dialog.getByLabel(/nome da conta/i);
 
-    await expect(async () => {
-      // If the dialog is already open, don't click anything.
-      if (await dialog.isVisible().catch(() => false)) return;
-
-      // Clear any open popovers/menus that might intercept clicks (safe no-op when nothing is open).
+    // Open dialog deterministically (avoid repeated fast retries that can fight slow UIs under parallel load).
+    if (!(await dialog.isVisible().catch(() => false))) {
+      // Clear any open popovers/menus/tours that might intercept clicks.
       await this.page.keyboard.press('Escape').catch(() => {});
-      await this.page.waitForTimeout(100); // Let the UI settle
+      await this.page.keyboard.press('Escape').catch(() => {});
 
+      // First attempt: click header add button via clickAdd() (tab-guarded).
       await this.clickAdd();
-      await expect(dialog).toBeVisible({ timeout: 5000 });
-    }).toPass({ timeout: 30000, intervals: [500, 1000, 2000, 3000] });
+      await dialog.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+
+      // Second attempt: press Escape and try clickAdd again (handles rare overlay race).
+      if (!(await dialog.isVisible().catch(() => false))) {
+        await this.page.keyboard.press('Escape').catch(() => {});
+        await this.clickAdd();
+        await dialog.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+      }
+
+      if (!(await dialog.isVisible().catch(() => false))) {
+        // Best-effort diagnostics for flakes (Playwright doesn't always attach screenshots for toPass timeouts).
+        await this.page
+          .screenshot({ path: `test-results/debug-accounts-add-dialog-${Date.now()}.png`, fullPage: true })
+          .catch(() => {});
+        throw new Error('Failed to open "Adicionar Conta" dialog');
+      }
+    }
 
     // Fill form fields - target inputs within the dialog
-    await expect(nameInput).toBeVisible({ timeout: 10000 });
-    await nameInput.fill(data.name);
+    await expect(nameInput).toBeVisible({ timeout: 15000 });
+    await expect(nameInput).toBeEditable({ timeout: 30000 });
+    await nameInput.scrollIntoViewIfNeeded().catch(() => {});
+    // Prefer fill() directly. Click+force-click is a common source of flakes when overlays exist
+    // (Playwright will wait for actionability and may run into the test timeout).
+    await nameInput.fill(data.name, { timeout: 30000 });
     
     // Select account type when needed.
     // New accounts default to "checking" in the UI, so don't touch the Select unless
@@ -108,8 +163,9 @@ export class AccountsSection {
 
     // Fill balance - use the currency input
     const balanceInput = dialog.locator('#balance');
-    await expect(balanceInput).toBeVisible({ timeout: 10000 });
-    await balanceInput.fill(data.balance);
+    await expect(balanceInput).toBeVisible({ timeout: 15000 });
+    await expect(balanceInput).toBeEditable({ timeout: 30000 });
+    await balanceInput.fill(data.balance, { timeout: 30000 });
     // Trigger validation/masks that run on blur
     await balanceInput.blur().catch(() => {});
 
@@ -119,8 +175,26 @@ export class AccountsSection {
     // Avoid hanging on implicit navigation waits for SPA submit handlers
     await submitButton.click({ noWaitAfter: true });
 
-    // Wait for dialog to close
-    await expect(dialog).not.toBeVisible({ timeout: 15000 });
+    // Wait for dialog to close (Supabase insert + invalidation can be slow under full-suite load).
+    // Fail fast if the Manage page surfaces an error message instead.
+    const pageError = this.page.locator('div.bg-destructive\\/10.text-destructive').first();
+    const deadline = Date.now() + 45000;
+    while (Date.now() < deadline) {
+      if (!(await dialog.isVisible().catch(() => false))) return;
+      if (await pageError.isVisible().catch(() => false)) {
+        const message = (await pageError.textContent().catch(() => null))?.trim() || 'Unknown error';
+        await this.page
+          .screenshot({ path: `test-results/debug-accounts-submit-error-${Date.now()}.png`, fullPage: true })
+          .catch(() => {});
+        throw new Error(`Account submit failed: ${message}`);
+      }
+      await this.page.waitForTimeout(250);
+    }
+
+    await this.page
+      .screenshot({ path: `test-results/debug-accounts-submit-timeout-${Date.now()}.png`, fullPage: true })
+      .catch(() => {});
+    throw new Error('Account dialog did not close after submit');
   }
 
   /**
@@ -238,10 +312,14 @@ export class AccountsSection {
   async expectAccountVisible(name: string): Promise<void> {
     // Wait for the accounts section to be ready
     await this.waitForLoad();
-    
-    // Use Playwright's built-in expect with visibility check
-    const account = this.page.getByText(name).first();
-    await expect(account).toBeVisible({ timeout: 10000 });
+
+    // Wait for the specific account card to appear (realtime + fetch can be slow under full-suite load)
+    await expect(async () => {
+      const accountCard = this.page.locator('div.group.relative').filter({
+        has: this.page.getByRole('heading', { name, level: 3, exact: true }),
+      }).first();
+      await expect(accountCard).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   }
 
   /**

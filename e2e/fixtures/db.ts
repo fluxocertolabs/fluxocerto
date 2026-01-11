@@ -47,17 +47,48 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
   for (const table of tables) {
     try {
       if (table === 'user_preferences') {
-        // user_preferences uses email pattern matching
-        const { error } = await client.from(table).delete().like('email', pattern);
+        // user_preferences is keyed by auth user_id (no group_id / name / email columns).
+        // Best-effort cleanup for legacy prefixed test data:
+        // delete preferences for any auth user whose email matches our test worker pattern.
+        //
+        // NOTE: The pattern for other tables is "[W0]%" etc, which does NOT apply to auth emails.
+        // When workerIndex is provided, delete only that worker's test user.
+        const emailPattern =
+          workerIndex !== undefined
+            ? `%e2e-test-%-worker-${workerIndex}@example.com`
+            : `%e2e-test-%-worker-%@example.com`;
+
+        await executeSQL(
+          `
+            DELETE FROM public.user_preferences up
+            USING auth.users u
+            WHERE u.email LIKE $1
+              AND up.user_id = u.id
+          `,
+          [emailPattern]
+        );
+        continue;
+      }
+
+      if (table === 'group_preferences') {
+        // group_preferences no longer has a `name` column; preferences are keyed by (group_id, key).
+        // Delete any pref rows created by legacy prefixed tests by matching key/value.
+        //
+        // This is best-effort only; group-scoped cleanup should use resetGroupData(groupId).
+        const { error } = await client
+          .from(table)
+          .delete()
+          .or(`key.like.${pattern},value.like.${pattern}`);
         if (error && !error.message.includes('does not exist')) {
           console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
         }
-      } else {
-        // Other tables use name pattern matching
-        const { error } = await client.from(table).delete().like('name', pattern);
-        if (error && !error.message.includes('does not exist')) {
-          console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
-        }
+        continue;
+      }
+
+      // Other tables use name pattern matching
+      const { error } = await client.from(table).delete().like('name', pattern);
+      if (error && !error.message.includes('does not exist')) {
+        console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
       }
     } catch (err) {
       // Ignore errors during cleanup
@@ -251,6 +282,24 @@ export async function resetGroupData(groupId: string): Promise<void> {
 
   for (const table of tables) {
     try {
+      if (table === 'user_preferences') {
+        // user_preferences is per-user and does NOT have group_id.
+        // Clear all user preferences for users belonging to this group by mapping:
+        // profiles (group_id) -> auth.users (email) -> user_preferences (user_id).
+        await executeSQL(
+          `
+            DELETE FROM public.user_preferences up
+            USING public.profiles p, auth.users u
+            WHERE p.group_id = $1
+              AND p.email IS NOT NULL
+              AND u.email = p.email::text
+              AND up.user_id = u.id
+          `,
+          [groupId]
+        );
+        continue;
+      }
+
       const start = Date.now();
       const { error } = await client.from(table).delete().eq('group_id', groupId);
       const duration = Date.now() - start;

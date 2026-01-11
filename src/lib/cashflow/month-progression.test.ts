@@ -2,12 +2,18 @@
  * Month Progression Tests
  *
  * Tests for month progression helper functions.
- * Note: The main async functions (performMonthProgression, checkAndProgressMonth)
- * are tested via E2E tests since they require database interactions.
  */
 
-import { describe, expect, it } from 'vitest'
-import { getMonthsDiff } from './month-progression'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { checkAndProgressMonth, performMonthProgression, getMonthsDiff } from './month-progression'
+
+const mockGetSupabase = vi.fn()
+const mockGetGroupId = vi.fn()
+
+vi.mock('@/lib/supabase', () => ({
+  getSupabase: () => mockGetSupabase(),
+  getGroupId: () => mockGetGroupId(),
+}))
 
 // =============================================================================
 // getMonthsDiff TESTS
@@ -54,6 +60,276 @@ describe('getMonthsDiff', () => {
     const from = new Date('2025-05-15')
     const to = new Date('2025-05-30')
     expect(getMonthsDiff(from, to)).toBe(0)
+  })
+})
+
+// =============================================================================
+// checkAndProgressMonth TESTS
+// =============================================================================
+
+describe('checkAndProgressMonth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('skips progression when last check is already in the current month', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-15T12:00:00Z'))
+
+    const result = await checkAndProgressMonth('2025-06-02T00:00:00.000Z')
+
+    expect(result).toEqual({ success: true, progressedCards: 0, cleanedStatements: 0 })
+    expect(mockGetSupabase).not.toHaveBeenCalled()
+    expect(mockGetGroupId).not.toHaveBeenCalled()
+  })
+
+  it('runs progression when last check was in a previous month', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-15T12:00:00Z'))
+
+    mockGetGroupId.mockResolvedValue('group-1')
+    mockGetSupabase.mockReturnValue({
+      from: (table: string) => {
+        if (table === 'credit_cards') {
+          return {
+            select: () => ({
+              eq: () => Promise.resolve({ data: [], error: null }),
+            }),
+          }
+        }
+        if (table === 'future_statements') {
+          return {
+            select: () => ({
+              eq: () => Promise.resolve({ data: [], error: null }),
+            }),
+            delete: () => ({
+              eq: () => ({
+                or: () => ({
+                  select: () => Promise.resolve({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }
+        }
+        throw new Error(`Unexpected table: ${table}`)
+      },
+    })
+
+    const result = await checkAndProgressMonth('2025-05-20T00:00:00.000Z')
+
+    expect(result).toEqual({ success: true, progressedCards: 0, cleanedStatements: 0 })
+    expect(mockGetGroupId).toHaveBeenCalledTimes(1)
+  })
+})
+
+// =============================================================================
+// performMonthProgression TESTS (mocked Supabase client)
+// =============================================================================
+
+describe('performMonthProgression', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('progresses current-month statement to credit card balance and cleans past statements', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-15T12:00:00Z'))
+
+    mockGetGroupId.mockResolvedValue('group-1')
+
+    const mockFrom = vi.fn()
+    const updateCalls: Array<{ id: string; values: unknown }> = []
+    const deletedById: string[] = []
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'credit_cards') {
+        return {
+          select: () => ({
+            eq: (col: string, value: string) => {
+              expect(col).toBe('group_id')
+              expect(value).toBe('group-1')
+              return Promise.resolve({
+                data: [{ id: 'card-1', statement_balance: 123 }],
+                error: null,
+              })
+            },
+          }),
+          update: (values: unknown) => ({
+            eq: (col: string, id: string) => {
+              expect(col).toBe('id')
+              updateCalls.push({ id, values })
+              return Promise.resolve({ error: null })
+            },
+          }),
+        }
+      }
+
+      if (table === 'future_statements') {
+        return {
+          select: () => ({
+            eq: (col: string, value: string) => {
+              expect(col).toBe('group_id')
+              expect(value).toBe('group-1')
+              return Promise.resolve({
+                data: [
+                  {
+                    id: 'fs-current',
+                    credit_card_id: 'card-1',
+                    group_id: 'group-1',
+                    target_month: 6,
+                    target_year: 2025,
+                    amount: 999,
+                    created_at: '2025-01-01T00:00:00Z',
+                    updated_at: '2025-01-01T00:00:00Z',
+                  },
+                  {
+                    id: 'fs-old',
+                    credit_card_id: 'card-1',
+                    group_id: 'group-1',
+                    target_month: 5,
+                    target_year: 2025,
+                    amount: 111,
+                    created_at: '2025-01-01T00:00:00Z',
+                    updated_at: '2025-01-01T00:00:00Z',
+                  },
+                ],
+                error: null,
+              })
+            },
+          }),
+          delete: () => ({
+            eq: (col: string, value: string) => {
+              if (col === 'id') {
+                deletedById.push(value)
+                return Promise.resolve({ error: null })
+              }
+              if (col === 'group_id') {
+                expect(value).toBe('group-1')
+                return {
+                  or: () => ({
+                    select: () =>
+                      Promise.resolve({
+                        data: [{ id: 'fs-old' }],
+                        error: null,
+                      }),
+                  }),
+                }
+              }
+              throw new Error(`Unexpected eq(${col}, ${value})`)
+            },
+          }),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    mockGetSupabase.mockReturnValue({ from: mockFrom })
+
+    const result = await performMonthProgression()
+
+    expect(result).toEqual({ success: true, progressedCards: 1, cleanedStatements: 1 })
+    expect(updateCalls).toEqual([{ id: 'card-1', values: { statement_balance: 999 } }])
+    expect(deletedById).toContain('fs-current')
+  })
+
+  it('rolls back the card balance if deleting the future statement fails', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-15T12:00:00Z'))
+
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    mockGetGroupId.mockResolvedValue('group-1')
+
+    const updateCalls: Array<{ id: string; values: unknown }> = []
+    const mockFrom = vi.fn()
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'credit_cards') {
+        return {
+          select: () => ({
+            eq: () =>
+              Promise.resolve({
+                data: [{ id: 'card-1', statement_balance: 123 }],
+                error: null,
+              }),
+          }),
+          update: (values: unknown) => ({
+            eq: (_col: string, id: string) => {
+              updateCalls.push({ id, values })
+              return Promise.resolve({ error: null })
+            },
+          }),
+        }
+      }
+
+      if (table === 'future_statements') {
+        return {
+          select: () => ({
+            eq: () =>
+              Promise.resolve({
+                data: [
+                  {
+                    id: 'fs-current',
+                    credit_card_id: 'card-1',
+                    group_id: 'group-1',
+                    target_month: 6,
+                    target_year: 2025,
+                    amount: 999,
+                    created_at: '2025-01-01T00:00:00Z',
+                    updated_at: '2025-01-01T00:00:00Z',
+                  },
+                ],
+                error: null,
+              }),
+          }),
+          delete: () => ({
+            eq: (col: string) => {
+              if (col === 'id') {
+                return Promise.resolve({ error: { message: 'delete failed' } })
+              }
+              return {
+                or: () => ({
+                  select: () => Promise.resolve({ data: [], error: null }),
+                }),
+              }
+            },
+          }),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    mockGetSupabase.mockReturnValue({ from: mockFrom })
+
+    const result = await performMonthProgression()
+
+    expect(result).toEqual({ success: true, progressedCards: 0, cleanedStatements: 0 })
+    expect(updateCalls).toEqual([
+      { id: 'card-1', values: { statement_balance: 999 } }, // initial update
+      { id: 'card-1', values: { statement_balance: 123 } }, // rollback
+    ])
+
+    consoleError.mockRestore()
+  })
+
+  it('returns a friendly error when groupId cannot be determined', async () => {
+    const from = vi.fn()
+    mockGetSupabase.mockReturnValue({ from })
+    mockGetGroupId.mockResolvedValue(null)
+    const result = await performMonthProgression()
+    expect(result).toEqual({ success: false, error: 'Não foi possível identificar seu grupo' })
+    expect(mockGetSupabase).toHaveBeenCalledTimes(1)
+    expect(from).not.toHaveBeenCalled()
   })
 })
 

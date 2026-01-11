@@ -8,10 +8,11 @@
 import { useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useNotificationsStore } from '@/stores/notifications-store'
+import type { Notification } from '@/types'
 
 export interface UseNotificationsReturn {
   /** List of notifications, newest first */
-  items: ReturnType<typeof useNotificationsStore>['items']
+  items: Notification[]
   /** Count of unread notifications */
   unreadCount: number
   /** Whether notifications are loading */

@@ -168,14 +168,16 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     
     await dashboardPage.goto();
     await dashboardPage.expectChartRendered();
-    
-    // Get the expense total
-    const expenseTotal = await dashboardPage.getExpenseTotal();
-    const numericValue = parseInt(expenseTotal.replace(/[^\d]/g, ''), 10);
-    
-    // Both credit card balances should be included
-    // Total should be at least R$ 800,00 (80000 cents = 800 reais)
-    expect(numericValue).toBeGreaterThanOrEqual(800);
+
+    // Ensure the projection window includes any next-month due dates (removes date-boundary flakes).
+    await dashboardPage.selectProjectionDays(60);
+
+    // Wait for the summary to converge (it can briefly render partial totals while data hydrates).
+    await expect(async () => {
+      const expenseTotal = await dashboardPage.getExpenseTotal();
+      const numericValue = parseInt(expenseTotal.replace(/[^\d]/g, ''), 10);
+      expect(numericValue).toBeGreaterThanOrEqual(800);
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('chart tooltip shows correct credit card amount for next month', async ({

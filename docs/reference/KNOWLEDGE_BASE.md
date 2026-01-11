@@ -148,6 +148,8 @@ Deployment notes:
 - **Onboarding + tours are persisted server-side**:
   - `onboarding_states` (per user + group) and `tour_states` (per user + tour key) are real tables with RLS (see `20260105123100_onboarding_and_tour_state.sql`).
   - E2E setup often marks onboarding completed and tours dismissed to avoid overlays blocking tests.
+  - **E2E DB cleanup gotcha**: `user_preferences` is **per-user** (no `group_id`). Group-scoped cleanup must delete by mapping
+    `profiles.group_id` → `profiles.email` → `auth.users.id` → `user_preferences.user_id`. `group_preferences` is group-scoped and can be deleted by `group_id`.
 - **Expense/income types**:
   - `expenses.type ∈ {fixed, single_shot}`; fixed uses `due_day`, single-shot uses `date`.
   - `projects.type ∈ {recurring, single_shot}`; recurring uses frequency + schedule, single-shot uses `date`.

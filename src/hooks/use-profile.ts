@@ -45,13 +45,13 @@ export interface UseProfileReturn {
 }
 
 export function useProfile(): UseProfileReturn {
-  const { user, isAuthenticated } = useAuth()
+  const { user } = useAuth()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchProfile = useCallback(async () => {
-    if (!isSupabaseConfigured() || !isAuthenticated || !user?.email) {
+    if (!isSupabaseConfigured() || !user?.email) {
       setIsLoading(false)
       return
     }
@@ -95,7 +95,7 @@ export function useProfile(): UseProfileReturn {
       setError(message)
       setIsLoading(false)
     }
-  }, [isAuthenticated, user?.email])
+  }, [user])
 
   useEffect(() => {
     fetchProfile()
@@ -131,7 +131,7 @@ export function useProfile(): UseProfileReturn {
         return handleSupabaseError(err)
       }
     },
-    [user?.email]
+    [user]
   )
 
   const updateEmailNotifications = useCallback(

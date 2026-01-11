@@ -11,7 +11,6 @@ import type {
   TourStatus,
   NotificationRow,
   Notification,
-  UserPreferenceRow,
 } from '@/types'
 import { transformOnboardingStateRow, transformTourStateRow, transformNotificationRow } from '@/types'
 

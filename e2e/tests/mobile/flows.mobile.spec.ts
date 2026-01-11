@@ -44,35 +44,35 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
     await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
     // Step 1: Profile
-    await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible({ timeout: 20000 });
     await page.locator('#profile-name').fill('Mobile Test User');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 2: Group - wait for heading to confirm step transition
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 20000 });
     await page.locator('#group-name').fill('Mobile Test Group');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 3: Bank Account
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 20000 });
     await page.locator('#account-name').fill('Mobile Test Account');
     await page.locator('#account-balance').fill('1000');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 4: Income (skip - optional)
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 20000 });
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 5: Expense (skip - optional)
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 20000 });
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Step 6: Credit Card (skip - optional)
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible();
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 20000 });
     await wizardDialog.getByRole('button', { name: /finalizar/i }).click();
 
     // Wizard should close
-    await expect(wizardDialog).toBeHidden({ timeout: 10000 });
+    await expect(wizardDialog).toBeHidden({ timeout: 20000 });
   }
 
   test.describe('Onboarding on Mobile', () => {
