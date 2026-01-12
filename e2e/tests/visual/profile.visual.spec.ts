@@ -119,7 +119,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       const isChecked = await toggle.getAttribute('aria-checked');
       if (isChecked === 'true') {
         await toggle.click();
-        await page.waitForTimeout(500);
+        await expect(toggle).toHaveAttribute('aria-checked', 'false', { timeout: 2000 });
       }
 
       await visual.takeScreenshot(page, 'profile-light-notifications-disabled.png');
@@ -223,7 +223,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       const isChecked = await toggle.getAttribute('aria-checked');
       if (isChecked === 'true') {
         await toggle.click();
-        await page.waitForTimeout(500);
+        await expect(toggle).toHaveAttribute('aria-checked', 'false', { timeout: 2000 });
       }
 
       await visual.takeScreenshot(page, 'profile-dark-notifications-disabled.png');

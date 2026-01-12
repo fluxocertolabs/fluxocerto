@@ -269,7 +269,8 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
               unreadCount: calculateUnreadCount(updatedItems),
             })
           } else if (payload.eventType === 'DELETE') {
-            const deletedId = (payload.old as { id: string }).id
+            const deletedId = (payload.old as { id?: string })?.id
+            if (!deletedId) return
             const updatedItems = removeNotification(currentState.items, deletedId)
             set({
               items: updatedItems,

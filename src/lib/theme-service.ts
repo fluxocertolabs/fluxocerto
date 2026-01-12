@@ -27,11 +27,12 @@ export async function getThemePreference(): Promise<ThemeValue | null> {
   const supabase = getSupabase()
 
   try {
-    // Explicitly filter by group_id for defensive consistency.
-    // This ensures we only get preferences for the current user's group,
-    // even though RLS should already enforce this.
+    // Defense-in-depth: explicit group_id filter (RLS already enforces this)
     const groupId = await getGroupId()
     if (!groupId) {
+      if (import.meta.env.DEV) {
+        console.warn('getThemePreference: no group_id found (misconfigured RLS or client context?)')
+      }
       return null
     }
 
@@ -97,7 +98,6 @@ export async function saveThemePreference(theme: ThemeValue): Promise<void> {
     try {
       const { error } = await supabase.from('group_preferences').upsert(
         {
-          user_id: user.id,
           group_id: groupId,
           key: 'theme',
           value: theme,

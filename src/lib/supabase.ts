@@ -1162,14 +1162,24 @@ export async function triggerWelcomeEmail(notificationId: string): Promise<Resul
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
     const functionUrl = `${supabaseUrl}/functions/v1/send-welcome-email`
 
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ notification_id: notificationId }),
-    })
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 10_000)
+    
+    let response: Response
+    try {
+      response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({ notification_id: notificationId }),
+      })
+    } finally {
+      window.clearTimeout(timeout)
+    }
 
     let data: SendWelcomeEmailResponse
     try {

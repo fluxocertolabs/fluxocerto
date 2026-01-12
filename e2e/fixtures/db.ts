@@ -308,13 +308,14 @@ export async function resetGroupData(groupId: string): Promise<void> {
         // user_preferences is per-user and does NOT have group_id.
         // Clear all user preferences for users belonging to this group by mapping:
         // profiles (group_id) -> auth.users (email) -> user_preferences (user_id).
+        // Use lower() for case-insensitive email comparison to avoid missed deletes.
         await executeSQL(
           `
             DELETE FROM public.user_preferences up
             USING public.profiles p, auth.users u
             WHERE p.group_id = $1
               AND p.email IS NOT NULL
-              AND u.email = p.email::text
+              AND lower(u.email) = lower(p.email::text)
               AND up.user_id = u.id
           `,
           [groupId]
@@ -326,13 +327,14 @@ export async function resetGroupData(groupId: string): Promise<void> {
         // notifications is per-user and does NOT have group_id (see migrations/20260109120100_notifications.sql).
         // Clear notifications for users belonging to this group by mapping:
         // profiles (group_id) -> auth.users (email) -> notifications (user_id).
+        // Use lower() for case-insensitive email comparison to avoid missed deletes.
         await executeSQL(
           `
             DELETE FROM public.notifications n
             USING public.profiles p, auth.users u
             WHERE p.group_id = $1
               AND p.email IS NOT NULL
-              AND u.email = p.email::text
+              AND lower(u.email) = lower(p.email::text)
               AND n.user_id = u.id
           `,
           [groupId]
@@ -1386,7 +1388,7 @@ export async function notificationExistsByDedupeKey(
 // ============================================================================
 
 /**
- * Seed user preferences with test data
+ * Seed user preferences with test data (idempotent via upsert)
  */
 export async function seedUserPreferences(
   preferences: TestUserPreference[]
@@ -1399,7 +1401,10 @@ export async function seedUserPreferences(
     value: p.value,
   }));
 
-  const { data, error } = await client.from('user_preferences').insert(records).select();
+  const { data, error } = await client
+    .from('user_preferences')
+    .upsert(records, { onConflict: 'user_id,key' })
+    .select();
 
   if (error) {
     throw new Error(`Failed to seed user preferences: ${error.message}`);

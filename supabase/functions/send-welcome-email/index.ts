@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
 
   // Create Supabase client with user's auth token
   
-  // Client for user operations (respects RLS)
+  // Client for user operations (RLS enforced via user's JWT in Authorization header)
   const userClient = createClient(supabaseUrl, supabaseServiceKey, {
     global: {
       headers: { Authorization: authHeader },
@@ -386,7 +386,8 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       // Email was sent but we failed to record it - log but don't fail
-      console.error('Failed to update email_sent_at:', updateError)
+      // Note: This could lead to duplicate emails on retry
+      console.error('Failed to update email_sent_at - potential duplicate on retry:', updateError, { notification_id, user_id: user.id })
     }
 
     return new Response(

@@ -172,7 +172,7 @@ Deployment notes:
   - `ALTER PUBLICATION ... ADD TABLE ...` can fail if re-applied when the table is already in the publication. Consider guarding with a `DO` block check in migrations.
   - Subscriptions refetch on `SUBSCRIBED` status to handle reconnection scenarios where events may have been missed.
 - **Ports (local Supabase)**:
-  - API: `54321`, DB: `54322`, Studio: `54323`, Mailpit email UI/API: `54324` (configured under `[inbucket]` in `supabase/config.toml`; E2E uses `InbucketClient` + `INBUCKET_URL` for backwards compatibility).
+  - API: `54321`, DB: `54322`, Studio: `54323`, Mailpit email UI/API: `54324` (configured under `[inbucket]` in `supabase/config.toml`; the code uses legacy names `InbucketClient` + `INBUCKET_URL` for backwards compatibility, but the actual server is Mailpit).
 
 ### E2E test patterns and gotchas
 
