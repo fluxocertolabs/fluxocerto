@@ -46,12 +46,12 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     const expenseTotal = await dashboardPage.getExpenseTotal();
     
     // The expense total should include the credit card balance (R$ 500,00)
-    // Parse the currency value to check it's not 0
-    const numericValue = parseInt(expenseTotal.replace(/[^\d]/g, ''), 10);
+    // Use parseBRL for proper BRL currency parsing (returns cents)
+    const numericValueCents = parseBRL(expenseTotal);
     
     // The credit card balance should be included in expenses
-    // It should be at least R$ 500,00 (50000 cents = 500 reais)
-    expect(numericValue).toBeGreaterThanOrEqual(500);
+    // It should be at least R$ 500,00 (50000 cents)
+    expect(numericValueCents).toBeGreaterThanOrEqual(statementBalance);
   });
 
   test('credit card due in distant future (2+ months) with no futureStatement shows 0', async ({

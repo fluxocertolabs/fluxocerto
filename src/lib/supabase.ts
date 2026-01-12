@@ -897,6 +897,16 @@ export async function ensureWelcomeNotification(): Promise<Result<{ created: boo
       return handleSupabaseError(error)
     }
 
+    // Validate RPC response shape before using
+    if (
+      data === null ||
+      typeof data !== 'object' ||
+      typeof (data as Record<string, unknown>).created !== 'boolean' ||
+      typeof (data as Record<string, unknown>).notification_id !== 'string'
+    ) {
+      return { success: false, error: 'Resposta inválida do servidor' }
+    }
+
     const result = data as EnsureWelcomeNotificationResponse
     return {
       success: true,
@@ -913,7 +923,7 @@ export async function ensureWelcomeNotification(): Promise<Result<{ created: boo
 /**
  * List notifications for the current user, newest first.
  * 
- * @param options.limit - Maximum number of notifications to return (default: 50)
+ * @param options.limit - Maximum number of notifications to return (default: 50, max: 100)
  * @param options.unreadOnly - If true, only return unread notifications
  * @returns Result with array of Notification objects
  */
@@ -926,10 +936,9 @@ export async function listNotifications(options?: {
   }
 
   const client = getSupabase()
-  // Clamp/validate limit to avoid accidental expensive queries.
-  // Consider bounding to a sane max (e.g., 1–100) and rejecting <= 0
-  // to avoid surprising load and edge-case behavior.
-  const limit = options?.limit ?? 50
+  // Clamp limit to avoid accidental expensive queries (min 1, max 100)
+  const rawLimit = options?.limit ?? 50
+  const limit = Math.max(1, Math.min(100, rawLimit))
   const unreadOnly = options?.unreadOnly ?? false
 
   try {
@@ -994,6 +1003,10 @@ export async function getUnreadNotificationCount(): Promise<Result<number>> {
  * @returns Result indicating success or failure
  */
 export async function markNotificationRead(notificationId: string): Promise<Result<void>> {
+  if (!notificationId || notificationId.trim() === '') {
+    return { success: false, error: 'ID de notificação inválido' }
+  }
+
   if (!isSupabaseConfigured()) {
     return { success: false, error: 'Supabase não está configurado' }
   }
@@ -1031,23 +1044,25 @@ export async function getEmailNotificationsEnabled(): Promise<Result<boolean>> {
   }
 
   const client = getSupabase()
+  const { data: { user } } = await client.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: 'Você precisa estar autenticado' }
+  }
 
   try {
     const { data, error } = await client
       .from('user_preferences')
       .select('value')
+      .eq('user_id', user.id)
       .eq('key', 'email_notifications_enabled')
-      .single()
+      .maybeSingle()
 
     if (error) {
-      // PGRST116 means no rows - treat as enabled (default opt-out semantics)
-      if (error.code === 'PGRST116') {
-        return { success: true, data: true }
-      }
       return handleSupabaseError(error)
     }
 
-    // Parse the value - 'false' means disabled, anything else means enabled
+    // No row means enabled (opt-out semantics); 'false' means disabled
     const enabled = data?.value !== 'false'
     return { success: true, data: enabled }
   } catch (err) {

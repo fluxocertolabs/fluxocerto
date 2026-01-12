@@ -53,10 +53,11 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
         //
         // NOTE: The pattern for other tables is "[W0]%" etc, which does NOT apply to auth emails.
         // When workerIndex is provided, delete only that worker's test user.
+        // Anchored pattern (no leading %) to avoid accidental matches.
         const emailPattern =
           workerIndex !== undefined
-            ? `%e2e-test-%-worker-${workerIndex}@example.com`
-            : `%e2e-test-%-worker-%@example.com`;
+            ? `e2e-test-%-worker-${workerIndex}@example.com`
+            : `e2e-test-%-worker-%@example.com`;
 
         await executeSQL(
           `
@@ -73,10 +74,11 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
       if (table === 'notifications') {
         // notifications is keyed by auth user_id (no group_id / name / email columns).
         // Best-effort cleanup for legacy prefixed test data via auth.users email pattern.
+        // Anchored pattern (no leading %) to avoid accidental matches.
         const emailPattern =
           workerIndex !== undefined
-            ? `%e2e-test-%-worker-${workerIndex}@example.com`
-            : `%e2e-test-%-worker-%@example.com`;
+            ? `e2e-test-%-worker-${workerIndex}@example.com`
+            : `e2e-test-%-worker-%@example.com`;
 
         await executeSQL(
           `
@@ -1462,12 +1464,12 @@ export async function deleteUserPreferencesForUser(userId: string): Promise<void
 }
 
 /**
- * Get user ID by email from auth.users
+ * Get user ID by email from auth.users (case-insensitive)
  */
 export async function getUserIdByEmail(email: string): Promise<string | null> {
   try {
     const result = await executeSQLWithResult<{ id: string }>(
-      `SELECT id FROM auth.users WHERE email = $1 LIMIT 1`,
+      `SELECT id FROM auth.users WHERE lower(email) = lower($1) LIMIT 1`,
       [email]
     );
     

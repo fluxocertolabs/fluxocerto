@@ -217,7 +217,7 @@ Deployment notes:
 - **Projection snapshot**: saved historical projection payload (`projection_snapshots.data`) for later inspection.
 - **Onboarding wizard**: guided setup flow persisted via `onboarding_states`.
 - **Page tour**: per-page guided tour persisted via `tour_states`.
-- **Notification**: in-app message stored in `notifications` table. Has `type`, `title`, `message`, `read_at`, `email_sent_at`. Types include `welcome`, `system`, etc. Realtime subscriptions push INSERT/UPDATE/DELETE events to the client.
+- **Notification**: in-app message stored in `notifications` table. Has `type`, `title`, `message`, `read_at`, `email_sent_at`. Currently, `type` is constrained to `'welcome'` only; additional types (e.g., `system`) may be added in the future. Realtime subscriptions push INSERT/UPDATE/DELETE events to the client.
 - **Welcome notification**: auto-created notification for new users; can trigger a welcome email via `send-welcome-email` Edge Function.
 - **UserPreferenceKey**: typed union for valid `user_preferences.key` values (e.g., `'email_notifications_enabled'`). See `src/types/index.ts`.
 
