@@ -1339,13 +1339,18 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
   const client = getAdminClient();
   
-  const { error } = await client
+  const { data, error } = await client
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
-    .eq('id', notificationId);
+    .eq('id', notificationId)
+    .select('id');
 
   if (error) {
     throw new Error(`Failed to mark notification as read: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error(`Notification not found: ${notificationId}`);
   }
 }
 

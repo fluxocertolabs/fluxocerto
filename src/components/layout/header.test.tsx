@@ -181,9 +181,12 @@ describe('Header - Profile Navigation', () => {
     const profileLinks = screen.getAllByRole('link', { name: /perfil/i })
     expect(profileLinks[0]).toHaveAttribute('href', '/profile')
   })
+
+  it('navigates to /notifications when Notificações link is clicked', () => {
+    renderHeader()
+
+    const notificationLinks = screen.getAllByRole('link', { name: /notificações/i })
+    expect(notificationLinks[0]).toHaveAttribute('href', '/notifications')
+  })
 })
-
-
-
-
 

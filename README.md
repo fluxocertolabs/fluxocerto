@@ -145,9 +145,12 @@ pnpm preview      # Preview production build locally
 pnpm lint         # Run ESLint
 pnpm lint:fix     # Fix ESLint issues
 pnpm typecheck    # Run TypeScript type checking
-pnpm test         # Run tests once
-pnpm test:watch   # Run tests in watch mode
-pnpm test:coverage # Run tests with coverage report
+pnpm test         # Full test suite (unit + visual + e2e)
+pnpm test:unit    # Unit tests (Vitest)
+pnpm test:unit:watch
+pnpm test:unit:coverage
+pnpm test:e2e     # Playwright functional E2E
+pnpm test:visual  # Playwright visual regression
 ```
 
 ## Usage
@@ -359,7 +362,7 @@ In your Vercel project settings (Settings → Environment Variables):
 
 ## Roadmap
 
-See [docs/USER_STORIES.md](docs/USER_STORIES.md) for the full feature roadmap.
+See [docs/reference/USER_STORIES.md](docs/reference/USER_STORIES.md) for the full feature roadmap.
 
 **Potential future features:**
 - [ ] Data export/import (JSON/CSV backup)

@@ -163,6 +163,9 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;')
 }
 
+/** Timeout for Resend API requests (fail fast) */
+const RESEND_API_TIMEOUT_MS = 10_000
+
 /**
  * Send email via Resend API.
  */
@@ -173,6 +176,9 @@ async function sendEmailViaResend(
   html: string,
   fromEmail: string
 ): Promise<{ success: boolean; error?: string }> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), RESEND_API_TIMEOUT_MS)
+
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -186,6 +192,7 @@ async function sendEmailViaResend(
         subject,
         html,
       }),
+      signal: controller.signal,
     })
 
     if (!response.ok) {
@@ -196,8 +203,13 @@ async function sendEmailViaResend(
 
     return { success: true }
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { success: false, error: `Request timed out after ${RESEND_API_TIMEOUT_MS}ms` }
+    }
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { success: false, error: message }
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 
@@ -308,7 +320,7 @@ Deno.serve(async (req) => {
     }
 
     // Check email notifications preference at send time (opt-out enforcement)
-    // Note: userClient uses service key, so we must explicitly filter by user_id for RLS-like security
+    // Note: Explicit user_id filter for defense-in-depth (RLS applies via JWT in Authorization header)
     const { data: prefData } = await userClient
       .from('user_preferences')
       .select('value')

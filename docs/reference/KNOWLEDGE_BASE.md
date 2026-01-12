@@ -58,6 +58,7 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 - **DB schema + RLS**: `supabase/migrations/*.sql` (notably `20251220222000_rename_household_to_group.sql`, `20260105123000_self_serve_signup_provisioning.sql`, `20260105123100_onboarding_and_tour_state.sql`, `20260109120000_group_and_user_preferences_split.sql`)
 - **Notifications**: `src/stores/notifications-store.ts`, `src/components/notifications/`, `supabase/functions/send-welcome-email/`, `supabase/migrations/20260109120100_notifications.sql`
 - **Dev auth bypass**: `scripts/generate-dev-token.ts`, `src/main.tsx`, `src/lib/supabase.ts`
+- **Local Supabase readiness check**: `scripts/ensure-supabase.ts` (used by `pnpm db:ensure`)
 - **E2E auth flow**: `e2e/fixtures/auth.setup.ts`, `e2e/fixtures/auth.ts`, `e2e/playwright.config.ts`
 
 ---
@@ -68,6 +69,12 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 ```bash
 pnpm install
 pnpm db:start          # starts local Supabase (Postgres + Auth + Studio + Mailpit email UI/API on :54324)
+```
+
+If you're running tests, prefer:
+
+```bash
+pnpm db:ensure         # starts Supabase if needed AND verifies required keys are available
 ```
 
 ### Run (dev)
@@ -158,7 +165,7 @@ Deployment notes:
   - `group_preferences`: group-scoped settings (keyed by `group_id` + `key`). Examples: theme preference, display preferences.
   - `user_preferences`: user-scoped settings (keyed by `user_id` + `key`). Examples: `email_notifications_enabled`.
   - **E2E DB cleanup gotcha**: `user_preferences` and `notifications` are **per-user** (no `group_id`). Group-scoped cleanup must delete by mapping `profiles.group_id` → `profiles.email` → `auth.users.id` → `user_preferences.user_id` / `notifications.user_id`. `group_preferences` is group-scoped and can be deleted by `group_id`.
-  - **Opt-out semantics**: For `email_notifications_enabled`, missing row = enabled (opt-out default). Writing `value='false'` disables; deleting the row re-enables.
+  - **Opt-out semantics**: For `email_notifications_enabled`, missing row = enabled (opt-out default). Writing `value='false'` disables; deleting the row re-enables. **Rationale**: Opt-out defaults maximize user engagement for transactional emails (e.g., welcome emails) while respecting user choice when they explicitly disable. This follows common SaaS patterns where beneficial notifications are on by default.
 - **Expense/income types**:
   - `expenses.type ∈ {fixed, single_shot}`; fixed uses `due_day`, single-shot uses `date`.
   - `projects.type ∈ {recurring, single_shot}`; recurring uses frequency + schedule, single-shot uses `date`.
@@ -173,11 +180,20 @@ Deployment notes:
   - Subscriptions refetch on `SUBSCRIBED` status to handle reconnection scenarios where events may have been missed.
 - **Ports (local Supabase)**:
   - API: `54321`, DB: `54322`, Studio: `54323`, Mailpit email UI/API: `54324` (configured under `[inbucket]` in `supabase/config.toml`; the code uses legacy names `InbucketClient` + `INBUCKET_URL` for backwards compatibility, but the actual server is Mailpit).
+- **Supabase “status” can be a false positive**:
+  - Some environments can print “Supabase is not running” while still returning a successful exit code from `npx supabase status`.
+  - Tests require the Supabase keys to be present (anon + service role). Use `pnpm db:ensure` (see `scripts/ensure-supabase.ts`) instead of relying on `status || start` logic.
+- **Vite file watchers can hit OS limits (`ENOSPC`)**:
+  - If the pnpm store lives inside the repo (e.g. `.pnpm-store/`), Vite’s watcher can traverse it and exceed the system watcher limit.
+  - `vite.config.ts` explicitly ignores `.pnpm-store/` in `server.watch.ignored` to avoid Playwright webServer startup crashes.
 
 ### E2E test patterns and gotchas
 
 - **Test isolation**: Each test should call `db.clear()` or `db.reset()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value).
 - **Visual test state**: Visual regression tests for toggles/switches must reset state before capturing screenshots to avoid order-dependent failures.
+- **Web server mode depends on `PW_PER_TEST_CONTEXT`**:
+  - `PW_PER_TEST_CONTEXT=1` runs `vite build` + `vite preview` in Playwright `webServer` for determinism (cold browser context per test).
+  - Default mode runs the Vite dev server for faster iteration.
 - **Playwright element waiting**:
   - ❌ `element.isVisible({ timeout })` - The timeout parameter is deprecated and ineffective for waiting.
   - ✅ `element.waitFor({ state: 'visible', timeout })` - Properly waits for element visibility.

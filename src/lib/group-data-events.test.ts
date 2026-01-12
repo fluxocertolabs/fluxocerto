@@ -47,5 +47,3 @@ describe('group-data-events', () => {
   })
 })
 
-
-

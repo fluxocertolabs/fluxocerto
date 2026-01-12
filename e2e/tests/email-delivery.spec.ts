@@ -122,20 +122,44 @@ test.describe('Welcome Email Delivery @email', () => {
     page: Page,
     accessToken: string
   ): Promise<string | null> {
-    const notifications = await page.evaluate(
+    // Ensure page is in a stable state before running evaluate
+    // This prevents hanging when the page is navigating
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Use a timeout wrapper around page.evaluate to prevent indefinite hangs
+    const evaluatePromise = page.evaluate(
       async ({ baseUrl, apiKey, token }) => {
-        const res = await fetch(`${baseUrl}/rest/v1/notifications?type=eq.welcome`, {
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        return await res.json().catch(() => []);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        try {
+          const res = await fetch(`${baseUrl}/rest/v1/notifications?type=eq.welcome`, {
+            headers: {
+              apikey: apiKey,
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          return await res.json().catch(() => []);
+        } catch (err) {
+          clearTimeout(timeoutId);
+          console.error('getWelcomeNotificationId fetch error:', err);
+          return [];
+        }
       },
       { baseUrl: baseApiUrl, apiKey: anonKey!, token: accessToken }
     );
 
+    // Race against a timeout to prevent indefinite hangs
+    const timeoutPromise = new Promise<never[]>((resolve) => {
+      setTimeout(() => {
+        console.warn('getWelcomeNotificationId: page.evaluate timed out after 30s');
+        resolve([]);
+      }, 30000);
+    });
+
+    const notifications = await Promise.race([evaluatePromise, timeoutPromise]);
     return notifications.length > 0 ? notifications[0].id : null;
   }
 

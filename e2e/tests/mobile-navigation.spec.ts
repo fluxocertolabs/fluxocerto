@@ -150,36 +150,45 @@ test.describe('Mobile Navigation & Layout', () => {
       { name: 'Snapshot Mobile', data: createMockSnapshotData() },
     ]);
 
-    // Dashboard
-    await page.goto('/');
-    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible();
+    // Dashboard - wait for network idle to ensure page is fully loaded
+    await page.goto('/', { waitUntil: 'networkidle' });
+    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible({ timeout: 20000 });
     await expectNoHorizontalOverflow(page);
 
     // Navigate via mobile menu to History
-    await page.getByRole('button', { name: /abrir menu/i }).click();
+    const menuButton = page.getByRole('button', { name: /abrir menu/i });
+    await expect(menuButton).toBeVisible({ timeout: 10000 });
+    await menuButton.click();
+    
+    // Wait for menu to fully open - check for the navigation container to be visible
     const historyLink = page.getByRole('link', { name: 'Histórico' });
     await expect(historyLink).toBeVisible({ timeout: 10000 });
-    await Promise.all([
-      page.waitForURL(/\/history$/, { timeout: 30000 }),
-      historyLink.click({ noWaitAfter: true }),
-    ]);
-    await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible();
+    
+    // Click and wait for navigation in sequence (more reliable than Promise.all)
+    await historyLink.click();
+    await expect(page).toHaveURL(/\/history$/, { timeout: 30000 });
+    await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible({ timeout: 20000 });
     await expectNoHorizontalOverflow(page);
 
     // Navigate via mobile menu to Manage
-    await page.getByRole('button', { name: /abrir menu/i }).click();
+    // Re-query menu button since page has changed
+    const menuButtonManage = page.getByRole('button', { name: /abrir menu/i });
+    await expect(menuButtonManage).toBeVisible({ timeout: 10000 });
+    await menuButtonManage.click();
+    
+    // Wait for menu to fully open
     const manageLink = page.getByRole('link', { name: 'Gerenciar' });
     await expect(manageLink).toBeVisible({ timeout: 10000 });
-    await Promise.all([
-      page.waitForURL(/\/manage$/, { timeout: 30000 }),
-      manageLink.click({ noWaitAfter: true }),
-    ]);
-    await expect(page.getByRole('heading', { name: /gerenciar dados financeiros/i })).toBeVisible();
+    
+    // Click and wait for navigation
+    await manageLink.click();
+    await expect(page).toHaveURL(/\/manage$/, { timeout: 30000 });
+    await expect(page.getByRole('heading', { name: /gerenciar dados financeiros/i })).toBeVisible({ timeout: 20000 });
     await expectNoHorizontalOverflow(page);
 
     // Navigate to snapshot detail
-    await page.goto(`/history/${seeded.id}`);
-    await expect(page.getByTestId('historical-banner')).toBeVisible();
+    await page.goto(`/history/${seeded.id}`, { waitUntil: 'networkidle' });
+    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: 20000 });
     await expectNoHorizontalOverflow(page);
   });
 

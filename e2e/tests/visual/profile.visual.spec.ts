@@ -95,6 +95,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       // Verify toggle is visible and in enabled state (default)
       const toggle = page.getByRole('switch');
       await expect(toggle).toBeVisible({ timeout: 10000 });
+      await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 2000 });
 
       await visual.takeScreenshot(page, 'profile-light-notifications-enabled.png');
     });
@@ -199,6 +200,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
 
       const toggle = page.getByRole('switch');
       await expect(toggle).toBeVisible({ timeout: 10000 });
+      await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 2000 });
 
       await visual.takeScreenshot(page, 'profile-dark-notifications-enabled.png');
     });

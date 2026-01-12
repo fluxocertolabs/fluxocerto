@@ -82,7 +82,12 @@ test.describe('Historical Projection Snapshots', () => {
     await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible()
 
     await historyPage.clickSnapshot('Indicator Absence Snapshot')
-    await page.waitForURL(/\/history\/[a-f0-9-]+/)
+    await expect(page).toHaveURL(/\/history\/[a-f0-9-]+/, { timeout: 15000 })
+    
+    // Wait for the historical banner to appear first (indicates page has loaded snapshot data)
+    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: 15000 })
+    
+    // Then verify summary is rendered
     await snapshotDetailPage.expectSummaryRendered()
 
     await expect(page.locator('[data-testid="estimated-balance-indicator"]')).not.toBeVisible()

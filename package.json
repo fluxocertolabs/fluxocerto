@@ -9,7 +9,7 @@
     "db:start": "npx supabase start",
     "db:stop": "npx supabase stop",
     "db:reset": "npx supabase db reset",
-    "db:ensure": "npx supabase status > /dev/null 2>&1 || npx supabase start",
+    "db:ensure": "tsx scripts/ensure-supabase.ts",
     "emails:build": "tsx scripts/build-emails.ts",
     "emails:deploy:supabase": "tsx scripts/deploy-supabase-email-templates.ts",
     "build": "tsc -b && vite build",

@@ -78,7 +78,7 @@ export async function saveThemePreference(theme: ThemeValue): Promise<void> {
 
   const supabase = getSupabase()
 
-  // Get current user ID
+  // Verify user is authenticated
   const {
     data: { user },
   } = await supabase.auth.getUser()

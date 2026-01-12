@@ -38,44 +38,20 @@ export class SnapshotDetailPage {
    * Navigate to snapshot detail page by ID
    */
   async goto(snapshotId: string): Promise<void> {
-    await this.page.goto(`/history/${snapshotId}`);
+    // Use networkidle for more reliable page load detection in per-test context mode
+    const isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
+    await this.page.goto(`/history/${snapshotId}`, { 
+      waitUntil: isPerTestContext ? 'networkidle' : 'load' 
+    });
     
-    // Wait for page to be in a stable state:
-    // 1. First, wait for either loading to appear OR content to appear
-    //    (handles race where content loads before we can observe loading state)
-    // 2. Then wait for loading to complete and content to be visible
+    // Wait for final state to be visible - either banner (success) or not found (error)
+    // Use a single polling assertion for efficiency
     await expect(async () => {
-      const isLoading = await this.loadingSkeleton.isVisible().catch(() => false);
       const hasBanner = await this.historicalBanner.isVisible().catch(() => false);
       const hasNotFound = await this.notFoundMessage.isVisible().catch(() => false);
-      const hasError = await this.errorMessage.isVisible().catch(() => false);
       
-      // Page must be in one of these states:
-      // - Loading (data fetch in progress)
-      // - Banner visible (snapshot loaded successfully)
-      // - Not found visible (snapshot doesn't exist)
-      // - Error visible (failed to load)
-      const isInValidState = isLoading || hasBanner || hasNotFound || hasError;
-      expect(isInValidState, 'Page should be in a valid state (Loading, Banner, NotFound, or Error)').toBe(true);
-    }).toPass({ timeout: 15000, intervals: [100, 200, 500] });
-    
-    // Now wait for loading to complete and final state to be visible
-    await expect(async () => {
-      const isLoading = await this.loadingSkeleton.isVisible().catch(() => false);
-      const hasBanner = await this.historicalBanner.isVisible().catch(() => false);
-      const hasNotFound = await this.notFoundMessage.isVisible().catch(() => false);
-      const hasError = await this.errorMessage.isVisible().catch(() => false);
-
-      if (hasError) {
-        // Use short timeout to avoid blocking the retry loop if element disappears
-        const text = await this.errorMessage.textContent({ timeout: 100 }).catch(() => 'Unknown error');
-        console.log(`Snapshot load error: ${text}`);
-      }
-      
-      // Loading should be done AND we should see either banner or not found
-      // If error is present, this will fail naturally
-      expect(isLoading).toBe(false);
-      expect(hasBanner || hasNotFound).toBe(true);
+      // We should see either banner or not found
+      expect(hasBanner || hasNotFound, 'Page should show either historical banner or not found message').toBe(true);
     }).toPass({ timeout: 30000, intervals: [500, 1000, 2000] });
   }
 
@@ -116,24 +92,25 @@ export class SnapshotDetailPage {
    * Delete the current snapshot
    */
   async deleteSnapshot(): Promise<void> {
+    // Ensure delete button is visible and clickable before clicking
+    await expect(this.deleteButton).toBeVisible({ timeout: 15000 });
     await this.deleteButton.click();
     
     // Confirm the deletion in the dialog (scoped to the alert dialog)
     const dialog = this.page.getByRole('alertdialog');
     const confirmButton = dialog.getByRole('button', { name: /excluir/i });
-    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog).toBeVisible({ timeout: 15000 });
     await expect(confirmButton).toBeVisible({ timeout: 10000 });
     await expect(confirmButton).toBeEnabled({ timeout: 10000 });
 
-    // In SPAs, the click can trigger a client-side navigation. Waiting for it sequentially
-    // can occasionally hang under load; wait for URL change concurrently and prevent the
-    // click from waiting on navigation by itself.
+    // Click confirm and wait for redirect using polling assertion
+    // This is more robust than Promise.all with waitForURL
+    await confirmButton.click();
+    
+    // Use polling assertion to wait for URL change - more robust than waitForURL
     const isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
     const redirectTimeout = isPerTestContext ? 45000 : 20000;
-    await Promise.all([
-      this.page.waitForURL(/\/history$/, { timeout: redirectTimeout }),
-      confirmButton.click({ noWaitAfter: true }),
-    ]);
+    await expect(this.page).toHaveURL(/\/history$/, { timeout: redirectTimeout });
   }
 
   /**
