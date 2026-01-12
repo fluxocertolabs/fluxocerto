@@ -79,9 +79,14 @@ export async function saveThemePreference(theme: ThemeValue): Promise<void> {
   const supabase = getSupabase()
 
   // Verify user is authenticated
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch (error) {
+    console.warn('Cannot save theme preference: auth check failed', error)
+    return
+  }
   if (!user) {
     console.warn('Cannot save theme preference: user not authenticated')
     return
@@ -146,6 +151,7 @@ export async function deleteThemePreference(): Promise<void> {
     // This ensures we only delete preferences for the current user's group.
     const groupId = await getGroupId()
     if (!groupId) {
+      console.warn('Cannot delete theme preference: group not found')
       return
     }
 

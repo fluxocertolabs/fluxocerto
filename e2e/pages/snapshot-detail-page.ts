@@ -17,6 +17,10 @@ export class SnapshotDetailPage {
   readonly errorMessage: Locator;
   readonly loadingSkeleton: Locator;
 
+  private get isPerTestContext(): boolean {
+    return process.env.PW_PER_TEST_CONTEXT === '1';
+  }
+
   constructor(page: Page) {
     this.page = page;
     // The banner is a Card with bg-muted/50 containing the snapshot info
@@ -39,9 +43,8 @@ export class SnapshotDetailPage {
    */
   async goto(snapshotId: string): Promise<void> {
     // Use networkidle for more reliable page load detection in per-test context mode
-    const isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
     await this.page.goto(`/history/${snapshotId}`, { 
-      waitUntil: isPerTestContext ? 'networkidle' : 'load' 
+      waitUntil: this.isPerTestContext ? 'networkidle' : 'load' 
     });
     
     // Wait for final state to be visible - either banner (success) or not found (error)
@@ -108,8 +111,7 @@ export class SnapshotDetailPage {
     await confirmButton.click();
     
     // Use polling assertion to wait for URL change - more robust than waitForURL
-    const isPerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
-    const redirectTimeout = isPerTestContext ? 45000 : 20000;
+    const redirectTimeout = this.isPerTestContext ? 45000 : 20000;
     await expect(this.page).toHaveURL(/\/history$/, { timeout: redirectTimeout });
   }
 

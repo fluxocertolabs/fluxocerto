@@ -1693,14 +1693,22 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
       return result;
     },
     // Notification helpers (per-user, not per-group)
-    seedNotifications,
+    seedNotifications: async (notifications: TestNotification[]) => {
+      const result = await seedNotifications(notifications);
+      markDirty();
+      return result;
+    },
     getNotificationsForUser,
     getUnreadNotificationCount,
     markNotificationAsRead,
     deleteNotificationsForUser,
     notificationExistsByDedupeKey,
     // User preference helpers (per-user, not per-group)
-    seedUserPreferences,
+    seedUserPreferences: async (preferences: TestUserPreference[]) => {
+      const result = await seedUserPreferences(preferences);
+      markDirty();
+      return result;
+    },
     getUserPreference,
     setUserPreference,
     deleteUserPreferencesForUser,

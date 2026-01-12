@@ -202,7 +202,7 @@ test.describe('Welcome Email Delivery @email', () => {
   ): Promise<void> {
     await page.evaluate(
       async ({ baseUrl, apiKey, token, uid, value }) => {
-        await fetch(`${baseUrl}/rest/v1/user_preferences`, {
+        const res = await fetch(`${baseUrl}/rest/v1/user_preferences`, {
           method: 'POST',
           headers: {
             apikey: apiKey,
@@ -216,6 +216,11 @@ test.describe('Welcome Email Delivery @email', () => {
             value: value ? 'true' : 'false',
           }),
         });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          throw new Error(`Failed to set preference: ${res.status} ${text}`);
+        }
       },
       { baseUrl: baseApiUrl, apiKey: anonKey!, token: accessToken, uid: userId, value: enabled }
     );

@@ -55,7 +55,9 @@ function generateEmailHtml(
   ctaHref: string | null,
   baseUrl: string
 ): string {
-  const ctaUrl = ctaHref ? `${baseUrl}${ctaHref}` : `${baseUrl}/notifications`
+  const ctaUrl = ctaHref
+    ? (ctaHref.startsWith('http') ? ctaHref : `${baseUrl}${ctaHref}`)
+    : `${baseUrl}/notifications`
   const ctaText = ctaLabel || 'Ver notificação'
 
   return `
@@ -390,16 +392,21 @@ Deno.serve(async (req) => {
     }
 
     // Update email_sent_at using admin client (bypasses RLS for server-side update)
-    const { error: updateError } = await adminClient
+    const { data: updated, error: updateError } = await adminClient
       .from('notifications')
       .update({ email_sent_at: new Date().toISOString() })
       .eq('id', notification_id)
       .eq('user_id', user.id) // Extra safety
+      .is('email_sent_at', null) // Only update if not already sent
+      .select('id')
+      .maybeSingle()
 
     if (updateError) {
       // Email was sent but we failed to record it - log but don't fail
-      // Note: This could lead to duplicate emails on retry
-      console.error('Failed to update email_sent_at - potential duplicate on retry:', updateError, { notification_id, user_id: user.id })
+      console.error('Failed to update email_sent_at:', updateError, { notification_id, user_id: user.id })
+    } else if (!updated) {
+      // Another request already recorded the send - this is fine
+      console.log('Email already sent by concurrent request', { notification_id })
     }
 
     return new Response(

@@ -93,7 +93,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       // Verify toggle is visible and in enabled state (default)
-      const toggle = page.getByRole('switch');
+      const toggle = page.getByRole('switch', { name: /ativar notificações por email/i });
       await expect(toggle).toBeVisible({ timeout: 10000 });
       await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 2000 });
 
@@ -113,7 +113,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       // Toggle the switch to disabled state (it starts enabled by default after db.clear())
-      const toggle = page.getByRole('switch');
+      const toggle = page.getByRole('switch', { name: /ativar notificações por email/i });
       await expect(toggle).toBeVisible({ timeout: 10000 });
       
       // If toggle is checked, click to uncheck
@@ -198,7 +198,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const toggle = page.getByRole('switch');
+      const toggle = page.getByRole('switch', { name: /ativar notificações por email/i });
       await expect(toggle).toBeVisible({ timeout: 10000 });
       await expect(toggle).toHaveAttribute('aria-checked', 'true', { timeout: 2000 });
 
@@ -218,7 +218,7 @@ visualTest.describe('Profile Settings Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       // Toggle the switch to disabled state (it starts enabled by default after db.clear())
-      const toggle = page.getByRole('switch');
+      const toggle = page.getByRole('switch', { name: /ativar notificações por email/i });
       await expect(toggle).toBeVisible({ timeout: 10000 });
       
       // If toggle is checked, click to uncheck

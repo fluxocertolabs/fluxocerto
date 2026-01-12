@@ -143,10 +143,10 @@ test.describe('Historical Projection Snapshots', () => {
       await historyPage.clickSnapshot('Test Navigation Snapshot');
 
       // Wait for navigation to detail page
-      await page.waitForURL(/\/history\/[a-f0-9-]+/);
+      await expect(page).toHaveURL(/\/history\/[a-f0-9-]+/, { timeout: 15000 });
 
-    // Verify historical banner is shown (URL can change before snapshot data finishes loading)
-    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: 15000 });
+      // Verify historical banner is shown (URL can change before snapshot data finishes loading)
+      await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: 15000 });
     });
 
     test('delete snapshot from history list → snapshot removed', async ({
@@ -294,7 +294,7 @@ test.describe('Historical Projection Snapshots', () => {
       // Open snapshot detail
       await historyPage.goto()
       await historyPage.clickSnapshot('Frozen Snapshot')
-      await page.waitForURL(/\/history\/[a-f0-9-]+/)
+      await expect(page).toHaveURL(/\/history\/[a-f0-9-]+/, { timeout: 15000 })
       await snapshotDetailPage.expectSummaryRendered()
 
       // Capture stable summary values

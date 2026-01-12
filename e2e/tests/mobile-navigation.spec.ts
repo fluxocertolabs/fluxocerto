@@ -6,6 +6,10 @@
 import { test, expect } from '../fixtures/test-base';
 import { createAccount, createCreditCard } from '../utils/test-data';
 
+const VISIBILITY_TIMEOUT = 10_000;
+const HEADING_TIMEOUT = 20_000;
+const NAVIGATION_TIMEOUT = 30_000;
+
 function createMockSnapshotData() {
   const fixedDate = new Date('2025-01-15T12:00:00');
   return {
@@ -152,43 +156,43 @@ test.describe('Mobile Navigation & Layout', () => {
 
     // Dashboard - wait for network idle to ensure page is fully loaded
     await page.goto('/', { waitUntil: 'networkidle' });
-    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
 
     // Navigate via mobile menu to History
     const menuButton = page.getByRole('button', { name: /abrir menu/i });
-    await expect(menuButton).toBeVisible({ timeout: 10000 });
+    await expect(menuButton).toBeVisible({ timeout: VISIBILITY_TIMEOUT });
     await menuButton.click();
     
     // Wait for menu to fully open - check for the navigation container to be visible
     const historyLink = page.getByRole('link', { name: 'Histórico' });
-    await expect(historyLink).toBeVisible({ timeout: 10000 });
+    await expect(historyLink).toBeVisible({ timeout: VISIBILITY_TIMEOUT });
     
     // Click and wait for navigation in sequence (more reliable than Promise.all)
     await historyLink.click();
-    await expect(page).toHaveURL(/\/history$/, { timeout: 30000 });
-    await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible({ timeout: 20000 });
+    await expect(page).toHaveURL(/\/history$/, { timeout: NAVIGATION_TIMEOUT });
+    await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
 
     // Navigate via mobile menu to Manage
     // Re-query menu button since page has changed
     const menuButtonManage = page.getByRole('button', { name: /abrir menu/i });
-    await expect(menuButtonManage).toBeVisible({ timeout: 10000 });
+    await expect(menuButtonManage).toBeVisible({ timeout: VISIBILITY_TIMEOUT });
     await menuButtonManage.click();
     
     // Wait for menu to fully open
     const manageLink = page.getByRole('link', { name: 'Gerenciar' });
-    await expect(manageLink).toBeVisible({ timeout: 10000 });
+    await expect(manageLink).toBeVisible({ timeout: VISIBILITY_TIMEOUT });
     
     // Click and wait for navigation
     await manageLink.click();
-    await expect(page).toHaveURL(/\/manage$/, { timeout: 30000 });
-    await expect(page.getByRole('heading', { name: /gerenciar dados financeiros/i })).toBeVisible({ timeout: 20000 });
+    await expect(page).toHaveURL(/\/manage$/, { timeout: NAVIGATION_TIMEOUT });
+    await expect(page.getByRole('heading', { name: /gerenciar dados financeiros/i })).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
 
     // Navigate to snapshot detail
     await page.goto(`/history/${seeded.id}`, { waitUntil: 'networkidle' });
-    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
   });
 
