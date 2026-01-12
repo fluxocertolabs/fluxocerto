@@ -45,13 +45,20 @@ test.describe('Welcome Email Delivery @email', () => {
     await loginPage.expectMagicLinkSent();
 
     let magicLink: string | null = null;
+    const pollStart = Date.now();
     for (let i = 0; i < 25; i++) {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message) {
         magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
+        if (magicLink) {
+          console.log(`[Auth] Magic link found after ${i + 1} attempts (${Date.now() - pollStart}ms)`);
+          break;
+        }
       }
       await page.waitForTimeout(500);
+    }
+    if (!magicLink) {
+      console.warn(`[Auth] Magic link not found after 25 attempts (${Date.now() - pollStart}ms)`);
     }
 
     expect(magicLink).not.toBeNull();
@@ -164,6 +171,23 @@ test.describe('Welcome Email Delivery @email', () => {
   }
 
   /**
+   * Wait for welcome notification to exist with polling (more robust than fixed sleeps)
+   */
+  async function waitForWelcomeNotification(
+    page: Page,
+    accessToken: string,
+    timeoutMs = 15000
+  ): Promise<string> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const id = await getWelcomeNotificationId(page, accessToken);
+      if (id) return id;
+      await page.waitForTimeout(500);
+    }
+    throw new Error(`Welcome notification not created within ${timeoutMs}ms`);
+  }
+
+  /**
    * Helper to call the send-welcome-email Edge Function
    */
   async function callSendWelcomeEmail(
@@ -171,24 +195,65 @@ test.describe('Welcome Email Delivery @email', () => {
     accessToken: string,
     notificationId: string
   ): Promise<{ status: number; data: unknown }> {
-    return await page.evaluate(
-      async ({ baseUrl, apiKey, token, notifId }) => {
-        const res = await fetch(`${baseUrl}/functions/v1/send-welcome-email`, {
-          method: 'POST',
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ notification_id: notifId }),
-        });
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const timeoutMs = 15000;
+
+    // Ensure page is in a stable state before running evaluate
+    // This prevents hanging when the page is navigating
+    await page.waitForLoadState('domcontentloaded');
+
+    type SendWelcomeEmailEvalResult =
+      | { ok: true; status: number; data: unknown }
+      | { ok: false; error: string };
+
+    const evaluatePromise = page.evaluate(
+      async ({ baseUrl, apiKey, token, notifId, timeoutMs }): Promise<SendWelcomeEmailEvalResult> => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const res = await fetch(`${baseUrl}/functions/v1/send-welcome-email`, {
+            method: 'POST',
+            headers: {
+              apikey: apiKey,
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ notification_id: notifId }),
+            signal: controller.signal,
+          });
+
+          return {
+            ok: true,
+            status: res.status,
+            data: await res.json().catch(() => null),
+          };
+        } catch (err) {
+          const message =
+            err instanceof Error
+              ? err.name === 'AbortError'
+                ? `Request timed out after ${timeoutMs}ms`
+                : err.message
+              : String(err);
+          return { ok: false, error: message };
+        } finally {
+          clearTimeout(timeoutId);
+        }
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, token: accessToken, notifId: notificationId }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, token: accessToken, notifId: notificationId, timeoutMs }
     );
+
+    // Race against a timeout to prevent indefinite hangs
+    const timeoutPromise = new Promise<SendWelcomeEmailEvalResult>((resolve) => {
+      setTimeout(() => {
+        resolve({ ok: false, error: 'page.evaluate timed out after 30s' });
+      }, 30000);
+    });
+
+    const result = await Promise.race([evaluatePromise, timeoutPromise]);
+    if (!result.ok) {
+      throw new Error(`callSendWelcomeEmail failed: ${result.error}`);
+    }
+
+    return { status: result.status, data: result.data };
   }
 
   /**
@@ -235,13 +300,8 @@ test.describe('Welcome Email Delivery @email', () => {
     const user = await authenticateAndGetToken(page, userEmail);
     await completeOnboarding(page);
 
-    // Wait for welcome notification to be created
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, user.accessToken);
-    expect(notificationId).not.toBeNull();
-
-    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+    const notificationId = await waitForWelcomeNotification(page, user.accessToken);
+    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId);
 
     // In dev mode without provider credentials, should return preview
     expect(response.status).toBe(200);
@@ -265,12 +325,8 @@ test.describe('Welcome Email Delivery @email', () => {
     const user = await authenticateAndGetToken(page, userEmail);
     await completeOnboarding(page);
 
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, user.accessToken);
-    expect(notificationId).not.toBeNull();
-
-    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+    const notificationId = await waitForWelcomeNotification(page, user.accessToken);
+    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId);
 
     expect(response.status).toBe(200);
     const data = response.data as { ok: boolean; preview?: { subject: string; html: string } };
@@ -290,12 +346,8 @@ test.describe('Welcome Email Delivery @email', () => {
     const user = await authenticateAndGetToken(page, userEmail);
     await completeOnboarding(page);
 
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, user.accessToken);
-    expect(notificationId).not.toBeNull();
-
-    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+    const notificationId = await waitForWelcomeNotification(page, user.accessToken);
+    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId);
 
     expect(response.status).toBe(200);
     const data = response.data as { ok: boolean; preview?: { subject: string; html: string } };
@@ -316,15 +368,12 @@ test.describe('Welcome Email Delivery @email', () => {
     const user = await authenticateAndGetToken(page, userEmail);
     await completeOnboarding(page);
 
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, user.accessToken);
-    expect(notificationId).not.toBeNull();
+    const notificationId = await waitForWelcomeNotification(page, user.accessToken);
 
     // Disable email notifications right before calling
     await setEmailNotificationsEnabled(page, user.accessToken, user.userId, false);
 
-    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId);
 
     expect(response.status).toBe(200);
     const data = response.data as { ok: boolean; sent: boolean; skipped_reason?: string };
@@ -340,15 +389,12 @@ test.describe('Welcome Email Delivery @email', () => {
     const user = await authenticateAndGetToken(page, userEmail);
     await completeOnboarding(page);
 
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, user.accessToken);
-    expect(notificationId).not.toBeNull();
+    const notificationId = await waitForWelcomeNotification(page, user.accessToken);
 
     // Ensure email notifications are enabled (default)
     await setEmailNotificationsEnabled(page, user.accessToken, user.userId, true);
 
-    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+    const response = await callSendWelcomeEmail(page, user.accessToken, notificationId);
 
     expect(response.status).toBe(200);
     const data = response.data as { ok: boolean; sent?: boolean; preview?: unknown };
@@ -367,13 +413,10 @@ test.describe('Welcome Email Delivery @email', () => {
     const user = await authenticateAndGetToken(page, userEmail);
     await completeOnboarding(page);
 
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, user.accessToken);
-    expect(notificationId).not.toBeNull();
+    const notificationId = await waitForWelcomeNotification(page, user.accessToken);
 
     // First call
-    const response1 = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+    const response1 = await callSendWelcomeEmail(page, user.accessToken, notificationId);
     expect(response1.status).toBe(200);
     const data1 = response1.data as { ok: boolean; sent?: boolean; skipped_reason?: string; preview?: unknown };
 
@@ -385,7 +428,7 @@ test.describe('Welcome Email Delivery @email', () => {
       // Dev mode: both calls return preview
       expect(data1.preview).toBeDefined();
       
-      const response2 = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+      const response2 = await callSendWelcomeEmail(page, user.accessToken, notificationId);
       const data2 = response2.data as { ok: boolean; skipped_reason?: string; preview?: unknown };
       expect(data2.ok).toBe(true);
       expect(data2.skipped_reason).toBe('missing_credentials');
@@ -394,7 +437,7 @@ test.describe('Welcome Email Delivery @email', () => {
       // Prod mode: first call sent, second call should be 'already_sent'
       expect(data1.sent).toBe(true);
       
-      const response2 = await callSendWelcomeEmail(page, user.accessToken, notificationId!);
+      const response2 = await callSendWelcomeEmail(page, user.accessToken, notificationId);
       const data2 = response2.data as { ok: boolean; sent: boolean; skipped_reason?: string };
       expect(data2.ok).toBe(true);
       expect(data2.sent).toBe(false);
@@ -407,16 +450,13 @@ test.describe('Welcome Email Delivery @email', () => {
     const user = await authenticateAndGetToken(page, userEmail);
     await completeOnboarding(page);
 
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, user.accessToken);
-    expect(notificationId).not.toBeNull();
+    const notificationId = await waitForWelcomeNotification(page, user.accessToken);
 
     // Make multiple rapid calls
     const responses = await Promise.all([
-      callSendWelcomeEmail(page, user.accessToken, notificationId!),
-      callSendWelcomeEmail(page, user.accessToken, notificationId!),
-      callSendWelcomeEmail(page, user.accessToken, notificationId!),
+      callSendWelcomeEmail(page, user.accessToken, notificationId),
+      callSendWelcomeEmail(page, user.accessToken, notificationId),
+      callSendWelcomeEmail(page, user.accessToken, notificationId),
     ]);
 
     // All should succeed
@@ -498,10 +538,7 @@ test.describe('Welcome Email Delivery @email', () => {
     const userA = await authenticateAndGetToken(page, userAEmail);
     await completeOnboarding(page);
 
-    await page.waitForTimeout(2000);
-
-    const notificationId = await getWelcomeNotificationId(page, userA.accessToken);
-    expect(notificationId).not.toBeNull();
+    const notificationId = await waitForWelcomeNotification(page, userA.accessToken);
 
     // Create User B
     const contextB = await browser.newContext();
@@ -512,7 +549,7 @@ test.describe('Welcome Email Delivery @email', () => {
     await completeOnboarding(pageB);
 
     // User B tries to send email for User A's notification
-    const response = await callSendWelcomeEmail(pageB, userB.accessToken, notificationId!);
+    const response = await callSendWelcomeEmail(pageB, userB.accessToken, notificationId);
 
     // Should fail - notification not found (for this user)
     expect(response.status).toBe(404);

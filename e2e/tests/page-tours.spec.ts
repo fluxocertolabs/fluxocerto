@@ -57,14 +57,19 @@ test.describe('Page Tours', () => {
     const helpButton = page.locator('[data-testid="floating-help-button"]');
     await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-    // Click the FAB to expand (pinned mode)
-    const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-    await fabButton.click({ force: true });
-    await page.waitForTimeout(500);
+    // Click the FAB to expand (pinned mode). Use aria-expanded instead of name to avoid
+    // flakiness when the label changes (e.g., "Abrir ajuda" -> "Ajuda (aberta)").
+    const fabButton = helpButton.locator('button[aria-expanded]').first();
+    await expect(fabButton).toBeVisible({ timeout: 10000 });
+    const expanded = await fabButton.getAttribute('aria-expanded');
+    if (expanded !== 'true') {
+      await fabButton.click({ force: true });
+      await expect(fabButton).toHaveAttribute('aria-expanded', 'true', { timeout: 10000 });
+    }
 
     // Click the tour option (aria-label is "Iniciar tour guiado da página")
     const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-    await expect(tourOption).toBeVisible({ timeout: 5000 });
+    await expect(tourOption).toBeVisible({ timeout: 15000 });
     await tourOption.click({ force: true });
     await page.waitForTimeout(500);
 

@@ -305,17 +305,16 @@ export async function resetGroupData(groupId: string): Promise<void> {
   for (const table of tables) {
     try {
       if (table === 'user_preferences') {
-        // user_preferences is per-user and does NOT have group_id.
+        // user_preferences is per-user (keyed by auth user_id) and does NOT have group_id.
         // Clear all user preferences for users belonging to this group by mapping:
         // profiles (group_id) -> auth.users (email) -> user_preferences (user_id).
-        // Use lower() for case-insensitive email comparison to avoid missed deletes.
         await executeSQL(
           `
             DELETE FROM public.user_preferences up
             USING public.profiles p, auth.users u
             WHERE p.group_id = $1
               AND p.email IS NOT NULL
-              AND lower(u.email) = lower(p.email::text)
+              AND p.email = u.email::citext
               AND up.user_id = u.id
           `,
           [groupId]

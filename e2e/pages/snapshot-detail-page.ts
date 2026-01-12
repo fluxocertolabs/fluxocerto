@@ -55,7 +55,7 @@ export class SnapshotDetailPage {
       
       // We should see either banner or not found
       expect(hasBanner || hasNotFound, 'Page should show either historical banner or not found message').toBe(true);
-    }).toPass({ timeout: 30000, intervals: [500, 1000, 2000] });
+    }).toPass({ timeout: 30000, intervals: [500, 1000, 2000, 3000, 5000] });
   }
 
   /**

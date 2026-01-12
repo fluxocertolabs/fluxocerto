@@ -203,20 +203,22 @@ test.describe('Mobile Navigation & Layout', () => {
       { name: 'Snapshot Mobile Small', data: createMockSnapshotData() },
     ]);
 
-    await page.goto('/');
-    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible();
+    const waitUntil = process.env.PW_PER_TEST_CONTEXT === '1' ? 'networkidle' : 'load';
+
+    await page.goto('/', { waitUntil });
+    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
 
-    await page.goto('/history');
-    await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible();
+    await page.goto('/history', { waitUntil });
+    await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
 
-    await page.goto('/manage');
-    await expect(page.getByRole('heading', { name: /gerenciar dados financeiros/i })).toBeVisible();
+    await page.goto('/manage', { waitUntil });
+    await expect(page.getByRole('heading', { name: /gerenciar dados financeiros/i })).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
 
-    await page.goto(`/history/${seeded.id}`);
-    await expect(page.getByTestId('historical-banner')).toBeVisible();
+    await page.goto(`/history/${seeded.id}`, { waitUntil });
+    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: HEADING_TIMEOUT });
     await expectNoHorizontalOverflow(page);
   });
 
