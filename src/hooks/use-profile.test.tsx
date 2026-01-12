@@ -3,7 +3,7 @@
  * Tests profile data reading, display name updates, and email notification preferences.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useProfile } from './use-profile'
 
