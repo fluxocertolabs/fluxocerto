@@ -134,7 +134,9 @@ test.describe('Welcome Email Delivery @email', () => {
     await page.waitForLoadState('domcontentloaded');
     
     // Use a timeout wrapper around page.evaluate to prevent indefinite hangs
-    const evaluatePromise = page.evaluate(
+    type NotificationRow = { id: string };
+
+    const evaluatePromise: Promise<NotificationRow[]> = page.evaluate(
       async ({ baseUrl, apiKey, token }) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
@@ -159,7 +161,7 @@ test.describe('Welcome Email Delivery @email', () => {
     );
 
     // Race against a timeout to prevent indefinite hangs
-    const timeoutPromise = new Promise<never[]>((resolve) => {
+    const timeoutPromise = new Promise<NotificationRow[]>((resolve) => {
       setTimeout(() => {
         console.warn('getWelcomeNotificationId: page.evaluate timed out after 30s');
         resolve([]);
@@ -265,29 +267,47 @@ test.describe('Welcome Email Delivery @email', () => {
     userId: string,
     enabled: boolean
   ): Promise<void> {
-    await page.evaluate(
-      async ({ baseUrl, apiKey, token, uid, value }) => {
-        const res = await fetch(`${baseUrl}/rest/v1/user_preferences`, {
-          method: 'POST',
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            Prefer: 'resolution=merge-duplicates',
-          },
-          body: JSON.stringify({
-            user_id: uid,
-            key: 'email_notifications_enabled',
-            value: value ? 'true' : 'false',
-          }),
-        });
+    const timeoutMs = 15000;
 
-        if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          throw new Error(`Failed to set preference: ${res.status} ${text}`);
+    await page.evaluate(
+      async ({ baseUrl, apiKey, token, uid, value, timeoutMs }) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const res = await fetch(`${baseUrl}/rest/v1/user_preferences`, {
+            method: 'POST',
+            headers: {
+              apikey: apiKey,
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              Prefer: 'resolution=merge-duplicates',
+            },
+            body: JSON.stringify({
+              user_id: uid,
+              key: 'email_notifications_enabled',
+              value: value ? 'true' : 'false',
+            }),
+            signal: controller.signal,
+          });
+
+          if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`Failed to set preference: ${res.status} ${text}`);
+          }
+        } catch (err) {
+          const name = typeof err === 'object' && err !== null && 'name' in err ? String((err as { name: unknown }).name) : '';
+          const message =
+            name === 'AbortError'
+              ? `Request timed out after ${timeoutMs}ms`
+              : err instanceof Error
+                ? err.message
+                : String(err);
+          throw new Error(`Failed to set preference: ${message}`);
+        } finally {
+          clearTimeout(timeoutId);
         }
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, token: accessToken, uid: userId, value: enabled }
+      { baseUrl: baseApiUrl, apiKey: anonKey!, token: accessToken, uid: userId, value: enabled, timeoutMs }
     );
   }
 

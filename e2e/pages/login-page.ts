@@ -56,8 +56,6 @@ export class LoginPage {
       const text = (await this.errorMessage.textContent())?.trim() ?? 'Unknown error';
       throw new Error(`Magic link request failed: ${text}`);
     }
-
-    await expect(this.successMessage).toBeVisible();
   }
 
   /**

@@ -314,7 +314,7 @@ export async function resetGroupData(groupId: string): Promise<void> {
             USING public.profiles p, auth.users u
             WHERE p.group_id = $1
               AND p.email IS NOT NULL
-              AND p.email = u.email::citext
+              AND lower(u.email) = lower(p.email::text)
               AND up.user_id = u.id
           `,
           [groupId]
