@@ -1699,8 +1699,14 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     },
     getNotificationsForUser,
     getUnreadNotificationCount,
-    markNotificationAsRead,
-    deleteNotificationsForUser,
+    markNotificationAsRead: async (notificationId: string) => {
+      await markNotificationAsRead(notificationId);
+      markDirty();
+    },
+    deleteNotificationsForUser: async (userId: string) => {
+      await deleteNotificationsForUser(userId);
+      markDirty();
+    },
     notificationExistsByDedupeKey,
     // User preference helpers (per-user, not per-group)
     seedUserPreferences: async (preferences: TestUserPreference[]) => {
@@ -1713,7 +1719,10 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
       await setUserPreference(userId, key, value);
       markDirty();
     },
-    deleteUserPreferencesForUser,
+    deleteUserPreferencesForUser: async (userId: string) => {
+      await deleteUserPreferencesForUser(userId);
+      markDirty();
+    },
     // User ID helper
     getUserIdByEmail,
     // Existing helpers
