@@ -340,7 +340,9 @@ test.describe('Mobile Navigation & Layout', () => {
     await expectNoHorizontalOverflow(page);
 
     const [seeded] = await db.seedSnapshots([{ name: 'Snapshot Delete Mobile', data: createMockSnapshotData() }]);
-    await page.reload();
+    // Re-run the HistoryPage readiness checks after DB seeding.
+    // A plain reload can race with data loading under parallel CI load.
+    await historyPage.goto();
     await expect(page.getByText(seeded.name).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
 

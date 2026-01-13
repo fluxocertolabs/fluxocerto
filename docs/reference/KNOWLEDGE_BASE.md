@@ -102,6 +102,8 @@ pnpm test:unit          # Vitest (jsdom)
 pnpm test:e2e           # Playwright functional E2E
 pnpm test:visual        # Playwright visual regression (Docker locally/CI)
 pnpm test               # unit + visual + e2e (starts/stops Supabase)
+pnpm test:flakes        # Detect flaky tests (scans test-results/ for retry artifacts)
+pnpm test:flakes:fail   # Same as above, but exits non-zero if flakes found (for CI)
 ```
 
 ### Build / Release / Deploy
@@ -161,6 +163,7 @@ Deployment notes:
 - **Onboarding + tours are persisted server-side**:
   - `onboarding_states` (per user + group) and `tour_states` (per user + tour key) are real tables with RLS (see `20260105123100_onboarding_and_tour_state.sql`).
   - E2E setup often marks onboarding completed and tours dismissed to avoid overlays blocking tests.
+  - **Auth callback must not force-open wizard**: The onboarding wizard auto-shows based on `canAutoShow()` in `src/lib/onboarding/steps.ts` (checks status, `autoShownAt`, and `isMinimumSetupComplete`). Do not add code to `src/pages/auth-callback.tsx` that calls `openWizard()`—this breaks E2E tests that authenticate via magic link and rely on the natural auto-show flow.
 - **Preferences are split into two tables**:
   - `group_preferences`: group-scoped settings (keyed by `group_id` + `key`). Examples: theme preference, display preferences.
   - `user_preferences`: user-scoped settings (keyed by `user_id` + `key`). Examples: `email_notifications_enabled`.
@@ -191,6 +194,14 @@ Deployment notes:
 
 - **Test isolation**: Each test should call `db.clear()` or `db.reset()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value).
 - **Visual test state**: Visual regression tests for toggles/switches must reset state before capturing screenshots to avoid order-dependent failures.
+- **Visual test determinism** (see `e2e/fixtures/visual-test-base.ts`):
+  - **Fixed date**: `VISUAL_TEST_FIXED_DATE` is set to `'2025-01-15T12:00:00.000Z'` (explicit UTC) to ensure consistent timestamps across all environments.
+  - **Animations disabled**: CSS `* { animation: none !important; transition: none !important; }` is injected.
+  - **Caret hidden**: Input carets are hidden via CSS to avoid blinking cursor differences.
+  - **Font loading**: Tests wait for fonts to load before taking screenshots.
+  - **Worker-scoped context**: Visual tests share a browser context per worker. React state (Zustand stores, component state like `hasAutoShown`) persists across tests within the same worker. To reset React state, navigate to `about:blank` before navigating to the target URL.
+- **Onboarding wizard in visual tests**: The wizard auto-shows based on `canAutoShow()` which checks: (1) status not completed/dismissed, (2) `autoShownAt` is null, (3) `isMinimumSetupComplete` is false. Tests that need the wizard must call `db.clearOnboardingState()` and ensure the group has no finance data (use `db.clear()` in `beforeEach` to create a fresh empty group).
+- **Flake detection**: Run `pnpm test:flakes` after test runs to detect tests that passed via retry. Use `pnpm test:flakes:fail` in CI to fail the build if flakes are detected. Script location: `scripts/detect-flaky-tests.ts`.
 - **Web server mode depends on `PW_PER_TEST_CONTEXT`**:
   - `PW_PER_TEST_CONTEXT=1` runs `vite build` + `vite preview` in Playwright `webServer` for determinism (cold browser context per test).
   - Default mode runs the Vite dev server for faster iteration.
@@ -209,6 +220,15 @@ Deployment notes:
   - ❌ `await page.waitForTimeout(1000)` - Arbitrary delays are flaky and slow.
   - ✅ `await expect(element).toHaveAttribute('aria-checked', 'false', { timeout: 5000 })` - Assertion-based waits are deterministic.
   - ✅ `await expect.poll(() => getState()).toBe(expected)` - For complex conditions.
+
+- **Fresh group rotation** (see `e2e/fixtures/db.ts`):
+  - `db.clear()` and `db.resetDatabase()` create a **new empty group** for the worker user, avoiding expensive per-test DELETE cascades.
+  - The previous group is renamed to `{groupName} (archived {timestamp} #{counter})` to preserve uniqueness.
+  - Onboarding is auto-completed and tours are auto-dismissed for fresh groups to avoid blocking tests. Tests that need to exercise onboarding/tours must explicitly clear those states.
+- **Onboarding wizard tests** (`e2e/tests/onboarding-wizard.spec.ts`):
+  - These tests authenticate **new users via magic link** (not worker fixtures) and expect the wizard to auto-show based on database state.
+  - **Do not** add code to `auth-callback.tsx` that force-opens the wizard—this breaks the existing onboarding E2E tests which rely on the natural auto-show flow.
+- **Always run the full test suite** (`pnpm test`) before declaring changes complete. Running only a subset (e.g., `pnpm test:visual`) can miss regressions in other test categories.
 
 ### Unit test patterns
 
@@ -250,6 +270,7 @@ Deployment notes:
   - DB schema/RLS changes: `supabase/migrations/`
   - E2E coverage: `e2e/tests/` (+ fixtures under `e2e/fixtures/`)
   - E2E shared helpers: `e2e/utils/` (consider extracting duplicated test helpers here)
+  - Dev tooling scripts: `scripts/` (e.g., `detect-flaky-tests.ts`, `generate-dev-token.ts`)
 - **What to avoid**:
   - Storing money as floats (always use cents/integer).
   - Bypassing RLS in the client (service role keys must never ship to the browser).

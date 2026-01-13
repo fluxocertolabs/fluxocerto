@@ -371,9 +371,19 @@ function ProfileStep({
 
     try {
       const client = getSupabase()
-      const { data: { user } } = await client.auth.getUser()
-      
-      if (!user?.email) {
+
+      // Prefer getSession() (local) over getUser() (network) to avoid auth-service bottlenecks
+      // under CI parallel load.
+      const { data: { session } } = await client.auth.getSession()
+      let email = session?.user?.email ?? null
+
+      // Fallback: in rare early-hydration cases session can be null, so we ask the auth server.
+      if (!email) {
+        const { data: { user } } = await client.auth.getUser()
+        email = user?.email ?? null
+      }
+
+      if (!email) {
         throw new Error('Usuário não encontrado')
       }
 
@@ -381,7 +391,7 @@ function ProfileStep({
       const { error: updateError } = await client
         .from('profiles')
         .update({ name: trimmedName })
-        .eq('email', user.email.toLowerCase())
+        .eq('email', email.toLowerCase())
 
       if (updateError) {
         throw updateError

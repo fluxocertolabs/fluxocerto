@@ -124,8 +124,7 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await visual.waitForStableUI(page);
 
       // Mark all notifications as read via the "Marcar como lida" button
       await page.goto('/notifications');
@@ -137,7 +136,8 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       const isButtonVisible = await markAsReadButton.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
       if (isButtonVisible) {
         await markAsReadButton.click();
-        await page.waitForTimeout(500);
+        // Wait for button to disappear or change state (indicates read action completed)
+        await markAsReadButton.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
       }
 
       await visual.waitForStableUI(page);
@@ -152,8 +152,7 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await visual.waitForStableUI(page);
 
       // Mark all notifications as read via the "Marcar como lida" button
       await page.goto('/notifications');
@@ -165,7 +164,8 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       const isButtonVisible = await markAsReadButton.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
       if (isButtonVisible) {
         await markAsReadButton.click();
-        await page.waitForTimeout(500);
+        // Wait for button to disappear or change state (indicates read action completed)
+        await markAsReadButton.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
       }
 
       await visual.waitForStableUI(page);

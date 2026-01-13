@@ -178,7 +178,9 @@ export class DashboardPage {
    * We check for the chart wrapper AND that it contains rendered path data.
    */
   async expectChartRendered(): Promise<void> {
-    const totalTimeout = this.isPerTestContext ? 45000 : 30000;
+    // Under full parallel CI load, cashflow projection (accounts/projects/expenses/cards + recharts paint)
+    // can legitimately take longer than 30s even when healthy. Align with the suite's retry budget.
+    const totalTimeout = 45000;
 
     const assertChartReady = async () => {
       await expect(async () => {

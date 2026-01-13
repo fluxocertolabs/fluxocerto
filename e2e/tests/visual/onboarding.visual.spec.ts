@@ -2,1127 +2,492 @@
  * Visual Regression Tests: Onboarding Wizard
  * Tests visual appearance of all onboarding wizard steps in light and dark themes
  *
- * NOTE: These tests use fresh user authentication to ensure the onboarding wizard
- * auto-shows. Each test creates a new user via magic link to get a clean onboarding state.
+ * NOTE: These tests use the existing authenticated worker user and open the onboarding
+ * wizard by clearing the onboarding state in the database. This is much faster and more
+ * reliable than creating new users via magic link for each test.
  *
  * Includes both desktop and mobile viewport tests.
  *
  * @visual
  */
 
-import { test as base, expect, type Page, devices } from '@playwright/test';
-import { LoginPage } from '../../pages/login-page';
-import { InbucketClient } from '../../utils/inbucket';
+import { devices } from '@playwright/test';
+import { visualTest, expect, type VisualTestHelpers } from '../../fixtures/visual-test-base';
+import type { Page } from '@playwright/test';
+import type { WorkerDatabaseFixture } from '../../fixtures/db';
 
-// Extend base test with visual helpers
-const visualTest = base.extend<{
-  visual: {
-    setTheme: (page: Page, theme: 'light' | 'dark') => Promise<void>;
-    waitForStableUI: (page: Page) => Promise<void>;
-    disableAnimations: (page: Page) => Promise<void>;
-  };
-}>({
-  visual: async ({}, use) => {
-    await use({
-      setTheme: async (page: Page, theme: 'light' | 'dark') => {
-        await page.evaluate(
-          ({ theme }) => {
-            window.localStorage.setItem(
-              'fluxo-certo-theme',
-              JSON.stringify({
-                state: { theme, resolvedTheme: theme, isLoaded: true },
-                version: 0,
-              })
-            );
-            const root = document.documentElement;
-            root.classList.remove('light', 'dark');
-            root.classList.add(theme);
-          },
-          { theme }
-        );
-        await page.waitForTimeout(100);
-      },
-      waitForStableUI: async (page: Page) => {
-        await Promise.race([
-          page.waitForLoadState('networkidle'),
-          page.waitForTimeout(5000),
-        ]);
-        await page.waitForTimeout(500);
-        await page.evaluate(() => document.fonts.ready);
-      },
-      disableAnimations: async (page: Page) => {
-        await page.addStyleTag({
-          content: `
-            *, *::before, *::after {
-              animation-duration: 0s !important;
-              animation-delay: 0s !important;
-              transition-duration: 0s !important;
-              transition-delay: 0s !important;
-            }
-          `,
-        });
-      },
-    });
-  },
-});
+/**
+ * Helper to open the onboarding wizard by clearing onboarding state.
+ * This triggers the wizard to auto-show on page load.
+ *
+ * NOTE: The beforeEach hook calls db.clear() which creates a fresh empty group.
+ * This means the wizard should auto-show because:
+ * - No onboarding state exists (status: null, autoShownAt: null)
+ * - No finance data exists (isMinimumSetupComplete: false)
+ *
+ * IMPORTANT: Visual tests share a worker-scoped browser context, so React state
+ * (including Zustand stores and component state like `hasAutoShown`) persists
+ * between tests. We must force a hard page reload to clear all React state.
+ */
+async function openOnboardingWizard(
+  page: Page,
+  db: WorkerDatabaseFixture,
+  visual: VisualTestHelpers
+): Promise<void> {
+  // Clear onboarding state for the current group (should be no-op for fresh group)
+  await db.clearOnboardingState();
 
-// Run onboarding visual tests serially to avoid email conflicts
-visualTest.describe.configure({ mode: 'serial' });
+  // CRITICAL: Force a hard page reload to clear all React state.
+  // SPA navigations within the same browser context preserve React state,
+  // which causes `hasAutoShown` to remain true from previous tests.
+  // Using page.goto with a fresh URL forces a full page reload.
+  const timestamp = Date.now();
+
+  // First navigate away to ensure we're not on the dashboard
+  // (goto to the same URL might not trigger a full reload)
+  await page.goto('about:blank');
+
+  // Now navigate to dashboard - this is a fresh page load
+  await page.goto(`/?_t=${timestamp}`);
+
+  // Wait for the profile name input to be ready - this is the most reliable
+  // indicator that the wizard has fully loaded and rendered its content.
+  // The input only exists when the wizard is open AND on the profile step.
+  const profileNameInput = page.locator('#profile-name');
+
+  // Wait for page to fully load and React to hydrate
+  await page.waitForLoadState('networkidle');
+
+  // Retry up to 3 times with page reload if wizard doesn't appear
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // Wait for React to settle
+    await page.waitForTimeout(500);
+
+    const inputVisible = await profileNameInput.isVisible().catch(() => false);
+    if (inputVisible) break;
+
+    if (attempt < 2) {
+      // Hard reload to pick up the cleared onboarding state
+      await page.goto('about:blank');
+      await page.goto(`/?_t=${Date.now()}`);
+      await page.waitForLoadState('networkidle');
+    }
+  }
+
+  // Wait for the profile name input with extended timeout
+  await expect(profileNameInput).toBeVisible({ timeout: 20000 });
+
+  // Stabilize UI before taking screenshots
+  await visual.waitForStableUI(page);
+}
+
+/**
+ * Helper to navigate to a specific onboarding step.
+ * Fills required fields and advances through steps.
+ */
+async function navigateToStep(
+  page: Page,
+  targetStep: 'profile' | 'group' | 'bank-account' | 'income' | 'expense' | 'credit-card'
+): Promise<void> {
+  const wizardDialog = page
+    .locator('[role="dialog"]')
+    .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+
+  const steps = ['profile', 'group', 'bank-account', 'income', 'expense', 'credit-card'];
+  const targetIndex = steps.indexOf(targetStep);
+
+  if (targetIndex === 0) return; // Already on profile step
+
+  // Navigate through steps
+  if (targetIndex >= 1) {
+    // Fill profile and advance
+    await page.locator('#profile-name').fill('Usuário Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
+  }
+
+  if (targetIndex >= 2) {
+    // Fill group and advance
+    await page.locator('#group-name').fill('Grupo Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
+  }
+
+  if (targetIndex >= 3) {
+    // Fill bank account and advance
+    await page.locator('#account-name').fill('Conta Visual Test');
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
+  }
+
+  if (targetIndex >= 4) {
+    // Skip income (optional) and advance
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
+  }
+
+  if (targetIndex >= 5) {
+    // Skip expense (optional) and advance
+    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
+    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
+  }
+}
+
+// ============================================================================
+// DESKTOP VISUAL TESTS
+// ============================================================================
 
 visualTest.describe('Onboarding Wizard Visual Regression @visual', () => {
-  let inbucket: InbucketClient;
-
-  visualTest.beforeAll(async () => {
-    inbucket = new InbucketClient();
+  visualTest.beforeEach(async ({ db }) => {
+    // Reset database for each test to ensure clean state
+    await db.clear();
   });
 
-  /**
-   * Helper to authenticate a fresh user and get to onboarding wizard
-   */
-  async function authenticateNewUser(page: Page, email: string): Promise<void> {
-    const loginPage = new LoginPage(page);
-    const mailbox = email.split('@')[0];
-
-    await inbucket.purgeMailbox(mailbox);
-    await loginPage.goto();
-    await loginPage.requestMagicLink(email);
-    await loginPage.expectMagicLinkSent();
-
-    // Get magic link from Inbucket
-    let magicLink: string | null = null;
-    for (let i = 0; i < 15; i++) {
-      const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
-      }
-      await page.waitForTimeout(500);
-    }
-
-    expect(magicLink).not.toBeNull();
-    await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
-  }
-
-  visualTest('onboarding wizard - profile step - light', async ({ page, visual }) => {
-    const email = `onboarding-visual-profile-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Set theme and stabilize
+  // Profile step tests
+  visualTest('onboarding wizard - profile step - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    // Verify we're on profile step
-    await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
-
-    // Take screenshot
-    await expect(page).toHaveScreenshot('onboarding-profile-step-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-profile-step-light.png');
   });
 
-  visualTest('onboarding wizard - profile step - dark', async ({ page, visual }) => {
-    const email = `onboarding-visual-profile-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
+  visualTest('onboarding wizard - profile step - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
-
-    await expect(page).toHaveScreenshot('onboarding-profile-step-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-profile-step-dark.png');
   });
 
-  visualTest('onboarding wizard - group step - light', async ({ page, visual }) => {
-    const email = `onboarding-visual-group-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Fill profile and advance to group step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
+  // Group step tests
+  visualTest('onboarding wizard - group step - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'group');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-group-step-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-group-step-light.png');
   });
 
-  visualTest('onboarding wizard - group step - dark', async ({ page, visual }) => {
-    const email = `onboarding-visual-group-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('onboarding wizard - group step - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'group');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-group-step-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-group-step-dark.png');
   });
 
-  visualTest('onboarding wizard - bank account step - light', async ({ page, visual }) => {
-    const email = `onboarding-visual-bank-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to bank account step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
+  // Bank account step tests
+  visualTest('onboarding wizard - bank account step - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'bank-account');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-bank-account-step-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-bank-account-step-light.png');
   });
 
-  visualTest('onboarding wizard - bank account step - dark', async ({ page, visual }) => {
-    const email = `onboarding-visual-bank-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('onboarding wizard - bank account step - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'bank-account');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-bank-account-step-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-bank-account-step-dark.png');
   });
 
-  visualTest('onboarding wizard - income step - light', async ({ page, visual }) => {
-    const email = `onboarding-visual-income-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to income step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
+  // Income step tests
+  visualTest('onboarding wizard - income step - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'income');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-income-step-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-income-step-light.png');
   });
 
-  visualTest('onboarding wizard - income step - dark', async ({ page, visual }) => {
-    const email = `onboarding-visual-income-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('onboarding wizard - income step - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'income');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-income-step-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-income-step-dark.png');
   });
 
-  visualTest('onboarding wizard - expense step - light', async ({ page, visual }) => {
-    const email = `onboarding-visual-expense-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to expense step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    // Skip income (optional)
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
+  // Expense step tests
+  visualTest('onboarding wizard - expense step - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'expense');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-expense-step-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-expense-step-light.png');
   });
 
-  visualTest('onboarding wizard - expense step - dark', async ({ page, visual }) => {
-    const email = `onboarding-visual-expense-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('onboarding wizard - expense step - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'expense');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-expense-step-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-expense-step-dark.png');
   });
 
-  visualTest('onboarding wizard - credit card step - light', async ({ page, visual }) => {
-    const email = `onboarding-visual-card-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to credit card step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
-
+  // Credit card step tests
+  visualTest('onboarding wizard - credit card step - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'credit-card');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-credit-card-step-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-credit-card-step-light.png');
   });
 
-  visualTest('onboarding wizard - credit card step - dark', async ({ page, visual }) => {
-    const email = `onboarding-visual-card-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('onboarding wizard - credit card step - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'credit-card');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-credit-card-step-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-credit-card-step-dark.png');
   });
 });
 
-/**
- * Mobile viewport tests for onboarding wizard.
- * Uses Pixel 5 device emulation for mobile-specific layouts.
- */
-const mobileTest = base.extend<{
-  visual: {
-    setTheme: (page: Page, theme: 'light' | 'dark') => Promise<void>;
-    waitForStableUI: (page: Page) => Promise<void>;
-    disableAnimations: (page: Page) => Promise<void>;
-  };
-}>({
-  visual: async ({}, use) => {
-    await use({
-      setTheme: async (page: Page, theme: 'light' | 'dark') => {
-        await page.evaluate(
-          ({ theme }) => {
-            window.localStorage.setItem(
-              'fluxo-certo-theme',
-              JSON.stringify({
-                state: { theme, resolvedTheme: theme, isLoaded: true },
-                version: 0,
-              })
-            );
-            const root = document.documentElement;
-            root.classList.remove('light', 'dark');
-            root.classList.add(theme);
-          },
-          { theme }
-        );
-        await page.waitForTimeout(100);
-      },
-      waitForStableUI: async (page: Page) => {
-        await Promise.race([
-          page.waitForLoadState('networkidle'),
-          page.waitForTimeout(5000),
-        ]);
-        await page.waitForTimeout(500);
-        await page.evaluate(() => document.fonts.ready);
-      },
-      disableAnimations: async (page: Page) => {
-        await page.addStyleTag({
-          content: `
-            *, *::before, *::after {
-              animation-duration: 0s !important;
-              animation-delay: 0s !important;
-              transition-duration: 0s !important;
-              transition-delay: 0s !important;
-            }
-          `,
-        });
-      },
-    });
-  },
-});
+// ============================================================================
+// MOBILE VISUAL TESTS
+// ============================================================================
 
-// Use Pixel 5 device for mobile viewport
-mobileTest.use({ ...devices['Pixel 5'] });
+// Mobile viewport tests use Pixel 5 device emulation
+const mobileVisualTest = visualTest.extend({});
+mobileVisualTest.use({ ...devices['Pixel 5'] });
 
-mobileTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => {
-  // Mobile tests run serially to avoid email conflicts
-  mobileTest.describe.configure({ mode: 'serial' });
-
-  let inbucket: InbucketClient;
-
-  mobileTest.beforeAll(async () => {
-    inbucket = new InbucketClient();
+mobileVisualTest.describe('Onboarding Wizard Mobile Visual Regression @visual', () => {
+  mobileVisualTest.beforeEach(async ({ db }) => {
+    await db.clear();
   });
 
-  /**
-   * Helper to authenticate a fresh user and get to onboarding wizard
-   */
-  async function authenticateNewUser(page: Page, email: string): Promise<void> {
-    const loginPage = new LoginPage(page);
-    const mailbox = email.split('@')[0];
-
-    await inbucket.purgeMailbox(mailbox);
-    await loginPage.goto();
-    await loginPage.requestMagicLink(email);
-    await loginPage.expectMagicLinkSent();
-
-    // Get magic link from Inbucket
-    let magicLink: string | null = null;
-    for (let i = 0; i < 15; i++) {
-      const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
-      }
-      await page.waitForTimeout(500);
-    }
-
-    expect(magicLink).not.toBeNull();
-    await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
-  }
-
-  mobileTest('onboarding wizard - profile step - mobile light', async ({ page, visual }) => {
-    const email = `onboarding-mobile-profile-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
+  // Profile step - mobile
+  mobileVisualTest('onboarding wizard - profile step - mobile light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
-
-    await expect(page).toHaveScreenshot('onboarding-profile-step-mobile-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-profile-step-mobile-light.png');
   });
 
-  mobileTest('onboarding wizard - profile step - mobile dark', async ({ page, visual }) => {
-    const email = `onboarding-mobile-profile-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
+  mobileVisualTest('onboarding wizard - profile step - mobile dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
-
-    await expect(page).toHaveScreenshot('onboarding-profile-step-mobile-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-profile-step-mobile-dark.png');
   });
 
-  mobileTest('onboarding wizard - bank account step - mobile light', async ({ page, visual }) => {
-    const email = `onboarding-mobile-bank-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to bank account step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
+  // Bank account step - mobile
+  mobileVisualTest('onboarding wizard - bank account step - mobile light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'bank-account');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-bank-account-step-mobile-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-bank-account-step-mobile-light.png');
   });
 
-  mobileTest('onboarding wizard - bank account step - mobile dark', async ({ page, visual }) => {
-    const email = `onboarding-mobile-bank-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
+  mobileVisualTest('onboarding wizard - bank account step - mobile dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'bank-account');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-bank-account-step-mobile-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-bank-account-step-mobile-dark.png');
   });
 
-  // Additional mobile steps to ensure full coverage across all onboarding wizard steps
-
-  mobileTest('onboarding wizard - group step - mobile light', async ({ page, visual }) => {
-    const email = `onboarding-mobile-group-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to group step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
+  // Group step - mobile
+  mobileVisualTest('onboarding wizard - group step - mobile light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'group');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-group-step-mobile-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-group-step-mobile-light.png');
   });
 
-  mobileTest('onboarding wizard - group step - mobile dark', async ({ page, visual }) => {
-    const email = `onboarding-mobile-group-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
+  mobileVisualTest('onboarding wizard - group step - mobile dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'group');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-group-step-mobile-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-group-step-mobile-dark.png');
   });
 
-  mobileTest('onboarding wizard - income step - mobile light', async ({ page, visual }) => {
-    const email = `onboarding-mobile-income-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to income step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
+  // Income step - mobile
+  mobileVisualTest('onboarding wizard - income step - mobile light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'income');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-income-step-mobile-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-income-step-mobile-light.png');
   });
 
-  mobileTest('onboarding wizard - income step - mobile dark', async ({ page, visual }) => {
-    const email = `onboarding-mobile-income-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
+  mobileVisualTest('onboarding wizard - income step - mobile dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'income');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-income-step-mobile-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-income-step-mobile-dark.png');
   });
 
-  mobileTest('onboarding wizard - expense step - mobile light', async ({ page, visual }) => {
-    const email = `onboarding-mobile-expense-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to expense step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    // Skip income (optional)
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
+  // Expense step - mobile
+  mobileVisualTest('onboarding wizard - expense step - mobile light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'expense');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-expense-step-mobile-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-expense-step-mobile-light.png');
   });
 
-  mobileTest('onboarding wizard - expense step - mobile dark', async ({ page, visual }) => {
-    const email = `onboarding-mobile-expense-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
+  mobileVisualTest('onboarding wizard - expense step - mobile dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'expense');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-expense-step-mobile-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-expense-step-mobile-dark.png');
   });
 
-  mobileTest('onboarding wizard - credit card step - mobile light', async ({ page, visual }) => {
-    const email = `onboarding-mobile-card-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to credit card step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
-
+  // Credit card step - mobile
+  mobileVisualTest('onboarding wizard - credit card step - mobile light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'credit-card');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-credit-card-step-mobile-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-credit-card-step-mobile-light.png');
   });
 
-  mobileTest('onboarding wizard - credit card step - mobile dark', async ({ page, visual }) => {
-    const email = `onboarding-mobile-card-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#account-name').fill('Conta Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible({ timeout: 10000 });
-
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /cartão de crédito/i })).toBeVisible({ timeout: 10000 });
-
+  mobileVisualTest('onboarding wizard - credit card step - mobile dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'credit-card');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-credit-card-step-mobile-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-credit-card-step-mobile-dark.png');
   });
 });
 
-/**
- * Validation error states for onboarding wizard.
- * Tests visual appearance of validation errors (aria-invalid styling).
- */
+// ============================================================================
+// VALIDATION ERROR STATE TESTS
+// ============================================================================
+
 visualTest.describe('Onboarding Wizard Validation Error States @visual', () => {
-  let inbucket: InbucketClient;
-
-  visualTest.beforeAll(async () => {
-    inbucket = new InbucketClient();
+  visualTest.beforeEach(async ({ db }) => {
+    await db.clear();
   });
 
-  /**
-   * Helper to authenticate a fresh user and get to onboarding wizard
-   */
-  async function authenticateNewUser(page: Page, email: string): Promise<void> {
-    const loginPage = new LoginPage(page);
-    const mailbox = email.split('@')[0];
-
-    await inbucket.purgeMailbox(mailbox);
-    await loginPage.goto();
-    await loginPage.requestMagicLink(email);
-    await loginPage.expectMagicLinkSent();
-
-    let magicLink: string | null = null;
-    for (let i = 0; i < 15; i++) {
-      const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
-      }
-      await page.waitForTimeout(500);
-    }
-
-    expect(magicLink).not.toBeNull();
-    await page.goto(magicLink!);
-    await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
-  }
-
-  visualTest('profile step - validation error - light', async ({ page, visual }) => {
-    const email = `onboarding-val-profile-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
+  visualTest('profile step - validation error - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
+
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    const profileNameInput = page.locator('#profile-name');
+
+    // Wait for the input to be visible and interactable
+    await expect(profileNameInput).toBeVisible({ timeout: 10000 });
 
     // Leave profile name empty and try to proceed
-    await page.locator('#profile-name').clear();
+    await profileNameInput.clear();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
     // Wait for validation error to show
-    await page.waitForTimeout(500);
     await visual.waitForStableUI(page);
 
-    // The input should have aria-invalid or show error styling
-    await expect(page).toHaveScreenshot('onboarding-profile-validation-error-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-profile-validation-error-light.png');
   });
 
-  visualTest('profile step - validation error - dark', async ({ page, visual }) => {
-    const email = `onboarding-val-profile-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
+  visualTest('profile step - validation error - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
 
-    // Leave profile name empty and try to proceed
-    await page.locator('#profile-name').clear();
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    const profileNameInput = page.locator('#profile-name');
+
+    // Wait for the input to be visible and interactable
+    await expect(profileNameInput).toBeVisible({ timeout: 10000 });
+
+    await profileNameInput.clear();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
-    await page.waitForTimeout(500);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-profile-validation-error-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-profile-validation-error-dark.png');
   });
 
-  visualTest('group step - validation error - light', async ({ page, visual }) => {
-    const email = `onboarding-val-group-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Fill profile and advance to group step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('group step - validation error - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'group');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
+
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
     // Leave group name empty and try to proceed
     await page.locator('#group-name').clear();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
-    await page.waitForTimeout(500);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-group-validation-error-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-group-validation-error-light.png');
   });
 
-  visualTest('group step - validation error - dark', async ({ page, visual }) => {
-    const email = `onboarding-val-group-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('group step - validation error - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'group');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
+
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
     await page.locator('#group-name').clear();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
-    await page.waitForTimeout(500);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-group-validation-error-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-group-validation-error-dark.png');
   });
 
-  visualTest('bank account step - validation error - light', async ({ page, visual }) => {
-    const email = `onboarding-val-bank-light-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    // Navigate to bank account step
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('bank account step - validation error - light', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'bank-account');
     await visual.setTheme(page, 'light');
-    await visual.disableAnimations(page);
+
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
     // Leave account name empty and try to proceed
     await page.locator('#account-name').clear();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
-    await page.waitForTimeout(500);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-bank-validation-error-light.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-bank-validation-error-light.png');
   });
 
-  visualTest('bank account step - validation error - dark', async ({ page, visual }) => {
-    const email = `onboarding-val-bank-dark-${Date.now()}@example.com`;
-    await authenticateNewUser(page, email);
-
-    // Wait for wizard dialog to appear (no hardcoded timeout - use proper wait)
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-    await expect(wizardDialog).toBeVisible({ timeout: 20000 });
-
-    await page.locator('#profile-name').fill('Usuário Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
-
-    await page.locator('#group-name').fill('Grupo Visual Test');
-    await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-    await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible({ timeout: 10000 });
-
+  visualTest('bank account step - validation error - dark', async ({ page, db, visual }) => {
+    await openOnboardingWizard(page, db, visual);
+    await navigateToStep(page, 'bank-account');
     await visual.setTheme(page, 'dark');
-    await visual.disableAnimations(page);
+
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
     await page.locator('#account-name').clear();
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
 
-    await page.waitForTimeout(500);
     await visual.waitForStableUI(page);
 
-    await expect(page).toHaveScreenshot('onboarding-bank-validation-error-dark.png', {
-      mask: [page.locator('[data-testid="group-badge"]')],
-    });
+    await visual.takeScreenshot(page, 'onboarding-bank-validation-error-dark.png');
   });
 });
-

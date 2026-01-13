@@ -851,8 +851,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'light');
@@ -868,8 +867,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'dark');
@@ -885,8 +883,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'light');
@@ -894,9 +891,11 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       // Mark as read via the button
       const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
-      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      const isButtonVisible = await markAsReadButton.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+      if (isButtonVisible) {
         await markAsReadButton.tap();
-        await page.waitForTimeout(500);
+        // Wait for button to disappear or change state (indicates read action completed)
+        await markAsReadButton.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
       }
 
       await visual.waitForStableUI(page);
@@ -910,8 +909,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
+      await visual.waitForStableUI(page);
 
       await page.goto('/notifications');
       await visual.setTheme(page, 'dark');
@@ -919,9 +917,11 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
 
       // Mark as read via the button
       const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
-      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+      const isButtonVisible = await markAsReadButton.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+      if (isButtonVisible) {
         await markAsReadButton.tap();
-        await page.waitForTimeout(500);
+        // Wait for button to disappear or change state (indicates read action completed)
+        await markAsReadButton.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
       }
 
       await visual.waitForStableUI(page);

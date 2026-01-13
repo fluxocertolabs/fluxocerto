@@ -146,11 +146,7 @@ export function ManagePage() {
   const store = useFinanceStore()
 
   // Coordinated loading state for smooth transitions
-  const loadingState = useCoordinatedLoading(
-    isLoading,
-    fetchError,
-    retry
-  )
+  const loadingState = useCoordinatedLoading(isLoading, fetchError, retry)
 
   const handleTabChange = (value: string) => {
     const tabValue = value as TabValue

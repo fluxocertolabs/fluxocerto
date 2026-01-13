@@ -15,14 +15,68 @@ export class AccountsSection {
     this.accountList = page.locator('[data-testid="accounts-list"], .accounts-list').first();
   }
 
+  private get manageTabs(): Locator {
+    return this.page.locator('[data-tour="manage-tabs"]');
+  }
+
+  /**
+   * Ensure the Manage tabs UI is rendered and interactive.
+   *
+   * Under high CI parallelism, the Manage page can transiently fall back to a loading/error
+   * wrapper where the tabs are not present. We recover deterministically by clicking the
+   * built-in "Tentar Novamente" button when available, and as a last resort performing a
+   * soft reload of the page.
+   */
+  private async ensureManageTabsVisible(): Promise<void> {
+    const errorAlertWithRetry = this.page.getByRole('alert').filter({
+      has: this.page.getByRole('button', { name: /tentar novamente/i }),
+    });
+    const retryButton = errorAlertWithRetry.getByRole('button', { name: /tentar novamente/i });
+
+    const start = Date.now();
+    let reloadAttempts = 0;
+
+    await expect(async () => {
+      // Detect auth/session issues early (prevents long hangs that end in test timeout).
+      if (this.page.url().includes('/login')) {
+        throw new Error('Redirected to /login while waiting for Manage tabs');
+      }
+
+      const tabsVisible = await this.manageTabs.isVisible().catch(() => false);
+      if (tabsVisible) return;
+
+      const canRetry = await retryButton.isVisible().catch(() => false);
+      if (canRetry) {
+        console.warn('[AccountsSection] Manage error state detected; clicking retry');
+        await retryButton.click({ timeout: 5000 }).catch(() => {});
+        await this.page.waitForTimeout(1000);
+      }
+
+      const elapsed = Date.now() - start;
+      if (elapsed > 25000 && reloadAttempts < 1) {
+        reloadAttempts += 1;
+        console.warn('[AccountsSection] Manage tabs still missing; reloading /manage (once)');
+        try {
+          await this.page.reload({ waitUntil: 'domcontentloaded' });
+        } catch {
+          await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
+        }
+        await this.page.waitForTimeout(1000);
+      }
+
+      throw new Error('Manage tabs not visible yet');
+    }).toPass({ timeout: 50000, intervals: [500, 1000, 2000] });
+  }
+
   private get accountsTab(): Locator {
-    return this.page.getByRole('tab', { name: /contas|accounts/i });
+    // Scope to the Manage tabs list to avoid matching unrelated/hidden role=tab elements.
+    return this.manageTabs.getByRole('tab', { name: /contas|accounts/i });
   }
 
   private get headerAddButton(): Locator {
     // On /manage, the "Adicionar Conta" header button is rendered alongside the tabs list.
     // We scope to the header container to avoid picking up similarly named buttons elsewhere.
-    const header = this.page.locator('[data-tour="manage-tabs"]').locator('..').locator('..');
+    const header = this.manageTabs.locator('..').locator('..');
     return header.getByRole('button', { name: /adicionar conta/i });
   }
 
@@ -39,22 +93,23 @@ export class AccountsSection {
    * Click add new account button to open form
    */
   async clickAdd(): Promise<void> {
-    // Ensure we're on the accounts tab (defensive; some failures were caused by running while another tab was active).
-    const tabState = await this.accountsTab.getAttribute('data-state').catch(() => null);
-    if (tabState !== 'active') {
-      await this.accountsTab.click({ timeout: 5000 }).catch(async () => {
-        await this.accountsTab.click({ force: true });
-      });
-      await expect(this.accountsTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
+    await this.ensureManageTabsVisible();
+
+    // Prefer the header button when available; it's the most deterministic and implies
+    // the Accounts tab is already active (button is conditional on activeTab === 'accounts').
+    const headerVisible = await this.headerAddButton.isVisible().catch(() => false);
+    if (!headerVisible) {
+      // Activate the Accounts tab, then wait for the header action to appear.
+      await this.accountsTab
+        .click({ timeout: 15000 })
+        .catch(() => this.accountsTab.click({ force: true, timeout: 15000 }));
+      await expect(this.headerAddButton).toBeVisible({ timeout: 15000 });
     }
 
-    // Prefer the header button when available; it's the most deterministic.
-    if (await this.headerAddButton.isVisible().catch(() => false)) {
-      await this.headerAddButton.click({ timeout: 5000, noWaitAfter: true }).catch(async () => {
-        await this.headerAddButton.click({ force: true, noWaitAfter: true });
-      });
-      return;
-    }
+    await this.headerAddButton
+      .click({ timeout: 15000, noWaitAfter: true })
+      .catch(() => this.headerAddButton.click({ force: true, timeout: 15000, noWaitAfter: true }));
+    return;
 
     // Fallback: pick the last visible match outside dialogs.
     const buttons = this.addButtons;
@@ -106,7 +161,9 @@ export class AccountsSection {
       .filter({ has: this.page.locator('input#name') })
       .filter({ has: this.page.locator('#balance') })
       .first();
-    const nameInput = dialog.getByLabel(/nome da conta/i);
+    // Target by id for stability. Labels are correct, but under heavy CI load we occasionally
+    // observe transient detach/re-render where `getByLabel()` can take longer to resolve.
+    const nameInput = dialog.locator('input#name');
 
     // Open dialog deterministically (avoid repeated fast retries that can fight slow UIs under parallel load).
     if (!(await dialog.isVisible().catch(() => false))) {
@@ -140,7 +197,13 @@ export class AccountsSection {
     await nameInput.scrollIntoViewIfNeeded().catch(() => {});
     // Prefer fill() directly. Click+force-click is a common source of flakes when overlays exist
     // (Playwright will wait for actionability and may run into the test timeout).
-    await nameInput.fill(data.name, { timeout: 30000 });
+    // Under CI parallelism, the dialog content can re-mount once right after opening (React reconciliation),
+    // briefly detaching inputs. Use short, retrying assertions instead of one long fill timeout.
+    await expect(async () => {
+      await expect(nameInput).toBeVisible({ timeout: 2000 });
+      await nameInput.fill(data.name, { timeout: 2000 });
+      await expect(nameInput).toHaveValue(data.name, { timeout: 2000 });
+    }).toPass({ timeout: 30000, intervals: [250, 500, 1000] });
     
     // Select account type when needed.
     // New accounts default to "checking" in the UI, so don't touch the Select unless
@@ -165,7 +228,11 @@ export class AccountsSection {
     const balanceInput = dialog.locator('#balance');
     await expect(balanceInput).toBeVisible({ timeout: 15000 });
     await expect(balanceInput).toBeEditable({ timeout: 30000 });
-    await balanceInput.fill(data.balance, { timeout: 30000 });
+    await expect(async () => {
+      await expect(balanceInput).toBeVisible({ timeout: 2000 });
+      await balanceInput.fill(data.balance, { timeout: 2000 });
+      await expect(balanceInput).toHaveValue(/\d/, { timeout: 2000 });
+    }).toPass({ timeout: 30000, intervals: [250, 500, 1000] });
     // Trigger validation/masks that run on blur
     await balanceInput.blur().catch(() => {});
 
@@ -285,25 +352,19 @@ export class AccountsSection {
    * Uses Playwright's built-in retry mechanism for stability in parallel execution
    */
   async waitForLoad(): Promise<void> {
-    const accountCard = this.page.locator('div.group.relative').filter({
-      has: this.page.getByRole('heading', { level: 3 })
-    }).first();
-    const addButton = this.page.getByRole('button', { name: /adicionar conta/i });
-    
-    // Use Playwright's built-in retry with toPass for parallel execution stability
-    await expect(async () => {
-      const cardCount = await accountCard.count();
-      const buttonCount = await addButton.count();
-      if (cardCount > 0) {
-        console.log(`[waitForLoad] Account card found`);
-        return;
-      }
-      if (buttonCount > 0) {
-        console.log(`[waitForLoad] Add button found`);
-        return;
-      }
-      throw new Error('Neither account cards nor add button visible');
-    }).toPass({ timeout: 15000, intervals: [100, 200, 500] });
+    // Make sure the Manage tabs shell is present (prevents false positives from hidden DOM).
+    await this.ensureManageTabsVisible();
+
+    // If the header add button is visible, the Accounts tab is active and the section is ready.
+    if (await this.headerAddButton.isVisible().catch(() => false)) {
+      return;
+    }
+
+    // Otherwise, ensure Accounts tab is active and the header button appears.
+    await this.accountsTab
+      .click({ timeout: 15000 })
+      .catch(() => this.accountsTab.click({ force: true, timeout: 15000 }));
+    await expect(this.headerAddButton).toBeVisible({ timeout: 15000 });
   }
 
   /**

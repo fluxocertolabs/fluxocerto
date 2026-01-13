@@ -28,9 +28,11 @@ const USE_PER_TEST_CONTEXT = process.env.PW_PER_TEST_CONTEXT === '1';
 
 /**
  * Fixed date for visual tests - ensures deterministic screenshots
- * Using January 15, 2025 at noon to avoid timezone edge cases
+ * Using January 15, 2025 at noon UTC to avoid timezone edge cases.
+ * The explicit 'Z' suffix ensures consistent behavior across all environments
+ * (local dev, CI containers with different TZ settings).
  */
-export const VISUAL_TEST_FIXED_DATE = new Date('2025-01-15T12:00:00');
+export const VISUAL_TEST_FIXED_DATE = new Date('2025-01-15T12:00:00.000Z');
 
 /**
  * Theme modes supported by the app

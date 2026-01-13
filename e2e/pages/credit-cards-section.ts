@@ -15,18 +15,37 @@ export class CreditCardsSection {
     this.cardList = page.locator('[data-testid="credit-cards-list"], .credit-cards-list').first();
   }
 
+  private get creditCardDialog(): Locator {
+    // Be specific: multiple dialogs can exist in the DOM (e.g. onboarding wizard).
+    // This dialog is uniquely identified by the credit card form fields.
+    return this.page
+      .getByRole('dialog')
+      .filter({ has: this.page.locator('input#name') })
+      .filter({ has: this.page.locator('#statementBalance') })
+      .filter({ has: this.page.locator('input#dueDay') });
+  }
+
   /**
    * Get the add button - uses the one in the header
    */
   private get addButton(): Locator {
-    return this.page.getByRole('button', { name: /adicionar cartão/i }).first();
+    // IMPORTANT:
+    // Prefer the header action ("Adicionar Cartão de Crédito") instead of the
+    // empty-state CTA ("Adicionar Cartão"). When tabs are not active, Radix can
+    // keep off-screen content in the DOM, which makes `.first()` sometimes pick
+    // a hidden button and wait ~30s for it to become actionable under CI load.
+    return this.page.getByRole('button', { name: /adicionar cartão de crédito/i }).first();
   }
 
   /**
    * Click add new credit card button
    */
   async clickAdd(): Promise<void> {
-    await this.addButton.click();
+    await expect(this.addButton).toBeVisible({ timeout: 15000 });
+    // This button opens a dialog (SPA state) and should not trigger a navigation.
+    // Under CI load, Playwright can sometimes detect a "scheduled navigation" from
+    // unrelated router work and hang here. Avoid waiting for navigation.
+    await this.addButton.click({ timeout: 15000, noWaitAfter: true });
   }
 
   /**
@@ -37,20 +56,55 @@ export class CreditCardsSection {
     balance: string;
     dueDay: string;
   }): Promise<void> {
+    // Ensure the tab content + header actions have rendered before trying to click.
+    // Under high parallel load, this avoids the default 30s action timeout on click().
+    await this.waitForLoad();
     await this.clickAdd();
 
     // Wait for dialog to open
-    const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    const dialog = this.creditCardDialog;
+    await expect(dialog).toBeVisible({ timeout: 15000 });
 
     // Fill form fields within dialog
-    await dialog.getByLabel(/nome/i).fill(data.name);
-    await dialog.getByLabel(/saldo.*fatura/i).fill(data.balance);
-    await dialog.getByLabel(/dia.*vencimento/i).fill(data.dueDay);
+    const nameInput = dialog.locator('input#name');
+    const balanceInput = dialog.locator('#statementBalance');
+    const dueDayInput = dialog.locator('input#dueDay');
+
+    await expect(async () => {
+      await expect(nameInput).toBeVisible({ timeout: 2000 });
+      await nameInput.fill(data.name, { timeout: 2000 });
+      await expect(nameInput).toHaveValue(data.name, { timeout: 2000 });
+    }).toPass({ timeout: 15000, intervals: [250, 500, 1000] });
+
+    await expect(async () => {
+      await expect(balanceInput).toBeVisible({ timeout: 2000 });
+      await balanceInput.fill(data.balance, { timeout: 2000 });
+      await expect(balanceInput).toHaveValue(/\d/, { timeout: 2000 });
+    }).toPass({ timeout: 15000, intervals: [250, 500, 1000] });
+
+    await expect(async () => {
+      await expect(dueDayInput).toBeVisible({ timeout: 2000 });
+      await dueDayInput.fill(data.dueDay, { timeout: 2000 });
+      await expect(dueDayInput).toHaveValue(data.dueDay, { timeout: 2000 });
+    }).toPass({ timeout: 15000, intervals: [250, 500, 1000] });
+    await dueDayInput.blur().catch(() => {});
 
     // Submit
-    await dialog.getByRole('button', { name: /salvar|adicionar/i }).click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    const submitButton = dialog.locator('button[type="submit"]').first();
+    await expect(submitButton).toBeEnabled({ timeout: 10000 });
+    await submitButton.click({ noWaitAfter: true });
+
+    // Wait for dialog close; fail fast if the page surfaces an error message.
+    const pageError = this.page.locator('div.bg-destructive\\/10.border-destructive\\/20').first();
+    await expect(async () => {
+      if (await pageError.isVisible().catch(() => false)) {
+        const message = (await pageError.textContent().catch(() => null))?.trim() || 'Unknown error';
+        throw new Error(`Credit card submit failed: ${message}`);
+      }
+      if (await dialog.isVisible().catch(() => false)) {
+        throw new Error('Dialog still visible');
+      }
+    }).toPass({ timeout: 30000, intervals: [250, 500, 1000, 2000] });
   }
 
   /**
@@ -86,7 +140,7 @@ export class CreditCardsSection {
    */
   async updateDueDay(name: string, newDueDay: string): Promise<void> {
     await this.editCreditCard(name);
-    const dialog = this.page.getByRole('dialog');
+    const dialog = this.creditCardDialog;
     const dueDayInput = dialog.getByLabel(/dia.*vencimento/i);
     await dueDayInput.clear();
     await dueDayInput.fill(newDueDay);
@@ -99,7 +153,7 @@ export class CreditCardsSection {
    */
   async updateCardBalance(name: string, newBalance: string): Promise<void> {
     await this.editCreditCard(name);
-    const dialog = this.page.getByRole('dialog');
+    const dialog = this.creditCardDialog;
     const balanceInput = dialog.getByLabel(/saldo.*fatura/i);
     await balanceInput.clear();
     await balanceInput.fill(newBalance);
@@ -154,7 +208,7 @@ export class CreditCardsSection {
       }).first().waitFor({ state: 'visible', timeout: 30000 }),
       // Or empty state / add button
       this.page.getByText(/nenhum cartão/i).waitFor({ state: 'visible', timeout: 30000 }),
-      this.page.getByRole('button', { name: /adicionar cartão/i }).waitFor({ state: 'visible', timeout: 30000 }),
+      this.addButton.waitFor({ state: 'visible', timeout: 30000 }),
     ]).catch(() => {
       // Content might already be visible
     });

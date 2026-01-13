@@ -263,32 +263,43 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
     expect([200, 204, 403, 401]).toContain(response.status);
   });
 
-  test('user cannot update other user\'s notifications via RPC', async ({ page, browser }) => {
+  test('user cannot update other user\'s notifications via RPC', async ({ page, browser, request }) => {
     // Create and authenticate User A
     const userAEmail = `rls-notif-rpc-a-${Date.now()}@example.com`;
     const userA = await authenticateAndGetToken(page, userAEmail);
     await completeOnboarding(page);
 
-    // Wait for welcome notification to be created
-    await page.waitForTimeout(2000);
+    // Wait for welcome notification to be created (async backend side-effect).
+    // Poll via PostgREST instead of sleeping a fixed amount.
+    const userAHeaders = {
+      apikey: anonKey!,
+      Authorization: `Bearer ${userA.accessToken}`,
+      'Content-Type': 'application/json',
+    } as const;
 
-    // Get User A's notification ID
-    const userANotifications = await page.evaluate(
-      async ({ baseUrl, apiKey, accessToken }) => {
-        const res = await fetch(`${baseUrl}/rest/v1/notifications`, {
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        return await res.json().catch(() => []);
-      },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userA.accessToken }
+    await expect
+      .poll(
+        async () => {
+          const res = await request.get(
+            `${baseApiUrl}/rest/v1/notifications?select=id&order=created_at.desc&limit=1`,
+            { headers: userAHeaders }
+          );
+          if (!res.ok()) return 0;
+          const data = (await res.json().catch(() => [])) as any[];
+          return Array.isArray(data) ? data.length : 0;
+        },
+        { timeout: 20000, intervals: [500, 1000, 2000] }
+      )
+      .toBeGreaterThan(0);
+
+    const userANotificationsRes = await request.get(
+      `${baseApiUrl}/rest/v1/notifications?select=id&order=created_at.desc&limit=1`,
+      { headers: userAHeaders }
     );
-
+    expect(userANotificationsRes.ok()).toBeTruthy();
+    const userANotifications = (await userANotificationsRes.json().catch(() => [])) as any[];
     expect(userANotifications.length).toBeGreaterThan(0);
-    const userANotificationId = userANotifications[0].id;
+    const userANotificationId = userANotifications[0].id as string;
 
     // Create a new browser context for User B
     const contextB = await browser.newContext();
@@ -300,44 +311,27 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
     await completeOnboarding(pageB);
 
     // User B tries to mark User A's notification as read via RPC
-    const response = await pageB.evaluate(
-      async ({ baseUrl, apiKey, accessToken, notificationId }) => {
-        const res = await fetch(`${baseUrl}/rest/v1/rpc/mark_notification_read`, {
-          method: 'POST',
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ notification_id: notificationId }),
-        });
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const rpcRes = await request.post(`${baseApiUrl}/rest/v1/rpc/mark_notification_read`, {
+      headers: {
+        apikey: anonKey!,
+        Authorization: `Bearer ${userB.accessToken}`,
+        'Content-Type': 'application/json',
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, notificationId: userANotificationId }
-    );
+      data: { notification_id: userANotificationId },
+    });
 
     // RPC returns 204 (No Content) for VOID functions - the function doesn't raise an error
     // for non-existent or unauthorized notifications (prevents information leakage)
     // The key security check is below: verify User A's notification was NOT marked as read
-    expect([200, 204, 400, 403]).toContain(response.status);
+    expect([200, 204, 400, 403]).toContain(rpcRes.status());
 
     // Verify User A's notification was NOT marked as read
-    const verifyResponse = await page.evaluate(
-      async ({ baseUrl, apiKey, accessToken, notificationId }) => {
-        const res = await fetch(`${baseUrl}/rest/v1/notifications?id=eq.${notificationId}`, {
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        return await res.json().catch(() => []);
-      },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userA.accessToken, notificationId: userANotificationId }
+    const verifyRes = await request.get(
+      `${baseApiUrl}/rest/v1/notifications?id=eq.${userANotificationId}&select=read_at`,
+      { headers: userAHeaders }
     );
+    expect(verifyRes.ok()).toBeTruthy();
+    const verifyResponse = (await verifyRes.json().catch(() => [])) as any[];
 
     // User A's notification should still be unread
     if (verifyResponse.length > 0) {

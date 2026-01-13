@@ -13,7 +13,9 @@ const DEFAULT_CONFIG: Required<LoadingConfig> = {
   // 5s was too aggressive in cold-cache scenarios (e.g. first load, mobile, or
   // under heavy parallel load). A premature timeout flips the UI into an error
   // state even if data arrives shortly after.
-  timeoutThreshold: 15000,
+  // Keep production relatively snappy, but allow much more headroom in DEV/test where
+  // local Supabase + parallel E2E can legitimately take longer without being "stuck".
+  timeoutThreshold: import.meta.env.DEV ? 45000 : 15000,
   enableDevLogging: import.meta.env.DEV,
 }
 

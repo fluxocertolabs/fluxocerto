@@ -43,6 +43,9 @@ test.describe('Page Tours', () => {
 
   async function dismissTourIfPresent(page: import('@playwright/test').Page) {
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    // The tour can auto-show slightly after the dashboard finishes hydrating/loading.
+    // Wait briefly so we don't miss it and leave an overlay that blocks later clicks (e.g., the help FAB).
+    await closeTourButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     if (await closeTourButton.isVisible().catch(() => false)) {
       await closeTourButton.click();
       await expect(closeTourButton).toBeHidden({ timeout: 10000 });
@@ -54,6 +57,10 @@ test.describe('Page Tours', () => {
    * Uses click (pinned mode) to reliably expand on both desktop and mobile.
    */
   async function startTourViaFloatingHelp(page: import('@playwright/test').Page) {
+    // If a tour is already active (auto-shown), it can overlay the bottom-right corner
+    // and prevent the FAB click from reaching the button. Always dismiss first.
+    await dismissTourIfPresent(page);
+
     const helpButton = page.locator('[data-testid="floating-help-button"]');
     await expect(helpButton).toBeVisible({ timeout: 10000 });
 
@@ -134,6 +141,7 @@ test.describe('Page Tours', () => {
     await page.waitForTimeout(2000);
 
     await completeOnboardingIfPresent(page);
+    // The auto-shown tour may appear a bit after onboarding completes; wait briefly to catch it, then dismiss.
     await dismissTourIfPresent(page);
 
     // Use floating help button to start tour (MUST work - no conditional)

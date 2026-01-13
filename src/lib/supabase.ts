@@ -442,17 +442,26 @@ export async function getGroupId(): Promise<string | null> {
   }
 
   const client = getSupabase()
-  const { data: { user } } = await client.auth.getUser()
-  
-  if (!user?.email) {
-    return null
+  // Prefer getSession() (reads local storage) over getUser() (network call).
+  // In E2E/CI under heavy parallel load, the auth service call can become a bottleneck
+  // and occasionally stall long enough to cause UI flows (e.g. add account/card) to hang.
+  const { data: { session } } = await client.auth.getSession()
+  let email = session?.user?.email ?? null
+
+  // Fallback: if there's no session yet (rare, but can happen during early hydration),
+  // ask Supabase for the user (network).
+  if (!email) {
+    const { data: { user } } = await client.auth.getUser()
+    email = user?.email ?? null
   }
+
+  if (!email) return null
 
   const { data: profile, error } = await client
     .from('profiles')
     .select('group_id')
-    .eq('email', user.email.toLowerCase())
-    .single()
+    .eq('email', email.toLowerCase())
+    .maybeSingle()
 
   if (error || !profile) {
     return null

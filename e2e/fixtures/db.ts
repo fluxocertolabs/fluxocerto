@@ -239,20 +239,42 @@ export async function getOrCreateWorkerGroup(workerIndex: number, groupName: str
     try {
       const client = getAdminClient();
 
-      // Try to find existing group
-      const { data: existing, error: selectError } = await client
+      // Try to find existing groups.
+      //
+      // IMPORTANT:
+      // - Group names are not globally unique in the product (users can name groups anything).
+      // - Our test harness uses deterministic worker group names (e.g. "Test chromium Worker 0")
+      //   and expects them to behave as unique identifiers.
+      //
+      // If duplicates exist (usually from a prior flaky/aborted run), `.maybeSingle()` throws.
+      // We self-heal by picking the newest group and renaming the rest, but ONLY for test groups.
+      const { data: existingGroups, error: selectError } = await client
         .from('groups')
-        .select('id')
+        .select('id, created_at')
         .eq('name', groupName)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
       if (selectError) {
         throw new Error(`Failed to query worker group: ${selectError.message}`);
       }
 
-      if (existing) {
-        cachedWorkerGroupIds.set(groupName, existing.id);
-        return existing.id;
+      if (existingGroups && existingGroups.length > 0) {
+        const primary = existingGroups[0];
+
+        if (existingGroups.length > 1 && groupName.startsWith('Test ')) {
+          console.warn(
+            `[DB] Found ${existingGroups.length} groups named "${groupName}". Deduping to keep setup deterministic.`
+          );
+          const ts = Date.now();
+          for (let i = 1; i < existingGroups.length; i++) {
+            const dupId = existingGroups[i].id;
+            const newName = `${groupName} (archived ${ts} #${i})`;
+            await executeSQL(`UPDATE public.groups SET name = $1 WHERE id = $2`, [newName, dupId]);
+          }
+        }
+
+        cachedWorkerGroupIds.set(groupName, primary.id);
+        return primary.id;
       }
 
       // Create new group for this worker
@@ -1540,122 +1562,204 @@ export async function clearTourStateForGroup(groupId: string): Promise<void> {
 export function createWorkerDbFixture(workerContext: IWorkerContext) {
   const { workerIndex, email, dataPrefix, groupName } = workerContext;
 
-  // Track whether this worker's database has been modified since last reset
-  // This allows optimizing away redundant resets (which are expensive network operations)
-  let isDirty = true; // Start dirty so first reset actually runs
+  // Current group for this worker user.
+  // We intentionally rotate groups during the suite to avoid expensive per-test DELETEs,
+  // which cause DB/PostgREST contention under full parallelism.
+  let currentGroupId: string | null = null;
+  let freshGroupCounter = 0;
+  let cachedAuthUserId: string | null = null;
 
   // Helper to get this worker's group ID (cached after first call)
   const getWorkerGroupId = async () => {
-    return getOrCreateWorkerGroup(workerIndex, groupName);
+    if (currentGroupId) return currentGroupId;
+    // Fallback to the long-lived worker group (created in setup).
+    // Most tests will call resetDatabase() first, which rotates to a fresh group.
+    currentGroupId = await getOrCreateWorkerGroup(workerIndex, groupName);
+    return currentGroupId;
   };
 
-  // Mark the database as dirty (data has been added)
-  const markDirty = () => {
-    isDirty = true;
+  const getAuthUserId = async (): Promise<string> => {
+    if (cachedAuthUserId) return cachedAuthUserId;
+    const id = await getUserIdByEmail(email);
+    if (!id) {
+      throw new Error(`Failed to resolve auth user id for ${email} (auth.users row missing)`);
+    }
+    cachedAuthUserId = id;
+    return id;
+  };
+
+  const createFreshGroupForTest = async (): Promise<string> => {
+    freshGroupCounter += 1;
+    // IMPORTANT:
+    // - Group names must be unique because setup uses eq(name).maybeSingle().
+    // - Visual snapshots assume the *current* group name is stable (it affects layout).
+    //
+    // Strategy:
+    // - Rename the current group to an archived unique name.
+    // - Create a new empty group reusing the stable worker group name.
+    //
+    // This keeps UI layout stable while still guaranteeing uniqueness in the DB.
+    const previousGroupId = await getWorkerGroupId();
+    const archivedGroupName = `${groupName} (archived ${Date.now()} #${freshGroupCounter})`;
+
+    const archived = await executeSQLWithResult<{ id: string }>(
+      `UPDATE public.groups SET name = $1 WHERE id = $2 RETURNING id`,
+      [archivedGroupName, previousGroupId]
+    );
+    if (!archived?.[0]?.id) {
+      throw new Error(`Failed to archive previous group (${previousGroupId}) before creating a fresh group`);
+    }
+
+    const rows = await executeSQLWithResult<{ id: string }>(
+      `INSERT INTO public.groups (name) VALUES ($1) RETURNING id`,
+      [groupName]
+    );
+    const groupId = rows?.[0]?.id;
+    if (!groupId) {
+      throw new Error('Failed to create fresh test group (no id returned)');
+    }
+    // Keep the worker-group cache consistent for any code paths that still call getOrCreateWorkerGroup().
+    cachedWorkerGroupIds.set(groupName, groupId);
+
+    // Assign this worker user to the new group (RLS uses JWT email -> profiles.group_id).
+    // Do it via direct SQL to avoid admin API contention under parallel load.
+    const profileName = email.split('@')[0];
+    await executeSQL(
+      `
+        INSERT INTO public.profiles (email, name, group_id)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (email) DO UPDATE
+        SET name = EXCLUDED.name,
+            group_id = EXCLUDED.group_id
+      `,
+      [email, profileName, groupId]
+    );
+
+    // Clear per-user tables that can leak across tests (these are NOT group-scoped).
+    const userId = await getAuthUserId();
+    await executeSQL(`DELETE FROM public.notifications WHERE user_id = $1`, [userId]);
+    await executeSQL(`DELETE FROM public.user_preferences WHERE user_id = $1`, [userId]);
+
+    // Prevent UI-blocking onboarding wizard and auto-tours for the worker user in this fresh group.
+    // (Some tests explicitly clear these states when they need to exercise onboarding/tours.)
+    try {
+      await executeSQL(
+        `
+          INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+          VALUES ($1, $2, 'completed', 'done', now(), now())
+          ON CONFLICT (user_id, group_id) DO UPDATE
+          SET status = 'completed',
+              current_step = 'done',
+              auto_shown_at = now(),
+              completed_at = now()
+        `,
+        [userId, groupId]
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes('does not exist')) {
+        throw new Error(`Failed to upsert onboarding state for fresh group: ${message}`);
+      }
+    }
+
+    try {
+      await executeSQL(
+        `
+          INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+          VALUES
+            ($1, 'dashboard', 'dismissed', 1, now(), NULL),
+            ($1, 'manage', 'dismissed', 1, now(), NULL)
+          ON CONFLICT (user_id, tour_key) DO UPDATE
+          SET status = EXCLUDED.status,
+              version = EXCLUDED.version,
+              dismissed_at = EXCLUDED.dismissed_at,
+              completed_at = EXCLUDED.completed_at
+        `,
+        [userId]
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes('does not exist')) {
+        throw new Error(`Failed to upsert tour state for fresh group: ${message}`);
+      }
+    }
+
+    currentGroupId = groupId;
+    return groupId;
   };
 
   return {
     /**
-     * Reset database by clearing this worker's group data.
-     * Uses group_id for reliable isolation instead of name patterns.
-     * This always resets regardless of dirty state - use clear() for optimized resets.
+     * Reset database for this worker by switching the worker user to a fresh, empty group.
+     *
+     * Root-cause fix:
+     * - Avoids per-test DELETE cascades across many tables, which cause DB contention under
+     *   full parallelism and lead to UI hydration flakes (tabs/charts never render).
+     * - Keeps isolation strong because RLS is group-scoped.
      */
     resetDatabase: async () => {
-      const groupId = await getWorkerGroupId();
-      await resetGroupData(groupId);
-      isDirty = false;
+      await createFreshGroupForTest();
     },
 
     /**
-     * Clear database only if data has been seeded since last clear/reset.
-     * This is an optimized version of resetDatabase() that skips the expensive
-     * DELETE operations if the database is already clean.
-     * 
-     * Use this in tests that need empty state - it's instant if no data was added.
+     * Clear this worker's data for the current test.
+     *
+     * IMPORTANT: UI-driven writes are not tracked, so "smart clear" based on a local dirty flag
+     * is not reliable. For determinism, we always switch to a fresh group.
      */
     clear: async () => {
-      if (!isDirty) {
-        // Database is already clean, skip expensive reset
-        return;
-      }
-      const groupId = await getWorkerGroupId();
-      await resetGroupData(groupId);
-      isDirty = false;
+      await createFreshGroupForTest();
     },
 
-    /**
-     * Check if database has been modified since last reset/clear
-     */
-    isDirty: () => isDirty,
     ensureTestUser: async (userEmail?: string) => {
       const groupId = await getWorkerGroupId();
       return ensureTestUser(userEmail ?? email, workerIndex, groupId);
     },
     removeTestUser: (userEmail?: string) => removeTestUser(userEmail ?? email, workerIndex),
     // CRITICAL: Pass group ID directly to avoid fallback to default group
-    // All seed methods mark the database as dirty
     seedAccounts: async (accounts: TestAccount[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedAccountsWithGroup(accounts, workerIndex, groupId);
-      markDirty();
-      return result;
+      return seedAccountsWithGroup(accounts, workerIndex, groupId);
     },
     setCheckingAccountsBalanceUpdatedAt: async (balanceUpdatedAt: string | null) => {
       const groupId = await getWorkerGroupId();
       await setCheckingAccountsBalanceUpdatedAtForGroup(groupId, balanceUpdatedAt);
-      markDirty();
     },
     setAccountsBalanceUpdatedAt: async (balanceUpdatedAt: string | null) => {
       const groupId = await getWorkerGroupId();
       await setAccountsBalanceUpdatedAtForGroup(groupId, balanceUpdatedAt);
-      markDirty();
     },
     setCreditCardsBalanceUpdatedAt: async (balanceUpdatedAt: string | null) => {
       const groupId = await getWorkerGroupId();
       await setCreditCardsBalanceUpdatedAtForGroup(groupId, balanceUpdatedAt);
-      markDirty();
     },
     seedExpenses: async (expenses: TestExpense[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedExpensesWithGroup(expenses, workerIndex, groupId);
-      markDirty();
-      return result;
+      return seedExpensesWithGroup(expenses, workerIndex, groupId);
     },
     seedSingleShotExpenses: async (expenses: TestSingleShotExpense[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedSingleShotExpensesWithGroup(expenses, workerIndex, groupId);
-      markDirty();
-      return result;
+      return seedSingleShotExpensesWithGroup(expenses, workerIndex, groupId);
     },
     seedProjects: async (projects: TestProject[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedProjectsWithGroup(projects, workerIndex, groupId);
-      markDirty();
-      return result;
+      return seedProjectsWithGroup(projects, workerIndex, groupId);
     },
     seedSingleShotIncome: async (income: TestSingleShotIncome[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedSingleShotIncomeWithGroup(income, workerIndex, groupId);
-      markDirty();
-      return result;
+      return seedSingleShotIncomeWithGroup(income, workerIndex, groupId);
     },
     seedCreditCards: async (cards: TestCreditCard[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedCreditCardsWithGroup(cards, workerIndex, groupId);
-      markDirty();
-      return result;
+      return seedCreditCardsWithGroup(cards, workerIndex, groupId);
     },
     seedFutureStatements: async (statements: TestFutureStatement[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedFutureStatementsWithGroup(statements, groupId);
-      markDirty();
-      return result;
+      return seedFutureStatementsWithGroup(statements, groupId);
     },
     seedSnapshots: async (snapshots: { name: string; data: object }[]) => {
       const groupId = await getWorkerGroupId();
-      const result = await seedSnapshotsWithGroup(snapshots, groupId);
-      markDirty();
-      return result;
+      return seedSnapshotsWithGroup(snapshots, groupId);
     },
     getSnapshots: async () => {
       const groupId = await getWorkerGroupId();
@@ -1684,44 +1788,33 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
     seedFullScenario: async (data: Parameters<typeof seedFullScenario>[0]) => {
       const groupId = await getWorkerGroupId();
       await seedFullScenarioWithGroup(data, workerIndex, groupId);
-      markDirty();
     },
     seedGroups: async (groups: TestGroup[]) => {
-      const result = await seedGroups(groups, workerIndex);
-      markDirty();
-      return result;
+      return seedGroups(groups, workerIndex);
     },
     // Notification helpers (per-user, not per-group)
     seedNotifications: async (notifications: TestNotification[]) => {
-      const result = await seedNotifications(notifications);
-      markDirty();
-      return result;
+      return seedNotifications(notifications);
     },
     getNotificationsForUser,
     getUnreadNotificationCount,
     markNotificationAsRead: async (notificationId: string) => {
       await markNotificationAsRead(notificationId);
-      markDirty();
     },
     deleteNotificationsForUser: async (userId: string) => {
       await deleteNotificationsForUser(userId);
-      markDirty();
     },
     notificationExistsByDedupeKey,
     // User preference helpers (per-user, not per-group)
     seedUserPreferences: async (preferences: TestUserPreference[]) => {
-      const result = await seedUserPreferences(preferences);
-      markDirty();
-      return result;
+      return seedUserPreferences(preferences);
     },
     getUserPreference,
     setUserPreference: async (userId: string, key: string, value: string) => {
       await setUserPreference(userId, key, value);
-      markDirty();
     },
     deleteUserPreferencesForUser: async (userId: string) => {
       await deleteUserPreferencesForUser(userId);
-      markDirty();
     },
     // User ID helper
     getUserIdByEmail,

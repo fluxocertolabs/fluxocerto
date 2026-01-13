@@ -61,7 +61,9 @@ export class ManagePage {
         // Avoid waiting for full page load - SPA routes + long-lived connections (Realtime/WebSockets)
         // can make `waitUntil: 'load'` slower/flakier than needed for E2E readiness.
         const start = Date.now();
-        await this.page.goto('/manage', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        // Use the page's default navigation timeout (set by our Playwright fixtures) instead of an
+        // aggressive hard-coded 15s, which can be exceeded under full parallel CI load.
+        await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
         const duration = Date.now() - start;
         if (duration > 5000) {
           console.warn(`[ManagePage] Slow navigation to /manage: ${duration}ms`);
@@ -184,7 +186,6 @@ export class ManagePage {
       });
       const errorRetryButton = errorAlertWithRetry.getByRole('button', { name: /tentar novamente/i });
       let retryAttempts = 0;
-      let reloadAttempts = 0;
 
       await expect(async () => {
         const tabsVisible = await withTimeout(manageTabs.isVisible(), 1000, false).catch(() => false);
@@ -196,28 +197,6 @@ export class ManagePage {
           console.warn(`[ManagePage] ErrorState detected on /manage; clicking retry (attempt ${retryAttempts})`);
           await errorRetryButton.click({ timeout: 5000 }).catch(() => {});
           // Give the app a moment to transition back to skeleton/content.
-          await this.page.waitForTimeout(1000);
-        }
-
-        // If we are "stuck" for a long time without ever rendering the tabs,
-        // do a soft reload. This is a pragmatic flake killer under heavy
-        // parallel load (cold cache + Supabase/Realtime backpressure).
-        const elapsed = Date.now() - waitStart;
-        // Allow up to 2 reload attempts to recover from stuck states.
-        // First reload at 10s, second reload at 25s.
-        const firstReloadThreshold = 10000;
-        const secondReloadThreshold = 25000;
-        if (
-          (elapsed > firstReloadThreshold && reloadAttempts < 1) ||
-          (elapsed > secondReloadThreshold && reloadAttempts < 2)
-        ) {
-          reloadAttempts += 1;
-          console.warn(`[ManagePage] Tabs still not visible after ${elapsed}ms; reloading /manage (attempt ${reloadAttempts})`);
-          try {
-            await this.page.reload({ waitUntil: 'domcontentloaded' });
-          } catch {
-            await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
-          }
           await this.page.waitForTimeout(1000);
         }
 

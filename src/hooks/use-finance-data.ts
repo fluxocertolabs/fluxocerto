@@ -291,8 +291,11 @@ export function useFinanceData(): UseFinanceDataReturn {
       return
     }
 
-    const REQUEST_TIMEOUT_MS = 20000
-    const MAX_ATTEMPTS = 2
+    // Under DEV/test (local Supabase + parallel E2E), PostgREST can legitimately take longer.
+    // Keep production snappy, but give DEV more headroom to avoid false timeouts.
+    const REQUEST_TIMEOUT_MS = import.meta.env.DEV ? 45000 : 20000
+    // Avoid compounding long waits in DEV (a second full timeout can exceed typical E2E budgets).
+    const MAX_ATTEMPTS = import.meta.env.DEV ? 1 : 2
 
     try {
       setError(null)
