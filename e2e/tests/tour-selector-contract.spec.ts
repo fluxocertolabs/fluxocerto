@@ -214,8 +214,9 @@ test.describe('Tour Selector Comprehensive Check @contract', () => {
       } else if (tourKey === 'manage') {
         await expect(page.locator('[data-tour="manage-tabs"]')).toBeVisible({ timeout: 15000 });
       } else if (tourKey === 'history') {
-        // History page - wait for page heading which is always visible
-        await expect(page.getByRole('heading', { name: /histórico/i })).toBeVisible({ timeout: 15000 });
+        // History page - wait for the snapshot list to finish loading
+        // The snapshot-list element only renders after loading completes (not during loading/error states)
+        await expect(page.locator('[data-tour="snapshot-list"]')).toBeVisible({ timeout: 20000 });
       }
 
       const missing: string[] = [];
