@@ -121,26 +121,46 @@ export class DashboardPage {
 
   /**
    * Open Quick Update modal
+   *
+   * Strategy: Prefer clicking the CTA inside the estimated balance indicator (more specific)
+   * before falling back to the generic header button. This avoids ambiguity when multiple
+   * "Atualizar Saldos" buttons are present on the page.
    */
   async openQuickUpdate(): Promise<void> {
     // Wait for page to be fully loaded first
     await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
-    
-    // Use retry logic to handle race conditions where button may not be immediately visible
+
+    // Strategy 1: Try clicking the CTA inside the estimated balance indicator (most specific)
+    const indicatorCtaVisible = await this.estimatedBalanceCta.isVisible().catch(() => false);
+    if (indicatorCtaVisible) {
+      await this.estimatedBalanceCta.scrollIntoViewIfNeeded();
+      await this.page.waitForTimeout(200);
+      await this.estimatedBalanceCta.click({ timeout: 5000 });
+      return;
+    }
+
+    // Strategy 2: Use the header quick update button (scoped to header for specificity)
+    const headerQuickUpdateButton = this.page.locator('header').getByRole('button', { name: /atualizar saldos/i });
+    const headerButtonVisible = await headerQuickUpdateButton.isVisible().catch(() => false);
+    if (headerButtonVisible) {
+      await headerQuickUpdateButton.scrollIntoViewIfNeeded();
+      await this.page.waitForTimeout(200);
+      await headerQuickUpdateButton.click({ timeout: 5000 });
+      return;
+    }
+
+    // Strategy 3: Fall back to the generic button with retry logic
     await expect(async () => {
       await expect(this.quickUpdateButton).toBeVisible();
     }).toPass({ timeout: 20000 });
-    
-    // On mobile viewports, buttons may overlap due to responsive layout.
-    // Scroll the button into view and click with force to bypass interception checks.
+
     await this.quickUpdateButton.scrollIntoViewIfNeeded();
-    await this.page.waitForTimeout(300); // Allow scroll animation to complete
-    
+    await this.page.waitForTimeout(300);
+
     // Try regular click first, fall back to force click if intercepted
     try {
       await this.quickUpdateButton.click({ timeout: 5000 });
     } catch {
-      // If regular click fails due to interception, use force click
       await this.quickUpdateButton.click({ force: true });
     }
   }

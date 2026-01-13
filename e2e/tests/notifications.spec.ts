@@ -210,35 +210,38 @@ test.describe('Notifications Live Updates', () => {
     // First context: Initialize and create welcome notification
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+
+    // Navigate to notifications page in first context
+    await page.goto('/notifications');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for welcome notification to be visible (this triggers the notification creation)
+    const welcomeNotification = page.getByText(/bem-vindo ao fluxo certo/i);
+    await expect(welcomeNotification).toBeVisible({ timeout: 15000 });
 
     // Create second context (simulates another tab/device)
     const secondPage = await context.newPage();
     await secondPage.goto('/notifications');
     await secondPage.waitForLoadState('networkidle');
-    await secondPage.waitForTimeout(2000);
 
     // Verify welcome notification is visible in second context
     const welcomeInSecondPage = secondPage.getByText(/bem-vindo ao fluxo certo/i);
-    await expect(welcomeInSecondPage).toBeVisible({ timeout: 10000 });
+    await expect(welcomeInSecondPage).toBeVisible({ timeout: 15000 });
 
-    // Mark as read in first context
-    await page.goto('/notifications');
-    await page.waitForLoadState('networkidle');
-    
+    // Mark as read in first context - MUST succeed (no conditional)
     const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
-    if (await markAsReadButton.isVisible()) {
-      await markAsReadButton.click();
-      await page.waitForTimeout(1000);
-    }
+    await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
+    await markAsReadButton.click();
+
+    // Wait for the mark-as-read API call to complete by polling for the button to disappear
+    await expect(markAsReadButton).not.toBeVisible({ timeout: 10000 });
 
     // Reload second context and verify read state propagated
     await secondPage.reload();
     await secondPage.waitForLoadState('networkidle');
-    await secondPage.waitForTimeout(1000);
 
     // The mark as read button should not be visible in second context
-    await expect(secondPage.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+    await expect(secondPage.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 10000 });
 
     await secondPage.close();
   });

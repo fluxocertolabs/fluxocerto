@@ -184,34 +184,38 @@ test.describe('Tour Selector Contract Tests @contract', () => {
 
 /**
  * Comprehensive selector presence test that runs against all tours
- * This is a single test that validates everything in one pass
+ * This is a single test that validates everything in one pass.
+ *
+ * NOTE: This test is redundant with the per-page tests above and can be flaky
+ * because it visits multiple pages serially without proper page-specific setup.
+ * The per-page tests (dashboard, manage, history) are more reliable.
+ * This test is kept for backwards compatibility but may be removed in the future.
  */
 test.describe('Tour Selector Comprehensive Check @contract', () => {
-  test('all tour selectors are present on their respective pages', async ({ page }) => {
+  test('all tour selectors are present on their respective pages', async ({ page, db }) => {
     const results: { tour: string; page: string; missing: string[] }[] = [];
+
+    // Seed data to ensure dashboard is not in empty state
+    await db.seedAccounts([createAccount({ name: 'Comprehensive Check - Account', balance: 100000 })]);
+    await db.seedProjects([createProject({ name: 'Comprehensive Check - Income', amount: 800000 })]);
+    await db.seedExpenses([createExpense({ name: 'Comprehensive Check - Expense', amount: 200000 })]);
 
     for (const [tourKey, tour] of Object.entries(TOURS)) {
       const route = TOUR_ROUTES[tourKey];
       if (!route) continue;
 
       await page.goto(route);
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
 
-      // Wait for page-specific content
+      // Wait for page-specific content to be ready
       if (tourKey === 'dashboard') {
-        // Dashboard can be in empty state or with data
-        const projectionSelector = page.locator('[data-tour="projection-selector"]');
-        const emptyState = page.locator('text=Nenhum Dado Financeiro Ainda');
-        await expect(projectionSelector.or(emptyState)).toBeVisible({ timeout: 15000 });
-        
-        // Skip dashboard tour check if in empty state
-        if (await emptyState.isVisible()) {
-          continue;
-        }
+        // Wait for the first tour target to be visible (indicates dashboard loaded with data)
+        await expect(page.locator('[data-tour="projection-selector"]')).toBeVisible({ timeout: 20000 });
       } else if (tourKey === 'manage') {
         await expect(page.locator('[data-tour="manage-tabs"]')).toBeVisible({ timeout: 15000 });
-      } else {
-        await page.waitForTimeout(2000);
+      } else if (tourKey === 'history') {
+        // History page - wait for page heading which is always visible
+        await expect(page.getByRole('heading', { name: /histórico/i })).toBeVisible({ timeout: 15000 });
       }
 
       const missing: string[] = [];
@@ -227,13 +231,14 @@ test.describe('Tour Selector Comprehensive Check @contract', () => {
       }
     }
 
-    // Generate a detailed error message
+    // Use standard expect assertion instead of expect.fail (which doesn't exist in Playwright)
     if (results.length > 0) {
       const errorDetails = results
         .map((r) => `\n  Tour "${r.tour}" on ${r.page}:\n    - ${r.missing.join('\n    - ')}`)
         .join('');
 
-      expect.fail(`Missing tour selectors:${errorDetails}`);
+      // This will fail the test with a clear message
+      expect(results, `Missing tour selectors:${errorDetails}`).toEqual([]);
     }
   });
 });

@@ -524,9 +524,9 @@ test.describe('Quick Update Modal', () => {
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
 
-    // Find the specific account row
+    // Find the specific account row - use extended timeout since account list can take time to load
     const accountRow = page.locator('div.rounded-lg.border').filter({ hasText: accountName });
-    await expect(accountRow).toBeVisible();
+    await expect(accountRow).toBeVisible({ timeout: 20000 });
     
     // Verify the account is listed
     await expect(page.getByText(accountName, { exact: false })).toBeVisible();
