@@ -202,9 +202,11 @@ Deployment notes:
   - **Worker-scoped context**: Visual tests share a browser context per worker. React state (Zustand stores, component state like `hasAutoShown`) persists across tests within the same worker. To reset React state, navigate to `about:blank` before navigating to the target URL.
 - **Onboarding wizard in visual tests**: The wizard auto-shows based on `canAutoShow()` which checks: (1) status not completed/dismissed, (2) `autoShownAt` is null, (3) `isMinimumSetupComplete` is false. Tests that need the wizard must call `db.clearOnboardingState()` and ensure the group has no finance data (use `db.clear()` in `beforeEach` to create a fresh empty group).
 - **Flake detection**: Run `pnpm test:flakes` after test runs to detect tests that passed via retry. Use `pnpm test:flakes:fail` in CI to fail the build if flakes are detected. Script location: `scripts/detect-flaky-tests.ts`.
+- **Visual snapshot updates**: When visual tests fail due to legitimate UI changes (not flakiness), regenerate snapshots by triggering the **"Update Visual Snapshots"** workflow in GitHub Actions. This ensures snapshots are generated in the same Docker environment as CI. Do not update snapshots locally unless you're using the same Docker image (`mcr.microsoft.com/playwright:v1.57.0-jammy`).
 - **Web server mode depends on `PW_PER_TEST_CONTEXT`**:
   - `PW_PER_TEST_CONTEXT=1` runs `vite build` + `vite preview` in Playwright `webServer` for determinism (cold browser context per test).
   - Default mode runs the Vite dev server for faster iteration.
+  - **CI uses default mode** (no `PW_PER_TEST_CONTEXT`). Per-test contexts were tested in CI but introduced timing-related flakes due to increased overhead. Worker-scoped contexts with proper state management are more reliable.
 - **Playwright element waiting**:
   - ❌ `element.isVisible({ timeout })` - The timeout parameter is deprecated and ineffective for waiting.
   - ✅ `element.waitFor({ state: 'visible', timeout })` - Properly waits for element visibility.
@@ -225,6 +227,14 @@ Deployment notes:
   - `db.clear()` and `db.resetDatabase()` create a **new empty group** for the worker user, avoiding expensive per-test DELETE cascades.
   - The previous group is renamed to `{groupName} (archived {timestamp} #{counter})` to preserve uniqueness.
   - Onboarding is auto-completed and tours are auto-dismissed for fresh groups to avoid blocking tests. Tests that need to exercise onboarding/tours must explicitly clear those states.
+- **Page tour tests** (`e2e/tests/page-tours.spec.ts`):
+  - Use DB-driven state via `db.clearTourState()` + `db.seedAccounts/Projects/Expenses` instead of magic-link authentication.
+  - Dashboard must have data (accounts, income, expenses) for `TourRunner` to render—empty state skips tour rendering.
+  - Clear localStorage tour cache in tests to avoid stale client-side state: `localStorage.removeItem('fluxocerto:tour:...')`.
+  - Force full React state reset between tests by navigating to `about:blank` before the target URL.
+- **Tour selector contract tests** (`e2e/tests/tour-selector-contract.spec.ts`):
+  - The comprehensive check must wait for page-specific tour targets, not just page headings.
+  - History page: wait for `[data-tour="snapshot-list"]` (only renders after loading completes, not during loading/error states).
 - **Onboarding wizard tests** (`e2e/tests/onboarding-wizard.spec.ts`):
   - These tests authenticate **new users via magic link** (not worker fixtures) and expect the wizard to auto-show based on database state.
   - **Do not** add code to `auth-callback.tsx` that force-opens the wizard—this breaks the existing onboarding E2E tests which rely on the natural auto-show flow.
