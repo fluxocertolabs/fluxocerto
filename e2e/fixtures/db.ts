@@ -1709,7 +1709,10 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
       return result;
     },
     getUserPreference,
-    setUserPreference,
+    setUserPreference: async (userId: string, key: string, value: string) => {
+      await setUserPreference(userId, key, value);
+      markDirty();
+    },
     deleteUserPreferencesForUser,
     // User ID helper
     getUserIdByEmail,

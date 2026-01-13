@@ -154,6 +154,7 @@ async function main(): Promise<void> {
     // We then add a single wildcard entry for the current preview deployment.
     const pruned = existing.filter((url) => !isVercelPreviewUrl(url))
     const next = unique([...pruned, previewAllowListEntry])
+    let finalList = next
     const shouldSendString = typeof existingRaw === 'string' || isStringAllowListKey(redirectKey)
 
     // GoTrue's `URI_ALLOW_LIST` environment variable is a comma-separated list.
@@ -182,6 +183,7 @@ async function main(): Promise<void> {
         ...existing.filter((url) => !url.toLowerCase().includes('.vercel.app')),
         previewAllowListEntry,
       ])
+      finalList = aggressivelyPruned
       const aggressiveValue: unknown = shouldSendString ? aggressivelyPruned.join(',') : aggressivelyPruned
       patchResult = await patchOnce({ [redirectKey]: aggressiveValue })
     }
@@ -206,7 +208,7 @@ async function main(): Promise<void> {
             projectRef,
             updatedField: redirectKey,
             added: [previewAllowListEntry],
-            totalRedirectUrls: next.length,
+            totalRedirectUrls: finalList.length,
             attempt,
           },
           null,
