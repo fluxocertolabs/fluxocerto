@@ -485,3 +485,118 @@ export function transformTourStateRow(row: TourStateRow): TourState {
     updatedAt: new Date(row.updated_at),
   }
 }
+
+// === Notifications ===
+
+/**
+ * Notification type identifiers.
+ * v1 supports only 'welcome', extensible in future versions.
+ */
+export const NotificationTypeSchema = z.enum(['welcome'])
+export type NotificationType = z.infer<typeof NotificationTypeSchema>
+
+/**
+ * Notification row shape (matches database table).
+ */
+export interface NotificationRow {
+  id: string
+  user_id: string
+  type: NotificationType
+  title: string
+  body: string
+  primary_action_label: string | null
+  primary_action_href: string | null
+  dedupe_key: string | null
+  read_at: string | null
+  email_sent_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Notification for client use (camelCase).
+ */
+export interface Notification {
+  id: string
+  userId: string
+  type: NotificationType
+  title: string
+  body: string
+  primaryActionLabel: string | null
+  primaryActionHref: string | null
+  dedupeKey: string | null
+  readAt: Date | null
+  emailSentAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Transform notification row to client format.
+ */
+export function transformNotificationRow(row: NotificationRow): Notification {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    title: row.title,
+    body: row.body,
+    primaryActionLabel: row.primary_action_label,
+    primaryActionHref: row.primary_action_href,
+    dedupeKey: row.dedupe_key,
+    readAt: row.read_at ? new Date(row.read_at) : null,
+    emailSentAt: row.email_sent_at ? new Date(row.email_sent_at) : null,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }
+}
+
+// === User Preferences (per-user) ===
+
+/**
+ * Known user preference keys.
+ * email_notifications_enabled: 'true' | 'false' - controls email notification opt-out
+ */
+export const UserPreferenceKeySchema = z.enum(['email_notifications_enabled'])
+export type UserPreferenceKey = z.infer<typeof UserPreferenceKeySchema>
+
+/**
+ * User preference row shape (matches database table).
+ * Note: key is typed as UserPreferenceKey for compile-time safety.
+ * If arbitrary keys are needed for future extensibility, consider using a string union type.
+ */
+export interface UserPreferenceRow {
+  id: string
+  user_id: string
+  key: UserPreferenceKey
+  value: string
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * User preference for client use (camelCase).
+ * Note: key is typed as UserPreferenceKey for compile-time safety.
+ */
+export interface UserPreference {
+  id: string
+  userId: string
+  key: UserPreferenceKey
+  value: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Transform user preference row to client format.
+ */
+export function transformUserPreferenceRow(row: UserPreferenceRow): UserPreference {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    key: row.key,
+    value: row.value,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  }
+}

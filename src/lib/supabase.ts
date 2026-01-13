@@ -9,8 +9,10 @@ import type {
   TourState,
   TourKey,
   TourStatus,
+  NotificationRow,
+  Notification,
 } from '@/types'
-import { transformOnboardingStateRow, transformTourStateRow } from '@/types'
+import { transformOnboardingStateRow, transformTourStateRow, transformNotificationRow } from '@/types'
 
 // Database row types for type-safe responses
 
@@ -858,6 +860,358 @@ export async function upsertTourState(
     }
 
     return { success: true, data: transformTourStateRow(data as TourStateRow) }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+// ============================================================================
+// NOTIFICATION HELPERS
+// ============================================================================
+
+/**
+ * Response shape from ensure_welcome_notification RPC.
+ */
+interface EnsureWelcomeNotificationResponse {
+  created: boolean
+  notification_id: string
+}
+
+/**
+ * Ensure the welcome notification exists for the current user.
+ * This is idempotent - calling multiple times will not create duplicates.
+ * 
+ * @returns Result with { created: boolean, notificationId: string }
+ */
+export async function ensureWelcomeNotification(): Promise<Result<{ created: boolean; notificationId: string }>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { data, error } = await client.rpc('ensure_welcome_notification')
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    // Validate RPC response shape before using
+    if (
+      data === null ||
+      typeof data !== 'object' ||
+      typeof (data as Record<string, unknown>).created !== 'boolean' ||
+      typeof (data as Record<string, unknown>).notification_id !== 'string'
+    ) {
+      return { success: false, error: 'Resposta inválida do servidor' }
+    }
+
+    const result = data as EnsureWelcomeNotificationResponse
+    return {
+      success: true,
+      data: {
+        created: result.created,
+        notificationId: result.notification_id,
+      },
+    }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * List notifications for the current user, newest first.
+ * 
+ * @param options.limit - Maximum number of notifications to return (default: 50, max: 100)
+ * @param options.unreadOnly - If true, only return unread notifications
+ * @returns Result with array of Notification objects
+ */
+export async function listNotifications(options?: {
+  limit?: number
+  unreadOnly?: boolean
+}): Promise<Result<Notification[]>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+  // Clamp limit to avoid accidental expensive queries (min 1, max 100)
+  const rawLimit = options?.limit ?? 50
+  const limit = Math.max(1, Math.min(100, rawLimit))
+  const unreadOnly = options?.unreadOnly ?? false
+
+  try {
+    let query = client
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (unreadOnly) {
+      query = query.is('read_at', null)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    return {
+      success: true,
+      data: (data as NotificationRow[]).map(transformNotificationRow),
+    }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * Get the count of unread notifications for the current user.
+ * 
+ * @returns Result with unread count
+ */
+export async function getUnreadNotificationCount(): Promise<Result<number>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { count, error } = await client
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .is('read_at', null)
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    return { success: true, data: count ?? 0 }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * Mark a notification as read.
+ * Uses the SECURITY DEFINER RPC for least-privilege access.
+ * 
+ * @param notificationId - The notification ID to mark as read
+ * @returns Result indicating success or failure
+ */
+export async function markNotificationRead(notificationId: string): Promise<Result<void>> {
+  if (!notificationId || notificationId.trim() === '') {
+    return { success: false, error: 'ID de notificação inválido' }
+  }
+
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { error } = await client.rpc('mark_notification_read', {
+      notification_id: notificationId,
+    })
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    return { success: true, data: undefined }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+// ============================================================================
+// USER PREFERENCE HELPERS (per-user preferences)
+// ============================================================================
+
+/**
+ * Get the email notifications enabled preference for the current user.
+ * Returns true (enabled) when the preference row is missing (opt-out semantics).
+ * 
+ * @returns Result with boolean indicating if email notifications are enabled
+ */
+export async function getEmailNotificationsEnabled(): Promise<Result<boolean>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+  const { data: { user } } = await client.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: 'Você precisa estar autenticado' }
+  }
+
+  try {
+    const { data, error } = await client
+      .from('user_preferences')
+      .select('value')
+      .eq('user_id', user.id)
+      .eq('key', 'email_notifications_enabled')
+      .maybeSingle()
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    // No row means enabled (opt-out semantics); 'false' means disabled
+    const enabled = data?.value !== 'false'
+    return { success: true, data: enabled }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * Set the email notifications enabled preference for the current user.
+ * 
+ * @param enabled - Whether email notifications should be enabled
+ * @returns Result indicating success or failure
+ */
+export async function setEmailNotificationsEnabled(enabled: boolean): Promise<Result<void>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+  const { data: { user } } = await client.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: 'Você precisa estar autenticado' }
+  }
+
+  try {
+    const { error } = await client.from('user_preferences').upsert(
+      {
+        user_id: user.id,
+        key: 'email_notifications_enabled',
+        value: enabled ? 'true' : 'false',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'user_id,key',
+      }
+    )
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    return { success: true, data: undefined }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+// ============================================================================
+// WELCOME EMAIL HELPERS
+// ============================================================================
+
+/**
+ * Response shape from send-welcome-email Edge Function.
+ */
+interface SendWelcomeEmailResponse {
+  ok: boolean
+  sent: boolean
+  skipped_reason?: string
+  preview?: {
+    subject: string
+    html: string
+  }
+}
+
+/**
+ * Trigger the welcome email for a notification via the Edge Function.
+ * 
+ * This function:
+ * - Validates the notification belongs to the user
+ * - Checks email_notifications_enabled preference
+ * - Enforces idempotency (won't send twice)
+ * - Returns a preview when email provider is not configured (dev/test)
+ * 
+ * @param notificationId - The notification ID to send the welcome email for
+ * @returns Result with send status and optional preview
+ */
+export async function triggerWelcomeEmail(notificationId: string): Promise<Result<{
+  sent: boolean
+  skippedReason?: string
+  preview?: { subject: string; html: string }
+}>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+  
+  try {
+    // Get the current session for auth header
+    const { data: { session }, error: sessionError } = await client.auth.getSession()
+    if (sessionError || !session) {
+      return { success: false, error: 'Você precisa estar autenticado' }
+    }
+
+    // Construct the Edge Function URL
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const functionUrl = `${supabaseUrl}/functions/v1/send-welcome-email`
+
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 10_000)
+    
+    let response: Response
+    try {
+      response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({ notification_id: notificationId }),
+      })
+    } finally {
+      window.clearTimeout(timeout)
+    }
+
+    let data: SendWelcomeEmailResponse
+    try {
+      data = await response.json()
+    } catch {
+      return { success: false, error: 'Resposta inválida do servidor' }
+    }
+
+    if (!data.ok) {
+      // Map common skip reasons to user-friendly messages
+      const reasonMessages: Record<string, string> = {
+        'unauthorized': 'Você não tem permissão para esta ação',
+        'notification_not_found': 'Notificação não encontrada',
+        'missing_notification_id': 'ID da notificação não informado',
+        'invalid_request': 'Requisição inválida',
+        'no_user_email': 'Email do usuário não encontrado',
+        'internal_error': 'Erro interno do servidor',
+      }
+      const message = data.skipped_reason 
+        ? (reasonMessages[data.skipped_reason] || data.skipped_reason)
+        : 'Falha ao enviar email'
+      return { success: false, error: message }
+    }
+
+    return {
+      success: true,
+      data: {
+        sent: data.sent,
+        skippedReason: data.skipped_reason,
+        preview: data.preview,
+      },
+    }
   } catch (err) {
     return handleSupabaseError(err)
   }

@@ -26,15 +26,19 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
   visualTest(
     'quick update - light populated',
     async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
-      // Create profiles to use as owners
+      // Create profiles to use as owners - use workerIndex to avoid email conflicts across parallel workers
       const groupId = await db.getWorkerGroupId();
+      const uniqueId = `${db.workerIndex}-${Date.now()}`;
+      const email1 = `visual-owner1-light-${uniqueId}@test.local`;
+      const email2 = `visual-owner2-light-${uniqueId}@test.local`;
+      
       const owner1 = await db.createProfileInGroup(
-        'visual-owner1@test.local',
+        email1,
         'João',
         groupId
       );
       const owner2 = await db.createProfileInGroup(
-        'visual-owner2@test.local',
+        email2,
         'Maria',
         groupId
       );
@@ -62,23 +66,27 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
       await visual.takeScreenshot(page, 'quick-update-light-populated.png');
 
       // Clean up profiles
-      await db.deleteProfileByEmail('visual-owner1@test.local');
-      await db.deleteProfileByEmail('visual-owner2@test.local');
+      await db.deleteProfileByEmail(email1);
+      await db.deleteProfileByEmail(email2);
     }
   );
 
   visualTest(
     'quick update - dark populated',
     async ({ page, dashboardPage, quickUpdatePage, db, visual }) => {
-      // Create profiles to use as owners
+      // Create profiles to use as owners - use workerIndex to avoid email conflicts across parallel workers
       const groupId = await db.getWorkerGroupId();
+      const uniqueId = `${db.workerIndex}-${Date.now()}`;
+      const email1 = `visual-owner1-dark-${uniqueId}@test.local`;
+      const email2 = `visual-owner2-dark-${uniqueId}@test.local`;
+      
       const owner1 = await db.createProfileInGroup(
-        'visual-owner1-dark@test.local',
+        email1,
         'João',
         groupId
       );
       const owner2 = await db.createProfileInGroup(
-        'visual-owner2-dark@test.local',
+        email2,
         'Maria',
         groupId
       );
@@ -106,8 +114,8 @@ visualTest.describe('Quick Update Visual Regression @visual', () => {
       await visual.takeScreenshot(page, 'quick-update-dark-populated.png');
 
       // Clean up profiles
-      await db.deleteProfileByEmail('visual-owner1-dark@test.local');
-      await db.deleteProfileByEmail('visual-owner2-dark@test.local');
+      await db.deleteProfileByEmail(email1);
+      await db.deleteProfileByEmail(email2);
     }
   );
 

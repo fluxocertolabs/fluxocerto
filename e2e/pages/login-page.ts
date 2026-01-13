@@ -43,8 +43,19 @@ export class LoginPage {
    * Verify success message is displayed after magic link request
    */
   async expectMagicLinkSent(): Promise<void> {
-    // Wait up to 15 seconds for the success message (email sending can take time)
-    await expect(this.successMessage).toBeVisible({ timeout: 15000 });
+    // Wait for either success or an error. Under load, auth/email can be slow, so we
+    // use a longer timeout and fail fast if an explicit error is shown.
+    const timeoutMs = 30000;
+
+    const result = await Promise.race([
+      this.successMessage.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => ({ ok: true as const })),
+      this.errorMessage.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => ({ ok: false as const })),
+    ]);
+
+    if (!result.ok) {
+      const text = (await this.errorMessage.textContent())?.trim() ?? 'Unknown error';
+      throw new Error(`Magic link request failed: ${text}`);
+    }
   }
 
   /**

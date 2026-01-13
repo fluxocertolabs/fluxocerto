@@ -10,6 +10,7 @@
 
 import { test, expect } from '../fixtures/test-base';
 import { createAccount, createCreditCard, createFutureStatement } from '../utils/test-data';
+import { parseBRL } from '../utils/format';
 
 test.describe('Credit Card Projection - Next Month Bug Fix', () => {
   test('credit card due in next month shows statementBalance (not 0)', async ({
@@ -45,12 +46,12 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     const expenseTotal = await dashboardPage.getExpenseTotal();
     
     // The expense total should include the credit card balance (R$ 500,00)
-    // Parse the currency value to check it's not 0
-    const numericValue = parseInt(expenseTotal.replace(/[^\d]/g, ''), 10);
+    // Use parseBRL for proper BRL currency parsing (returns cents)
+    const numericValueCents = parseBRL(expenseTotal);
     
     // The credit card balance should be included in expenses
-    // It should be at least R$ 500,00 (50000 cents = 500 reais)
-    expect(numericValue).toBeGreaterThanOrEqual(500);
+    // It should be at least R$ 500,00 (50000 cents)
+    expect(numericValueCents).toBeGreaterThanOrEqual(statementBalance);
   });
 
   test('credit card due in distant future (2+ months) with no futureStatement shows 0', async ({
@@ -168,14 +169,19 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     
     await dashboardPage.goto();
     await dashboardPage.expectChartRendered();
-    
-    // Get the expense total
-    const expenseTotal = await dashboardPage.getExpenseTotal();
-    const numericValue = parseInt(expenseTotal.replace(/[^\d]/g, ''), 10);
-    
-    // Both credit card balances should be included
-    // Total should be at least R$ 800,00 (80000 cents = 800 reais)
-    expect(numericValue).toBeGreaterThanOrEqual(800);
+
+    // Ensure the projection window includes any next-month due dates (removes date-boundary flakes).
+    await dashboardPage.selectProjectionDays(60);
+
+    // Wait for the summary to converge (it can briefly render partial totals while data hydrates).
+    // Use parseBRL helper for proper BRL currency parsing (handles "R$ 800,00" format correctly)
+    // Expected: At least R$ 800,00 (80000 cents = card1Balance + card2Balance)
+    const expectedMinCents = totalExpected; // R$ 800,00
+    await expect(async () => {
+      const expenseTotal = await dashboardPage.getExpenseTotal();
+      const numericValueCents = parseBRL(expenseTotal);
+      expect(numericValueCents).toBeGreaterThanOrEqual(expectedMinCents);
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
   });
 
   test('chart tooltip shows correct credit card amount for next month', async ({

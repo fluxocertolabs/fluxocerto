@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { Bell, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,15 +16,20 @@ import { BrandSymbol } from '@/components/brand'
 import { signOut } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import { useGroup } from '@/hooks/use-group'
+import { useNotifications, useNotificationsInitializer } from '@/hooks/use-notifications'
 
 export function Header() {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const { group, isLoading: groupLoading } = useGroup()
+  const { unreadCount } = useNotifications()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+  // Initialize notifications on authenticated app entry
+  useNotificationsInitializer()
 
   const handleSignOut = async () => {
     const { error } = await signOut()
@@ -92,7 +97,41 @@ export function Header() {
             >
               Gerenciar
             </NavLink>
-            <ThemeToggle />
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                cn(
+                  'text-sm font-medium transition-colors hover:text-foreground cursor-pointer',
+                  isActive ? 'text-foreground' : 'text-muted-foreground'
+                )
+              }
+            >
+              Perfil
+            </NavLink>
+            <div className="flex items-center gap-1 ml-2">
+              <NavLink
+                to="/notifications"
+                aria-label="Notificações"
+                className={({ isActive }) =>
+                  cn(
+                    'relative p-2 rounded-md transition-colors hover:bg-muted cursor-pointer',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                  )
+                }
+              >
+                <Bell className="h-5 w-5" />
+                <span className="sr-only">Notificações</span>
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground px-1"
+                    aria-label={`${unreadCount} notificações não lidas`}
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </NavLink>
+              <ThemeToggle />
+            </div>
             {isAuthenticated && (
               <Button
                 variant="ghost"
@@ -107,6 +146,29 @@ export function Header() {
 
           {/* Mobile actions */}
           <div className="flex items-center gap-1 md:hidden">
+            {isAuthenticated && (
+              <NavLink
+                to="/notifications"
+                aria-label="Notificações"
+                className={({ isActive }) =>
+                  cn(
+                    'relative p-2 rounded-md transition-colors hover:bg-muted cursor-pointer',
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                  )
+                }
+              >
+                <Bell className="h-5 w-5" />
+                <span className="sr-only">Notificações</span>
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground px-1"
+                    aria-label={`${unreadCount} notificações não lidas`}
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </NavLink>
+            )}
             <ThemeToggle />
             {isAuthenticated && (
               <Button
@@ -181,6 +243,34 @@ export function Header() {
               }
             >
               Gerenciar
+            </NavLink>
+            <NavLink
+              to="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'rounded-lg px-3 py-2 text-base font-medium transition-colors',
+                  isActive
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                )
+              }
+            >
+              Perfil
+            </NavLink>
+            <NavLink
+              to="/notifications"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'rounded-lg px-3 py-2 text-base font-medium transition-colors',
+                  isActive
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                )
+              }
+            >
+              Notificações
             </NavLink>
           </div>
 

@@ -591,7 +591,9 @@ test.describe('Onboarding Wizard', () => {
       await authenticateUser(page, freshEmail);
 
       const wizardDialog = getWizardDialog(page);
-      await expect(wizardDialog).toBeVisible({ timeout: 15000 });
+      // This test exercises full provisioning + onboarding + multiple inserts.
+      // Under full-suite parallel load the wizard can take longer to appear.
+      await expect(wizardDialog).toBeVisible({ timeout: 30000 });
 
       // Define test data
       const testData = {

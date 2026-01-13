@@ -24,6 +24,31 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const ALL_PROJECTS_TO_SETUP = ['chromium', 'chromium-mobile', 'visual', 'visual-mobile'] as const;
+type ProjectToSetup = (typeof ALL_PROJECTS_TO_SETUP)[number];
+
+function getProjectsToSetup(): readonly ProjectToSetup[] {
+  const raw = process.env.PW_SETUP_PROJECTS;
+  if (!raw) return ALL_PROJECTS_TO_SETUP;
+
+  const requested = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const valid = requested.filter((p): p is ProjectToSetup =>
+    (ALL_PROJECTS_TO_SETUP as readonly string[]).includes(p)
+  );
+
+  if (valid.length === 0) {
+    throw new Error(
+      `PW_SETUP_PROJECTS must include at least one of: ${ALL_PROJECTS_TO_SETUP.join(', ')}`
+    );
+  }
+
+  return valid;
+}
+
 /**
  * Global setup: Create worker groups, clean up old test data, and authenticate all workers.
  * This runs once before any tests start.
@@ -38,8 +63,9 @@ setup('setup-parallel-workers', async ({ page, browser }) => {
   // This setup test does O(workerCount) real work (group provisioning + full auth flow per worker),
   // so its runtime scales with the number of workers.
   // Keep the default 45s for small worker counts, but allow more time for high-core dev machines.
-  const projectsToSetup = ['chromium', 'chromium-mobile', 'visual', 'visual-mobile'] as const;
-  setup.setTimeout(Math.max(45000, workerCount * projectsToSetup.length * 15000));
+  const projectsToSetup = getProjectsToSetup();
+  const perWorkerPerProjectMs = 25000;
+  setup.setTimeout(Math.max(45000, workerCount * projectsToSetup.length * perWorkerPerProjectMs));
 
   // Clear any cached group IDs from previous runs
   clearGroupCache();

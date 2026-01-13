@@ -227,18 +227,20 @@ export function AuthCallbackPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Precisa de Ajuda?</DialogTitle>
-                  <DialogDescription className="space-y-4">
-                    <p>
-                      Ocorreu um erro ao configurar sua conta. Tente as seguintes soluções:
-                    </p>
-                    <ul className="list-disc list-inside space-y-1 text-sm">
-                      <li>Verifique sua conexão com a internet</li>
-                      <li>Clique em "Tentar Novamente"</li>
-                      <li>Se o problema persistir, saia e solicite um novo link de acesso</li>
-                    </ul>
-                    <p className="text-sm text-muted-foreground">
-                      Se precisar de suporte, copie os detalhes abaixo e entre em contato conosco.
-                    </p>
+                  <DialogDescription asChild>
+                    <div className="space-y-4 text-sm text-muted-foreground">
+                      <p>
+                        Ocorreu um erro ao configurar sua conta. Tente as seguintes soluções:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Verifique sua conexão com a internet</li>
+                        <li>Clique em "Tentar Novamente"</li>
+                        <li>Se o problema persistir, saia e solicite um novo link de acesso</li>
+                      </ul>
+                      <p>
+                        Se precisar de suporte, copie os detalhes abaixo e entre em contato conosco.
+                      </p>
+                    </div>
                   </DialogDescription>
                 </DialogHeader>
                 <div className="mt-4">

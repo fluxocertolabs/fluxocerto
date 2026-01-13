@@ -55,8 +55,10 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 - **Entry point(s)**: `src/main.tsx`, `src/App.tsx`
 - **Core domain logic**: `src/lib/cashflow/calculate.ts` (+ `src/lib/cashflow/*`), `src/hooks/use-cashflow-projection.ts`
 - **Supabase client + auth**: `src/lib/supabase.ts`
-- **DB schema + RLS**: `supabase/migrations/*.sql` (notably `20251220222000_rename_household_to_group.sql`, `20260105123000_self_serve_signup_provisioning.sql`, `20260105123100_onboarding_and_tour_state.sql`)
+- **DB schema + RLS**: `supabase/migrations/*.sql` (notably `20251220222000_rename_household_to_group.sql`, `20260105123000_self_serve_signup_provisioning.sql`, `20260105123100_onboarding_and_tour_state.sql`, `20260109120000_group_and_user_preferences_split.sql`)
+- **Notifications**: `src/stores/notifications-store.ts`, `src/components/notifications/`, `supabase/functions/send-welcome-email/`, `supabase/migrations/20260109120100_notifications.sql`
 - **Dev auth bypass**: `scripts/generate-dev-token.ts`, `src/main.tsx`, `src/lib/supabase.ts`
+- **Local Supabase readiness check**: `scripts/ensure-supabase.ts` (used by `pnpm db:ensure`)
 - **E2E auth flow**: `e2e/fixtures/auth.setup.ts`, `e2e/fixtures/auth.ts`, `e2e/playwright.config.ts`
 
 ---
@@ -66,7 +68,13 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 ### Setup
 ```bash
 pnpm install
-pnpm db:start          # starts local Supabase (Postgres + Auth + Studio + Inbucket)
+pnpm db:start          # starts local Supabase (Postgres + Auth + Studio + Mailpit email UI/API on :54324)
+```
+
+If you're running tests, prefer:
+
+```bash
+pnpm db:ensure         # starts Supabase if needed AND verifies required keys are available
 ```
 
 ### Run (dev)
@@ -125,6 +133,11 @@ Deployment notes:
 - **Testing strategy**:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
   - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
+- **Array utility functions**: `src/lib/utils/array.ts` contains helpers like `upsertUniqueById()` which must be immutable (never mutate the input array).
+- **E2E test parallelism**:
+  - Auth tests (`auth.spec.ts`) run **serially** with 1 worker to avoid email rate limiting (`fullyParallel: false`).
+  - All other tests (visual, functional E2E, mobile) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
+  - Worker count is controlled via `e2e/fixtures/worker-count.ts`; override with `PW_WORKERS` env var.
 
 ---
 
@@ -148,13 +161,60 @@ Deployment notes:
 - **Onboarding + tours are persisted server-side**:
   - `onboarding_states` (per user + group) and `tour_states` (per user + tour key) are real tables with RLS (see `20260105123100_onboarding_and_tour_state.sql`).
   - E2E setup often marks onboarding completed and tours dismissed to avoid overlays blocking tests.
+- **Preferences are split into two tables**:
+  - `group_preferences`: group-scoped settings (keyed by `group_id` + `key`). Examples: theme preference, display preferences.
+  - `user_preferences`: user-scoped settings (keyed by `user_id` + `key`). Examples: `email_notifications_enabled`.
+  - **E2E DB cleanup gotcha**: `user_preferences` and `notifications` are **per-user** (no `group_id`). Group-scoped cleanup must delete by mapping `profiles.group_id` → `profiles.email` → `auth.users.id` → `user_preferences.user_id` / `notifications.user_id`. `group_preferences` is group-scoped and can be deleted by `group_id`.
+  - **Opt-out semantics**: For `email_notifications_enabled`, missing row = enabled (opt-out default). Writing `value='false'` disables; deleting the row re-enables. **Rationale**: Opt-out defaults maximize user engagement for transactional emails (e.g., welcome emails) while respecting user choice when they explicitly disable. This follows common SaaS patterns where beneficial notifications are on by default.
 - **Expense/income types**:
   - `expenses.type ∈ {fixed, single_shot}`; fixed uses `due_day`, single-shot uses `date`.
   - `projects.type ∈ {recurring, single_shot}`; recurring uses frequency + schedule, single-shot uses `date`.
 - **Auth hook**:
   - The `before-user-created` Edge Function currently allows self-serve signups but fails closed if `BEFORE_USER_CREATED_HOOK_SECRET` is missing.
+- **Edge Functions and RLS**:
+  - Edge Functions using `supabaseServiceKey` bypass RLS entirely. When querying user-specific data, always add explicit filters (e.g., `.eq('user_id', user.id)`) to enforce data isolation.
+  - The `send-welcome-email` function demonstrates this pattern for `user_preferences` queries.
+- **Realtime subscriptions**:
+  - Tables must be added to `supabase_realtime` publication to receive change events.
+  - `ALTER PUBLICATION ... ADD TABLE ...` can fail if re-applied when the table is already in the publication. Consider guarding with a `DO` block check in migrations.
+  - Subscriptions refetch on `SUBSCRIBED` status to handle reconnection scenarios where events may have been missed.
 - **Ports (local Supabase)**:
-  - API: `54321`, DB: `54322`, Studio: `54323`, Inbucket: `54324` (see `supabase/config.toml`).
+  - API: `54321`, DB: `54322`, Studio: `54323`, Mailpit email UI/API: `54324` (configured under `[inbucket]` in `supabase/config.toml`; the code uses legacy names `InbucketClient` + `INBUCKET_URL` for backwards compatibility, but the actual server is Mailpit).
+- **Supabase “status” can be a false positive**:
+  - Some environments can print “Supabase is not running” while still returning a successful exit code from `npx supabase status`.
+  - Tests require the Supabase keys to be present (anon + service role). Use `pnpm db:ensure` (see `scripts/ensure-supabase.ts`) instead of relying on `status || start` logic.
+- **Vite file watchers can hit OS limits (`ENOSPC`)**:
+  - If the pnpm store lives inside the repo (e.g. `.pnpm-store/`), Vite’s watcher can traverse it and exceed the system watcher limit.
+  - `vite.config.ts` explicitly ignores `.pnpm-store/` in `server.watch.ignored` to avoid Playwright webServer startup crashes.
+
+### E2E test patterns and gotchas
+
+- **Test isolation**: Each test should call `db.clear()` or `db.reset()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value).
+- **Visual test state**: Visual regression tests for toggles/switches must reset state before capturing screenshots to avoid order-dependent failures.
+- **Web server mode depends on `PW_PER_TEST_CONTEXT`**:
+  - `PW_PER_TEST_CONTEXT=1` runs `vite build` + `vite preview` in Playwright `webServer` for determinism (cold browser context per test).
+  - Default mode runs the Vite dev server for faster iteration.
+- **Playwright element waiting**:
+  - ❌ `element.isVisible({ timeout })` - The timeout parameter is deprecated and ineffective for waiting.
+  - ✅ `element.waitFor({ state: 'visible', timeout })` - Properly waits for element visibility.
+  - ✅ `expect(element).toBeVisible()` - Use explicit assertions instead of conditionals to catch missing elements.
+- **Currency parsing in tests**:
+  - Use the `parseBRL()` helper from `e2e/utils/format.ts` to convert BRL strings to cents.
+  - ❌ `parseInt(text.replace(/[^\d]/g, ''))` - Strips decimals incorrectly (e.g., "R$ 800,00" → 80000 instead of 80000 cents = R$ 800).
+  - ✅ `parseBRL(text)` - Correctly handles Brazilian format with comma as decimal separator.
+- **Idempotency testing**: When testing idempotent operations (e.g., email sending), account for dev/preview modes where side effects may be skipped. Use conditional assertions based on environment.
+- **Async persistence timing**: When testing state that persists via async API calls (e.g., toggling preferences), wait for the API call to complete before reloading. `networkidle` may fire before the DB transaction commits—add a small buffer or poll for expected state.
+- **Modal data loading**: When testing modal content (e.g., Quick Update), wait for section headings to appear before asserting on specific items. Data may load asynchronously after the modal opens.
+- **Prefer polling assertions over fixed timeouts**:
+  - ❌ `await page.waitForTimeout(1000)` - Arbitrary delays are flaky and slow.
+  - ✅ `await expect(element).toHaveAttribute('aria-checked', 'false', { timeout: 5000 })` - Assertion-based waits are deterministic.
+  - ✅ `await expect.poll(() => getState()).toBe(expected)` - For complex conditions.
+
+### Unit test patterns
+
+- **Mock state reset**: Use `beforeEach` to reset mock state to defaults. Avoid manual resets at the end of individual tests—they won't run if the test fails.
+- **Listener cleanup**: Wrap event listener tests in `try/finally` to guarantee `removeEventListener` is called even if assertions fail.
+- **Immutability tests**: When testing functions that should not mutate inputs, assert both the return value and that the original input is unchanged.
 
 ---
 
@@ -173,6 +233,9 @@ Deployment notes:
 - **Projection snapshot**: saved historical projection payload (`projection_snapshots.data`) for later inspection.
 - **Onboarding wizard**: guided setup flow persisted via `onboarding_states`.
 - **Page tour**: per-page guided tour persisted via `tour_states`.
+- **Notification**: in-app message stored in `notifications` table. Has `type`, `title`, `message`, `read_at`, `email_sent_at`. Currently, `type` is constrained to `'welcome'` only; additional types (e.g., `system`) may be added in the future. Realtime subscriptions push INSERT/UPDATE/DELETE events to the client.
+- **Welcome notification**: auto-created notification for new users; can trigger a welcome email via `send-welcome-email` Edge Function.
+- **UserPreferenceKey**: typed union for valid `user_preferences.key` values (e.g., `'email_notifications_enabled'`). See `src/types/index.ts`.
 
 ---
 
@@ -183,8 +246,10 @@ Deployment notes:
   - New UI component: `src/components/`
   - New state or persistence: `src/stores/`
   - New business logic: `src/lib/` (especially `src/lib/cashflow/`)
+  - Shared utility functions: `src/lib/utils/`
   - DB schema/RLS changes: `supabase/migrations/`
   - E2E coverage: `e2e/tests/` (+ fixtures under `e2e/fixtures/`)
+  - E2E shared helpers: `e2e/utils/` (consider extracting duplicated test helpers here)
 - **What to avoid**:
   - Storing money as floats (always use cents/integer).
   - Bypassing RLS in the client (service role keys must never ship to the browser).

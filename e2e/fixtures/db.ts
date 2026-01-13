@@ -4,7 +4,7 @@
  * Uses data prefixing for parallel test isolation (each worker prefixes its data)
  */
 
-import { executeSQL, getAdminClient } from '../utils/supabase-admin';
+import { executeSQL, executeSQLWithResult, getAdminClient } from '../utils/supabase-admin';
 import type { IWorkerContext } from './worker-context';
 import { addWorkerPrefix, getWorkerPrefixPattern, ALL_WORKERS_PATTERN } from './worker-context';
 import type {
@@ -17,6 +17,8 @@ import type {
   TestFutureStatement,
   TestGroup,
   TestProfile,
+  TestNotification,
+  TestUserPreference,
 } from '../utils/test-data';
 
 /**
@@ -28,7 +30,9 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
 
   // Delete in order to respect foreign key constraints
   const tables = [
+    'notifications',
     'user_preferences',
+    'group_preferences',
     'future_statements',
     'credit_cards',
     'expenses',
@@ -43,17 +47,70 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
   for (const table of tables) {
     try {
       if (table === 'user_preferences') {
-        // user_preferences uses email pattern matching
-        const { error } = await client.from(table).delete().like('email', pattern);
+        // user_preferences is keyed by auth user_id (no group_id / name / email columns).
+        // Best-effort cleanup for legacy prefixed test data:
+        // delete preferences for any auth user whose email matches our test worker pattern.
+        //
+        // NOTE: The pattern for other tables is "[W0]%" etc, which does NOT apply to auth emails.
+        // When workerIndex is provided, delete only that worker's test user.
+        // Anchored pattern (no leading %) to avoid accidental matches.
+        const emailPattern =
+          workerIndex !== undefined
+            ? `e2e-test-%-worker-${workerIndex}@example.com`
+            : `e2e-test-%-worker-%@example.com`;
+
+        await executeSQL(
+          `
+            DELETE FROM public.user_preferences up
+            USING auth.users u
+            WHERE lower(u.email) LIKE lower($1)
+              AND up.user_id = u.id
+          `,
+          [emailPattern]
+        );
+        continue;
+      }
+
+      if (table === 'notifications') {
+        // notifications is keyed by auth user_id (no group_id / name / email columns).
+        // Best-effort cleanup for legacy prefixed test data via auth.users email pattern.
+        // Anchored pattern (no leading %) to avoid accidental matches.
+        const emailPattern =
+          workerIndex !== undefined
+            ? `e2e-test-%-worker-${workerIndex}@example.com`
+            : `e2e-test-%-worker-%@example.com`;
+
+        await executeSQL(
+          `
+            DELETE FROM public.notifications n
+            USING auth.users u
+            WHERE lower(u.email) LIKE lower($1)
+              AND n.user_id = u.id
+          `,
+          [emailPattern]
+        );
+        continue;
+      }
+
+      if (table === 'group_preferences') {
+        // group_preferences no longer has a `name` column; preferences are keyed by (group_id, key).
+        // Delete any pref rows created by legacy prefixed tests by matching key/value.
+        //
+        // This is best-effort only; group-scoped cleanup should use resetGroupData(groupId).
+        const { error } = await client
+          .from(table)
+          .delete()
+          .or(`key.like.${pattern},value.like.${pattern}`);
         if (error && !error.message.includes('does not exist')) {
           console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
         }
-      } else {
-        // Other tables use name pattern matching
-        const { error } = await client.from(table).delete().like('name', pattern);
-        if (error && !error.message.includes('does not exist')) {
-          console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
-        }
+        continue;
+      }
+
+      // Other tables use name pattern matching
+      const { error } = await client.from(table).delete().like('name', pattern);
+      if (error && !error.message.includes('does not exist')) {
+        console.warn(`Warning: Failed to reset ${table}: ${error.message}`);
       }
     } catch (err) {
       // Ignore errors during cleanup
@@ -235,7 +292,9 @@ export async function resetGroupData(groupId: string): Promise<void> {
   // Note: We don't delete profiles to preserve auth linkage
   const tables = [
     'projection_snapshots',
+    'notifications',
     'user_preferences',
+    'group_preferences',
     'future_statements',
     'credit_cards',
     'expenses',
@@ -245,6 +304,43 @@ export async function resetGroupData(groupId: string): Promise<void> {
 
   for (const table of tables) {
     try {
+      if (table === 'user_preferences') {
+        // user_preferences is per-user (keyed by auth user_id) and does NOT have group_id.
+        // Clear all user preferences for users belonging to this group by mapping:
+        // profiles (group_id) -> auth.users (email) -> user_preferences (user_id).
+        await executeSQL(
+          `
+            DELETE FROM public.user_preferences up
+            USING public.profiles p, auth.users u
+            WHERE p.group_id = $1
+              AND p.email IS NOT NULL
+              AND lower(u.email) = lower(p.email::text)
+              AND up.user_id = u.id
+          `,
+          [groupId]
+        );
+        continue;
+      }
+
+      if (table === 'notifications') {
+        // notifications is per-user and does NOT have group_id (see migrations/20260109120100_notifications.sql).
+        // Clear notifications for users belonging to this group by mapping:
+        // profiles (group_id) -> auth.users (email) -> notifications (user_id).
+        // Use lower() for case-insensitive email comparison to avoid missed deletes.
+        await executeSQL(
+          `
+            DELETE FROM public.notifications n
+            USING public.profiles p, auth.users u
+            WHERE p.group_id = $1
+              AND p.email IS NOT NULL
+              AND lower(u.email) = lower(p.email::text)
+              AND n.user_id = u.id
+          `,
+          [groupId]
+        );
+        continue;
+      }
+
       const start = Date.now();
       const { error } = await client.from(table).delete().eq('group_id', groupId);
       const duration = Date.now() - start;
@@ -1164,6 +1260,238 @@ export async function deleteSnapshotsForGroup(groupId: string): Promise<void> {
   }
 }
 
+// ============================================================================
+// NOTIFICATION HELPERS
+// ============================================================================
+
+/**
+ * Seed notifications with test data
+ * Note: Notifications are per-user (user_id), not per-group
+ */
+export async function seedNotifications(
+  notifications: TestNotification[]
+): Promise<TestNotification[]> {
+  const client = getAdminClient();
+  
+  const records = notifications.map((n) => ({
+    user_id: n.user_id,
+    type: n.type,
+    title: n.title,
+    body: n.body,
+    primary_action_label: n.primary_action_label ?? null,
+    primary_action_href: n.primary_action_href ?? null,
+    dedupe_key: n.dedupe_key ?? null,
+    read_at: n.read_at ?? null,
+    email_sent_at: n.email_sent_at ?? null,
+  }));
+
+  const { data, error } = await client.from('notifications').insert(records).select();
+
+  if (error) {
+    throw new Error(`Failed to seed notifications: ${error.message}`);
+  }
+
+  return data as TestNotification[];
+}
+
+/**
+ * Get notifications for a user
+ */
+export async function getNotificationsForUser(userId: string): Promise<TestNotification[]> {
+  const client = getAdminClient();
+  
+  const { data, error } = await client
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to get notifications: ${error.message}`);
+  }
+
+  return data as TestNotification[];
+}
+
+/**
+ * Get unread notification count for a user
+ */
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  const client = getAdminClient();
+  
+  const { count, error } = await client
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('read_at', null);
+
+  if (error) {
+    throw new Error(`Failed to get unread count: ${error.message}`);
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Mark a notification as read (admin bypass)
+ */
+export async function markNotificationAsRead(notificationId: string): Promise<void> {
+  const client = getAdminClient();
+  
+  const { data, error } = await client
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', notificationId)
+    .select('id');
+
+  if (error) {
+    throw new Error(`Failed to mark notification as read: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error(`Notification not found: ${notificationId}`);
+  }
+}
+
+/**
+ * Delete all notifications for a user
+ */
+export async function deleteNotificationsForUser(userId: string): Promise<void> {
+  const client = getAdminClient();
+  const { error } = await client.from('notifications').delete().eq('user_id', userId);
+  if (error) {
+    throw new Error(`Failed to delete notifications: ${error.message}`);
+  }
+}
+
+/**
+ * Check if a notification exists by dedupe_key for a user
+ */
+export async function notificationExistsByDedupeKey(
+  userId: string,
+  dedupeKey: string
+): Promise<boolean> {
+  const client = getAdminClient();
+  const { data, error } = await client
+    .from('notifications')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('dedupe_key', dedupeKey)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`Warning checking notification existence: ${error.message}`);
+    return false;
+  }
+
+  return data !== null;
+}
+
+// ============================================================================
+// USER PREFERENCE HELPERS
+// ============================================================================
+
+/**
+ * Seed user preferences with test data (idempotent via upsert)
+ */
+export async function seedUserPreferences(
+  preferences: TestUserPreference[]
+): Promise<TestUserPreference[]> {
+  const client = getAdminClient();
+  
+  const records = preferences.map((p) => ({
+    user_id: p.user_id,
+    key: p.key,
+    value: p.value,
+  }));
+
+  const { data, error } = await client
+    .from('user_preferences')
+    .upsert(records, { onConflict: 'user_id,key' })
+    .select();
+
+  if (error) {
+    throw new Error(`Failed to seed user preferences: ${error.message}`);
+  }
+
+  return data as TestUserPreference[];
+}
+
+/**
+ * Get a user preference by key
+ */
+export async function getUserPreference(
+  userId: string,
+  key: string
+): Promise<string | null> {
+  const client = getAdminClient();
+  
+  const { data, error } = await client
+    .from('user_preferences')
+    .select('value')
+    .eq('user_id', userId)
+    .eq('key', key)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`Warning getting user preference: ${error.message}`);
+    return null;
+  }
+
+  return data?.value ?? null;
+}
+
+/**
+ * Set a user preference (upsert)
+ */
+export async function setUserPreference(
+  userId: string,
+  key: string,
+  value: string
+): Promise<void> {
+  const client = getAdminClient();
+  
+  const { error } = await client.from('user_preferences').upsert(
+    { user_id: userId, key, value },
+    { onConflict: 'user_id,key' }
+  );
+
+  if (error) {
+    throw new Error(`Failed to set user preference: ${error.message}`);
+  }
+}
+
+/**
+ * Delete all user preferences for a user
+ */
+export async function deleteUserPreferencesForUser(userId: string): Promise<void> {
+  const client = getAdminClient();
+  const { error } = await client.from('user_preferences').delete().eq('user_id', userId);
+  if (error) {
+    throw new Error(`Failed to delete user preferences: ${error.message}`);
+  }
+}
+
+/**
+ * Get user ID by email from auth.users (case-insensitive)
+ */
+export async function getUserIdByEmail(email: string): Promise<string | null> {
+  try {
+    const result = await executeSQLWithResult<{ id: string }>(
+      `SELECT id FROM auth.users WHERE lower(email) = lower($1) LIMIT 1`,
+      [email]
+    );
+    
+    if (result && result.length > 0 && result[0].id) {
+      return result[0].id;
+    }
+    return null;
+  } catch (err) {
+    console.warn(`Warning getting user ID by email: ${err}`);
+    return null;
+  }
+}
+
 /**
  * Clear onboarding state for a group.
  * This will cause the onboarding wizard to appear on next page load.
@@ -1363,6 +1691,41 @@ export function createWorkerDbFixture(workerContext: IWorkerContext) {
       markDirty();
       return result;
     },
+    // Notification helpers (per-user, not per-group)
+    seedNotifications: async (notifications: TestNotification[]) => {
+      const result = await seedNotifications(notifications);
+      markDirty();
+      return result;
+    },
+    getNotificationsForUser,
+    getUnreadNotificationCount,
+    markNotificationAsRead: async (notificationId: string) => {
+      await markNotificationAsRead(notificationId);
+      markDirty();
+    },
+    deleteNotificationsForUser: async (userId: string) => {
+      await deleteNotificationsForUser(userId);
+      markDirty();
+    },
+    notificationExistsByDedupeKey,
+    // User preference helpers (per-user, not per-group)
+    seedUserPreferences: async (preferences: TestUserPreference[]) => {
+      const result = await seedUserPreferences(preferences);
+      markDirty();
+      return result;
+    },
+    getUserPreference,
+    setUserPreference: async (userId: string, key: string, value: string) => {
+      await setUserPreference(userId, key, value);
+      markDirty();
+    },
+    deleteUserPreferencesForUser: async (userId: string) => {
+      await deleteUserPreferencesForUser(userId);
+      markDirty();
+    },
+    // User ID helper
+    getUserIdByEmail,
+    // Existing helpers
     expenseExists,
     projectExists,
     getProjectById,

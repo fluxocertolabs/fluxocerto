@@ -822,6 +822,169 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       }
     });
   });
+
+  visualTest.describe('Notifications Mobile', () => {
+    visualTest('notifications - mobile light empty', async ({ page, db, visual }) => {
+      await db.clear();
+
+      await page.goto('/notifications');
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'notifications-mobile-light-empty.png');
+    });
+
+    visualTest('notifications - mobile dark empty', async ({ page, db, visual }) => {
+      await db.clear();
+
+      await page.goto('/notifications');
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'notifications-mobile-dark-empty.png');
+    });
+
+    visualTest('notifications - mobile light with notification', async ({
+      page,
+      dashboardPage,
+      visual,
+    }) => {
+      // Navigate to dashboard first to trigger welcome notification creation
+      await dashboardPage.goto();
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(2000);
+
+      await page.goto('/notifications');
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'notifications-mobile-light-with-notification.png');
+    });
+
+    visualTest('notifications - mobile dark with notification', async ({
+      page,
+      dashboardPage,
+      visual,
+    }) => {
+      // Navigate to dashboard first to trigger welcome notification creation
+      await dashboardPage.goto();
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(2000);
+
+      await page.goto('/notifications');
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'notifications-mobile-dark-with-notification.png');
+    });
+
+    visualTest('notifications - mobile light read', async ({
+      page,
+      dashboardPage,
+      visual,
+    }) => {
+      // Navigate to dashboard first to trigger welcome notification creation
+      await dashboardPage.goto();
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(2000);
+
+      await page.goto('/notifications');
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      // Mark as read via the button
+      const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await markAsReadButton.tap();
+        await page.waitForTimeout(500);
+      }
+
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'notifications-mobile-light-read.png');
+    });
+
+    visualTest('notifications - mobile dark read', async ({
+      page,
+      dashboardPage,
+      visual,
+    }) => {
+      // Navigate to dashboard first to trigger welcome notification creation
+      await dashboardPage.goto();
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(2000);
+
+      await page.goto('/notifications');
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      // Mark as read via the button
+      const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+      if (await markAsReadButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await markAsReadButton.tap();
+        await page.waitForTimeout(500);
+      }
+
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'notifications-mobile-dark-read.png');
+    });
+  });
+
+  visualTest.describe('Profile Mobile', () => {
+    visualTest('profile - mobile light default', async ({ page, db, visual }) => {
+      await db.clear();
+
+      await page.goto('/profile');
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'profile-mobile-light-default.png');
+    });
+
+    visualTest('profile - mobile dark default', async ({ page, db, visual }) => {
+      await db.clear();
+
+      await page.goto('/profile');
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'profile-mobile-dark-default.png');
+    });
+
+    visualTest('profile - mobile light validation error', async ({ page, db, visual }) => {
+      await db.clear();
+
+      await page.goto('/profile');
+      await visual.setTheme(page, 'light');
+      await visual.waitForStableUI(page);
+
+      // Clear name field and submit to trigger validation
+      const nameInput = page.getByLabel(/^nome$/i);
+      await nameInput.clear();
+      await page.getByRole('button', { name: /salvar nome/i }).click();
+
+      await page.waitForTimeout(500);
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'profile-mobile-light-validation-error.png');
+    });
+
+    visualTest('profile - mobile dark validation error', async ({ page, db, visual }) => {
+      await db.clear();
+
+      await page.goto('/profile');
+      await visual.setTheme(page, 'dark');
+      await visual.waitForStableUI(page);
+
+      const nameInput = page.getByLabel(/^nome$/i);
+      await nameInput.clear();
+      await page.getByRole('button', { name: /salvar nome/i }).click();
+
+      await page.waitForTimeout(500);
+      await visual.waitForStableUI(page);
+
+      await visual.takeScreenshot(page, 'profile-mobile-dark-validation-error.png');
+    });
+  });
 });
 
 unauthTest.describe('Mobile Visual Regression (Public Routes) @visual', () => {

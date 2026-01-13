@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -29,6 +29,20 @@ const mockTourStore = {
   reset: vi.fn(),
 }
 
+const getDefaultMockNotificationsStore = () => ({
+  items: [] as unknown[],
+  unreadCount: 0,
+  isLoading: false,
+  isInitialized: false,
+  error: null as string | null,
+  initialize: vi.fn(),
+  refresh: vi.fn(),
+  markAsRead: vi.fn(),
+  reset: vi.fn(),
+})
+
+let mockNotificationsStore = getDefaultMockNotificationsStore()
+
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => mockAuth,
 }))
@@ -43,6 +57,15 @@ vi.mock('@/hooks/use-onboarding-state', () => ({
 
 vi.mock('@/stores/tour-store', () => ({
   useTourStore: () => mockTourStore,
+}))
+
+vi.mock('@/stores/notifications-store', () => ({
+  useNotificationsStore: (selector?: (state: typeof mockNotificationsStore) => unknown) => {
+    if (selector) {
+      return selector(mockNotificationsStore)
+    }
+    return mockNotificationsStore
+  },
 }))
 
 vi.mock('@/lib/supabase', () => ({
@@ -60,6 +83,11 @@ function renderHeader() {
   })
 }
 
+// Reset mock state to default values before each test across all describe blocks
+beforeEach(() => {
+  mockNotificationsStore = getDefaultMockNotificationsStore()
+})
+
 describe('Header - Mobile Navigation', () => {
   it('opens the mobile menu with navigation links', async () => {
     const user = userEvent.setup()
@@ -71,6 +99,7 @@ describe('Header - Mobile Navigation', () => {
     expect(screen.getByRole('link', { name: 'Painel' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Histórico' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Gerenciar' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument()
   })
 
@@ -96,7 +125,68 @@ describe('Header - Mobile Navigation', () => {
   })
 })
 
+describe('Header - Notifications Navigation', () => {
+  it('displays Notificações icon link in header', () => {
+    renderHeader()
 
+    // Notifications icon link should be visible in the header (not in hamburger menu)
+    const notificationLinks = screen.getAllByRole('link', { name: /notificações/i })
+    expect(notificationLinks.length).toBeGreaterThanOrEqual(1)
+  })
 
+  it('displays unread badge when unreadCount > 0', () => {
+    mockNotificationsStore.unreadCount = 5
+    renderHeader()
 
+    // Badge should be visible with count (appears in both mobile and desktop nav icons)
+    const badges = screen.getAllByText('5')
+    expect(badges.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('does not display unread badge when unreadCount is 0', () => {
+    mockNotificationsStore.unreadCount = 0
+    renderHeader()
+
+    // Link should be present but no badge
+    const notificationLinks = screen.getAllByRole('link', { name: /notificações/i })
+    expect(notificationLinks.length).toBeGreaterThanOrEqual(1)
+    // No badge element with "0" should be visible
+    expect(screen.queryByText(/^0$/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Header - Profile Navigation', () => {
+  it('displays Perfil as a text link in desktop navigation', () => {
+    renderHeader()
+
+    // Profile should be a text link in the navigation (like Painel, Histórico, Gerenciar)
+    const profileLinks = screen.getAllByRole('link', { name: /perfil/i })
+    expect(profileLinks.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('displays Perfil link in mobile menu', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+
+    // Profile should be in the mobile hamburger menu
+    expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument()
+  })
+
+  it('navigates to /profile when Perfil link is clicked', () => {
+    renderHeader()
+
+    // Profile links should point to /profile
+    const profileLinks = screen.getAllByRole('link', { name: /perfil/i })
+    expect(profileLinks[0]).toHaveAttribute('href', '/profile')
+  })
+
+  it('navigates to /notifications when Notificações link is clicked', () => {
+    renderHeader()
+
+    const notificationLinks = screen.getAllByRole('link', { name: /notificações/i })
+    expect(notificationLinks[0]).toHaveAttribute('href', '/notifications')
+  })
+})
 

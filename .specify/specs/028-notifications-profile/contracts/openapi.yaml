@@ -1,0 +1,332 @@
+openapi: 3.0.3
+info:
+  title: Fluxo Certo — Notifications & Profile API (Planned)
+  version: 0.1.0
+  description: >
+    Planned API surface for the Notifications inbox + Profile settings feature.
+    Implementation is expected to use Supabase PostgREST/RPC (for database reads/writes)
+    and Supabase Edge Functions (for trusted email sending).
+
+servers:
+  - url: http://localhost:54321
+    description: Supabase local (dev)
+  - url: https://{projectRef}.supabase.co
+    description: Supabase hosted
+    variables:
+      projectRef:
+        default: your-project-ref
+
+tags:
+  - name: Notifications
+  - name: Profile
+  - name: Preferences
+  - name: Email
+
+security:
+  - supabaseAuth: []
+
+components:
+  securitySchemes:
+    supabaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase access token (JWT). In the app this is managed by supabase-js.
+
+  schemas:
+    Notification:
+      type: object
+      required:
+        - id
+        - user_id
+        - type
+        - title
+        - body
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          description: Recipient auth user id (auth.users.id).
+        type:
+          type: string
+          description: Notification type. v1 supports "welcome".
+          example: welcome
+        title:
+          type: string
+          description: pt-BR title/heading.
+        body:
+          type: string
+          description: pt-BR body text.
+        primary_action_label:
+          type: string
+          nullable: true
+        primary_action_href:
+          type: string
+          nullable: true
+          description: Relative link destination (e.g. "/manage").
+        dedupe_key:
+          type: string
+          nullable: true
+          description: Idempotency key. For welcome: "welcome-v1".
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        email_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Profile:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: Authenticated email (read-only in UI).
+        name:
+          type: string
+          description: Display name (stored in profiles.name).
+
+    EmailNotificationsPreference:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          description: >
+            When false, notification emails must not be sent.
+            Default behavior when no preference exists: enabled=true (opt-out).
+
+    EnsureWelcomeNotificationResponse:
+      type: object
+      required:
+        - created
+      properties:
+        created:
+          type: boolean
+        notification_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    SendWelcomeEmailRequest:
+      type: object
+      required:
+        - notification_id
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+
+    SendWelcomeEmailResponse:
+      type: object
+      required:
+        - ok
+        - sent
+      properties:
+        ok:
+          type: boolean
+        sent:
+          type: boolean
+          description: True when an email was actually sent; false when skipped.
+        skipped_reason:
+          type: string
+          nullable: true
+          description: e.g. "preference_disabled" | "already_sent" | "missing_credentials"
+        preview:
+          type: object
+          nullable: true
+          description: Optional safe preview payload for dev when delivery is disabled.
+          properties:
+            subject:
+              type: string
+            html:
+              type: string
+
+paths:
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List current user's notifications (newest-first)
+      description: >
+        Returns the signed-in user's persistent notifications inbox.
+        Authorization and filtering are enforced by RLS (user_id = auth.uid()).
+        The app should sort by created_at desc and can compute unread count from read_at=null.
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200 }
+          required: false
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0 }
+          required: false
+        - in: query
+          name: unreadOnly
+          schema: { type: boolean }
+          required: false
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{notificationId}:
+    patch:
+      tags: [Notifications]
+      summary: Update a notification (v1: mark as read)
+      description: >
+        v1 use-case: set read_at to a timestamp to mark as read.
+        RLS enforces ownership (user_id = auth.uid()).
+      parameters:
+        - in: path
+          name: notificationId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /rpc/ensure_welcome_notification:
+    post:
+      tags: [Notifications]
+      summary: Ensure welcome notification exists (idempotent)
+      description: >
+        Idempotently creates exactly one welcome notification per user using
+        a DB-level uniqueness constraint (user_id, dedupe_key).
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnsureWelcomeNotificationResponse"
+
+  /profile:
+    get:
+      tags: [Profile]
+      summary: Get current user's profile settings
+      description: >
+        Returns email (read-only) and display name. Email comes from auth session; name is stored in profiles.name.
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    patch:
+      tags: [Profile]
+      summary: Update display name
+      description: >
+        Updates profiles.name for the signed-in user.
+        RLS policy for profiles updates is email-based (auth.jwt email claim).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /preferences/email-notifications:
+    get:
+      tags: [Preferences]
+      summary: Get email notifications preference
+      description: >
+        Reads per-user key "email_notifications_enabled" from user_preferences.
+        If missing, treat as enabled=true (opt-out).
+      responses:
+        "200":
+          description: Preference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailNotificationsPreference"
+    put:
+      tags: [Preferences]
+      summary: Set email notifications preference
+      description: >
+        Writes per-user key "email_notifications_enabled" to user_preferences.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailNotificationsPreference"
+      responses:
+        "200":
+          description: Updated preference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailNotificationsPreference"
+
+  /functions/v1/send-welcome-email:
+    post:
+      tags: [Email]
+      summary: Send welcome email for a welcome notification (trusted server)
+      description: >
+        Supabase Edge Function. Must enforce preference at send time.
+        In dev without provider credentials, may return a safe preview instead of sending (FR-013).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendWelcomeEmailRequest"
+      responses:
+        "200":
+          description: Delivery result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendWelcomeEmailResponse"
+

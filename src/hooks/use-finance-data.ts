@@ -241,6 +241,10 @@ export function useFinanceData(): UseFinanceDataReturn {
   const [futureStatements, setFutureStatements] = useState<FutureStatement[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const profilesRef = useRef<Profile[]>([])
+  // Note: groupIdRef is captured at subscription setup time. If the user's group
+  // changes mid-session, subscriptions won't automatically update. This is acceptable
+  // for current usage patterns where group switching is not a feature.
+  const groupIdRef = useRef<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -317,7 +321,7 @@ export function useFinanceData(): UseFinanceDataReturn {
               .order('target_year', { ascending: true })
               .order('target_month', { ascending: true })
               .abortSignal(controller.signal),
-            client.from('profiles').select('id, name').order('name').abortSignal(controller.signal),
+            client.from('profiles').select('id, name, group_id').order('name').abortSignal(controller.signal),
           ])
 
           // Check for errors
@@ -351,6 +355,7 @@ export function useFinanceData(): UseFinanceDataReturn {
           const mappedProfiles = (profilesResult.data ?? []).map((row) =>
             mapProfileFromDb(row as ProfileRow)
           )
+          groupIdRef.current = mappedProfiles[0]?.groupId ?? null
 
           setAccounts(mappedAccounts)
           setProjects(mappedProjects)
@@ -631,51 +636,39 @@ export function useFinanceData(): UseFinanceDataReturn {
 
       // Subscribe to realtime changes (no user_id filter - shared family data)
       const client = getSupabase()
+      const groupFilter = groupIdRef.current ? `group_id=eq.${groupIdRef.current}` : undefined
+      type FinanceRealtimeTable = 'accounts' | 'projects' | 'expenses' | 'credit_cards' | 'future_statements'
+      const changes = (table: FinanceRealtimeTable) => ({
+        event: '*',
+        schema: 'public',
+        table,
+        ...(groupFilter ? { filter: groupFilter } : {}),
+      } as const)
       channel = client
         .channel(channelNameRef.current!)
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'accounts',
-          },
+          changes('accounts'),
           handleAccountChange
         )
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'projects',
-          },
+          changes('projects'),
           handleProjectChange
         )
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'expenses',
-          },
+          changes('expenses'),
           handleExpenseChange
         )
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'credit_cards',
-          },
+          changes('credit_cards'),
           handleCreditCardChange
         )
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'future_statements',
-          },
+          changes('future_statements'),
           handleFutureStatementChange
         )
         .subscribe((status, err) => {

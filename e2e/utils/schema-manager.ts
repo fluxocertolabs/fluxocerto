@@ -15,7 +15,9 @@ const TABLES_TO_CLONE = [
   'projects',
   'expenses',
   'credit_cards',
+  'group_preferences',
   'user_preferences',
+  'notifications',
 ] as const;
 
 /**
@@ -73,6 +75,29 @@ async function cloneTableStructure(schemaName: string, tableName: string): Promi
     await executeSQL(`
       ALTER TABLE ${schemaName}.user_preferences 
       ADD CONSTRAINT ${schemaName}_user_preferences_user_id_fkey 
+      FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    `);
+  }
+
+  // For group_preferences, add FK to auth.users and groups
+  if (tableName === 'group_preferences') {
+    await executeSQL(`
+      ALTER TABLE ${schemaName}.group_preferences 
+      ADD CONSTRAINT ${schemaName}_group_preferences_user_id_fkey 
+      FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    `);
+    await executeSQL(`
+      ALTER TABLE ${schemaName}.group_preferences 
+      ADD CONSTRAINT ${schemaName}_group_preferences_group_id_fkey 
+      FOREIGN KEY (group_id) REFERENCES public.groups(id) ON DELETE CASCADE;
+    `);
+  }
+
+  // For notifications, add FK to auth.users (shared auth schema)
+  if (tableName === 'notifications') {
+    await executeSQL(`
+      ALTER TABLE ${schemaName}.notifications 
+      ADD CONSTRAINT ${schemaName}_notifications_user_id_fkey 
       FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
     `);
   }

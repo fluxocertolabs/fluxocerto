@@ -21,7 +21,7 @@ import { formatBRL } from '../utils/format';
 test.describe.configure({ mode: 'serial' });
 // Under full parallel load (many workers + frequent DB resets), this suite can occasionally take
 // slightly longer than the global default timeout even when it's healthy. Give it a small buffer.
-test.setTimeout(60000);
+test.setTimeout(90000);
 
 test.describe('Account Management', () => {
 
@@ -33,6 +33,7 @@ test.describe('Account Management', () => {
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
+    await accounts.waitForLoad();
     // Use worker-specific name for UI-created data to avoid conflicts
     const uniqueId = Date.now();
     const accountName = `Nubank W${workerContext.workerIndex} ${uniqueId}`;

@@ -305,26 +305,28 @@ test.describe('Quick Update Modal', () => {
     db,
   }) => {
     const uniqueId = Date.now();
+    const accountName = `Nubank Check ${uniqueId}`;
     
     // Seed a checking account (using unique name without "Corrente" to avoid confusion)
     const [seededAccount] = await db.seedAccounts([
       createAccount({ 
-        name: `Nubank Check ${uniqueId}`, 
+        name: accountName, 
         type: 'checking',
         balance: 100000,
       }),
     ]);
     
-
     // Navigate and open Quick Update
     await dashboardPage.goto();
     await dashboardPage.expectChartRendered();
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
     
+    // Wait for accounts section to load in the modal
+    await expect(page.getByRole('heading', { name: /contas bancárias/i })).toBeVisible({ timeout: 15000 });
 
     // Verify the account is listed with its type badge
-    await expect(page.getByText(`Nubank Check ${uniqueId}`, { exact: false })).toBeVisible();
+    await expect(page.getByText(accountName, { exact: false })).toBeVisible({ timeout: 10000 });
     // Use the badge with emoji to be more specific
     await expect(page.getByText('🏦').first()).toBeVisible();
     await expect(page.locator('span').filter({ hasText: /^🏦Corrente$/ }).first()).toBeVisible();
@@ -582,14 +584,25 @@ test.describe('Quick Update Modal', () => {
     // Update balance (auto-save on blur)
     const escapedName = accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const balanceInput = page.getByLabel(new RegExp(`Saldo de.*${escapedName}`, 'i')).last();
-    await expect(balanceInput).toBeVisible();
+    await expect(balanceInput).toBeVisible({ timeout: 10000 });
     await balanceInput.clear();
     await balanceInput.fill('2000,00');
     await balanceInput.blur();
 
-    // Wait for save to settle (input disables during save)
-    await expect(balanceInput).toBeDisabled({ timeout: 5000 }).catch(() => {});
-    await expect(balanceInput).not.toBeDisabled({ timeout: 15000 });
+    // Wait for save to complete using polling assertion
+    // The input goes through: enabled -> disabled (saving) -> enabled (saved)
+    // Use expect.poll to robustly wait for the final enabled state
+    await expect.poll(
+      async () => {
+        const isDisabled = await balanceInput.isDisabled();
+        return !isDisabled;
+      },
+      {
+        message: 'Balance input should be enabled after save completes',
+        timeout: 20000,
+        intervals: [500, 1000, 2000],
+      }
+    ).toBe(true);
 
     // Regression: owner/type badges must still be visible after save
     await expect(accountRow.getByText('Daniel')).toBeVisible();

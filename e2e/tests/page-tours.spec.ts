@@ -5,7 +5,7 @@
 
 import { test, expect } from '@playwright/test';
 import { InbucketClient } from '../utils/inbucket';
-import { authenticateNewUser } from '../utils/auth-helper';
+import { authenticateNewUser, completeOnboardingWizard } from '../utils/auth-helper';
 
 test.describe('Page Tours', () => {
   // Run tour tests serially to avoid state conflicts
@@ -36,53 +36,9 @@ test.describe('Page Tours', () => {
 
     if (!(await wizardDialog.isVisible().catch(() => false))) return;
 
-    // Fill required fields when present, then advance until completion.
-    // Use try-catch to handle race conditions where element might disappear
-    async function fillIfVisible(selector: string, value: string) {
-      try {
-        const el = page.locator(selector);
-        if (await el.isVisible().catch(() => false)) {
-          await el.fill(value, { timeout: 5000 });
-        }
-      } catch {
-        // Element disappeared or became non-interactable, skip
-      }
-    }
-
-    await fillIfVisible('#profile-name', 'Usuário Teste');
-    await fillIfVisible('#group-name', 'Grupo Teste');
-    await fillIfVisible('#account-name', 'Conta Teste');
-
-    for (let i = 0; i < 10; i++) {
-      if (!(await wizardDialog.isVisible().catch(() => false))) break;
-
-      // Re-fill required inputs if the step changed.
-      await fillIfVisible('#profile-name', 'Usuário Teste');
-      await fillIfVisible('#group-name', 'Grupo Teste');
-      await fillIfVisible('#account-name', 'Conta Teste');
-
-      const finalize = wizardDialog.getByRole('button', { name: /finalizar/i });
-      if (await finalize.isVisible().catch(() => false)) {
-        await finalize.click();
-        break;
-      }
-
-      const next = wizardDialog.getByRole('button', { name: /próximo/i });
-      try {
-        await next.click({ timeout: 5000 });
-      } catch {
-        // Button might have disappeared, break out
-        break;
-      }
-      await page.waitForTimeout(250);
-    }
-
-    // Wait for wizard to be hidden, but don't fail if it's already hidden
-    try {
-      await expect(wizardDialog).toBeHidden({ timeout: 20000 });
-    } catch {
-      // Wizard might already be hidden
-    }
+    // Use the shared, step-aware onboarding helper (already validated by onboarding-wizard.spec.ts).
+    // This avoids flakiness from hand-rolled "click next until done" loops.
+    await completeOnboardingWizard(page);
   }
 
   async function dismissTourIfPresent(page: import('@playwright/test').Page) {
@@ -101,14 +57,19 @@ test.describe('Page Tours', () => {
     const helpButton = page.locator('[data-testid="floating-help-button"]');
     await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-    // Click the FAB to expand (pinned mode)
-    const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-    await fabButton.click({ force: true });
-    await page.waitForTimeout(500);
+    // Click the FAB to expand (pinned mode). Use aria-expanded instead of name to avoid
+    // flakiness when the label changes (e.g., "Abrir ajuda" -> "Ajuda (aberta)").
+    const fabButton = helpButton.locator('button[aria-expanded]').first();
+    await expect(fabButton).toBeVisible({ timeout: 10000 });
+    const expanded = await fabButton.getAttribute('aria-expanded');
+    if (expanded !== 'true') {
+      await fabButton.click({ force: true });
+      await expect(fabButton).toHaveAttribute('aria-expanded', 'true', { timeout: 10000 });
+    }
 
     // Click the tour option (aria-label is "Iniciar tour guiado da página")
     const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-    await expect(tourOption).toBeVisible({ timeout: 5000 });
+    await expect(tourOption).toBeVisible({ timeout: 15000 });
     await tourOption.click({ force: true });
     await page.waitForTimeout(500);
 

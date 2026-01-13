@@ -20,6 +20,17 @@ type GenerateLinkData = {
   action_link?: string
 }
 
+type GenerateLinkResult = {
+  data: unknown
+  error: { message: string } | null
+}
+
+type AuthWithAdmin = {
+  admin: {
+    generateLink: (params: { type: 'magiclink'; email: string }) => Promise<GenerateLinkResult>
+  }
+}
+
 function sendJson(res: PreviewAuthBypassResponseWriter, status: number, body: PreviewAuthBypassResponse): void {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -114,7 +125,11 @@ export default async function handler(req: PreviewAuthBypassRequest, res: Previe
       },
     })
 
-    const { data, error } = await adminClient.auth.admin.generateLink({
+    // Vercel's TS builder can resolve Supabase auth types differently depending on runtime conditions.
+    // Avoid relying on `SupabaseAuthClient.admin` being present in the type surface by using a narrow cast.
+    const authAdmin = adminClient.auth as unknown as AuthWithAdmin
+
+    const { data, error } = await authAdmin.admin.generateLink({
       type: 'magiclink',
       email,
     })

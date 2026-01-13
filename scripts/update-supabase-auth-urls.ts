@@ -53,6 +53,18 @@ function isStringAllowListKey(key: string): boolean {
   return normalized.includes('uri_allow_list') || normalized === 'uri-allow-list'
 }
 
+function hasWildcardPattern(value: string): boolean {
+  // Supabase supports glob wildcards (*, **, ?, []) in redirect URLs.
+  return value.includes('*') || value.includes('?') || value.includes('[')
+}
+
+function isVercelPreviewUrl(value: string): boolean {
+  // We only prune exact (non-wildcard) Vercel preview URLs to prevent URI_ALLOW_LIST growth.
+  // Keep wildcard patterns intact since they are stable + low-churn.
+  const lower = value.toLowerCase()
+  return lower.includes('.vercel.app') && !hasWildcardPattern(value)
+}
+
 /**
  * Update the hosted Supabase Auth URL configuration to allow the current Vercel preview deployment.
  *
@@ -63,7 +75,8 @@ async function main(): Promise<void> {
   const accessToken = requireEnv('SUPABASE_ACCESS_TOKEN')
   const previewUrl = normalizeUrl(requireEnv('PREVIEW_URL'))
 
-  const previewConfirmUrl = `${previewUrl}/auth/confirm`
+  // Use a single wildcard entry (covers /auth/confirm, /auth/callback, etc.) to avoid growing the allowlist.
+  const previewAllowListEntry = `${previewUrl}/**`
 
   const REQUEST_TIMEOUT_MS = 30_000
   const MAX_ATTEMPTS = 5
@@ -119,8 +132,8 @@ async function main(): Promise<void> {
     const existingRaw = config[redirectKey]
     const existing = toStringArray(existingRaw)
 
-    // Skip update if both URLs already exist (avoids unnecessary PATCH + reduces race likelihood).
-    if (existing.includes(previewUrl) && existing.includes(previewConfirmUrl)) {
+    // Skip update if our wildcard entry already exists (avoids unnecessary PATCH + reduces race likelihood).
+    if (existing.includes(previewAllowListEntry)) {
       console.log(
         JSON.stringify(
           {
@@ -128,7 +141,7 @@ async function main(): Promise<void> {
             updatedField: redirectKey,
             skipped: true,
             reason: 'Preview URLs already present',
-            urls: [previewUrl, previewConfirmUrl],
+            urls: [previewAllowListEntry],
           },
           null,
           2
@@ -137,7 +150,11 @@ async function main(): Promise<void> {
       return
     }
 
-    const next = unique([...existing, previewUrl, previewConfirmUrl])
+    // Prune old exact Vercel preview URLs to prevent the `URI_ALLOW_LIST` value from growing without bound.
+    // We then add a single wildcard entry for the current preview deployment.
+    const pruned = existing.filter((url) => !isVercelPreviewUrl(url))
+    const next = unique([...pruned, previewAllowListEntry])
+    let finalList = next
     const shouldSendString = typeof existingRaw === 'string' || isStringAllowListKey(redirectKey)
 
     // GoTrue's `URI_ALLOW_LIST` environment variable is a comma-separated list.
@@ -158,6 +175,19 @@ async function main(): Promise<void> {
       }
     }
 
+    // If the API rejects due to `URI_ALLOW_LIST` being too large, fall back to an aggressive prune:
+    // drop ALL exact Vercel preview URLs (including older ones we may not have caught in `existingRaw` formatting),
+    // then keep the current preview wildcard entry.
+    if (!patchResult.ok && patchResult.text.includes('URI_ALLOW_LIST')) {
+      const aggressivelyPruned = unique([
+        ...existing.filter((url) => !url.toLowerCase().includes('.vercel.app')),
+        previewAllowListEntry,
+      ])
+      finalList = aggressivelyPruned
+      const aggressiveValue: unknown = shouldSendString ? aggressivelyPruned.join(',') : aggressivelyPruned
+      patchResult = await patchOnce({ [redirectKey]: aggressiveValue })
+    }
+
     if (!patchResult.ok) {
       if (attempt === MAX_ATTEMPTS) {
         throw new Error(
@@ -170,15 +200,15 @@ async function main(): Promise<void> {
     // Verify our URLs are still present after PATCH (mitigates concurrent update races).
     const post = await getConfig()
     const postExisting = toStringArray(post[redirectKey])
-    const ok = postExisting.includes(previewUrl) && postExisting.includes(previewConfirmUrl)
+    const ok = postExisting.includes(previewAllowListEntry)
     if (ok) {
       console.log(
         JSON.stringify(
           {
             projectRef,
             updatedField: redirectKey,
-            added: [previewUrl, previewConfirmUrl],
-            totalRedirectUrls: next.length,
+            added: [previewAllowListEntry],
+            totalRedirectUrls: finalList.length,
             attempt,
           },
           null,

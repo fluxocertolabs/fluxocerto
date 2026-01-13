@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getSupabase, isSupabaseConfigured, ensureCurrentUserGroup } from '@/lib/supabase'
+import { subscribeToGroupDataInvalidation } from '@/lib/group-data-events'
 import { useAuth } from '@/hooks/use-auth'
 import type { Profile } from '@/types'
 
@@ -165,6 +166,14 @@ export function useGroup(): UseGroupReturn {
       mounted = false
     }
   }, [isAuthenticated, user?.id, user?.email, retryCount])
+
+  // Subscribe to group data invalidation events (e.g., profile name updates)
+  useEffect(() => {
+    const unsubscribe = subscribeToGroupDataInvalidation(() => {
+      retry()
+    })
+    return unsubscribe
+  }, [retry])
 
   return { group, members, isLoading, error, isRecoverable, retry, recoverProvisioning }
 }

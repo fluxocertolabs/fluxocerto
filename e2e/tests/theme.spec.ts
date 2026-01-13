@@ -17,7 +17,7 @@ function waitForThemeBootstrap(page: Page): Promise<void> {
   return page
     .waitForResponse(
       (response) =>
-        response.url().includes('user_preferences') && response.request().method() === 'GET',
+        response.url().includes('group_preferences') && response.request().method() === 'GET',
       { timeout: 15000 }
     )
     .catch(() => undefined);
@@ -89,7 +89,7 @@ test.describe('Theme Switching', () => {
       ? page
           .waitForResponse(
             (response) =>
-              response.url().includes('user_preferences') &&
+              response.url().includes('group_preferences') &&
               response.request().method() !== 'GET' &&
               response.status() >= 200 &&
               response.status() < 300

@@ -12,6 +12,8 @@ import { Dashboard } from '@/pages/dashboard'
 import { ManagePage } from '@/pages/manage'
 import { HistoryPage } from '@/pages/history'
 import { SnapshotDetailPage } from '@/pages/snapshot-detail'
+import { NotificationsPage } from '@/pages/notifications'
+import { ProfilePage } from '@/pages/profile'
 import { LoginPage } from '@/pages/login'
 import { AuthCallbackPage } from '@/pages/auth-callback'
 
@@ -73,6 +75,8 @@ function AppRoutes() {
         <Route path="manage" element={<ManagePage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="history/:snapshotId" element={<SnapshotDetailPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* Catch-all redirect */}
