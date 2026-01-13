@@ -63,7 +63,7 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
           `
             DELETE FROM public.user_preferences up
             USING auth.users u
-            WHERE u.email LIKE $1
+            WHERE lower(u.email) LIKE lower($1)
               AND up.user_id = u.id
           `,
           [emailPattern]
@@ -84,7 +84,7 @@ export async function resetDatabase(workerIndex?: number): Promise<void> {
           `
             DELETE FROM public.notifications n
             USING auth.users u
-            WHERE u.email LIKE $1
+            WHERE lower(u.email) LIKE lower($1)
               AND n.user_id = u.id
           `,
           [emailPattern]

@@ -55,7 +55,7 @@ function isStringAllowListKey(key: string): boolean {
 
 function hasWildcardPattern(value: string): boolean {
   // Supabase supports glob wildcards (*, **, ?, []) in redirect URLs.
-  return /[*?\[]/.test(value)
+  return value.includes('*') || value.includes('?') || value.includes('[')
 }
 
 function isVercelPreviewUrl(value: string): boolean {
