@@ -88,43 +88,6 @@ test.describe('Page Tours', () => {
     }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000] });
   }
 
-  /**
-   * Helper to prepare a state where onboarding is active (wizard should show).
-   * This is used to test that tours are deferred while onboarding is active.
-   *
-   * NOTE: The onboarding wizard only auto-shows when:
-   * - status is not 'completed' or 'dismissed'
-   * - autoShownAt is null
-   * - isMinimumSetupComplete is false (no accounts, income, or expenses)
-   */
-  async function prepareForOnboardingActive(page: Page, db: WorkerDatabaseFixture): Promise<void> {
-    // Create a fresh empty group - this clears all finance data
-    // NOTE: db.clear() marks onboarding as completed, so we need to clear it again
-    await db.clear();
-
-    // Clear onboarding state so the wizard will auto-show
-    await db.clearOnboardingState();
-
-    // Navigate to dashboard first to ensure we have a page context for localStorage operations
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Clear localStorage tour cache and onboarding cache
-    await page.evaluate(() => {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('fluxocerto:tour:') || key.includes('fluxocerto:onboarding:'))) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
-    });
-
-    // Force full reload to trigger onboarding wizard
-    await forceFullReload(page);
-  }
-
   async function dismissTourIfPresent(page: Page): Promise<void> {
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
     // Wait briefly for tour to potentially auto-show
@@ -247,34 +210,6 @@ test.describe('Page Tours', () => {
     // Tour should be active
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
     await expect(closeTourButton).toBeVisible({ timeout: 10000 });
-  });
-
-  test.skip('tour is deferred while onboarding wizard is active', async ({ page, db }) => {
-    // SKIPPED: This test is flaky in CI because the onboarding wizard auto-show depends on
-    // many conditions (group association, finance data loading, localStorage cache, etc.)
-    // that are hard to control reliably in E2E tests.
-    //
-    // The behavior is covered by unit tests for the canAutoShow() function and the
-    // useOnboardingState hook.
-
-    // Prepare state: onboarding NOT complete (wizard should show)
-    await prepareForOnboardingActive(page, db);
-
-    // Wait for page to load
-    await page.waitForTimeout(1000);
-
-    // Check if onboarding wizard is visible
-    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-
-    // Wizard MUST be visible (mandatory onboarding)
-    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
-
-    // While wizard is active, tour should NOT be showing
-    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    const isTourActive = await closeTourButton.isVisible().catch(() => false);
-
-    // Tour should be deferred while onboarding is active
-    expect(isTourActive).toBe(false);
   });
 
   test('tour gracefully handles missing target elements', async ({ page, db }) => {
