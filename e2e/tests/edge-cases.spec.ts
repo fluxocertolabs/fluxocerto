@@ -107,7 +107,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.waitForReady();
     await managePage.selectExpensesTab();
 
     const expenses = managePage.expenses();
@@ -128,7 +128,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -153,7 +153,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -163,10 +163,6 @@ test.describe('Edge Cases & Error Handling', () => {
     // Perform a single update
     await accounts.updateAccountBalance(seeded.name, '4.000,00');
     
-    // Wait for the update to process
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
-    await page.waitForTimeout(500);
-
     // Wait for update to complete via realtime subscription
     // Use toPass to retry until realtime update propagates
     // Look for the balance in the specific account card to avoid matching other elements
@@ -196,7 +192,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // The page should load successfully even with data
     // Loading states would be visible during the load
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await expect(page.getByRole('heading', { name: /painel de fluxo de caixa/i })).toBeVisible();
 
     // Verify content eventually loads
     await expect(page.locator('body')).toBeVisible();
@@ -215,7 +211,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.waitForReady();
     await managePage.selectExpensesTab();
 
     const expenses = managePage.expenses();
@@ -236,7 +232,7 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate and wait for page to be fully ready
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await managePage.waitForReady();
     await managePage.selectAccountsTab();
 
     const accounts = managePage.accounts();
@@ -248,8 +244,9 @@ test.describe('Edge Cases & Error Handling', () => {
       has: page.getByRole('heading', { name: seeded.name, level: 3, exact: true }) 
     }).first();
     await accountCard.hover();
-    await page.waitForTimeout(200);
-    await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
+    const moreOptionsButton = accountCard.getByRole('button', { name: /mais opções|more/i });
+    await expect(moreOptionsButton).toBeVisible();
+    await moreOptionsButton.click();
     await page.getByRole('button', { name: /excluir/i }).click();
 
     // Verify confirmation dialog appears

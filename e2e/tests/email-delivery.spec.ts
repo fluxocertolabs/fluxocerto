@@ -46,21 +46,18 @@ test.describe('Welcome Email Delivery @email', () => {
 
     let magicLink: string | null = null;
     const pollStart = Date.now();
-    for (let i = 0; i < 25; i++) {
-      const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) {
-          console.log(`[Auth] Magic link found after ${i + 1} attempts (${Date.now() - pollStart}ms)`);
-          break;
-        }
-      }
-      await page.waitForTimeout(500);
-    }
-    if (!magicLink) {
-      console.warn(`[Auth] Magic link not found after 25 attempts (${Date.now() - pollStart}ms)`);
-    }
+    let attempts = 0;
 
+    await expect(async () => {
+      attempts += 1;
+      const message = await inbucket.getLatestMessage(mailbox);
+      magicLink = message ? inbucket.extractMagicLink(message) : null;
+      if (!magicLink) {
+        throw new Error('Magic link not found yet');
+      }
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
+
+    console.log(`[Auth] Magic link found after ${attempts} attempts (${Date.now() - pollStart}ms)`);
     expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 20000 });
@@ -180,13 +177,15 @@ test.describe('Welcome Email Delivery @email', () => {
     accessToken: string,
     timeoutMs = 15000
   ): Promise<string> {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      const id = await getWelcomeNotificationId(page, accessToken);
-      if (id) return id;
-      await page.waitForTimeout(500);
-    }
-    throw new Error(`Welcome notification not created within ${timeoutMs}ms`);
+    let notificationId: string | null = null;
+    await expect(async () => {
+      notificationId = await getWelcomeNotificationId(page, accessToken);
+      if (!notificationId) {
+        throw new Error('Welcome notification not created yet');
+      }
+    }).toPass({ timeout: timeoutMs, intervals: [500, 1000, 2000] });
+
+    return notificationId!;
   }
 
   /**
