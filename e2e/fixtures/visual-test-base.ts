@@ -120,22 +120,18 @@ export async function disableAnimations(page: Page): Promise<void> {
  */
 export async function waitForStableUI(page: Page): Promise<void> {
   // Wait for network to settle (with timeout since Supabase realtime keeps connections open)
-  await Promise.race([
-    page.waitForLoadState('networkidle'),
-    page.waitForTimeout(5000), // Max 5 seconds
-  ]);
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
+    // Supabase realtime keeps connections open; proceed after timeout.
+  });
   
   // Disable all CSS animations and transitions
   await disableAnimations(page);
   
-  // Wait for initial render to complete
-  await page.waitForTimeout(500);
+  // Wait for the app root to have rendered at least one element
+  await expect(page.locator('#root > *').first()).toBeVisible({ timeout: 10000 });
   
   // Wait for web fonts to load (prevents font-swap flicker)
   await page.evaluate(() => document.fonts.ready);
-  
-  // Wait for any pending React state updates to flush
-  await page.waitForTimeout(500);
   
   // Final stability check - wait for no DOM mutations
   await page.evaluate(() => {
@@ -146,18 +142,18 @@ export async function waitForStableUI(page: Page): Promise<void> {
         timeout = setTimeout(() => {
           observer.disconnect();
           resolve();
-        }, 200);
+        }, 300);
       });
       observer.observe(document.body, {
         childList: true,
         subtree: true,
         attributes: true,
       });
-      // If no mutations occur within 300ms, consider stable
+      // If no mutations occur within 500ms, consider stable
       timeout = setTimeout(() => {
         observer.disconnect();
         resolve();
-      }, 300);
+      }, 500);
     });
   });
 }
@@ -210,8 +206,10 @@ export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
       }, resolvedTheme);
     });
 
-  // Small wait for any CSS transitions
-  await page.waitForTimeout(100);
+  // Allow styles to apply before taking screenshots (avoid fixed sleeps)
+  await page.evaluate(
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  );
 }
 
 /**

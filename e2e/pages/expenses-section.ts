@@ -78,14 +78,10 @@ export class ExpensesSection {
     const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa fixa/i });
     const addButtonEmpty = this.page.getByRole('button', { name: /^adicionar despesa$/i });
     
-    // Use toPass to handle race conditions where button may not be immediately visible
-    await expect(async () => {
-      if (await addButtonFull.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await addButtonFull.click();
-      } else {
-        await addButtonEmpty.click();
-      }
-    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+    // Wait for whichever "add" button is visible (list state vs empty state), then click it.
+    const addButton = addButtonFull.or(addButtonEmpty);
+    await expect(addButton).toBeVisible({ timeout: 10000 });
+    await addButton.click();
 
     // Wait for dialog
     const dialog = this.page.getByRole('dialog');
@@ -132,14 +128,10 @@ export class ExpensesSection {
     const addButtonFull = this.page.getByRole('button', { name: /adicionar despesa pontual/i });
     const addButtonEmpty = this.page.getByRole('button', { name: /^adicionar despesa$/i });
     
-    // Use toPass to handle race conditions where button may not be immediately visible
-    await expect(async () => {
-      if (await addButtonFull.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await addButtonFull.click();
-      } else {
-        await addButtonEmpty.click();
-      }
-    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+    // Wait for whichever "add" button is visible (list state vs empty state), then click it.
+    const addButton = addButtonFull.or(addButtonEmpty);
+    await expect(addButton).toBeVisible({ timeout: 10000 });
+    await addButton.click();
 
     // Wait for dialog
     const dialog = this.page.getByRole('dialog');
@@ -293,9 +285,8 @@ export class ExpensesSection {
     
     // Get all matching elements - in parallel execution, other workers' data may be visible
     const expenses = this.page.getByText(name, { exact: true });
-    const count = await expenses.count();
     
-    // The specific expense should not be visible (count should be 0)
+    // The specific expense should not be visible
     await expect(expenses).toHaveCount(0, { timeout: 5000 });
   }
 

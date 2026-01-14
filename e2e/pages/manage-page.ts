@@ -180,7 +180,6 @@ export class ManagePage {
       // user clicks "Tentar Novamente".
       //
       // We handle this deterministically by auto-clicking retry a small number of times.
-      const waitStart = Date.now();
       const errorAlertWithRetry = this.page.getByRole('alert').filter({
         has: this.page.getByRole('button', { name: /tentar novamente/i }),
       });
