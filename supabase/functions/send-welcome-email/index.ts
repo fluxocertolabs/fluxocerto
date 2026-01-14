@@ -215,15 +215,26 @@ async function sendEmailViaResend(
   }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 Deno.serve(async (req) => {
   // #region agent log
   fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C',location:'send-welcome-email/index.ts:219',message:'request_received',data:{method:req.method,hasAuthHeader:Boolean(req.headers.get('Authorization'))},timestamp:Date.now()})}).catch(()=>{});
   // #endregion
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders })
+  }
+
   // Only accept POST requests
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'method_not_allowed' }),
-      { status: 405, headers: { 'Content-Type': 'application/json' } }
+      { status: 405, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 
@@ -232,7 +243,7 @@ Deno.serve(async (req) => {
   if (!authHeader) {
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'unauthorized' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
+      { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 
@@ -243,7 +254,7 @@ Deno.serve(async (req) => {
   } catch {
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'invalid_request' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 
@@ -254,7 +265,7 @@ Deno.serve(async (req) => {
     // #endregion
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'missing_notification_id' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 
@@ -272,7 +283,7 @@ Deno.serve(async (req) => {
     console.error('Missing required environment variables:', missingVars.join(', '))
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'server_configuration_error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 
@@ -297,7 +308,7 @@ Deno.serve(async (req) => {
       // #endregion
       return new Response(
         JSON.stringify({ ok: false, sent: false, skipped_reason: 'unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -314,7 +325,7 @@ Deno.serve(async (req) => {
       // #endregion
       return new Response(
         JSON.stringify({ ok: false, sent: false, skipped_reason: 'notification_not_found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -324,7 +335,7 @@ Deno.serve(async (req) => {
     if (notificationRow.user_id !== user.id) {
       return new Response(
         JSON.stringify({ ok: false, sent: false, skipped_reason: 'unauthorized' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
+        { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -335,7 +346,7 @@ Deno.serve(async (req) => {
       // #endregion
       return new Response(
         JSON.stringify({ ok: true, sent: false, skipped_reason: 'already_sent' } satisfies SendWelcomeEmailResponse),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -358,7 +369,7 @@ Deno.serve(async (req) => {
       // #endregion
       return new Response(
         JSON.stringify({ ok: true, sent: false, skipped_reason: 'opted_out' } satisfies SendWelcomeEmailResponse),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -390,7 +401,7 @@ Deno.serve(async (req) => {
           skipped_reason: 'missing_credentials',
           preview: { subject, html },
         } satisfies SendWelcomeEmailResponse),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -399,7 +410,7 @@ Deno.serve(async (req) => {
     if (!userEmail) {
       return new Response(
         JSON.stringify({ ok: false, sent: false, skipped_reason: 'no_user_email' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -414,7 +425,7 @@ Deno.serve(async (req) => {
       console.error('Failed to send email:', sendResult.error)
       return new Response(
         JSON.stringify({ ok: false, sent: false, skipped_reason: 'send_failed' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
@@ -441,14 +452,14 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ ok: true, sent: true } satisfies SendWelcomeEmailResponse),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
 
   } catch (err) {
     console.error('Unexpected error in send-welcome-email:', err)
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'internal_error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 })
