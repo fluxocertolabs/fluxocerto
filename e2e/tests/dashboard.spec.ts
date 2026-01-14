@@ -72,8 +72,8 @@ test.describe('Dashboard & Cashflow Projection', () => {
     // Change projection to 90 days
     await dashboardPage.selectProjectionDays(90);
 
-    // Wait for chart to update
-    await page.waitForTimeout(500);
+    // Wait for projection selector to reflect the change
+    await expect(page.locator('#projection-selector')).toContainText(/90/);
 
     // Chart should still be rendered
     await dashboardPage.expectChartRendered();

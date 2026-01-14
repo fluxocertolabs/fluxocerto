@@ -13,7 +13,7 @@
  */
 
 import { test as rawTest, expect as rawExpect } from '@playwright/test';
-import { test, expect } from '../fixtures/test-base';
+import { test } from '../fixtures/test-base';
 
 /**
  * Dev Auth Bypass Mechanism Tests
@@ -51,7 +51,14 @@ rawTest.describe('Dev Auth Bypass - Mechanism', () => {
     
     // Wait for navigation to settle - either dashboard or login
     // The app will redirect to /login if not authenticated
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    const dashboardContent = page.locator('text=Fluxo de Caixa').or(page.locator('text=Cashflow')).first();
+    await rawExpect(async () => {
+      const currentUrl = page.url();
+      const loginVisible = currentUrl.includes('/login') ||
+        await page.locator('input[type="email"]').isVisible().catch(() => false);
+      const dashboardVisible = await dashboardContent.isVisible().catch(() => false);
+      rawExpect(loginVisible || dashboardVisible).toBe(true);
+    }).toPass({ timeout: 5000, intervals: [500, 1000, 2000] });
     
     // Check if we ended up on login page (bypass not active)
     const currentUrl = page.url();
@@ -74,7 +81,6 @@ rawTest.describe('Dev Auth Bypass - Mechanism', () => {
     await rawExpect(page).toHaveURL(/\/(dashboard)?$/);
     
     // Verify dashboard content is visible (either Portuguese or English)
-    const dashboardContent = page.locator('text=Fluxo de Caixa').or(page.locator('text=Cashflow')).first();
     await rawExpect(dashboardContent).toBeVisible({ timeout: 10000 });
   });
 
@@ -149,7 +155,6 @@ rawTest.describe('Dev Auth Bypass - Mechanism', () => {
  */
 test.describe('Dev Auth Bypass - Seed Data', () => {
   test('T024: Seeded account appears on dashboard after login', async ({
-    page,
     managePage,
     db,
     workerContext,
@@ -182,7 +187,6 @@ test.describe('Dev Auth Bypass - Seed Data', () => {
   });
 
   test('T025: RLS enforcement - only user group data is accessible', async ({
-    page,
     managePage,
     workerContext,
   }) => {
