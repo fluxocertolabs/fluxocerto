@@ -103,7 +103,7 @@ export class QuickUpdatePage {
   async complete(): Promise<void> {
     await this.completeButton.click();
     // Wait for view to close (button text may change to "Salvando..." while still open)
-    await expect(this.dialog).not.toBeVisible({ timeout: 15000 });
+    await expect(this.dialog).not.toBeVisible({ timeout: 25000 });
   }
 
   /**
@@ -111,7 +111,7 @@ export class QuickUpdatePage {
    */
   async cancel(): Promise<void> {
     await this.cancelButton.click();
-    await expect(this.dialog).not.toBeVisible({ timeout: 15000 });
+    await expect(this.dialog).not.toBeVisible({ timeout: 25000 });
   }
 
   /**

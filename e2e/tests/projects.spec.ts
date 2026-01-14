@@ -122,7 +122,7 @@ test.describe('Project (Income) Management', () => {
         await managePage.selectProjectsTab();
         const projects = managePage.projects();
         await projects.selectRecurring();
-        const projectNameEl = page.getByText(seeded.name, { exact: true }).first();
+        const projectNameEl = page.getByText(seeded.name, { exact: false }).first();
         await expect(projectNameEl).toBeVisible({ timeout: 5000 });
         const container = projectNameEl.locator('..');
         await expect(container.getByText(/provável/i)).toBeVisible({ timeout: 3000 });

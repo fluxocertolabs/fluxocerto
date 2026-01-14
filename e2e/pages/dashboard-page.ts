@@ -245,8 +245,14 @@ export class DashboardPage {
     } catch (err) {
       // One-time recovery: sometimes the dashboard can transiently render empty state while auth/group/data hydrate.
       // A reload forces a clean fetch without masking real failures (we only do this if empty state is visible).
+      if (this.page.isClosed()) {
+        throw err;
+      }
       const inEmptyState = await this.emptyState.isVisible().catch(() => false);
       if (inEmptyState) {
+        if (this.page.isClosed()) {
+          throw err;
+        }
         await this.page.reload({ waitUntil: 'domcontentloaded' });
         await this.waitForDashboardLoad();
         await assertChartReady();

@@ -20,11 +20,78 @@ export class ExpensesSection {
     this.expenseList = page.locator('[data-testid="expenses-list"], .expenses-list').first();
   }
 
+  private get manageTabs(): Locator {
+    return this.page.locator('[data-tour="manage-tabs"]');
+  }
+
+  private get expensesTab(): Locator {
+    return this.manageTabs.getByRole('tab', { name: /despesas|expenses/i });
+  }
+
+  private async ensureManageTabsVisible(): Promise<void> {
+    const errorAlertWithRetry = this.page.getByRole('alert').filter({
+      has: this.page.getByRole('button', { name: /tentar novamente/i }),
+    });
+    const retryButton = errorAlertWithRetry.getByRole('button', { name: /tentar novamente/i });
+
+    await expect(async () => {
+      if (this.page.url().includes('/login')) {
+        throw new Error('Redirected to /login while waiting for Manage tabs');
+      }
+
+      const tabsVisible = await this.manageTabs.isVisible().catch(() => false);
+      if (tabsVisible) return;
+
+      const canRetry = await retryButton.isVisible().catch(() => false);
+      if (canRetry) {
+        console.warn('[ExpensesSection] Manage error state detected; clicking retry');
+        await retryButton.click({ timeout: 5000 }).catch(() => {});
+        await this.page.waitForTimeout(1000);
+      }
+
+      throw new Error('Manage tabs not visible yet');
+    }).toPass({ timeout: 50000, intervals: [500, 1000, 2000] });
+  }
+
+  /**
+   * Wait for expenses tab content to be ready.
+   */
+  async waitForLoad(): Promise<void> {
+    await this.ensureManageTabsVisible();
+
+    const tabState = await this.expensesTab.getAttribute('data-state').catch(() => null);
+    if (tabState !== 'active') {
+      await this.expensesTab.click({ timeout: 15000 }).catch(() => this.expensesTab.click({ force: true, timeout: 15000 }));
+      await expect(this.expensesTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
+    }
+
+    await expect(async () => {
+      const hasAddFixed = await this.page
+        .getByRole('button', { name: /adicionar despesa fixa/i })
+        .isVisible()
+        .catch(() => false);
+      const hasAddSingle = await this.page
+        .getByRole('button', { name: /adicionar despesa pontual/i })
+        .isVisible()
+        .catch(() => false);
+      const hasEmpty = await this.page
+        .getByText(/nenhuma despesa/i)
+        .isVisible()
+        .catch(() => false);
+      const hasAnyCard =
+        (await this.page.locator('div.p-4.rounded-lg.border.bg-card').count().catch(() => 0)) > 0;
+
+      if (!hasAddFixed && !hasAddSingle && !hasEmpty && !hasAnyCard) {
+        throw new Error('Expenses content not visible yet.');
+      }
+    }).toPass({ timeout: 30000, intervals: [250, 500, 1000, 2000] });
+  }
 
   /**
    * Switch to fixed expenses sub-tab
    */
   async selectFixedExpenses(): Promise<void> {
+    await this.ensureManageTabsVisible();
     await this.fixedExpensesTab.click();
     // Wait for tab panel to be ready
     await this.page.waitForTimeout(300);
@@ -44,6 +111,7 @@ export class ExpensesSection {
    * Switch to single-shot expenses sub-tab
    */
   async selectSingleShot(): Promise<void> {
+    await this.ensureManageTabsVisible();
     await this.singleShotTab.click();
     // Wait for tab panel to be ready
     await this.page.waitForTimeout(300);

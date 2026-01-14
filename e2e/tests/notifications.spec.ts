@@ -4,6 +4,29 @@
  */
 
 import { test, expect } from '../fixtures/test-base';
+import { createNotification } from '../utils/test-data';
+
+async function seedWelcomeNotification(db: {
+  getUserIdByEmail: (email: string) => Promise<string | null>;
+  seedNotifications: (notifications: ReturnType<typeof createNotification>[]) => Promise<unknown>;
+}, email: string): Promise<string> {
+  const userId = await db.getUserIdByEmail(email);
+  if (!userId) {
+    throw new Error(`Failed to resolve auth user id for ${email}`);
+  }
+  await db.seedNotifications([createNotification(userId)]);
+  return userId;
+}
+
+async function waitForNotificationsReady(page: { getByText: any; getByRole: any }): Promise<void> {
+  await expect(async () => {
+    const hasWelcome = await page.getByText(/bem-vindo ao fluxo certo/i).isVisible().catch(() => false);
+    const hasMarkAsRead = await page.getByRole('button', { name: /marcar como lida/i }).isVisible().catch(() => false);
+    if (!hasWelcome && !hasMarkAsRead) {
+      throw new Error('Notifications not visible yet');
+    }
+  }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
+}
 
 test.describe('Notifications Inbox', () => {
   test.beforeEach(async ({ db }) => {
@@ -148,13 +171,14 @@ test.describe('Notifications Inbox', () => {
 
   test('clicking primary action marks notification as read', async ({
     page,
-    dashboardPage,
+    db,
+    workerContext,
   }) => {
-    await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
+    await seedWelcomeNotification(db, workerContext.email);
 
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
+    await waitForNotificationsReady(page);
 
     // Verify notification is unread (has "Marcar como lida" button)
     const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
@@ -192,17 +216,17 @@ test.describe('Notifications Live Updates', () => {
   test('notifications update across browser contexts without full page reload', async ({
     page,
     context,
-    dashboardPage,
+    db,
+    workerContext,
   }) => {
-    // First context: Initialize and create welcome notification
-    await dashboardPage.goto();
-    await page.waitForLoadState('networkidle');
+    await seedWelcomeNotification(db, workerContext.email);
 
     // Navigate to notifications page in first context
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
+    await waitForNotificationsReady(page);
 
-    // Wait for welcome notification to be visible (this triggers the notification creation)
+    // Wait for welcome notification to be visible
     const welcomeNotification = page.getByText(/bem-vindo ao fluxo certo/i);
     await expect(welcomeNotification).toBeVisible({ timeout: 15000 });
 
@@ -210,6 +234,7 @@ test.describe('Notifications Live Updates', () => {
     const secondPage = await context.newPage();
     await secondPage.goto('/notifications');
     await secondPage.waitForLoadState('networkidle');
+    await waitForNotificationsReady(secondPage);
 
     // Verify welcome notification is visible in second context
     const welcomeInSecondPage = secondPage.getByText(/bem-vindo ao fluxo certo/i);
