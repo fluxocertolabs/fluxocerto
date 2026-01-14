@@ -11,6 +11,13 @@ import {
   createProject,
   createExpense,
 } from '../../utils/test-data';
+import {
+  getFloatingHelpContainer,
+  getFloatingHelpFAB,
+  getTourOptionButton,
+  openFloatingHelpMenu,
+  waitForFloatingHelp,
+} from '../../utils/floating-help';
 
 visualTest.describe('Floating Help Button Visual Regression @visual', () => {
   visualTest.describe('Dashboard Page', () => {
@@ -29,9 +36,8 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // The floating help button MUST be visible on dashboard
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
+      // Wait for the floating help button to be visible
+      await waitForFloatingHelp(page);
       await visual.takeScreenshot(page, 'floating-help-collapsed-dashboard-light.png');
     });
 
@@ -50,8 +56,7 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
+      await waitForFloatingHelp(page);
       await visual.takeScreenshot(page, 'floating-help-collapsed-dashboard-dark.png');
     });
 
@@ -70,11 +75,14 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Click the floating help button to expand it
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
-      await helpButton.click();
-      await page.waitForTimeout(500);
+      // Open the menu using the stable helper (handles desktop hover vs mobile click)
+      await openFloatingHelpMenu(page);
+
+      // Verify menu is expanded via aria-expanded before screenshot
+      const fab = getFloatingHelpFAB(page);
+      await expect(fab).toHaveAttribute('aria-expanded', 'true');
+      await expect(getTourOptionButton(page)).toBeVisible();
+
       await visual.takeScreenshot(page, 'floating-help-expanded-dashboard-light.png');
     });
 
@@ -93,10 +101,14 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
-      await helpButton.click();
-      await page.waitForTimeout(500);
+      // Open the menu using the stable helper
+      await openFloatingHelpMenu(page);
+
+      // Verify menu is expanded via aria-expanded before screenshot
+      const fab = getFloatingHelpFAB(page);
+      await expect(fab).toHaveAttribute('aria-expanded', 'true');
+      await expect(getTourOptionButton(page)).toBeVisible();
+
       await visual.takeScreenshot(page, 'floating-help-expanded-dashboard-dark.png');
     });
   });
@@ -115,8 +127,7 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
+      await waitForFloatingHelp(page);
       await visual.takeScreenshot(page, 'floating-help-collapsed-manage-light.png');
     });
 
@@ -133,8 +144,7 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
+      await waitForFloatingHelp(page);
       await visual.takeScreenshot(page, 'floating-help-collapsed-manage-dark.png');
     });
 
@@ -151,10 +161,14 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
-      await helpButton.click();
-      await page.waitForTimeout(500);
+      // Open the menu using the stable helper
+      await openFloatingHelpMenu(page);
+
+      // Verify menu is expanded via aria-expanded before screenshot
+      const fab = getFloatingHelpFAB(page);
+      await expect(fab).toHaveAttribute('aria-expanded', 'true');
+      await expect(getTourOptionButton(page)).toBeVisible();
+
       await visual.takeScreenshot(page, 'floating-help-expanded-manage-light.png');
     });
 
@@ -171,10 +185,14 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
-      await helpButton.click();
-      await page.waitForTimeout(500);
+      // Open the menu using the stable helper
+      await openFloatingHelpMenu(page);
+
+      // Verify menu is expanded via aria-expanded before screenshot
+      const fab = getFloatingHelpFAB(page);
+      await expect(fab).toHaveAttribute('aria-expanded', 'true');
+      await expect(getTourOptionButton(page)).toBeVisible();
+
       await visual.takeScreenshot(page, 'floating-help-expanded-manage-dark.png');
     });
   });
@@ -192,8 +210,7 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
+      await waitForFloatingHelp(page);
       await visual.takeScreenshot(page, 'floating-help-collapsed-history-light.png');
     });
 
@@ -209,8 +226,7 @@ visualTest.describe('Floating Help Button Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
+      await waitForFloatingHelp(page);
       await visual.takeScreenshot(page, 'floating-help-collapsed-history-dark.png');
     });
   });

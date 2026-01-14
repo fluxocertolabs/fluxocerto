@@ -235,5 +235,38 @@ export class CreditCardsSection {
       await expect(card).not.toBeVisible({ timeout: 2000 });
     }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   }
+
+  /**
+   * Get a specific credit card element by name.
+   * Waits for the card to be visible before returning.
+   */
+  async getCardByName(name: string): Promise<Locator> {
+    await this.waitForLoad();
+    const cardElement = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { name, level: 3 }),
+    }).first();
+    await expect(cardElement).toBeVisible({ timeout: 15000 });
+    return cardElement;
+  }
+
+  /**
+   * Expand the "Future Statements" (Próximas Faturas) collapsible section for a card.
+   * Waits for the section content to be visible after expanding.
+   */
+  async expandFutureStatements(cardName: string): Promise<Locator> {
+    const cardElement = await this.getCardByName(cardName);
+
+    const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
+    await expect(collapsibleTrigger).toBeVisible({ timeout: 5000 });
+    await collapsibleTrigger.click();
+
+    // Wait for the collapsible content to expand (the section should show "Adicionar" or statement items)
+    const collapsibleContent = cardElement.locator('[data-state="open"]').or(
+      cardElement.getByRole('button', { name: /adicionar/i })
+    );
+    await expect(collapsibleContent.first()).toBeVisible({ timeout: 5000 });
+
+    return cardElement;
+  }
 }
 

@@ -14,30 +14,11 @@ import {
   createProject,
   createExpense,
 } from '../../utils/test-data';
-
-/**
- * Helper to start a tour via the floating help button.
- * Uses click (pinned mode) to reliably expand on both desktop and mobile.
- */
-async function startTourViaFloatingHelp(page: import('@playwright/test').Page) {
-  const helpButton = page.locator('[data-testid="floating-help-button"]');
-  await expect(helpButton).toBeVisible({ timeout: 10000 });
-
-  // Click the FAB to expand (pinned mode)
-  const fabButton = helpButton.getByRole('button', { name: /abrir ajuda/i });
-  await fabButton.click({ force: true });
-  await page.waitForTimeout(500);
-
-  // Click the tour option (aria-label is "Iniciar tour guiado da página")
-  const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-  await expect(tourOption).toBeVisible({ timeout: 5000 });
-  await tourOption.click({ force: true });
-  await page.waitForTimeout(500);
-
-  // Assert tour started
-  const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-  await expect(closeTourButton).toBeVisible({ timeout: 10000 });
-}
+import {
+  startTourViaFloatingHelp,
+  advanceTourStep,
+  getCloseTourButton,
+} from '../../utils/floating-help';
 
 visualTest.describe('Page Tours Visual Regression @visual', () => {
   visualTest.describe('Dashboard Tour', () => {
@@ -57,8 +38,11 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Start tour via floating help button (MUST work - no conditional)
+      // Start tour via floating help button using the stable helper
       await startTourViaFloatingHelp(page);
+
+      // Verify tour is active before screenshot
+      await expect(getCloseTourButton(page)).toBeVisible();
 
       // Take screenshot of tour step 1
       await visual.takeScreenshot(page, 'dashboard-tour-step1-light.png');
@@ -80,6 +64,7 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       await startTourViaFloatingHelp(page);
+      await expect(getCloseTourButton(page)).toBeVisible();
       await visual.takeScreenshot(page, 'dashboard-tour-step1-dark.png');
     });
 
@@ -100,11 +85,11 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
 
       await startTourViaFloatingHelp(page);
 
-      // Advance to step 2
-      const nextButton = page.getByRole('button', { name: /próximo/i });
-      await expect(nextButton).toBeVisible();
-      await nextButton.click();
-      await page.waitForTimeout(300);
+      // Advance to step 2 using the helper (waits for next button to be visible)
+      await advanceTourStep(page);
+
+      // Verify we're still in tour mode
+      await expect(getCloseTourButton(page)).toBeVisible();
 
       await visual.takeScreenshot(page, 'dashboard-tour-step2-light.png');
     });
@@ -126,11 +111,10 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
 
       await startTourViaFloatingHelp(page);
 
-      const nextButton = page.getByRole('button', { name: /próximo/i });
-      await expect(nextButton).toBeVisible();
-      await nextButton.click();
-      await page.waitForTimeout(300);
+      // Advance to step 2 using the helper
+      await advanceTourStep(page);
 
+      await expect(getCloseTourButton(page)).toBeVisible();
       await visual.takeScreenshot(page, 'dashboard-tour-step2-dark.png');
     });
   });
@@ -150,6 +134,7 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       await startTourViaFloatingHelp(page);
+      await expect(getCloseTourButton(page)).toBeVisible();
       await visual.takeScreenshot(page, 'manage-tour-step1-light.png');
     });
 
@@ -167,6 +152,7 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       await startTourViaFloatingHelp(page);
+      await expect(getCloseTourButton(page)).toBeVisible();
       await visual.takeScreenshot(page, 'manage-tour-step1-dark.png');
     });
   });
@@ -185,6 +171,7 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       await startTourViaFloatingHelp(page);
+      await expect(getCloseTourButton(page)).toBeVisible();
       await visual.takeScreenshot(page, 'history-tour-step1-light.png');
     });
 
@@ -201,6 +188,7 @@ visualTest.describe('Page Tours Visual Regression @visual', () => {
       await visual.waitForStableUI(page);
 
       await startTourViaFloatingHelp(page);
+      await expect(getCloseTourButton(page)).toBeVisible();
       await visual.takeScreenshot(page, 'history-tour-step1-dark.png');
     });
   });

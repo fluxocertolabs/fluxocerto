@@ -34,15 +34,12 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Expand the future statements section
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements(seededCard.name);
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
+      // Verify section is expanded before screenshot
+      await expect(cardElement.getByRole('button', { name: /adicionar/i })).toBeVisible();
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statements-light-empty.png');
@@ -59,15 +56,12 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Expand the future statements section
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements(seededCard.name);
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
+      // Verify section is expanded before screenshot
+      await expect(cardElement.getByRole('button', { name: /adicionar/i })).toBeVisible();
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statements-dark-empty.png');
@@ -107,15 +101,12 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Expand the future statements section
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements(seededCard.name);
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
+      // Verify future statements are visible (at least one edit button should be present)
+      await expect(cardElement.getByRole('button', { name: /editar/i }).first()).toBeVisible();
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statements-light-populated.png');
@@ -154,15 +145,12 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Expand the future statements section
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements(seededCard.name);
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
+      // Verify future statements are visible
+      await expect(cardElement.getByRole('button', { name: /editar/i }).first()).toBeVisible();
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statements-dark-populated.png');
@@ -181,21 +169,17 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Find card and open add form
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Form', level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements('Nubank Form');
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
-      await visual.waitForStableUI(page);
-
+      // Click add button to open form
       const addButton = cardElement.getByRole('button', { name: /adicionar/i });
       await expect(addButton).toBeVisible({ timeout: 10000 });
       await addButton.click();
 
+      // Wait for dialog to appear
+      await expect(page.getByRole('dialog', { name: /adicionar fatura futura/i })).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statement-form-add-light.png');
@@ -212,21 +196,17 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Find card and open add form
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Form', level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements('Nubank Form');
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
-      await visual.waitForStableUI(page);
-
+      // Click add button to open form
       const addButton = cardElement.getByRole('button', { name: /adicionar/i });
       await expect(addButton).toBeVisible({ timeout: 10000 });
       await addButton.click();
 
+      // Wait for dialog to appear
+      await expect(page.getByRole('dialog', { name: /adicionar fatura futura/i })).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statement-form-add-dark.png');
@@ -252,20 +232,17 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Find card and open edit form
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Edit', level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements('Nubank Edit');
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
-      await visual.waitForStableUI(page);
-
+      // Click edit button to open form
       const editButton = cardElement.getByRole('button', { name: /editar/i }).first();
+      await expect(editButton).toBeVisible({ timeout: 5000 });
       await editButton.click();
 
+      // Wait for dialog to appear
+      await expect(page.getByRole('dialog', { name: /editar fatura futura/i })).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statement-form-edit-light.png');
@@ -291,20 +268,17 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Find card and open edit form
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Edit', level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements('Nubank Edit');
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
-      await visual.waitForStableUI(page);
-
+      // Click edit button to open form
       const editButton = cardElement.getByRole('button', { name: /editar/i }).first();
+      await expect(editButton).toBeVisible({ timeout: 5000 });
       await editButton.click();
 
+      // Wait for dialog to appear
+      await expect(page.getByRole('dialog', { name: /editar fatura futura/i })).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statement-form-edit-dark.png');
@@ -332,20 +306,17 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Find card and click delete
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Delete', level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements('Nubank Delete');
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
-      await visual.waitForStableUI(page);
-
+      // Click delete button to open confirmation
       const deleteButton = cardElement.getByRole('button', { name: /excluir/i }).first();
+      await expect(deleteButton).toBeVisible({ timeout: 5000 });
       await deleteButton.click();
 
+      // Wait for confirmation dialog
+      await expect(page.getByRole('alertdialog').or(page.getByRole('dialog'))).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statement-delete-confirm-light.png');
@@ -371,20 +342,17 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Find card and click delete
-      const cardElement = page.locator('div.group.relative').filter({
-        has: page.getByRole('heading', { name: 'Nubank Delete', level: 3 }),
-      }).first();
+      // Use the stable helper to expand future statements section
+      const creditCards = managePage.creditCards();
+      const cardElement = await creditCards.expandFutureStatements('Nubank Delete');
 
-      await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-      const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-      await collapsibleTrigger.click();
-      await visual.waitForStableUI(page);
-
+      // Click delete button to open confirmation
       const deleteButton = cardElement.getByRole('button', { name: /excluir/i }).first();
+      await expect(deleteButton).toBeVisible({ timeout: 5000 });
       await deleteButton.click();
 
+      // Wait for confirmation dialog
+      await expect(page.getByRole('alertdialog').or(page.getByRole('dialog'))).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'future-statement-delete-confirm-dark.png');
@@ -419,16 +387,10 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Expand both cards' future statements sections
+      // Expand both cards' future statements sections using the stable helper
+      const creditCards = managePage.creditCards();
       for (const card of cards) {
-        const cardElement = page.locator('div.group.relative').filter({
-          has: page.getByRole('heading', { name: card.name, level: 3 }),
-        }).first();
-
-        await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-        const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-        await collapsibleTrigger.click();
+        await creditCards.expandFutureStatements(card.name);
       }
 
       await visual.waitForStableUI(page);
@@ -463,16 +425,10 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      // Expand both cards' future statements sections
+      // Expand both cards' future statements sections using the stable helper
+      const creditCards = managePage.creditCards();
       for (const card of cards) {
-        const cardElement = page.locator('div.group.relative').filter({
-          has: page.getByRole('heading', { name: card.name, level: 3 }),
-        }).first();
-
-        await expect(cardElement).toBeVisible({ timeout: 10000 });
-
-        const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
-        await collapsibleTrigger.click();
+        await creditCards.expandFutureStatements(card.name);
       }
 
       await visual.waitForStableUI(page);
@@ -481,4 +437,3 @@ visualTest.describe('Future Statements Visual Regression @visual', () => {
     });
   });
 });
-

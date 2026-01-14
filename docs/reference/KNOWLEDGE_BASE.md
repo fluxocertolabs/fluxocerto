@@ -194,6 +194,10 @@ Deployment notes:
 
 - **Test isolation**: Each test should call `db.clear()` or `db.reset()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value).
 - **Visual test state**: Visual regression tests for toggles/switches must reset state before capturing screenshots to avoid order-dependent failures.
+- **ESLint guardrails for E2E tests**: The ESLint config (`eslint.config.js`) enforces restrictions on flaky patterns in `e2e/**` files:
+  - `page.waitForTimeout()` is disallowed — use assertion-based waits instead.
+  - `locator.isVisible({ timeout })` conditionals are disallowed — use strict `expect()` assertions.
+  - Run `pnpm lint` to catch these patterns before committing.
 - **Visual test determinism** (see `e2e/fixtures/visual-test-base.ts`):
   - **Fixed date**: `VISUAL_TEST_FIXED_DATE` is set to `'2025-01-15T12:00:00.000Z'` (explicit UTC) to ensure consistent timestamps across all environments.
   - **Animations disabled**: CSS `* { animation: none !important; transition: none !important; }` is injected.
@@ -222,6 +226,14 @@ Deployment notes:
   - ❌ `await page.waitForTimeout(1000)` - Arbitrary delays are flaky and slow.
   - ✅ `await expect(element).toHaveAttribute('aria-checked', 'false', { timeout: 5000 })` - Assertion-based waits are deterministic.
   - ✅ `await expect.poll(() => getState()).toBe(expected)` - For complex conditions.
+
+- **Floating Help button interaction** (see `e2e/utils/floating-help.ts`):
+  - The Floating Help component has different behaviors on **desktop** (hover) vs **mobile** (click).
+  - **Container vs FAB**: The `data-testid="floating-help-button"` is a `<div>` wrapper — do NOT click it directly. Click the inner FAB button (`getByRole('button', { name: /abrir ajuda/i })`).
+  - **Desktop (hover-capable)**: Hover the container to open the menu, then click the tour option.
+  - **Mobile (touch)**: Click the inner FAB button to toggle the menu open.
+  - **Use the shared helper**: Import `openFloatingHelpMenu()`, `startTourViaFloatingHelp()`, etc. from `e2e/utils/floating-help.ts` instead of writing ad-hoc interactions.
+  - **Verify state via aria attributes**: After opening, assert `aria-expanded="true"` on the FAB before interacting with menu items.
 
 - **Fresh group rotation** (see `e2e/fixtures/db.ts`):
   - `db.clear()` and `db.resetDatabase()` create a **new empty group** for the worker user, avoiding expensive per-test DELETE cascades.
@@ -279,7 +291,7 @@ Deployment notes:
   - Shared utility functions: `src/lib/utils/`
   - DB schema/RLS changes: `supabase/migrations/`
   - E2E coverage: `e2e/tests/` (+ fixtures under `e2e/fixtures/`)
-  - E2E shared helpers: `e2e/utils/` (consider extracting duplicated test helpers here)
+  - E2E shared helpers: `e2e/utils/` (e.g., `floating-help.ts` for Floating Help/tour interactions, `auth-helper.ts` for authentication flows)
   - Dev tooling scripts: `scripts/` (e.g., `detect-flaky-tests.ts`, `generate-dev-token.ts`)
 - **What to avoid**:
   - Storing money as floats (always use cents/integer).

@@ -5,7 +5,7 @@
  * @visual
  */
 
-import { visualTest } from '../../fixtures/visual-test-base';
+import { visualTest, expect } from '../../fixtures/visual-test-base';
 import { test as unauthTest, expect as unauthExpect, type Page } from '@playwright/test';
 import { disableAnimations, setTheme, waitForStableUI } from '../../fixtures/visual-test-base';
 import {
@@ -14,6 +14,14 @@ import {
   createProject,
   createCreditCard,
 } from '../../utils/test-data';
+import {
+  waitForFloatingHelp,
+  openFloatingHelpMenu,
+  startTourViaFloatingHelp,
+  getFloatingHelpFAB,
+  getTourOptionButton,
+  getCloseTourButton,
+} from '../../utils/floating-help';
 
 function createMockSnapshotData() {
   // Use fixed date for deterministic screenshots
@@ -80,10 +88,13 @@ function createMockSnapshotData() {
 
 async function waitForChartToStabilize(page: Page): Promise<void> {
   const chartContainer = page.locator('[data-testid="cashflow-chart"], .recharts-wrapper').first();
-  await chartContainer.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {
-    // Chart may not be present if no data
-  });
-  await page.waitForTimeout(1000);
+  try {
+    await chartContainer.waitFor({ state: 'attached', timeout: 10000 });
+    // Wait for chart SVG to be rendered (indicates chart data is loaded)
+    await page.locator('.recharts-surface').first().waitFor({ state: 'visible', timeout: 5000 });
+  } catch {
+    // Chart may not be present if no data - that's OK
+  }
 }
 
 /**
@@ -630,9 +641,8 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Floating help button should be visible
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.waitFor({ state: 'visible', timeout: 5000 });
+      // Wait for floating help button using the stable helper
+      await waitForFloatingHelp(page);
 
       await visual.takeScreenshot(page, 'floating-help-collapsed-mobile-light.png');
     });
@@ -648,8 +658,7 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.waitFor({ state: 'visible', timeout: 5000 });
+      await waitForFloatingHelp(page);
 
       await visual.takeScreenshot(page, 'floating-help-collapsed-mobile-dark.png');
     });
@@ -665,15 +674,15 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Click to expand
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.click();
-      await page.waitForTimeout(500);
+      // Open menu using the stable helper (clicks inner FAB on mobile)
+      await openFloatingHelpMenu(page);
 
-      // Wait for expanded menu
-      await page.getByRole('button', { name: /iniciar tour guiado/i }).waitFor({ state: 'visible', timeout: 5000 });
+      // Verify expanded state via aria-expanded
+      const fab = getFloatingHelpFAB(page);
+      await expect(fab).toHaveAttribute('aria-expanded', 'true');
+      await expect(getTourOptionButton(page)).toBeVisible();
+
       await visual.waitForStableUI(page);
-
       await visual.takeScreenshot(page, 'floating-help-expanded-mobile-light.png');
     });
 
@@ -688,13 +697,15 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.click();
-      await page.waitForTimeout(500);
+      // Open menu using the stable helper (clicks inner FAB on mobile)
+      await openFloatingHelpMenu(page);
 
-      await page.getByRole('button', { name: /iniciar tour guiado/i }).waitFor({ state: 'visible', timeout: 5000 });
+      // Verify expanded state via aria-expanded
+      const fab = getFloatingHelpFAB(page);
+      await expect(fab).toHaveAttribute('aria-expanded', 'true');
+      await expect(getTourOptionButton(page)).toBeVisible();
+
       await visual.waitForStableUI(page);
-
       await visual.takeScreenshot(page, 'floating-help-expanded-mobile-dark.png');
     });
   });
@@ -713,23 +724,14 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      // Start tour via floating help
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.click();
-      await page.waitForTimeout(300);
+      // Start tour using the stable helper (handles mobile click vs desktop hover)
+      await startTourViaFloatingHelp(page);
 
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await tourOption.click();
-        await page.waitForTimeout(500);
+      // Verify tour is active
+      await expect(getCloseTourButton(page)).toBeVisible();
 
-        // Check if tour started
-        const tourOverlay = page.locator('[data-tour-active="true"]');
-        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await visual.waitForStableUI(page);
-          await visual.takeScreenshot(page, 'dashboard-tour-step1-mobile-light.png');
-        }
-      }
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'dashboard-tour-step1-mobile-light.png');
     });
 
     visualTest('dashboard tour - step 1 - mobile dark', async ({
@@ -745,21 +747,14 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.click();
-      await page.waitForTimeout(300);
+      // Start tour using the stable helper
+      await startTourViaFloatingHelp(page);
 
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await tourOption.click();
-        await page.waitForTimeout(500);
+      // Verify tour is active
+      await expect(getCloseTourButton(page)).toBeVisible();
 
-        const tourOverlay = page.locator('[data-tour-active="true"]');
-        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await visual.waitForStableUI(page);
-          await visual.takeScreenshot(page, 'dashboard-tour-step1-mobile-dark.png');
-        }
-      }
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'dashboard-tour-step1-mobile-dark.png');
     });
 
     visualTest('manage tour - step 1 - mobile light', async ({
@@ -775,21 +770,14 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'light');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.click();
-      await page.waitForTimeout(300);
+      // Start tour using the stable helper
+      await startTourViaFloatingHelp(page);
 
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await tourOption.click();
-        await page.waitForTimeout(500);
+      // Verify tour is active
+      await expect(getCloseTourButton(page)).toBeVisible();
 
-        const tourOverlay = page.locator('[data-tour-active="true"]');
-        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await visual.waitForStableUI(page);
-          await visual.takeScreenshot(page, 'manage-tour-step1-mobile-light.png');
-        }
-      }
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'manage-tour-step1-mobile-light.png');
     });
 
     visualTest('manage tour - step 1 - mobile dark', async ({
@@ -805,21 +793,14 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await visual.setTheme(page, 'dark');
       await visual.waitForStableUI(page);
 
-      const helpButton = page.getByTestId('floating-help-button');
-      await helpButton.click();
-      await page.waitForTimeout(300);
+      // Start tour using the stable helper
+      await startTourViaFloatingHelp(page);
 
-      const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-      if (await tourOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await tourOption.click();
-        await page.waitForTimeout(500);
+      // Verify tour is active
+      await expect(getCloseTourButton(page)).toBeVisible();
 
-        const tourOverlay = page.locator('[data-tour-active="true"]');
-        if (await tourOverlay.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await visual.waitForStableUI(page);
-          await visual.takeScreenshot(page, 'manage-tour-step1-mobile-dark.png');
-        }
-      }
+      await visual.waitForStableUI(page);
+      await visual.takeScreenshot(page, 'manage-tour-step1-mobile-dark.png');
     });
   });
 
@@ -962,7 +943,8 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await nameInput.clear();
       await page.getByRole('button', { name: /salvar nome/i }).click();
 
-      await page.waitForTimeout(500);
+      // Wait for validation error message to appear
+      await expect(page.getByText(/obrigatório|required|preencha/i)).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'profile-mobile-light-validation-error.png');
@@ -979,7 +961,8 @@ visualTest.describe('Mobile Visual Regression @visual', () => {
       await nameInput.clear();
       await page.getByRole('button', { name: /salvar nome/i }).click();
 
-      await page.waitForTimeout(500);
+      // Wait for validation error message to appear
+      await expect(page.getByText(/obrigatório|required|preencha/i)).toBeVisible({ timeout: 5000 });
       await visual.waitForStableUI(page);
 
       await visual.takeScreenshot(page, 'profile-mobile-dark-validation-error.png');
