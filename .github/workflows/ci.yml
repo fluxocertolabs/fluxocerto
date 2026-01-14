@@ -460,10 +460,43 @@ jobs:
           cat migration-output.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
+  deploy-edge-functions:
+    name: Deploy Edge Functions (Production)
+    runs-on: ubuntu-latest
+    needs: [quality, visual, e2e, migrate]
+    # Deploy Edge Functions on push to main OR when triggered by workflow_run on main
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
+    timeout-minutes: 10
+    # Serialize function deployments to avoid race conditions when multiple merges happen close together
+    concurrency:
+      group: supabase-functions-production
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.62.10
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Deploy Edge Functions
+        run: |
+          supabase functions deploy send-welcome-email
+          supabase functions deploy before-user-created
+
   deploy-production:
     name: Deploy Production
     runs-on: ubuntu-latest
-    needs: [quality, visual, e2e, migrate]
+    needs: [quality, visual, e2e, migrate, deploy-edge-functions]
     # Run production deploy on push to main OR when triggered by workflow_run on main
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||

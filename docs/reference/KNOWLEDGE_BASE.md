@@ -115,6 +115,7 @@ pnpm preview
 Deployment notes:
 - Vercel Git deployments are disabled (`vercel.json`), so deploys run via GitHub Actions + Vercel CLI.
 - CI applies Supabase migrations to staging on PRs and to production on `main` merges (see `.github/workflows/ci.yml`).
+- CI deploys Supabase Edge Functions to production on `main` merges (see `.github/workflows/ci.yml` → `deploy-edge-functions` job).
 - Preview deployments add the preview URL to the Supabase redirect allowlist via `scripts/update-supabase-auth-urls.ts`.
 
 ---
