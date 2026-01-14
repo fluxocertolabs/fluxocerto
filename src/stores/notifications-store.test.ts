@@ -161,7 +161,7 @@ describe('useNotificationsStore', () => {
       expect(mockTriggerWelcomeEmail).toHaveBeenCalledWith('new-notif')
     })
 
-    it('does not trigger welcome email when notification already exists', async () => {
+    it('triggers welcome email when notification already exists', async () => {
       mockEnsureWelcomeNotification.mockResolvedValue({
         success: true,
         data: { notificationId: 'existing-notif', created: false },
@@ -169,7 +169,10 @@ describe('useNotificationsStore', () => {
 
       await useNotificationsStore.getState().initialize()
 
-      expect(mockTriggerWelcomeEmail).not.toHaveBeenCalled()
+      // Wait for the fire-and-forget promise to be called
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      expect(mockTriggerWelcomeEmail).toHaveBeenCalledWith('existing-notif')
     })
 
     it('populates items with fetched notifications', async () => {

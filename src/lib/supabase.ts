@@ -917,6 +917,9 @@ export async function ensureWelcomeNotification(): Promise<Result<{ created: boo
     }
 
     const result = data as EnsureWelcomeNotificationResponse
+    // #region agent log
+    fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A',location:'supabase.ts:919',message:'ensure_welcome_notification_result',data:{created:result.created,hasNotificationId:Boolean(result.notification_id)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     return {
       success: true,
       data: {
@@ -1175,6 +1178,9 @@ export async function triggerWelcomeEmail(notificationId: string): Promise<Resul
     if (!anonKey) {
       return { success: false, error: 'Supabase não está configurado' }
     }
+    // #region agent log
+    fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C',location:'supabase.ts:1175',message:'trigger_welcome_email_start',data:{hasNotificationId:Boolean(notificationId),hasSupabaseUrl:Boolean(supabaseUrl),hasAnonKey:Boolean(anonKey)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     // Add timeout to prevent hanging requests
     const controller = new AbortController()
@@ -1202,9 +1208,15 @@ export async function triggerWelcomeEmail(notificationId: string): Promise<Resul
     try {
       data = await response.json()
     } catch {
+      // #region agent log
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C',location:'supabase.ts:1205',message:'trigger_welcome_email_invalid_json',data:{status:response.status},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return { success: false, error: 'Resposta inválida do servidor' }
     }
 
+    // #region agent log
+    fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'B',location:'supabase.ts:1208',message:'trigger_welcome_email_response',data:{status:response.status,ok:data.ok,sent:data.sent,skippedReason:data.skipped_reason ?? null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!data.ok) {
       // Map common skip reasons to user-friendly messages
       const reasonMessages: Record<string, string> = {

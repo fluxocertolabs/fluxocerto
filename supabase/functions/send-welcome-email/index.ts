@@ -216,6 +216,9 @@ async function sendEmailViaResend(
 }
 
 Deno.serve(async (req) => {
+  // #region agent log
+  fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C',location:'send-welcome-email/index.ts:219',message:'request_received',data:{method:req.method,hasAuthHeader:Boolean(req.headers.get('Authorization'))},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   // Only accept POST requests
   if (req.method !== 'POST') {
     return new Response(
@@ -246,6 +249,9 @@ Deno.serve(async (req) => {
 
   const { notification_id } = body
   if (!notification_id) {
+    // #region agent log
+    fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C',location:'send-welcome-email/index.ts:251',message:'missing_notification_id',data:{hasNotificationId:false},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'missing_notification_id' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -257,6 +263,9 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !supabaseServiceKey) {
+    // #region agent log
+    fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C',location:'send-welcome-email/index.ts:260',message:'missing_env_vars',data:{hasSupabaseUrl:Boolean(supabaseUrl),hasServiceKey:Boolean(supabaseServiceKey)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const missingVars = []
     if (!supabaseUrl) missingVars.push('SUPABASE_URL')
     if (!supabaseServiceKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY')
@@ -283,6 +292,9 @@ Deno.serve(async (req) => {
     // Get the authenticated user
     const { data: { user }, error: userError } = await userClient.auth.getUser()
     if (userError || !user) {
+      // #region agent log
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C',location:'send-welcome-email/index.ts:286',message:'user_lookup_failed',data:{userError: Boolean(userError),userFound:false},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return new Response(
         JSON.stringify({ ok: false, sent: false, skipped_reason: 'unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -297,6 +309,9 @@ Deno.serve(async (req) => {
       .single()
 
     if (notificationError || !notification) {
+      // #region agent log
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A',location:'send-welcome-email/index.ts:300',message:'notification_not_found',data:{notificationError:Boolean(notificationError),notificationFound:false},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return new Response(
         JSON.stringify({ ok: false, sent: false, skipped_reason: 'notification_not_found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
@@ -315,6 +330,9 @@ Deno.serve(async (req) => {
 
     // Check idempotency: already sent?
     if (notificationRow.email_sent_at) {
+      // #region agent log
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D',location:'send-welcome-email/index.ts:317',message:'already_sent',data:{alreadySent:true},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return new Response(
         JSON.stringify({ ok: true, sent: false, skipped_reason: 'already_sent' } satisfies SendWelcomeEmailResponse),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -335,6 +353,9 @@ Deno.serve(async (req) => {
     const emailEnabled = prefRow?.value !== 'false'
 
     if (!emailEnabled) {
+      // #region agent log
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'B',location:'send-welcome-email/index.ts:338',message:'email_opted_out',data:{prefRowPresent:Boolean(prefRow),emailEnabled:false},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return new Response(
         JSON.stringify({ ok: true, sent: false, skipped_reason: 'opted_out' } satisfies SendWelcomeEmailResponse),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -357,6 +378,9 @@ Deno.serve(async (req) => {
     const fromEmail = Deno.env.get('EMAIL_FROM') || 'noreply@fluxocerto.app'
 
     if (!resendApiKey) {
+      // #region agent log
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'B',location:'send-welcome-email/index.ts:359',message:'missing_resend_credentials',data:{hasResendKey:false,hasFromEmail:Boolean(fromEmail)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       // Dev/test mode: return safe preview without sending (FR-013)
       console.log('RESEND_API_KEY not set - returning preview instead of sending')
       return new Response(
@@ -383,6 +407,9 @@ Deno.serve(async (req) => {
     const sendResult = await sendEmailViaResend(resendApiKey, userEmail, subject, html, fromEmail)
 
     if (!sendResult.success) {
+      // #region agent log
+      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D',location:'send-welcome-email/index.ts:385',message:'send_failed',data:{sendSuccess:false},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       // Log detailed error server-side, return sanitized message to client
       console.error('Failed to send email:', sendResult.error)
       return new Response(
@@ -408,6 +435,9 @@ Deno.serve(async (req) => {
       // Another request already recorded the send - this is fine
       console.log('Email already sent by concurrent request', { notification_id })
     }
+    // #region agent log
+    fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D',location:'send-welcome-email/index.ts:407',message:'email_send_completed',data:{sendSuccess:true,updateRecorded:Boolean(updated),updateError:Boolean(updateError)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     return new Response(
       JSON.stringify({ ok: true, sent: true } satisfies SendWelcomeEmailResponse),
