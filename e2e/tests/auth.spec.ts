@@ -115,16 +115,15 @@ test.describe('Authentication Flow', () => {
     await loginPage.requestMagicLink(SELF_SERVE_EMAIL);
     await loginPage.expectMagicLinkSent();
 
-    // Get magic link from Inbucket
+    // Get magic link from Inbucket using poll-based wait
     let magicLink: string | null = null;
-    for (let i = 0; i < 10; i++) {
+    await expect.poll(async () => {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
       }
-      await page.waitForTimeout(500);
-    }
+      return magicLink;
+    }, { timeout: 10000, intervals: [500, 500, 1000, 1000, 1000] }).not.toBeNull();
 
     expect(magicLink).not.toBeNull();
 
@@ -153,16 +152,15 @@ test.describe('Authentication Flow', () => {
     await loginPage.requestMagicLink(TEST_EMAIL);
     await loginPage.expectMagicLinkSent();
     
-    // Wait for email with retry
+    // Wait for email with poll-based wait
     let magicLink: string | null = null;
-    for (let i = 0; i < 10; i++) {
+    await expect.poll(async () => {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
       }
-      await page.waitForTimeout(500);
-    }
+      return magicLink;
+    }, { timeout: 10000, intervals: [500, 500, 1000, 1000, 1000] }).not.toBeNull();
 
     expect(magicLink).not.toBeNull();
 
@@ -196,16 +194,14 @@ test.describe('Authentication Flow', () => {
     await loginPage.expectMagicLinkSent();
     
     let magicLink: string | null = null;
-    for (let i = 0; i < 25; i++) {
+    await expect.poll(async () => {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
       }
-      await page.waitForTimeout(500);
-    }
+      return magicLink;
+    }, { timeout: 15000, intervals: [500, 500, 1000, 1000, 1000, 1000, 1000] }).not.toBeNull();
 
-    expect(magicLink).not.toBeNull();
     await page.goto(normalizeSupabaseMagicLink(magicLink!));
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
 
@@ -247,7 +243,8 @@ test.describe('Authentication Flow', () => {
         }
       }
     }
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Wait for network to settle or continue after timeout (long-lived connections may prevent full idle)
+    await page.waitForLoadState('networkidle').catch(() => {});
 
     // Should still be on dashboard (not redirected to login)
     const dashboardUrl = /\/(dashboard)?$/;
@@ -282,16 +279,14 @@ test.describe('Authentication Flow', () => {
     await loginPage.expectMagicLinkSent();
     
     let magicLink: string | null = null;
-    for (let i = 0; i < 25; i++) {
+    await expect.poll(async () => {
       const message = await inbucket.getLatestMessage(mailbox);
       if (message && message.id !== previousMessageId) {
         magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
       }
-      await page.waitForTimeout(500);
-    }
+      return magicLink;
+    }, { timeout: 15000, intervals: [500, 500, 1000, 1000, 1000, 1000, 1000] }).not.toBeNull();
 
-    expect(magicLink).not.toBeNull();
     await page.goto(normalizeSupabaseMagicLink(magicLink!));
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 20000 });
 
@@ -306,8 +301,8 @@ test.describe('Authentication Flow', () => {
       return hasAuthToken || hasSessionAuth;
     }, null, { timeout: 20000 });
 
-    // Wait for the page to fully load
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Wait for the page to fully load (long-lived connections may prevent full idle)
+    await page.waitForLoadState('networkidle').catch(() => {});
     
     // Ensure onboarding/tour overlays never block the sign-out flow in this auth-only spec.
     // We mark onboarding as completed + dismiss tours via admin SQL and then reload.
@@ -351,7 +346,8 @@ test.describe('Authentication Flow', () => {
     );
 
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 });
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    // Wait for network to settle or continue after timeout (long-lived connections may prevent full idle)
+    await page.waitForLoadState('networkidle').catch(() => {});
 
     const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
     await expect(wizardDialog).toBeHidden({ timeout: 20000 });

@@ -174,10 +174,6 @@ test.describe('Auth Callback Recovery', () => {
       
       // Wait for at least one RPC call to be intercepted
       await expect.poll(() => interceptCount, { timeout: 10000 }).toBeGreaterThan(0);
-      
-      
-      // Wait a bit for the page to process the error response
-      await page.waitForTimeout(1000);
 
       // Wait for provisioning error UI to appear
       // Note: CardTitle renders as a div, not a heading, so we use getByText
@@ -254,9 +250,6 @@ test.describe('Auth Callback Recovery', () => {
       
       // Wait for at least one RPC call to be intercepted
       await expect.poll(() => interceptCount, { timeout: 10000 }).toBeGreaterThan(0);
-      
-      // Wait a bit for the page to process the error response
-      await page.waitForTimeout(1000);
 
       // Wait for error UI
       // Note: CardTitle renders as a div, not a heading, so we use getByText

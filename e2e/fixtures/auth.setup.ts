@@ -56,7 +56,7 @@ function getProjectsToSetup(): readonly ProjectToSetup[] {
  * Each worker gets its own group for complete data isolation via RLS.
  * This eliminates race conditions and data conflicts between parallel workers.
  */
-setup('setup-parallel-workers', async ({ page, browser }) => {
+setup('setup-parallel-workers', async ({ page: _page, browser }) => {
   const workerCount = getWorkerCount();
   console.log(`Setting up ${workerCount} parallel workers with group isolation...`);
 

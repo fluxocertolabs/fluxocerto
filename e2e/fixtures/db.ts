@@ -425,7 +425,7 @@ export async function ensureTestUser(
 /**
  * Remove test user from profiles table
  */
-export async function removeTestUser(email: string, workerIndex?: number): Promise<void> {
+export async function removeTestUser(email: string, _workerIndex?: number): Promise<void> {
   const client = getAdminClient();
   const { error } = await client.from('profiles').delete().eq('email', email);
   if (error) {
