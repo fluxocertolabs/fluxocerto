@@ -1,0 +1,35 @@
+<mjml lang="pt-BR">
+  <mj-head>
+    <mj-include path="../partials/head.mjml" />
+    <mj-preview>{{PREVIEW}}</mj-preview>
+    <mj-title>{{TITLE}}</mj-title>
+  </mj-head>
+
+  <mj-body background-color="#f8fafd" width="600px">
+    <mj-include path="../partials/header.mjml" />
+
+    <mj-section padding="0 16px">
+      <mj-column background-color="#ffffff" padding="24px">
+        <mj-text font-size="20px" font-weight="800" padding="0 0 12px">
+          {{TITLE}}
+        </mj-text>
+        <mj-text padding="0 0 16px">
+          {{BODY}}
+        </mj-text>
+
+        <mj-button href="{{CTA_URL}}" padding="0 0 16px">
+          {{CTA_LABEL}}
+        </mj-button>
+
+        <mj-divider padding="8px 0 16px" />
+
+        <mj-text padding="0" css-class="fc-muted fc-small">
+          Este email foi enviado pelo Fluxo Certo. Se você não deseja receber emails, ajuste suas preferências no app.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="../partials/footer.mjml" />
+  </mj-body>
+</mjml>
+

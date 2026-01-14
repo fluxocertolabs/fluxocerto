@@ -45,112 +45,42 @@ interface UserPreferenceRow {
   value: string
 }
 
+let cachedWelcomeTemplate: string | null = null
+
+async function getWelcomeTemplate(): Promise<string> {
+  if (cachedWelcomeTemplate) {
+    return cachedWelcomeTemplate
+  }
+
+  const templateUrl = new URL('./welcome.html', import.meta.url)
+  const html = await Deno.readTextFile(templateUrl)
+  cachedWelcomeTemplate = html
+  return html
+}
+
 /**
  * Generate the welcome email HTML template.
  */
-function generateEmailHtml(
+async function generateEmailHtml(
   title: string,
   body: string,
   ctaLabel: string | null,
   ctaHref: string | null,
   baseUrl: string
-): string {
+): Promise<string> {
   const ctaUrl = ctaHref
     ? (ctaHref.startsWith('http') ? ctaHref : `${baseUrl}${ctaHref}`)
     : `${baseUrl}/notifications`
   const ctaText = ctaLabel || 'Ver notificação'
+  const previewText = `Fluxo Certo - ${title}`
+  const template = await getWelcomeTemplate()
 
-  return `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fluxo Certo - ${escapeHtml(title)}</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #1a1a1a;
-      background-color: #f5f5f5;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 40px 20px;
-    }
-    .card {
-      background-color: #ffffff;
-      border-radius: 12px;
-      padding: 32px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .logo-text {
-      font-size: 24px;
-      font-weight: 700;
-      color: #2563eb;
-    }
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      margin: 0 0 16px 0;
-      color: #1a1a1a;
-    }
-    p {
-      font-size: 16px;
-      margin: 0 0 24px 0;
-      color: #4a4a4a;
-    }
-    .cta-button {
-      display: inline-block;
-      background-color: #2563eb;
-      color: #ffffff;
-      text-decoration: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 16px;
-    }
-    .cta-button:hover {
-      background-color: #1d4ed8;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 32px;
-      padding-top: 24px;
-      border-top: 1px solid #e5e5e5;
-    }
-    .footer p {
-      font-size: 14px;
-      color: #6b7280;
-      margin: 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="logo">
-        <span class="logo-text">Fluxo Certo</span>
-      </div>
-      <h1>${escapeHtml(title)}</h1>
-      <p>${escapeHtml(body)}</p>
-      <a href="${escapeHtml(ctaUrl)}" class="cta-button">${escapeHtml(ctaText)}</a>
-      <div class="footer">
-        <p>Este email foi enviado pelo Fluxo Certo.</p>
-        <p>Se você não deseja receber emails, ajuste suas preferências no app.</p>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-`.trim()
+  return template
+    .replaceAll('{{PREVIEW}}', escapeHtml(previewText))
+    .replaceAll('{{TITLE}}', escapeHtml(title))
+    .replaceAll('{{BODY}}', escapeHtml(body))
+    .replaceAll('{{CTA_URL}}', escapeHtml(ctaUrl))
+    .replaceAll('{{CTA_LABEL}}', escapeHtml(ctaText))
 }
 
 /**
@@ -376,7 +306,7 @@ Deno.serve(async (req) => {
     // Generate email content
     const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
     const subject = `Fluxo Certo - ${notificationRow.title}`
-    const html = generateEmailHtml(
+    const html = await generateEmailHtml(
       notificationRow.title,
       notificationRow.body,
       notificationRow.primary_action_label,

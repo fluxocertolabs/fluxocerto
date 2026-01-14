@@ -5,6 +5,20 @@ import mjml2html from 'mjml'
 
 import { SUPABASE_EMAIL_TEMPLATES } from './emails/supabase-templates'
 
+type CustomEmailTemplate = {
+  id: string
+  mjmlPath: string
+  htmlPath: string
+}
+
+const CUSTOM_EMAIL_TEMPLATES: CustomEmailTemplate[] = [
+  {
+    id: 'custom.welcome',
+    mjmlPath: 'emails/mjml/custom/welcome.mjml',
+    htmlPath: 'supabase/functions/send-welcome-email/welcome.html',
+  },
+]
+
 /**
  * Asserts that the compiled template includes a required Supabase GoTemplate placeholder.
  */
@@ -146,7 +160,50 @@ async function buildSupabaseTemplates(): Promise<void> {
   }
 }
 
-buildSupabaseTemplates().catch((err) => {
+async function buildCustomTemplates(): Promise<void> {
+  const repoRoot = process.cwd()
+  const failures: Array<{ templateId: string; error: string }> = []
+
+  for (const template of CUSTOM_EMAIL_TEMPLATES) {
+    const sourcePath = path.join(repoRoot, template.mjmlPath)
+    const outputPath = path.join(repoRoot, template.htmlPath)
+
+    const mjml = await readFile(sourcePath, 'utf8')
+
+    const result = mjml2html(mjml, {
+      filePath: path.dirname(sourcePath),
+      validationLevel: 'strict',
+    })
+
+    const mjmlErrors = formatMjmlErrors(result.errors)
+    if (mjmlErrors) {
+      failures.push({ templateId: template.id, error: mjmlErrors })
+      continue
+    }
+
+    await mkdir(path.dirname(outputPath), { recursive: true })
+
+    let html = result.html
+    html = html.replaceAll('style width="100%"', 'style="width:100%" width="100%"')
+
+    await writeFile(outputPath, html, 'utf8')
+  }
+
+  if (failures.length > 0) {
+    const message = failures
+      .map((f) => `\n---\n${f.templateId}\n${f.error}`)
+      .join('')
+
+    throw new Error(`MJML compilation failed for ${failures.length} template(s).${message}`)
+  }
+}
+
+async function buildAllTemplates(): Promise<void> {
+  await buildSupabaseTemplates()
+  await buildCustomTemplates()
+}
+
+buildAllTemplates().catch((err) => {
   const message = err instanceof Error ? err.message : String(err)
   console.error(message)
   process.exitCode = 1
