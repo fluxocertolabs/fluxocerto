@@ -101,48 +101,6 @@ test.describe('Page Tours', () => {
     await dismissTourViaHelper(page, true);
   }
 
-  async function completeOnboardingIfPresent(page: Page): Promise<void> {
-    const wizardDialog = page
-      .locator('[role="dialog"]')
-      .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
-
-    if (!(await wizardDialog.isVisible().catch(() => false))) return;
-
-    // Complete the wizard by clicking through all steps
-    const nextButton = page.getByRole('button', { name: /próximo/i });
-    const skipButton = page.getByRole('button', { name: /pular/i });
-    const completeButton = page.getByRole('button', { name: /concluir|começar a usar/i });
-    const stepHeading = wizardDialog.getByRole('heading').first();
-    const actionButtons = nextButton.or(skipButton).or(completeButton);
-
-    for (let i = 0; i < 15; i++) {
-      // Check if we're done
-      if (await completeButton.isVisible().catch(() => false)) {
-        await completeButton.click();
-        break;
-      }
-      // Try next button
-      if (await nextButton.isVisible().catch(() => false)) {
-        const previousHeading = (await stepHeading.textContent()) ?? '';
-        await nextButton.click();
-        await expect.poll(() => stepHeading.textContent()).not.toBe(previousHeading);
-        continue;
-      }
-      // Try skip button (for optional steps)
-      if (await skipButton.isVisible().catch(() => false)) {
-        const previousHeading = (await stepHeading.textContent()) ?? '';
-        await skipButton.click();
-        await expect.poll(() => stepHeading.textContent()).not.toBe(previousHeading);
-        continue;
-      }
-      // If nothing is visible, wait for any action button to reappear
-      await expect(actionButtons).toBeVisible({ timeout: 2000 });
-    }
-
-    // Wait for wizard to close
-    await expect(wizardDialog).toBeHidden({ timeout: 10000 });
-  }
-
   /**
    * Helper to start a tour via the floating help button.
    * Uses the shared utility from e2e/utils/floating-help.ts for consistent behavior.

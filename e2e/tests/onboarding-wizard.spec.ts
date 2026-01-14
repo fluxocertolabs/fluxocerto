@@ -8,8 +8,6 @@ import { test, expect } from '@playwright/test';
 import { InbucketClient } from '../utils/inbucket';
 import { 
   authenticateNewUser, 
-  waitForOnboardingWizard,
-  completeOnboardingWizard,
   dismissTourIfPresent 
 } from '../utils/auth-helper';
 

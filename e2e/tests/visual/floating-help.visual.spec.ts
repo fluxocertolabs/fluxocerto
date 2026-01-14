@@ -12,7 +12,6 @@ import {
   createExpense,
 } from '../../utils/test-data';
 import {
-  getFloatingHelpContainer,
   getFloatingHelpFAB,
   getTourOptionButton,
   openFloatingHelpMenu,

@@ -120,7 +120,7 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       page,
       dashboardPage,
       visual,
-      db,
+      db: _db,
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();
@@ -148,7 +148,7 @@ visualTest.describe('Notifications Page Visual Regression @visual', () => {
       page,
       dashboardPage,
       visual,
-      db,
+      db: _db,
     }) => {
       // Navigate to dashboard first to trigger welcome notification creation
       await dashboardPage.goto();

@@ -40,7 +40,7 @@ test.describe('Quick Update Modal', () => {
   });
 
   test('T071: open Quick Update → all accounts and credit cards listed', async ({
-    page,
+    page: _page,
     dashboardPage,
     quickUpdatePage,
     db,
@@ -305,7 +305,7 @@ test.describe('Quick Update Modal', () => {
     const accountName = `Nubank Check ${uniqueId}`;
     
     // Seed a checking account (using unique name without "Corrente" to avoid confusion)
-    const [seededAccount] = await db.seedAccounts([
+    await db.seedAccounts([
       createAccount({ 
         name: accountName, 
         type: 'checking',

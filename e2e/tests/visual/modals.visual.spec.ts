@@ -9,8 +9,6 @@ import { expect } from '@playwright/test';
 import { visualTest } from '../../fixtures/visual-test-base';
 import {
   createAccount,
-  createExpense,
-  createProject,
   createCreditCard,
 } from '../../utils/test-data';
 

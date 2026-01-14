@@ -209,7 +209,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
 
   visualTest(
     'snapshot-detail - not found light',
-    async ({ page, db, visual }) => {
+    async ({ page, db: _db, visual }) => {
       await page.goto('/history/00000000-0000-0000-0000-000000000000');
       await page.waitForSelector('text=/projeção não encontrada/i', { timeout: 10000 });
       
@@ -222,7 +222,7 @@ visualTest.describe('Snapshot Detail Page Visual Regression @visual', () => {
 
   visualTest(
     'snapshot-detail - not found dark',
-    async ({ page, db, visual }) => {
+    async ({ page, db: _db, visual }) => {
       await page.goto('/history/00000000-0000-0000-0000-000000000000');
       await page.waitForSelector('text=/projeção não encontrada/i', { timeout: 10000 });
       

@@ -81,17 +81,6 @@ test.describe('Mobile Notifications @mobile', () => {
     }
   }
 
-  /**
-   * Helper to open mobile navigation menu
-   */
-  async function openMobileMenu(page: Page): Promise<void> {
-    const menuButton = page.getByRole('button', { name: /menu/i });
-    if (await menuButton.isVisible().catch(() => false)) {
-      await menuButton.tap();
-      await expect(page.getByRole('navigation')).toBeVisible({ timeout: 5000 });
-    }
-  }
-
   test('access notifications from mobile header icon', async ({ page }) => {
     const email = `mobile-notif-nav-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);

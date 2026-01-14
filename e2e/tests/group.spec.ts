@@ -53,7 +53,7 @@ test.describe('Group Multi-Tenancy', () => {
     test('T082: view group members section → members list displayed with current user indicator', async ({
       page,
       managePage,
-      workerContext,
+      workerContext: _workerContext,
     }) => {
       await managePage.goto();
 
@@ -91,7 +91,7 @@ test.describe('Group Multi-Tenancy', () => {
     });
 
     test('T084: group members list shows at least one member', async ({
-      page,
+      page: _page,
       managePage,
     }) => {
       await managePage.goto();
@@ -113,7 +113,7 @@ test.describe('Group Multi-Tenancy', () => {
     // These tests verify the RLS policies work correctly for the current user's group.
 
     test('T085: user sees only their group data → accounts filtered by group', async ({
-      page,
+      page: _page,
       managePage,
       db,
     }) => {
@@ -134,7 +134,7 @@ test.describe('Group Multi-Tenancy', () => {
     });
 
     test('T086: user sees only their group data → expenses filtered by group', async ({
-      page,
+      page: _page,
       managePage,
       db,
     }) => {
@@ -157,7 +157,7 @@ test.describe('Group Multi-Tenancy', () => {
     });
 
     test('T087: user sees only their group data → projects filtered by group', async ({
-      page,
+      page: _page,
       managePage,
       db,
     }) => {

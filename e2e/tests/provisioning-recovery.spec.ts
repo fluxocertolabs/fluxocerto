@@ -94,7 +94,7 @@ test.describe('Provisioning Recovery', () => {
   test('orphaned user auto-heals via ensure_current_user_group on dashboard', async ({
     dashboardPage,
     workerContext,
-    db,
+    db: _db,
   }) => {
     const originalProfile = await getWorkerProfile(workerContext.email);
     expect(originalProfile).not.toBeNull();
@@ -194,15 +194,12 @@ test.describe('Provisioning Recovery', () => {
     // Set up route interception FIRST, before any navigation
     // Use a flag to control when to allow requests through (after retry button is clicked)
     let allowRequests = false;
-    let interceptCount = 0;
     await page.route('**/rest/v1/rpc/ensure_current_user_group*', async (route) => {
       // Only intercept POST requests (actual RPC calls), not OPTIONS preflight
       if (route.request().method() !== 'POST') {
         await route.continue();
         return;
       }
-      
-      interceptCount++;
       
       if (!allowRequests) {
         // Fail ALL requests until allowRequests is set to true

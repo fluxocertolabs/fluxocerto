@@ -74,7 +74,7 @@ test.describe('Historical Projection Snapshots', () => {
     page,
   }) => {
     // Seed a snapshot
-    const [seeded] = await db.seedSnapshots([
+    await db.seedSnapshots([
       { name: 'Indicator Absence Snapshot', data: createMockSnapshotData() },
     ])
 
@@ -130,12 +130,12 @@ test.describe('Historical Projection Snapshots', () => {
 
     test('click snapshot card → navigates to detail view', async ({
       historyPage,
-      snapshotDetailPage,
+      snapshotDetailPage: _snapshotDetailPage,
       db,
       page,
     }) => {
       // Seed a snapshot
-      const [seeded] = await db.seedSnapshots([
+      await db.seedSnapshots([
         { name: 'Test Navigation Snapshot', data: createMockSnapshotData() },
       ]);
 
@@ -343,7 +343,7 @@ test.describe('Historical Projection Snapshots', () => {
       await db.seedFullScenario(seedData);
 
       // Seed a snapshot for navigation testing
-      const [seeded] = await db.seedSnapshots([
+      await db.seedSnapshots([
         { name: 'Navigation Flow Snapshot', data: createMockSnapshotData() },
       ]);
 

@@ -173,7 +173,7 @@ test.describe('Expense Management', () => {
     });
 
     test('T041: edit single-shot expense date to 2025-12-20 → updated date displayed', async ({
-      page,
+      page: _page,
       managePage,
       db,
     }) => {
