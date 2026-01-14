@@ -253,8 +253,9 @@ visualTest.describe('Modal Visual Regression @visual', () => {
         has: page.getByRole('heading', { name: seeded.name, level: 3 }),
       }).first();
       await cardElement.hover();
-      await page.waitForTimeout(200);
-      await cardElement.getByRole('button', { name: /mais opções|more/i }).click();
+      const moreOptionsButton = cardElement.getByRole('button', { name: /mais opções|more/i });
+      await expect(moreOptionsButton).toBeVisible();
+      await moreOptionsButton.click();
       await page.getByRole('button', { name: /editar/i }).click();
 
       const dialog = page.getByRole('dialog');
@@ -283,8 +284,9 @@ visualTest.describe('Modal Visual Regression @visual', () => {
         has: page.getByRole('heading', { name: seeded.name, level: 3 }),
       }).first();
       await cardElement.hover();
-      await page.waitForTimeout(200);
-      await cardElement.getByRole('button', { name: /mais opções|more/i }).click();
+      const moreOptionsButton = cardElement.getByRole('button', { name: /mais opções|more/i });
+      await expect(moreOptionsButton).toBeVisible();
+      await moreOptionsButton.click();
       await page.getByRole('button', { name: /editar/i }).click();
 
       const dialog = page.getByRole('dialog');
@@ -316,8 +318,9 @@ visualTest.describe('Modal Visual Regression @visual', () => {
         has: page.getByRole('heading', { name: seeded.name, level: 3 }),
       }).first();
       await accountCard.hover();
-      await page.waitForTimeout(200);
-      await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
+      const moreOptionsButton = accountCard.getByRole('button', { name: /mais opções|more/i });
+      await expect(moreOptionsButton).toBeVisible();
+      await moreOptionsButton.click();
       await page.getByRole('button', { name: /excluir/i }).click();
 
       // Wait for confirmation dialog
@@ -348,8 +351,9 @@ visualTest.describe('Modal Visual Regression @visual', () => {
         has: page.getByRole('heading', { name: seeded.name, level: 3 }),
       }).first();
       await accountCard.hover();
-      await page.waitForTimeout(200);
-      await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
+      const moreOptionsButton = accountCard.getByRole('button', { name: /mais opções|more/i });
+      await expect(moreOptionsButton).toBeVisible();
+      await moreOptionsButton.click();
       await page.getByRole('button', { name: /excluir/i }).click();
 
       const confirmDialog = page.getByRole('alertdialog').or(page.getByRole('dialog'));

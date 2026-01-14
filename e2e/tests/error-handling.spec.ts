@@ -53,11 +53,14 @@ test.describe('Error Handling', () => {
       await balanceInput.fill('2.000,00'); // Try to change to R$ 2.000,00
 
       // Submit the form
+      const failedUpdate = page.waitForResponse(
+        (response) =>
+          response.url().includes('/rest/v1/accounts') &&
+          response.request().method() === 'PATCH' &&
+          response.status() === 500
+      );
       await dialog.getByRole('button', { name: /salvar|save|atualizar/i }).click();
-
-      // Wait for the error to be handled
-      // The dialog might show an error or close
-      await page.waitForTimeout(2000);
+      await failedUpdate;
 
       // Close dialog if still open
       if (await dialog.isVisible()) {
@@ -112,8 +115,9 @@ test.describe('Error Handling', () => {
         has: page.getByRole('heading', { name: seeded.name, level: 3 }),
       }).first();
       await cardElement.hover();
-      await page.waitForTimeout(200);
-      await cardElement.getByRole('button', { name: /mais opções|more/i }).click();
+      const moreOptionsButton = cardElement.getByRole('button', { name: /mais opções|more/i });
+      await expect(moreOptionsButton).toBeVisible();
+      await moreOptionsButton.click();
       await page.getByRole('button', { name: /editar/i }).click();
 
       const dialog = page.getByRole('dialog');
@@ -124,10 +128,14 @@ test.describe('Error Handling', () => {
       await balanceInput.fill('3.000,00'); // Try to change to R$ 3.000,00
 
       // Submit the form
+      const failedUpdate = page.waitForResponse(
+        (response) =>
+          response.url().includes('/rest/v1/credit_cards') &&
+          response.request().method() === 'PATCH' &&
+          response.status() === 500
+      );
       await dialog.getByRole('button', { name: /salvar|save|atualizar/i }).click();
-
-      // Wait for the error to be handled
-      await page.waitForTimeout(2000);
+      await failedUpdate;
 
       // Close dialog if still open
       if (await dialog.isVisible()) {
@@ -182,10 +190,14 @@ test.describe('Error Handling', () => {
       await dialog.getByLabel(/saldo/i).fill('500,00');
 
       // Submit
+      const failedCreate = page.waitForResponse(
+        (response) =>
+          response.url().includes('/rest/v1/accounts') &&
+          response.request().method() === 'POST' &&
+          response.status() === 500
+      );
       await dialog.getByRole('button', { name: /salvar|save|adicionar|criar|create/i }).click();
-
-      // Wait for error handling
-      await page.waitForTimeout(2000);
+      await failedCreate;
 
       // Close dialog if still open (might show error state)
       if (await dialog.isVisible()) {
@@ -237,17 +249,22 @@ test.describe('Error Handling', () => {
       }).first();
 
       await accountCard.hover();
-      await page.waitForTimeout(200);
-      await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
+      const moreOptionsButton = accountCard.getByRole('button', { name: /mais opções|more/i });
+      await expect(moreOptionsButton).toBeVisible();
+      await moreOptionsButton.click();
       await page.getByRole('button', { name: /excluir/i }).click();
 
       // Confirm deletion
       const confirmDialog = page.getByRole('alertdialog').or(page.getByRole('dialog'));
       await expect(confirmDialog).toBeVisible();
+      const failedDelete = page.waitForResponse(
+        (response) =>
+          response.url().includes('/rest/v1/accounts') &&
+          response.request().method() === 'DELETE' &&
+          response.status() === 500
+      );
       await confirmDialog.getByRole('button', { name: /confirmar|confirm|sim|yes|excluir/i }).click();
-
-      // Wait for error handling
-      await page.waitForTimeout(2000);
+      await failedDelete;
 
       // Verify the account is STILL in the list (deletion failed)
       await expect(async () => {
@@ -295,12 +312,14 @@ test.describe('Error Handling', () => {
       await balanceInput.fill('5.000,00');
 
       // Submit - this will timeout
+      const requestFailed = page.waitForEvent(
+        'requestfailed',
+        (request) =>
+          request.url().includes('/rest/v1/accounts') &&
+          request.method() === 'PATCH'
+      );
       await dialog.getByRole('button', { name: /salvar|save|atualizar/i }).click();
-
-      // The UI should handle the timeout gracefully
-      // Either show an error message or allow retry
-      // Wait a bit for the timeout to be detected
-      await page.waitForTimeout(3000);
+      await requestFailed;
 
       // Close dialog
       await page.keyboard.press('Escape');

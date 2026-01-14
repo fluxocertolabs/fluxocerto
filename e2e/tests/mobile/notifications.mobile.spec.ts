@@ -72,9 +72,12 @@ test.describe('Mobile Notifications @mobile', () => {
    */
   async function dismissTourIfVisible(page: Page): Promise<void> {
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    try {
+      await expect(closeTourButton).toBeVisible({ timeout: 3000 });
       await closeTourButton.tap();
       await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+    } catch {
+      // Tour not visible; continue
     }
   }
 
@@ -85,7 +88,7 @@ test.describe('Mobile Notifications @mobile', () => {
     const menuButton = page.getByRole('button', { name: /menu/i });
     if (await menuButton.isVisible().catch(() => false)) {
       await menuButton.tap();
-      await page.waitForTimeout(300);
+      await expect(page.getByRole('navigation')).toBeVisible({ timeout: 5000 });
     }
   }
 
@@ -139,7 +142,6 @@ test.describe('Mobile Notifications @mobile', () => {
     
     // Tap the mark as read button
     await markAsReadButton.tap();
-    await page.waitForTimeout(500);
 
     // Verify button is no longer visible after marking as read
     await expect(markAsReadButton).not.toBeVisible({ timeout: 5000 });
@@ -173,9 +175,6 @@ test.describe('Mobile Notifications @mobile', () => {
 
     // Should navigate to /manage
     await expect(page).toHaveURL(/\/manage/);
-    
-    // Wait a bit for the mark-as-read API call to complete in the background
-    await page.waitForTimeout(1000);
 
     // Navigate back to notifications
     await page.goto('/notifications');

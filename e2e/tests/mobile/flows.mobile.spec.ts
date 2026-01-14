@@ -126,7 +126,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
 
       // Dismiss any auto-shown tour that might be blocking the help button
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-      if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await closeTourButton.isVisible().catch(() => false)) {
         await closeTourButton.tap();
         await expect(closeTourButton).toBeHidden({ timeout: 5000 });
       }
@@ -151,7 +151,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
 
       // Wait for any auto-shown tour to finish or dismiss it
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-      if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await closeTourButton.isVisible().catch(() => false)) {
         await closeTourButton.tap();
         await expect(closeTourButton).toBeHidden({ timeout: 5000 });
       }
@@ -181,7 +181,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
       const nextButton = page.getByRole('button', { name: /próximo/i });
 
       // If tour auto-shows, use it; otherwise start it manually
-      if (!(await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false))) {
+      if (!(await closeTourButton.isVisible().catch(() => false))) {
         const helpButton = page.getByTestId('floating-help-button');
         await helpButton.getByRole('button', { name: /abrir ajuda/i }).tap();
         await page.getByRole('button', { name: /iniciar tour guiado/i }).tap();
@@ -215,7 +215,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
       // Wait for tour or start it
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
 
-      if (!(await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false))) {
+      if (!(await closeTourButton.isVisible().catch(() => false))) {
         const helpButton = page.getByTestId('floating-help-button');
         await helpButton.getByRole('button', { name: /abrir ajuda/i }).tap();
         await page.getByRole('button', { name: /iniciar tour guiado/i }).tap();
@@ -239,7 +239,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
       // Wait for tour or start it
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
 
-      if (!(await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false))) {
+      if (!(await closeTourButton.isVisible().catch(() => false))) {
         const helpButton = page.getByTestId('floating-help-button');
         await helpButton.getByRole('button', { name: /abrir ajuda/i }).tap();
         await page.getByRole('button', { name: /iniciar tour guiado/i }).tap();
@@ -256,7 +256,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
       while (maxSteps > 0 && !(await completeButton.isVisible().catch(() => false))) {
         if (await nextButton.isVisible().catch(() => false)) {
           await nextButton.tap();
-          await page.waitForTimeout(300);
+          await expect(page.getByText(/\d+ de \d+/)).toBeVisible({ timeout: 5000 });
         } else {
           break;
         }
@@ -284,7 +284,7 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
 
       // Close any tour that might be showing
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-      if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await closeTourButton.isVisible().catch(() => false)) {
         await closeTourButton.tap();
         await expect(closeTourButton).toBeHidden({ timeout: 5000 });
       }

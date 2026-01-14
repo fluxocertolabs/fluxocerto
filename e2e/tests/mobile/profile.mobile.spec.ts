@@ -74,9 +74,12 @@ test.describe('Mobile Profile Settings @mobile', () => {
    */
   async function dismissTourIfVisible(page: Page): Promise<void> {
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    try {
+      await expect(closeTourButton).toBeVisible({ timeout: 3000 });
       await closeTourButton.tap();
       await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+    } catch {
+      // Tour not visible; continue
     }
   }
 

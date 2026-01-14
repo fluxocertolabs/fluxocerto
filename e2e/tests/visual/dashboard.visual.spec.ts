@@ -9,7 +9,7 @@
  * @visual
  */
 
-import { visualTest } from '../../fixtures/visual-test-base';
+import { visualTest, expect } from '../../fixtures/visual-test-base';
 import {
   createAccount,
   createCreditCard,
@@ -28,8 +28,8 @@ async function waitForChartToStabilize(page: import('@playwright/test').Page): P
   await chartContainer.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {
     // Chart may not be present if no data
   });
-  // Additional wait for chart animations to complete
-  await page.waitForTimeout(1000);
+  // Wait for chart to be visible before snapshotting
+  await expect(chartContainer).toBeVisible({ timeout: 10000 });
 }
 
 visualTest.describe('Dashboard Visual Regression @visual', () => {

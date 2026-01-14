@@ -230,28 +230,27 @@ test.describe('Provisioning Recovery', () => {
     try {
       // Navigate to manage page - the useGroup hook will detect PGRST116 and call ensure_current_user_group
       await managePage.goto();
-      await page.waitForTimeout(2000);
       
 
       // Dismiss any dialogs that might be blocking (onboarding wizard, etc.)
       // The onboarding wizard uses a Dialog component with a close button
       const closeButton = page.locator('[role="dialog"] button:has-text("×"), [role="dialog"] button[aria-label*="close" i], [role="dialog"] button[aria-label*="fechar" i]');
-      if (await closeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      try {
+        await expect(closeButton).toBeVisible({ timeout: 2000 });
         await closeButton.click();
-        await page.waitForTimeout(500);
-      } else {
+        await expect(closeButton).toBeHidden({ timeout: 5000 });
+      } catch {
         // Try pressing Escape multiple times to close any open dialogs
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await expect(closeButton).toBeHidden({ timeout: 5000 });
       }
 
       // Switch to Group tab - wait for it to be visible first
       const groupTab = page.getByRole('tab', { name: /grupo|group/i });
       await expect(groupTab).toBeVisible({ timeout: 10000 });
       await groupTab.click();
-      await page.waitForTimeout(1500);
+      await expect(groupTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
       
 
       // Should see recovery UI - look for the specific error message

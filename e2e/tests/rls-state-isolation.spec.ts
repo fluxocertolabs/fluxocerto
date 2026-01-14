@@ -50,14 +50,13 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // Get magic link from Inbucket with increased retries
     let magicLink: string | null = null;
-    for (let i = 0; i < 25; i++) {
+    await expect(async () => {
       const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
+      magicLink = message ? inbucket.extractMagicLink(message) : null;
+      if (!magicLink) {
+        throw new Error('Magic link not found yet');
       }
-      await page.waitForTimeout(500);
-    }
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
 
     expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
@@ -95,7 +94,9 @@ test.describe('RLS State Isolation Tests @security', () => {
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    if (!(await wizardDialog.isVisible({ timeout: 3000 }).catch(() => false))) {
+    try {
+      await expect(wizardDialog).toBeVisible({ timeout: 3000 });
+    } catch {
       return; // No wizard to complete
     }
 
@@ -134,9 +135,12 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // Complete the tour to create a tour_state record
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    try {
+      await expect(closeTourButton).toBeVisible({ timeout: 3000 });
       await closeTourButton.click();
       await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+    } catch {
+      // Tour not visible; continue
     }
 
     // Create a new browser context for User B
@@ -275,9 +279,12 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // Dismiss tour to create a tour_state record
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    try {
+      await expect(closeTourButton).toBeVisible({ timeout: 3000 });
       await closeTourButton.click();
       await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+    } catch {
+      // Tour not visible; continue
     }
 
     // Create a new browser context for User B
@@ -359,9 +366,12 @@ test.describe('RLS State Isolation Tests @security', () => {
 
     // Dismiss tour to create a tour_state record
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    if (await closeTourButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    try {
+      await expect(closeTourButton).toBeVisible({ timeout: 3000 });
       await closeTourButton.click();
       await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+    } catch {
+      // Tour not visible; continue
     }
 
     // User reads their own tour_states

@@ -104,7 +104,14 @@ test.describe('Profile Settings', () => {
     const initialState = await toggle.getAttribute('aria-checked');
 
     // Toggle it
+    const preferenceUpdate = page.waitForResponse(
+      (response) =>
+        response.url().includes('/rest/v1/user_preferences') &&
+        response.request().method() === 'POST' &&
+        response.ok()
+    );
     await toggle.click();
+    await preferenceUpdate;
     
     // Wait for the toggle state to change (optimistic update)
     await expect(toggle).not.toHaveAttribute('aria-checked', initialState!, { timeout: 5000 });
@@ -117,10 +124,6 @@ test.describe('Profile Settings', () => {
     // The toggle triggers an async upsert to user_preferences
     await page.waitForLoadState('networkidle');
     
-    // Additional wait to ensure the database write is committed
-    // This is necessary because networkidle may fire before the DB transaction completes
-    await page.waitForTimeout(500);
-
     // Reload and verify state persisted
     await page.reload();
     await page.waitForLoadState('networkidle');

@@ -31,7 +31,7 @@ test.describe('Theme Switching', () => {
     dashboardPage,
   }) => {
     await dashboardPage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await dashboardPage.waitForDashboardLoad();
 
     // Find theme toggle button
     const themeToggle = page.getByRole('button', { name: /tema atual/i });
@@ -74,7 +74,7 @@ test.describe('Theme Switching', () => {
     });
 
     await dashboardPage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await dashboardPage.waitForDashboardLoad();
     await themeBootstrap;
 
     // Find theme toggle and get initial state
@@ -104,13 +104,8 @@ test.describe('Theme Switching', () => {
     // We race with a timeout just in case the network request is too fast or happens differently,
     // but ideally we catch it.
     if (saveRequestPromise) {
-      await Promise.race([saveRequestPromise, page.waitForTimeout(2000)]);
-    } else {
-      await page.waitForTimeout(200);
+      await saveRequestPromise;
     }
-    
-    // Also wait for UI update
-    await page.waitForTimeout(500);
 
     // Get the new class after toggle
     const newClass = await html.getAttribute('class');
@@ -123,8 +118,8 @@ test.describe('Theme Switching', () => {
 
     // Refresh the page
     await page.reload();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
-    await page.waitForTimeout(1000); // Give time for useTheme hook to fetch and apply
+    await dashboardPage.waitForDashboardLoad();
+    await waitForThemeBootstrap(page);
 
     // Verify theme persisted (class should match post-toggle state, not initial)
     const classAfterRefresh = await html.getAttribute('class');
@@ -166,7 +161,7 @@ test.describe('Theme Switching', () => {
     });
 
     await dashboardPage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+    await dashboardPage.waitForDashboardLoad();
     await themeBootstrap;
 
     // Find theme toggle
@@ -184,7 +179,6 @@ test.describe('Theme Switching', () => {
 
     // Toggle theme
     await themeToggle.click();
-    await page.waitForTimeout(500);
 
     // Verify background color changed (theme actually applied)
     // Use poll to wait for color transition

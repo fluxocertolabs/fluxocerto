@@ -278,9 +278,6 @@ test.describe('Quick Update Modal', () => {
     // Trigger blur to save (auto-save on blur)
     await balanceInput.blur();
     
-    // Wait for save to complete
-    await page.waitForTimeout(1000);
-
     // Verify the value was saved correctly by checking the input still shows the value
     // The input should display the Brazilian format
     await expect(balanceInput).toHaveValue(/1500[,.]50/);

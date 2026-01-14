@@ -81,7 +81,7 @@ async function waitForChartToStabilize(page: import('@playwright/test').Page): P
   await chartContainer.waitFor({ state: 'attached', timeout: 10000 }).catch(() => {
     // Chart may not be present if no data
   });
-  await page.waitForTimeout(1000);
+  await expect(chartContainer).toBeVisible({ timeout: 10000 });
 }
 
 visualTest.describe('History Page Visual Regression @visual', () => {

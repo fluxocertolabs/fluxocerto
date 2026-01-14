@@ -91,7 +91,9 @@ test.describe('Welcome Email Delivery @email', () => {
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    if (!(await wizardDialog.isVisible({ timeout: 3000 }).catch(() => false))) {
+    try {
+      await expect(wizardDialog).toBeVisible({ timeout: 3000 });
+    } catch {
       return;
     }
 

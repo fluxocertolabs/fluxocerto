@@ -27,8 +27,7 @@ test.describe('Group Multi-Tenancy', () => {
 
       await dashboardPage.goto();
 
-      // Wait for page to fully load
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      // Wait for the dashboard to fully load (handled by dashboardPage.goto)
 
       // FR-015: System MUST display the current group name visibly in the application header
       // The GroupBadge component shows group name with a Users icon
@@ -44,7 +43,6 @@ test.describe('Group Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // FR-015: Group name should be visible on any page (header is global)
       const header = page.locator('header');
@@ -58,7 +56,6 @@ test.describe('Group Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Navigate to group tab
       await managePage.selectGroupTab();
@@ -81,7 +78,6 @@ test.describe('Group Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       await managePage.selectGroupTab();
 
@@ -99,7 +95,6 @@ test.describe('Group Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       await managePage.selectGroupTab();
 
@@ -129,7 +124,6 @@ test.describe('Group Multi-Tenancy', () => {
       ]);
 
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectAccountsTab();
 
       const accounts = managePage.accounts();
@@ -150,14 +144,13 @@ test.describe('Group Multi-Tenancy', () => {
       ]);
 
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectExpensesTab();
 
       const expenses = managePage.expenses();
       await expenses.selectFixedExpenses();
 
-      // Wait for network to settle after tab switch
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
+      // Wait for the expenses section to be ready after tab switch
+      await expenses.waitForLoad();
 
       // User should see their own expense
       await expenses.expectExpenseVisible(seeded.name);
@@ -174,7 +167,6 @@ test.describe('Group Multi-Tenancy', () => {
       ]);
 
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -190,7 +182,6 @@ test.describe('Group Multi-Tenancy', () => {
       workerContext,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectAccountsTab();
 
       const accounts = managePage.accounts();
@@ -208,7 +199,6 @@ test.describe('Group Multi-Tenancy', () => {
 
       // Refresh the page and verify it persists
       await page.reload();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
       await managePage.selectAccountsTab();
       await accounts.waitForLoad();
       
@@ -226,7 +216,6 @@ test.describe('Group Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Verify group tab exists and is clickable
       await expect(managePage.groupTab).toBeVisible();
@@ -243,7 +232,6 @@ test.describe('Group Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       await managePage.selectGroupTab();
 
@@ -266,7 +254,6 @@ test.describe('Group Multi-Tenancy', () => {
     }) => {
       // Navigate to dashboard without seeding any data
       await dashboardPage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Group badge should still be visible in header
       // (group info is independent of financial data)
@@ -284,23 +271,17 @@ test.describe('Group Multi-Tenancy', () => {
       managePage,
     }) => {
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
 
       // Navigate through all tabs
       await managePage.selectAccountsTab();
-      await page.waitForTimeout(500);
       
       await managePage.selectExpensesTab();
-      await page.waitForTimeout(500);
       
       await managePage.selectProjectsTab();
-      await page.waitForTimeout(500);
       
       await managePage.selectCreditCardsTab();
-      await page.waitForTimeout(500);
       
       await managePage.selectGroupTab();
-      await page.waitForTimeout(500);
 
       // Group section should still work correctly
       const group = managePage.group();

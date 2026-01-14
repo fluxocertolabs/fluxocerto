@@ -47,7 +47,6 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -76,7 +75,6 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();
@@ -201,7 +199,6 @@ test.describe('Project (Income) Management', () => {
 
       // Navigate and wait for page to be fully ready
       await managePage.goto();
-      await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(3000)]);
       await managePage.selectProjectsTab();
 
       const projects = managePage.projects();

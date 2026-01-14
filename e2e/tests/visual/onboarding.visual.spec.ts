@@ -60,9 +60,6 @@ async function openOnboardingWizard(
 
   // Retry up to 3 times with page reload if wizard doesn't appear
   for (let attempt = 0; attempt < 3; attempt++) {
-    // Wait for React to settle
-    await page.waitForTimeout(500);
-
     const inputVisible = await profileNameInput.isVisible().catch(() => false);
     if (inputVisible) break;
 

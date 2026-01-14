@@ -75,11 +75,9 @@ test.describe('Onboarding Wizard', () => {
 
     // Attempt to dismiss via Escape / outside click should not close the wizard
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(250);
     await expect(wizardDialog).toBeVisible();
 
     await page.mouse.click(5, 5);
-    await page.waitForTimeout(250);
     await expect(wizardDialog).toBeVisible();
   });
 
@@ -178,7 +176,7 @@ test.describe('Onboarding Wizard', () => {
           if (urlMatcher.test(page.url())) return
           if (attempt === 3) throw err
           console.warn(`[Onboarding] page.goto(${path}) failed (attempt ${attempt}); retrying...`, err)
-          await page.waitForTimeout(750)
+          await page.waitForLoadState('domcontentloaded')
         }
       }
     }
@@ -215,7 +213,6 @@ test.describe('Onboarding Wizard', () => {
       
       // Click next with empty name
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-      await page.waitForTimeout(500);
 
       // Should still be on profile step (validation failed)
       await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
@@ -244,7 +241,6 @@ test.describe('Onboarding Wizard', () => {
       
       // Click next with empty name
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-      await page.waitForTimeout(500);
 
       // Should still be on group step (validation failed)
       await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
@@ -278,7 +274,6 @@ test.describe('Onboarding Wizard', () => {
       
       // Click next with empty name
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-      await page.waitForTimeout(500);
 
       // Should still be on bank account step (validation failed)
       await expect(wizardDialog.getByRole('heading', { name: /conta bancária/i })).toBeVisible();
@@ -316,7 +311,6 @@ test.describe('Onboarding Wizard', () => {
 
       // Click next
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-      await page.waitForTimeout(500);
 
       // Should still be on income step (validation failed - name filled but amount is 0)
       await expect(wizardDialog.getByRole('heading', { name: /^renda$/i })).toBeVisible();
@@ -383,7 +377,6 @@ test.describe('Onboarding Wizard', () => {
 
       // Click next
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
-      await page.waitForTimeout(500);
 
       // Should still be on expense step (validation failed - name filled but amount is 0)
       await expect(wizardDialog.getByRole('heading', { name: /^despesa$/i })).toBeVisible();
@@ -448,7 +441,7 @@ test.describe('Onboarding Wizard', () => {
       const cardTab = page.getByRole('tab', { name: /cartões/i });
       await expect(cardTab).toBeVisible({ timeout: 10000 });
       await cardTab.click();
-      await page.waitForTimeout(500);
+      await expect(cardTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
 
       // Card should exist with the name we entered
       await expect(page.getByText('Cartão Teste')).toBeVisible({ timeout: 10000 });
@@ -502,7 +495,7 @@ test.describe('Onboarding Wizard', () => {
       // Switch to Credit Cards tab
       const cardTab = page.getByRole('tab', { name: /cartões|cartão|cards|card/i });
       await cardTab.click();
-      await page.waitForTimeout(500);
+      await expect(cardTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
 
       // Should show empty state (no cards created)
       await expect(page.getByText(/nenhum cartão de crédito ainda/i)).toBeVisible({ timeout: 10000 });
@@ -553,7 +546,7 @@ test.describe('Onboarding Wizard', () => {
       // Try to type non-numeric characters in balance field
       // The CurrencyInput strips non-digits, so this will result in empty value
       await cardBalanceInput.fill('abc');
-      await page.waitForTimeout(200);
+      await expect.poll(() => cardBalanceInput.inputValue()).toBe('');
 
       // Verify the input was sanitized (CurrencyInput strips non-digits)
       // The displayed value should be empty or "0,00" after sanitization

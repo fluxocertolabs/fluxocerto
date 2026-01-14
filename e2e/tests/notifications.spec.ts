@@ -36,9 +36,6 @@ test.describe('Notifications Inbox', () => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
     
-    // Wait for notifications to initialize
-    await page.waitForTimeout(2000);
-
     // Navigate to notifications page
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
@@ -61,11 +58,10 @@ test.describe('Notifications Inbox', () => {
     for (let i = 0; i < 5; i++) {
       await page.reload();
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(1000);
 
       // Verify still only one welcome notification
       const currentWelcomeItems = page.getByText(/bem-vindo ao fluxo certo/i);
-      expect(await currentWelcomeItems.count()).toBe(1);
+      await expect(currentWelcomeItems).toHaveCount(1);
     }
   });
 
@@ -76,7 +72,6 @@ test.describe('Notifications Inbox', () => {
     // Navigate to dashboard (triggers welcome notification creation)
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
 
     // Check for unread badge in navigation
     const navLink = page.getByRole('link', { name: /notificações/i });
@@ -92,7 +87,6 @@ test.describe('Notifications Inbox', () => {
     // Assert button is visible before clicking - this ensures test fails if button doesn't render
     await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
     await markAsReadButton.click();
-    await page.waitForTimeout(500);
 
     // Verify the button is no longer visible (notification is now read)
     await expect(markAsReadButton).not.toBeVisible({ timeout: 5000 });
@@ -100,7 +94,6 @@ test.describe('Notifications Inbox', () => {
     // Reload and verify read state persists
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // The "Marcar como lida" button should still not be visible
     await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible();
@@ -112,7 +105,6 @@ test.describe('Notifications Inbox', () => {
   }) => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
 
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
@@ -139,7 +131,6 @@ test.describe('Notifications Inbox', () => {
   }) => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
 
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
@@ -161,7 +152,6 @@ test.describe('Notifications Inbox', () => {
   }) => {
     await dashboardPage.goto();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
 
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
@@ -178,9 +168,6 @@ test.describe('Notifications Inbox', () => {
     // Should navigate to /manage
     await expect(page).toHaveURL(/\/manage/);
     
-    // Wait a bit for the mark-as-read API call to complete in the background
-    await page.waitForTimeout(1000);
-
     // Navigate back to notifications
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');

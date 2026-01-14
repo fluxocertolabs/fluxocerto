@@ -55,14 +55,13 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
 
     // Get magic link from Inbucket with increased retries
     let magicLink: string | null = null;
-    for (let i = 0; i < 25; i++) {
+    await expect(async () => {
       const message = await inbucket.getLatestMessage(mailbox);
-      if (message) {
-        magicLink = inbucket.extractMagicLink(message);
-        if (magicLink) break;
+      magicLink = message ? inbucket.extractMagicLink(message) : null;
+      if (!magicLink) {
+        throw new Error('Magic link not found yet');
       }
-      await page.waitForTimeout(500);
-    }
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
 
     expect(magicLink).not.toBeNull();
     await page.goto(magicLink!);
@@ -102,7 +101,9 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    if (!(await wizardDialog.isVisible({ timeout: 3000 }).catch(() => false))) {
+    try {
+      await expect(wizardDialog).toBeVisible({ timeout: 3000 });
+    } catch {
       return; // No wizard to complete
     }
 
@@ -133,6 +134,31 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
     await expect(wizardDialog).toBeHidden({ timeout: 15000 });
   }
 
+  async function waitForWelcomeNotification(page: Page, accessToken: string): Promise<void> {
+    await expect
+      .poll(
+        async () => {
+          return await page.evaluate(
+            async ({ baseUrl, apiKey, token }) => {
+              const res = await fetch(`${baseUrl}/rest/v1/notifications?type=eq.welcome&select=id`, {
+                headers: {
+                  apikey: apiKey,
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              if (!res.ok) return 0;
+              const data = await res.json().catch(() => []);
+              return Array.isArray(data) ? data.length : 0;
+            },
+            { baseUrl: baseApiUrl, apiKey: anonKey!, token: accessToken }
+          );
+        },
+        { timeout: 20000, intervals: [500, 1000, 2000] }
+      )
+      .toBeGreaterThan(0);
+  }
+
   // =============================================================================
   // NOTIFICATIONS RLS TESTS
   // =============================================================================
@@ -144,7 +170,7 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
     await completeOnboarding(page);
 
     // Wait for welcome notification to be created
-    await page.waitForTimeout(2000);
+    await waitForWelcomeNotification(page, userA.accessToken);
 
     // Create a new browser context for User B
     const contextB = await browser.newContext();
@@ -190,7 +216,7 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
     await completeOnboarding(page);
 
     // Wait for welcome notification to be created
-    await page.waitForTimeout(2000);
+    await waitForWelcomeNotification(page, user.accessToken);
 
     // User reads their own notifications
     const response = await page.evaluate(
@@ -228,7 +254,7 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
     await completeOnboarding(page);
 
     // Wait for welcome notification to be created
-    await page.waitForTimeout(2000);
+    await waitForWelcomeNotification(page, user.accessToken);
 
     // User tries to directly update their notification via PostgREST
     // This should fail because there's no direct UPDATE policy

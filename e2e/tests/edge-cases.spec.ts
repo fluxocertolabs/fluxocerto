@@ -95,7 +95,7 @@ test.describe('Edge Cases & Error Handling', () => {
   });
 
   test('T065: special characters in names (Café & Cia.) → handled correctly', async ({
-    page,
+    page: _page,
     managePage,
     db,
   }) => {
@@ -117,7 +117,7 @@ test.describe('Edge Cases & Error Handling', () => {
   });
 
   test('T066: very long name (50+ characters) → truncated or wrapped appropriately', async ({
-    page,
+    page: _page,
     managePage,
     db,
   }) => {
@@ -199,7 +199,7 @@ test.describe('Edge Cases & Error Handling', () => {
   });
 
   test('T069: date edge case - expense due day 31 in 30-day month → handled correctly', async ({
-    page,
+    page: _page,
     managePage,
     db,
   }) => {

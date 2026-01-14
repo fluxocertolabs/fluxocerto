@@ -34,7 +34,7 @@ test.describe('Page Tours', () => {
     // the page has continuous polling (e.g., onboarding wizard, realtime)
     await page.waitForLoadState('domcontentloaded');
     // Wait for React to hydrate by checking for a common element
-    await page.waitForTimeout(1000);
+    await expect(page.locator('header, main').first()).toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -112,6 +112,8 @@ test.describe('Page Tours', () => {
     const nextButton = page.getByRole('button', { name: /próximo/i });
     const skipButton = page.getByRole('button', { name: /pular/i });
     const completeButton = page.getByRole('button', { name: /concluir|começar a usar/i });
+    const stepHeading = wizardDialog.getByRole('heading').first();
+    const actionButtons = nextButton.or(skipButton).or(completeButton);
 
     for (let i = 0; i < 15; i++) {
       // Check if we're done
@@ -121,18 +123,20 @@ test.describe('Page Tours', () => {
       }
       // Try next button
       if (await nextButton.isVisible().catch(() => false)) {
+        const previousHeading = (await stepHeading.textContent()) ?? '';
         await nextButton.click();
-        await page.waitForTimeout(300);
+        await expect.poll(() => stepHeading.textContent()).not.toBe(previousHeading);
         continue;
       }
       // Try skip button (for optional steps)
       if (await skipButton.isVisible().catch(() => false)) {
+        const previousHeading = (await stepHeading.textContent()) ?? '';
         await skipButton.click();
-        await page.waitForTimeout(300);
+        await expect.poll(() => stepHeading.textContent()).not.toBe(previousHeading);
         continue;
       }
-      // If nothing is visible, wait a bit and retry
-      await page.waitForTimeout(500);
+      // If nothing is visible, wait for any action button to reappear
+      await expect(actionButtons).toBeVisible({ timeout: 2000 });
     }
 
     // Wait for wizard to close
@@ -181,7 +185,7 @@ test.describe('Page Tours', () => {
     await page.waitForLoadState('networkidle');
 
     // Tour should NOT auto-show again
-    await page.waitForTimeout(2000);
+    await expect(closeTourButton).toBeHidden({ timeout: 5000 });
     const isTourAutoShowing = await closeTourButton.isVisible().catch(() => false);
     expect(isTourAutoShowing).toBe(false);
   });
@@ -224,7 +228,7 @@ test.describe('Page Tours', () => {
     for (let i = 0; i < 3; i++) {
       if (!(await nextButton.isVisible().catch(() => false))) break;
       await nextButton.click();
-      await page.waitForTimeout(250);
+      await expect(closeTourButton).toBeVisible({ timeout: 5000 });
     }
 
     // Page should not show any errors
@@ -255,7 +259,6 @@ test.describe('Page Tours', () => {
 
     // Press ArrowRight to advance to step 2
     await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(300);
 
     // Should now be on step 2
     const step2Counter = page.getByText(/2 de \d+/);
@@ -263,14 +266,12 @@ test.describe('Page Tours', () => {
 
     // Press ArrowLeft to go back to step 1
     await page.keyboard.press('ArrowLeft');
-    await page.waitForTimeout(300);
 
     // Should be back on step 1
     await expect(stepCounter).toBeVisible({ timeout: 5000 });
 
     // Press Escape to dismiss tour
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
 
     // Tour should be closed
     await expect(closeTourButton).toBeHidden({ timeout: 5000 });
@@ -416,8 +417,10 @@ test.describe('Page Tours', () => {
         break;
       }
       if (await nextButton.isVisible().catch(() => false)) {
+        const stepCounter = page.getByText(/\d+ de \d+/);
+        const previousStep = (await stepCounter.textContent()) ?? '';
         await nextButton.click();
-        await page.waitForTimeout(300);
+        await expect.poll(() => stepCounter.textContent()).not.toBe(previousStep);
       } else {
         break;
       }

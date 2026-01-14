@@ -20,7 +20,6 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -109,7 +108,6 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -185,7 +183,6 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -253,7 +250,6 @@ test.describe('Future Statement Management', () => {
     await db.seedFutureStatements(statements);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -286,7 +282,6 @@ test.describe('Future Statement Management', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card with retry logic
@@ -301,9 +296,6 @@ test.describe('Future Statement Management', () => {
     // Initially should show 0 or no badge
     const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
     await collapsibleTrigger.click();
-    
-    // Wait for the collapsible content to be visible
-    await page.waitForTimeout(500);
 
     // Add a future statement
     const addButton = cardElement.getByRole('button', { name: /adicionar/i });
@@ -340,10 +332,6 @@ test.describe('Future Statement Management', () => {
     
     // Wait for dialog to close with longer timeout for CI environments
     await expect(dialog).not.toBeVisible({ timeout: 15000 });
-    
-    // Wait for the data to refresh
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
-    await page.waitForTimeout(1000);
 
     // Badge should now show 1 - use longer timeout and more intervals
     // Re-locate the card element in case DOM changed
@@ -392,7 +380,6 @@ test.describe('Future Statement Validation', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
     
 
@@ -407,9 +394,6 @@ test.describe('Future Statement Validation', () => {
 
     const collapsibleTrigger = cardElement.getByRole('button', { name: /próximas faturas/i });
     await collapsibleTrigger.click();
-    
-    // Wait for collapsible content to be visible
-    await page.waitForTimeout(500);
 
     // Try to add another statement
     const addButton = cardElement.getByRole('button', { name: /adicionar/i });
@@ -448,10 +432,6 @@ test.describe('Future Statement Validation', () => {
     // The dialog should close successfully since we picked an available month
     await expect(dialog).not.toBeVisible({ timeout: 15000 });
     
-    // Wait for data to refresh
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
-    await page.waitForTimeout(1000);
-
     // Re-locate the card element in case DOM changed
     cardElement = page.locator('div.group.relative').filter({
       has: page.getByRole('heading', { name: seededCard.name, level: 3 }),
@@ -478,7 +458,6 @@ test.describe('Future Statement Validation', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -513,7 +492,7 @@ test.describe('Future Statement Validation', () => {
     });
     
     // If current month is available, select it
-    if (await monthOption.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await monthOption.isVisible().catch(() => false)) {
       await monthOption.click();
       const amountInput = dialog.getByLabel(/valor/i);
       await amountInput.click();
@@ -550,7 +529,6 @@ test.describe('Future Statement Empty State', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
@@ -582,7 +560,6 @@ test.describe('Future Statement Brazilian Decimal Format', () => {
     ]);
 
     await managePage.goto();
-    await Promise.race([page.waitForLoadState('networkidle'), page.waitForTimeout(5000)]);
     await managePage.selectCreditCardsTab();
 
     // Find the credit card and expand future statements section
