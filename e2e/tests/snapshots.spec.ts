@@ -291,8 +291,12 @@ test.describe('Historical Projection Snapshots', () => {
       await page.getByRole('button', { name: /salvar/i }).last().click()
       await expect(page.getByText(/projeção salva com sucesso/i)).toBeVisible({ timeout: 10000 })
 
-      // Open snapshot detail
+      // Open snapshot detail - wait for toast to dismiss first to avoid UI interference
+      await expect(page.getByText(/projeção salva com sucesso/i)).toBeHidden({ timeout: 10000 })
+      
       await historyPage.goto()
+      // Wait for the snapshot to be visible before clicking (may take a moment after save)
+      await historyPage.expectSnapshotVisible('Frozen Snapshot')
       await historyPage.clickSnapshot('Frozen Snapshot')
       await expect(page).toHaveURL(/\/history\/[a-f0-9-]+/, { timeout: 15000 })
       await snapshotDetailPage.expectSummaryRendered()

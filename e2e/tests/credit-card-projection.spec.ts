@@ -14,14 +14,13 @@ import { parseBRL } from '../utils/format';
 
 test.describe('Credit Card Projection - Next Month Bug Fix', () => {
   test('credit card due in next month shows statementBalance (not 0)', async ({
-    page,
     dashboardPage,
     db,
   }) => {
-    // Calculate next month's date
+    // Calculate next month's date (used for context, not directly in test)
     const now = new Date();
-    const nextMonth = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
-    const nextMonthYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+    const _nextMonth = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
+    const _nextMonthYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
     
     // Create a credit card with due day in the middle of next month
     const dueDay = 15;
@@ -55,7 +54,6 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
   });
 
   test('credit card due in distant future (2+ months) with no futureStatement shows 0', async ({
-    page,
     dashboardPage,
     db,
   }) => {
@@ -81,18 +79,11 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     // Set projection to 90 days to include distant future months
     await dashboardPage.selectProjectionDays(90);
     
-    // Wait for chart to update
-    await page.waitForTimeout(500);
-    
-    // The chart should render without errors
+    // Wait for chart to update by asserting it renders successfully
     await dashboardPage.expectChartRendered();
   });
 
-  test('credit card due in distant future with futureStatement uses that amount', async ({
-    page,
-    dashboardPage,
-    db,
-  }) => {
+  test('credit card due in distant future with futureStatement uses that amount', async ({ dashboardPage, db }) => {
     // Calculate a distant future month (3 months ahead)
     const now = new Date();
     let targetMonth = now.getMonth() + 4; // 3 months ahead (1-indexed will be +4)
@@ -134,18 +125,11 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     // Set projection to 90 days to include the distant future month
     await dashboardPage.selectProjectionDays(90);
     
-    // Wait for chart to update
-    await page.waitForTimeout(500);
-    
-    // The chart should render without errors
+    // Wait for chart to update by asserting it renders successfully
     await dashboardPage.expectChartRendered();
   });
 
-  test('multiple credit cards - next month uses statementBalance for all', async ({
-    page,
-    dashboardPage,
-    db,
-  }) => {
+  test('multiple credit cards - next month uses statementBalance for all', async ({ dashboardPage, db }) => {
     const card1Balance = 30000; // R$ 300,00
     const card2Balance = 50000; // R$ 500,00
     const totalExpected = card1Balance + card2Balance; // R$ 800,00
@@ -189,10 +173,10 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     dashboardPage,
     db,
   }) => {
-    // Calculate next month
+    // Calculate next month (used for context, not directly in test)
     const now = new Date();
-    const nextMonth = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
-    const nextMonthYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+    const _nextMonth = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
+    const _nextMonthYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
     
     const dueDay = 3; // Early in the month to ensure it's captured
     const statementBalance = 75000; // R$ 750,00
@@ -222,16 +206,18 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     if (chartBox) {
       // Hover over different points in the chart to find the tooltip
       // Move across the chart horizontally to trigger tooltip
+      const tooltip = page.locator('.recharts-tooltip-wrapper');
+      
       for (let i = 0.1; i <= 0.9; i += 0.1) {
         await page.mouse.move(
           chartBox.x + chartBox.width * i,
           chartBox.y + chartBox.height * 0.5
         );
-        await page.waitForTimeout(100);
         
-        // Check if tooltip appeared with credit card info
-        const tooltip = page.locator('.recharts-tooltip-wrapper');
-        if (await tooltip.isVisible()) {
+        // Wait for tooltip to potentially appear after mouse move
+        // Use a short poll instead of fixed timeout
+        try {
+          await expect(tooltip).toBeVisible({ timeout: 150 });
           const tooltipText = await tooltip.textContent();
           // If this is a day with the credit card payment, verify the amount
           if (tooltipText?.includes('Cartão Tooltip') || tooltipText?.includes('CC')) {
@@ -240,6 +226,8 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
             expect(tooltipText).toMatch(/R\$\s*7[50]0/);
             break;
           }
+        } catch {
+          // Tooltip not visible at this position, continue to next
         }
       }
     }

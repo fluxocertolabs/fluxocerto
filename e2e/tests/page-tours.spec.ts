@@ -10,6 +10,11 @@ import { test, expect } from '../fixtures/test-base';
 import type { Page } from '@playwright/test';
 import type { WorkerDatabaseFixture } from '../fixtures/db';
 import { createAccount, createProject, createExpense } from '../utils/test-data';
+import {
+  startTourViaFloatingHelp,
+  dismissTourIfPresent as dismissTourViaHelper,
+  getCloseTourButton,
+} from '../utils/floating-help';
 
 test.describe('Page Tours', () => {
   // Run tour tests serially to avoid state conflicts within the same worker
@@ -88,14 +93,12 @@ test.describe('Page Tours', () => {
     }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000] });
   }
 
+  /**
+   * Wrapper around the shared dismissTourIfPresent helper.
+   * Kept for backwards compatibility with existing tests.
+   */
   async function dismissTourIfPresent(page: Page): Promise<void> {
-    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    // Wait briefly for tour to potentially auto-show
-    await closeTourButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    if (await closeTourButton.isVisible().catch(() => false)) {
-      await closeTourButton.click();
-      await expect(closeTourButton).toBeHidden({ timeout: 10000 });
-    }
+    await dismissTourViaHelper(page, true);
   }
 
   async function completeOnboardingIfPresent(page: Page): Promise<void> {
@@ -138,31 +141,17 @@ test.describe('Page Tours', () => {
 
   /**
    * Helper to start a tour via the floating help button.
+   * Uses the shared utility from e2e/utils/floating-help.ts for consistent behavior.
    */
-  async function startTourViaFloatingHelp(page: Page): Promise<void> {
+  async function startTourViaFloatingHelpLocal(page: Page): Promise<void> {
     // Dismiss any existing tour first
     await dismissTourIfPresent(page);
 
-    const helpButton = page.locator('[data-testid="floating-help-button"]');
-    await expect(helpButton).toBeVisible({ timeout: 10000 });
+    // Use the shared helper which properly handles hover vs click behavior
+    await startTourViaFloatingHelp(page);
 
-    // Click the FAB to expand
-    const fabButton = helpButton.locator('button[aria-expanded]').first();
-    await expect(fabButton).toBeVisible({ timeout: 10000 });
-    const expanded = await fabButton.getAttribute('aria-expanded');
-    if (expanded !== 'true') {
-      await fabButton.click({ force: true });
-      await expect(fabButton).toHaveAttribute('aria-expanded', 'true', { timeout: 10000 });
-    }
-
-    // Click the tour option
-    const tourOption = page.getByRole('button', { name: /iniciar tour guiado/i });
-    await expect(tourOption).toBeVisible({ timeout: 15000 });
-    await tourOption.click({ force: true });
-    await page.waitForTimeout(500);
-
-    // Assert tour started
-    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    // Double-check tour started
+    const closeTourButton = getCloseTourButton(page);
     await expect(closeTourButton).toBeVisible({ timeout: 10000 });
   }
 
@@ -170,8 +159,8 @@ test.describe('Page Tours', () => {
     // Prepare state: onboarding complete, tour not seen
     await prepareForTourAutoShow(page, db);
 
-    // Tour should auto-show
-    const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
+    // Tour should auto-show - use shared helper for consistent locator
+    const closeTourButton = getCloseTourButton(page);
     await expect(closeTourButton).toBeVisible({ timeout: 30000 });
   });
 
@@ -205,7 +194,7 @@ test.describe('Page Tours', () => {
     await dismissTourIfPresent(page);
 
     // Start tour via floating help
-    await startTourViaFloatingHelp(page);
+    await startTourViaFloatingHelpLocal(page);
 
     // Tour should be active
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -224,7 +213,7 @@ test.describe('Page Tours', () => {
     await page.waitForLoadState('networkidle');
 
     // Start tour via floating help
-    await startTourViaFloatingHelp(page);
+    await startTourViaFloatingHelpLocal(page);
 
     // Tour should become active, and must not crash even if some targets are missing
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -255,7 +244,7 @@ test.describe('Page Tours', () => {
     await dismissTourIfPresent(page);
 
     // Start tour via floating help
-    await startTourViaFloatingHelp(page);
+    await startTourViaFloatingHelpLocal(page);
 
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
     await expect(closeTourButton).toBeVisible({ timeout: 10000 });
@@ -302,7 +291,7 @@ test.describe('Page Tours', () => {
     await dismissTourIfPresent(page);
 
     // Start tour via floating help
-    await startTourViaFloatingHelp(page);
+    await startTourViaFloatingHelpLocal(page);
 
     // Tour should be active
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -324,7 +313,7 @@ test.describe('Page Tours', () => {
     await dismissTourIfPresent(page);
 
     // Start tour via floating help
-    await startTourViaFloatingHelp(page);
+    await startTourViaFloatingHelpLocal(page);
 
     // Tour should be active
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -372,7 +361,7 @@ test.describe('Page Tours', () => {
     await expect(page.locator(targetSelector)).toHaveCount(0);
 
     // Start tour via floating help - tour should handle missing target gracefully
-    await startTourViaFloatingHelp(page);
+    await startTourViaFloatingHelpLocal(page);
 
     // Tour should still be functional (close button visible)
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });

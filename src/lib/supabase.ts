@@ -1171,6 +1171,11 @@ export async function triggerWelcomeEmail(notificationId: string): Promise<Resul
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
     const functionUrl = `${supabaseUrl}/functions/v1/send-welcome-email`
 
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!anonKey) {
+      return { success: false, error: 'Supabase não está configurado' }
+    }
+
     // Add timeout to prevent hanging requests
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 10_000)
@@ -1181,6 +1186,9 @@ export async function triggerWelcomeEmail(notificationId: string): Promise<Resul
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Supabase API gateway expects apikey even when using a user JWT.
+          // Without it, the request can be rejected before reaching the Edge Function.
+          apikey: anonKey,
           'Authorization': `Bearer ${session.access_token}`,
         },
         signal: controller.signal,

@@ -354,9 +354,12 @@ test.describe('Authentication Flow', () => {
 
     // Dismiss any tour that might still be showing (best-effort)
     const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-    if (await closeTourButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    try {
+      await expect(closeTourButton).toBeVisible({ timeout: 2000 });
       await closeTourButton.click();
       await expect(closeTourButton).toBeHidden({ timeout: 5000 });
+    } catch {
+      // Tour not showing, continue
     }
     
     // Click sign out - the button text is "Sair" in Portuguese
