@@ -232,7 +232,8 @@ Deployment notes:
   - The Floating Help component has different behaviors on **desktop** (hover) vs **mobile** (click).
   - **Container vs FAB**: The `data-testid="floating-help-button"` is a `<div>` wrapper — do NOT click it directly. Click the inner FAB button (`getByRole('button', { name: /abrir ajuda/i })`).
   - **Desktop (hover-capable)**: Hover the container to open the menu, then click the tour option.
-  - **Mobile (touch)**: Click the inner FAB button to toggle the menu open.
+  - **Mobile (touch)**: Tap the inner FAB button to toggle the menu open (`locator.tap()` in Playwright).
+    - `click()` can move the mouse and trigger hover handlers; in visual tests where animations are effectively 0ms, that can instantly animate the FAB off-screen and cause "outside of viewport" flakes.
   - **Use the shared helper**: Import `openFloatingHelpMenu()`, `startTourViaFloatingHelp()`, etc. from `e2e/utils/floating-help.ts` instead of writing ad-hoc interactions.
   - **Verify state via aria attributes**: After opening, assert `aria-expanded="true"` on the FAB before interacting with menu items.
 

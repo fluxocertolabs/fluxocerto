@@ -43,26 +43,33 @@ export function getCloseTourButton(page: Page): Locator {
 
 /**
  * Check if the device supports hover (desktop) or is touch-only (mobile).
- * Uses Playwright's viewport width as a heuristic.
+ * Uses the browser's media queries for accurate detection (matches app behavior).
  */
 async function isHoverCapable(page: Page): Promise<boolean> {
-  const viewport = page.viewportSize();
-  // Assume devices with viewport width >= 1024px support hover
-  // This matches typical desktop/laptop screens
-  return viewport ? viewport.width >= 1024 : true;
+  // Match the app's own heuristic: hover + fine pointer indicates mouse/trackpad.
+  // This avoids flakes where Playwright uses a mouse to click in a touch context,
+  // which can trigger hover handlers and instantly animate elements off-screen
+  // (visual tests set animation durations to 0ms).
+  return await page
+    .evaluate(() => {
+      const mq = window.matchMedia?.('(hover: hover) and (pointer: fine)');
+      return mq ? mq.matches : true;
+    })
+    .catch(() => true);
 }
 
 /**
  * Open the Floating Help menu deterministically.
  *
  * - On desktop (hover-capable): hovers the container to trigger the menu
- * - On mobile (touch): clicks the inner FAB button
+ * - On mobile (touch): taps the inner FAB button
  *
  * Waits for the menu to be fully expanded before returning.
  */
 export async function openFloatingHelpMenu(page: Page): Promise<void> {
   const container = getFloatingHelpContainer(page);
   const fab = getFloatingHelpFAB(page);
+  const tourOption = getTourOptionButton(page);
 
   // Ensure the help button is visible first
   await expect(container).toBeVisible({ timeout: 10000 });
@@ -73,30 +80,29 @@ export async function openFloatingHelpMenu(page: Page): Promise<void> {
     // Desktop: hover the container to open menu
     await container.hover();
   } else {
-    // Mobile: click the FAB button to toggle menu open
-    const alreadyExpanded = (await fab.getAttribute('aria-expanded')) === 'true';
-    if (!alreadyExpanded) {
-      await expect(async () => {
-        await fab.scrollIntoViewIfNeeded();
-        try {
-          await fab.click({ timeout: 2000 });
-        } catch {
-          await fab.click({ force: true, timeout: 2000 });
-        }
+    // Touch/mobile: use a tap to avoid mouse hover side-effects.
+    // IMPORTANT: When the menu is open, the FAB is intentionally animated off-screen
+    // and has `pointer-events: none`, so never try to click it if already expanded.
+    await expect(async () => {
+      const expanded = (await fab.getAttribute('aria-expanded')) === 'true';
+      if (expanded) {
+        return;
+      }
 
-        const expanded = await fab.getAttribute('aria-expanded');
-        if (expanded !== 'true') {
-          throw new Error('Floating help menu not expanded yet');
-        }
-      }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
-    }
+      await fab.scrollIntoViewIfNeeded();
+      await fab.tap({ timeout: 2000 });
+
+      const nowExpanded = (await fab.getAttribute('aria-expanded')) === 'true';
+      if (!nowExpanded) {
+        throw new Error('Floating help menu not expanded yet');
+      }
+    }).toPass({ timeout: 10000, intervals: [250, 500, 1000, 2000] });
   }
 
   // Wait for menu to be expanded
   await expect(fab).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
 
   // Also verify the tour option is visible (menu content is rendered)
-  const tourOption = getTourOptionButton(page);
   await expect(tourOption).toBeVisible({ timeout: 5000 });
 }
 
