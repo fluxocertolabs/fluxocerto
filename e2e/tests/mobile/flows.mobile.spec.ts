@@ -42,7 +42,6 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
 
     // Wait for wizard to appear
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(500);
     await expect(wizardDialog).toBeVisible({ timeout: 30000 });
 
     // Step 1: Profile
