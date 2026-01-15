@@ -268,5 +268,47 @@ export class CreditCardsSection {
 
     return cardElement;
   }
+
+  /**
+   * Get credit card names in DOM order (top to bottom).
+   * Useful for verifying stable ordering after balance updates.
+   */
+  async getCardNamesInOrder(): Promise<string[]> {
+    await this.waitForLoad();
+    
+    // Get all credit card cards
+    const cardElements = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { level: 3 })
+    });
+    
+    const count = await cardElements.count();
+    const names: string[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const card = cardElements.nth(i);
+      const heading = card.getByRole('heading', { level: 3 });
+      const name = await heading.textContent();
+      if (name) {
+        names.push(name.trim());
+      }
+    }
+    
+    return names;
+  }
+
+  /**
+   * Get the freshness indicator value for a credit card.
+   * Returns 'fresh', 'warning', or 'stale' based on the data-freshness attribute.
+   */
+  async getCardFreshness(name: string): Promise<string | null> {
+    const cardElement = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { name, level: 3, exact: true }),
+    }).first();
+    
+    await expect(cardElement).toBeVisible({ timeout: 10000 });
+    
+    const freshnessBar = cardElement.locator('[data-freshness]');
+    return freshnessBar.getAttribute('data-freshness');
+  }
 }
 

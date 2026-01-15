@@ -38,3 +38,35 @@ export function isStale(date: Date | undefined): boolean {
   return diffDays > 7
 }
 
+/**
+ * Balance freshness levels for UI indicators.
+ * - 'fresh': Updated today or yesterday (green indicator)
+ * - 'warning': Updated 2-7 days ago (yellow indicator)
+ * - 'stale': Updated more than 7 days ago or never (red indicator)
+ */
+export type BalanceFreshness = 'fresh' | 'warning' | 'stale'
+
+/**
+ * Get the freshness classification for a balance update date.
+ * Used to display visual indicators (left color bar) on account/card cards.
+ *
+ * @param date - The date when the balance was last updated
+ * @returns 'fresh' if updated today/yesterday, 'warning' if 2-7 days ago, 'stale' if >7 days or never
+ */
+export function getBalanceFreshness(date: Date | undefined): BalanceFreshness {
+  if (!date) return 'stale'
+
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  // Fresh: updated today (0 days) or yesterday (1 day)
+  if (diffDays <= 1) return 'fresh'
+
+  // Warning: updated 2-7 days ago
+  if (diffDays <= 7) return 'warning'
+
+  // Stale: updated more than 7 days ago
+  return 'stale'
+}
+

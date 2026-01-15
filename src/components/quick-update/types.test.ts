@@ -9,6 +9,7 @@ import {
   getIdFromItem,
   getOwnerFromItem,
   getAccountTypeFromItem,
+  getBalanceUpdatedAtFromItem,
   type BalanceItem,
 } from './types'
 import type { BankAccount, CreditCard } from '@/types'
@@ -162,6 +163,42 @@ describe('Quick Update Types', () => {
         entity: createMockCreditCard(),
       }
       expect(getAccountTypeFromItem(item)).toBeNull()
+    })
+  })
+
+  describe('getBalanceUpdatedAtFromItem', () => {
+    it('returns undefined when account has no balanceUpdatedAt', () => {
+      const item: BalanceItem = {
+        type: 'account',
+        entity: createMockBankAccount({ balanceUpdatedAt: undefined }),
+      }
+      expect(getBalanceUpdatedAtFromItem(item)).toBeUndefined()
+    })
+
+    it('returns undefined when card has no balanceUpdatedAt', () => {
+      const item: BalanceItem = {
+        type: 'card',
+        entity: createMockCreditCard({ balanceUpdatedAt: undefined }),
+      }
+      expect(getBalanceUpdatedAtFromItem(item)).toBeUndefined()
+    })
+
+    it('returns balanceUpdatedAt date for account', () => {
+      const date = new Date('2025-01-15T10:00:00Z')
+      const item: BalanceItem = {
+        type: 'account',
+        entity: createMockBankAccount({ balanceUpdatedAt: date }),
+      }
+      expect(getBalanceUpdatedAtFromItem(item)).toEqual(date)
+    })
+
+    it('returns balanceUpdatedAt date for card', () => {
+      const date = new Date('2025-01-14T15:30:00Z')
+      const item: BalanceItem = {
+        type: 'card',
+        entity: createMockCreditCard({ balanceUpdatedAt: date }),
+      }
+      expect(getBalanceUpdatedAtFromItem(item)).toEqual(date)
     })
   })
 })

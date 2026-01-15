@@ -14,6 +14,8 @@ import {
   mapExpenseFromDb,
   mapCreditCardFromDb,
   mergeRealtimeOwner,
+  compareByNameThenId,
+  sortByNameThenId,
 } from './use-finance-data'
 import type { ProfileRow, AccountRow, ProjectRow, ExpenseRow, CreditCardRow } from '@/lib/supabase'
 
@@ -593,6 +595,130 @@ describe('mergeRealtimeOwner', () => {
 
     expect(result.next.owner).toEqual({ id: 'p2', name: 'Maria' })
     expect(result.ownerSource).toBe('profiles')
+  })
+})
+
+// =============================================================================
+// SORTING UTILITIES TESTS
+// =============================================================================
+
+describe('compareByNameThenId', () => {
+  it('sorts by name alphabetically (pt-BR locale)', () => {
+    const a = { id: '1', name: 'Banco do Brasil' }
+    const b = { id: '2', name: 'Caixa' }
+    
+    expect(compareByNameThenId(a, b)).toBeLessThan(0)
+    expect(compareByNameThenId(b, a)).toBeGreaterThan(0)
+  })
+
+  it('is case-insensitive', () => {
+    const a = { id: '1', name: 'nubank' }
+    const b = { id: '2', name: 'Nubank' }
+    
+    // Same name (case-insensitive), so compare by id
+    expect(compareByNameThenId(a, b)).toBeLessThan(0)
+  })
+
+  it('handles diacritics correctly (pt-BR)', () => {
+    const a = { id: '1', name: 'Açaí' }
+    const b = { id: '2', name: 'Acai' }
+    
+    // With sensitivity: 'base', these should be equal (diacritics ignored)
+    // Then tie-break by id
+    expect(compareByNameThenId(a, b)).toBeLessThan(0)
+  })
+
+  it('uses id as tie-breaker when names are equal', () => {
+    const a = { id: 'aaa', name: 'Same Name' }
+    const b = { id: 'bbb', name: 'Same Name' }
+    
+    expect(compareByNameThenId(a, b)).toBeLessThan(0)
+    expect(compareByNameThenId(b, a)).toBeGreaterThan(0)
+  })
+
+  it('returns 0 for identical items', () => {
+    const a = { id: '1', name: 'Test' }
+    const b = { id: '1', name: 'Test' }
+    
+    expect(compareByNameThenId(a, b)).toBe(0)
+  })
+
+  it('handles numeric sorting correctly', () => {
+    const a = { id: '1', name: 'Account 2' }
+    const b = { id: '2', name: 'Account 10' }
+    
+    // With numeric: true, "Account 2" should come before "Account 10"
+    expect(compareByNameThenId(a, b)).toBeLessThan(0)
+  })
+})
+
+describe('sortByNameThenId', () => {
+  it('returns a new sorted array', () => {
+    const items = [
+      { id: '3', name: 'Charlie' },
+      { id: '1', name: 'Alpha' },
+      { id: '2', name: 'Bravo' },
+    ]
+    
+    const sorted = sortByNameThenId(items)
+    
+    expect(sorted).toEqual([
+      { id: '1', name: 'Alpha' },
+      { id: '2', name: 'Bravo' },
+      { id: '3', name: 'Charlie' },
+    ])
+  })
+
+  it('does not mutate the original array', () => {
+    const items = [
+      { id: '3', name: 'Charlie' },
+      { id: '1', name: 'Alpha' },
+    ]
+    const original = [...items]
+    
+    sortByNameThenId(items)
+    
+    expect(items).toEqual(original)
+  })
+
+  it('handles empty array', () => {
+    expect(sortByNameThenId([])).toEqual([])
+  })
+
+  it('handles single item', () => {
+    const items = [{ id: '1', name: 'Only' }]
+    expect(sortByNameThenId(items)).toEqual([{ id: '1', name: 'Only' }])
+  })
+
+  it('maintains stable order for items with same name', () => {
+    const items = [
+      { id: 'c', name: 'Same' },
+      { id: 'a', name: 'Same' },
+      { id: 'b', name: 'Same' },
+    ]
+    
+    const sorted = sortByNameThenId(items)
+    
+    // Should be sorted by id when names are equal
+    expect(sorted.map(i => i.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('sorts accounts with Brazilian names correctly', () => {
+    const items = [
+      { id: '1', name: 'Itaú' },
+      { id: '2', name: 'Bradesco' },
+      { id: '3', name: 'Caixa Econômica' },
+      { id: '4', name: 'Banco do Brasil' },
+    ]
+    
+    const sorted = sortByNameThenId(items)
+    
+    expect(sorted.map(i => i.name)).toEqual([
+      'Banco do Brasil',
+      'Bradesco',
+      'Caixa Econômica',
+      'Itaú',
+    ])
   })
 })
 

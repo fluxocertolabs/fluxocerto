@@ -73,3 +73,10 @@ export function getAccountTypeFromItem(item: BalanceItem): AccountType | null {
   return item.type === 'account' ? item.entity.type : null
 }
 
+/**
+ * Get the balanceUpdatedAt date from a balance item
+ */
+export function getBalanceUpdatedAtFromItem(item: BalanceItem): Date | undefined {
+  return item.entity.balanceUpdatedAt
+}
+

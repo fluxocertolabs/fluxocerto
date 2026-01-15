@@ -9,6 +9,7 @@ export interface TestAccount {
   type: 'checking' | 'savings' | 'investment';
   balance: number; // in cents
   owner_id?: string | null;
+  balance_updated_at?: string; // ISO date string
 }
 
 export interface TestExpense {
@@ -53,6 +54,7 @@ export interface TestCreditCard {
   statement_balance: number; // in cents
   due_day: number; // 1-31
   owner_id?: string | null;
+  balance_updated_at?: string; // ISO date string
 }
 
 export interface TestFutureStatement {

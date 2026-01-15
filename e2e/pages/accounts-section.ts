@@ -405,5 +405,47 @@ export class AccountsSection {
     });
     return accounts.count();
   }
+
+  /**
+   * Get account names in DOM order (top to bottom).
+   * Useful for verifying stable ordering after balance updates.
+   */
+  async getAccountNamesInOrder(): Promise<string[]> {
+    await this.waitForLoad();
+    
+    // Get all account cards
+    const accountCards = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { level: 3 })
+    });
+    
+    const count = await accountCards.count();
+    const names: string[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const card = accountCards.nth(i);
+      const heading = card.getByRole('heading', { level: 3 });
+      const name = await heading.textContent();
+      if (name) {
+        names.push(name.trim());
+      }
+    }
+    
+    return names;
+  }
+
+  /**
+   * Get the freshness indicator value for an account card.
+   * Returns 'fresh', 'warning', or 'stale' based on the data-freshness attribute.
+   */
+  async getAccountFreshness(name: string): Promise<string | null> {
+    const accountCard = this.page.locator('div.group.relative').filter({
+      has: this.page.getByRole('heading', { name, level: 3, exact: true }),
+    }).first();
+    
+    await expect(accountCard).toBeVisible({ timeout: 10000 });
+    
+    const freshnessBar = accountCard.locator('[data-freshness]');
+    return freshnessBar.getAttribute('data-freshness');
+  }
 }
 

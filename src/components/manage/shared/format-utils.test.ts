@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { formatCurrency, formatRelativeTime, isStale } from './format-utils'
+import { formatCurrency, formatRelativeTime, isStale, getBalanceFreshness } from './format-utils'
 
 /**
  * Normalize spaces in currency strings for comparison.
@@ -183,6 +183,110 @@ describe('isStale', () => {
     it('returns false for data updated 6 days ago', () => {
       const sixDaysAgo = new Date(2025, 0, 25)
       expect(isStale(sixDaysAgo)).toBe(false)
+    })
+  })
+})
+
+// =============================================================================
+// getBalanceFreshness TESTS (tri-state freshness indicator)
+// =============================================================================
+
+describe('getBalanceFreshness', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2025, 0, 31, 12, 0, 0)) // January 31, 2025 at noon
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  describe('undefined/null handling', () => {
+    it('returns "stale" for undefined', () => {
+      expect(getBalanceFreshness(undefined)).toBe('stale')
+    })
+  })
+
+  describe('fresh (today/yesterday)', () => {
+    it('returns "fresh" for data updated today', () => {
+      const today = new Date(2025, 0, 31, 10, 0, 0)
+      expect(getBalanceFreshness(today)).toBe('fresh')
+    })
+
+    it('returns "fresh" for data updated at midnight today', () => {
+      const midnight = new Date(2025, 0, 31, 0, 0, 0)
+      expect(getBalanceFreshness(midnight)).toBe('fresh')
+    })
+
+    it('returns "fresh" for data updated yesterday', () => {
+      const yesterday = new Date(2025, 0, 30, 12, 0, 0)
+      expect(getBalanceFreshness(yesterday)).toBe('fresh')
+    })
+
+    it('returns "fresh" for data updated 1 day ago', () => {
+      const oneDayAgo = new Date(2025, 0, 30, 12, 0, 0)
+      expect(getBalanceFreshness(oneDayAgo)).toBe('fresh')
+    })
+  })
+
+  describe('warning (2-7 days)', () => {
+    it('returns "warning" for data updated 2 days ago', () => {
+      const twoDaysAgo = new Date(2025, 0, 29, 12, 0, 0)
+      expect(getBalanceFreshness(twoDaysAgo)).toBe('warning')
+    })
+
+    it('returns "warning" for data updated 5 days ago', () => {
+      const fiveDaysAgo = new Date(2025, 0, 26, 12, 0, 0)
+      expect(getBalanceFreshness(fiveDaysAgo)).toBe('warning')
+    })
+
+    it('returns "warning" for data updated 7 days ago', () => {
+      const sevenDaysAgo = new Date(2025, 0, 24, 12, 0, 0)
+      expect(getBalanceFreshness(sevenDaysAgo)).toBe('warning')
+    })
+  })
+
+  describe('stale (>7 days)', () => {
+    it('returns "stale" for data updated 8 days ago', () => {
+      const eightDaysAgo = new Date(2025, 0, 23, 12, 0, 0)
+      expect(getBalanceFreshness(eightDaysAgo)).toBe('stale')
+    })
+
+    it('returns "stale" for data updated 14 days ago', () => {
+      const twoWeeksAgo = new Date(2025, 0, 17, 12, 0, 0)
+      expect(getBalanceFreshness(twoWeeksAgo)).toBe('stale')
+    })
+
+    it('returns "stale" for very old data', () => {
+      const veryOld = new Date(2020, 0, 1)
+      expect(getBalanceFreshness(veryOld)).toBe('stale')
+    })
+  })
+
+  describe('edge cases', () => {
+    it('returns "fresh" for future dates', () => {
+      const future = new Date(2025, 1, 15)
+      expect(getBalanceFreshness(future)).toBe('fresh')
+    })
+
+    it('boundary: 1 day returns fresh, 2 days returns warning', () => {
+      // Exactly at 1 day boundary
+      const oneDayExact = new Date(2025, 0, 30, 12, 0, 0)
+      expect(getBalanceFreshness(oneDayExact)).toBe('fresh')
+
+      // Just past 1 day (2 days)
+      const twoDays = new Date(2025, 0, 29, 12, 0, 0)
+      expect(getBalanceFreshness(twoDays)).toBe('warning')
+    })
+
+    it('boundary: 7 days returns warning, 8 days returns stale', () => {
+      // Exactly at 7 day boundary
+      const sevenDays = new Date(2025, 0, 24, 12, 0, 0)
+      expect(getBalanceFreshness(sevenDays)).toBe('warning')
+
+      // Just past 7 days (8 days)
+      const eightDays = new Date(2025, 0, 23, 12, 0, 0)
+      expect(getBalanceFreshness(eightDays)).toBe('stale')
     })
   })
 })

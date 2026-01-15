@@ -29,6 +29,39 @@ import { parse } from 'date-fns'
 import { FINANCE_DATA_INVALIDATED_EVENT } from '@/lib/finance-data-events'
 import { upsertUniqueById } from '@/lib/utils'
 
+// =============================================================================
+// SORTING UTILITIES
+// Deterministic alphabetical ordering (pt-BR locale) to prevent list "jumping"
+// =============================================================================
+
+/**
+ * Collator for pt-BR locale-aware string comparison.
+ * Case-insensitive and diacritics-insensitive for natural sorting.
+ */
+const ptBRCollator = new Intl.Collator('pt-BR', {
+  sensitivity: 'base', // ignore case and diacritics
+  numeric: true, // sort "Account 2" before "Account 10"
+})
+
+/**
+ * Compare two named entities by name (pt-BR locale) with id as tie-breaker.
+ * Ensures deterministic ordering across refetches and realtime updates.
+ */
+export function compareByNameThenId<T extends { name: string; id: string }>(a: T, b: T): number {
+  const nameCompare = ptBRCollator.compare(a.name, b.name)
+  if (nameCompare !== 0) return nameCompare
+  // Tie-breaker: compare by id for deterministic order when names are equal
+  return a.id.localeCompare(b.id)
+}
+
+/**
+ * Sort an array of named entities by name (pt-BR) then id.
+ * Returns a new sorted array (does not mutate input).
+ */
+export function sortByNameThenId<T extends { name: string; id: string }>(items: T[]): T[] {
+  return [...items].sort(compareByNameThenId)
+}
+
 export interface UseFinanceDataReturn {
   accounts: BankAccount[]
   projects: Project[]
@@ -360,11 +393,13 @@ export function useFinanceData(): UseFinanceDataReturn {
           )
           groupIdRef.current = mappedProfiles[0]?.groupId ?? null
 
-          setAccounts(mappedAccounts)
+          // Sort accounts and credit cards alphabetically for stable ordering
+          // This prevents "jumping" when balances are updated and data is refetched
+          setAccounts(sortByNameThenId(mappedAccounts))
           setProjects(mappedProjects)
           setSingleShotIncome(mappedSingleShotIncome)
           setExpenses(mappedExpenses)
-          setCreditCards(mappedCreditCards)
+          setCreditCards(sortByNameThenId(mappedCreditCards))
           setFutureStatements(mappedFutureStatements)
           setProfiles(mappedProfiles)
 
@@ -431,7 +466,7 @@ export function useFinanceData(): UseFinanceDataReturn {
       case 'INSERT':
         if (newRecord) {
           const mapped = mapAccountFromDb(newRecord as AccountRow)
-          setAccounts((prev) => upsertUniqueById(prev, mapped))
+          setAccounts((prev) => sortByNameThenId(upsertUniqueById(prev, mapped)))
         }
         break
       case 'UPDATE':
@@ -453,7 +488,8 @@ export function useFinanceData(): UseFinanceDataReturn {
               profilesRef.current
             )
 
-            return upsertUniqueById(prev, next)
+            // Sort to maintain stable ordering after upsert
+            return sortByNameThenId(upsertUniqueById(prev, next))
           })
         }
         break
@@ -543,7 +579,7 @@ export function useFinanceData(): UseFinanceDataReturn {
       case 'INSERT':
         if (newRecord) {
           const mapped = mapCreditCardFromDb(newRecord as CreditCardRow)
-          setCreditCards((prev) => upsertUniqueById(prev, mapped))
+          setCreditCards((prev) => sortByNameThenId(upsertUniqueById(prev, mapped)))
         }
         break
       case 'UPDATE':
@@ -564,7 +600,8 @@ export function useFinanceData(): UseFinanceDataReturn {
               profilesRef.current
             )
 
-            return upsertUniqueById(prev, next)
+            // Sort to maintain stable ordering after upsert
+            return sortByNameThenId(upsertUniqueById(prev, next))
           })
         }
         break

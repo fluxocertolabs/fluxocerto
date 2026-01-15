@@ -46,6 +46,35 @@ test.describe('Account Management', () => {
     await accounts.expectAccountVisible(accountName);
   });
 
+  test('T037: newly created account shows fresh freshness indicator', async ({
+    managePage,
+    workerContext,
+  }) => {
+    await managePage.goto();
+    await managePage.selectAccountsTab();
+
+    const accounts = managePage.accounts();
+    await accounts.waitForLoad();
+    
+    // Create a new account
+    const uniqueId = Date.now();
+    const accountName = `Fresh Account W${workerContext.workerIndex} ${uniqueId}`;
+    await accounts.createAccount({
+      name: accountName,
+      type: 'checking',
+      balance: '500,00',
+    });
+
+    await accounts.expectAccountVisible(accountName);
+
+    // Verify the freshness indicator shows "fresh" (green bar)
+    // since the account was just created with balance_updated_at set to now
+    await expect(async () => {
+      const freshness = await accounts.getAccountFreshness(accountName);
+      expect(freshness).toBe('fresh');
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+  });
+
   test('T030: edit account name to "Nubank Principal" → updated name displayed', async ({
     page,
     managePage,
@@ -244,5 +273,124 @@ test.describe('Account Management', () => {
       has: page.getByRole('heading', { name: seeded.name, level: 3 }) 
     }).first();
     await expect(accountCard).toBeVisible();
+  });
+
+  test('T035: accounts maintain stable alphabetical order after balance update', async ({
+    page,
+    managePage,
+    db,
+  }) => {
+    // Use unique timestamp to avoid collisions with other test runs
+    const uniqueId = Date.now();
+
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    await managePage.goto();
+    await managePage.selectAccountsTab();
+
+    // Seed 3 accounts with names that sort predictably (A < B < C alphabetically)
+    // Note: worker prefix is added by db fixture, so we use names that sort correctly
+    const seeded = await db.seedAccounts([
+      createAccount({ name: `AAA Banco ${uniqueId}`, balance: 100000 }),
+      createAccount({ name: `BBB Caixa ${uniqueId}`, balance: 200000 }),
+      createAccount({ name: `CCC Itaú ${uniqueId}`, balance: 300000 }),
+    ]);
+
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
+    await managePage.selectAccountsTab();
+
+    const accounts = managePage.accounts();
+    await accounts.waitForLoad();
+
+    // Verify all accounts are visible
+    for (const account of seeded) {
+      await accounts.expectAccountVisible(account.name);
+    }
+
+    // Get initial order
+    const initialOrder = await accounts.getAccountNamesInOrder();
+    
+    // Filter to just our seeded accounts (there may be others from previous tests)
+    const ourInitialOrder = initialOrder.filter(name => 
+      seeded.some(s => s.name === name)
+    );
+
+    // Update balance of the MIDDLE account (BBB Caixa)
+    const middleAccount = seeded[1];
+    await accounts.updateAccountBalance(middleAccount.name, '5.000,00');
+
+    // Wait for update to complete via realtime subscription
+    await expect(async () => {
+      // Ensure we're still on the accounts tab
+      const accountsTab = page.getByRole('tab', { name: /contas/i });
+      if (!(await accountsTab.getAttribute('aria-selected'))?.includes('true')) {
+        await managePage.selectAccountsTab();
+      }
+      await expect(page.getByText(formatBRL(500000)).first()).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
+
+    // Get order after update
+    const orderAfterUpdate = await accounts.getAccountNamesInOrder();
+    
+    // Filter to just our seeded accounts
+    const ourOrderAfterUpdate = orderAfterUpdate.filter(name => 
+      seeded.some(s => s.name === name)
+    );
+
+    // CRITICAL ASSERTION: Order should remain identical after balance update
+    expect(ourOrderAfterUpdate).toEqual(ourInitialOrder);
+  });
+
+  test('T036: account freshness indicator shows fresh after balance update', async ({
+    page,
+    managePage,
+    db,
+  }) => {
+    // Use unique timestamp to avoid collisions with other test runs
+    const uniqueId = Date.now();
+
+    // IMPORTANT: Navigate FIRST, then seed data, then reload.
+    await managePage.goto();
+    await managePage.selectAccountsTab();
+
+    // Seed an account with an old balance_updated_at (stale)
+    const oldDate = new Date();
+    oldDate.setDate(oldDate.getDate() - 10); // 10 days ago = stale
+    
+    const [seeded] = await db.seedAccounts([
+      createAccount({ 
+        name: `Conta Freshness ${uniqueId}`, 
+        balance: 100000,
+        balance_updated_at: oldDate.toISOString(),
+      }),
+    ]);
+
+    // Reload to pick up the seeded data
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await managePage.waitForReady();
+    await managePage.selectAccountsTab();
+
+    const accounts = managePage.accounts();
+    await accounts.waitForLoad();
+    await accounts.expectAccountVisible(seeded.name);
+
+    // Check initial freshness is stale
+    const initialFreshness = await accounts.getAccountFreshness(seeded.name);
+    expect(initialFreshness).toBe('stale');
+
+    // Update the balance
+    await accounts.updateAccountBalance(seeded.name, '2.000,00');
+
+    // Wait for update to complete
+    await expect(async () => {
+      await expect(page.getByText(formatBRL(200000)).first()).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000, 3000] });
+
+    // Check freshness is now fresh (updated today)
+    await expect(async () => {
+      const freshness = await accounts.getAccountFreshness(seeded.name);
+      expect(freshness).toBe('fresh');
+    }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
   });
 });
