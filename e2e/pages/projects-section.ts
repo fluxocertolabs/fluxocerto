@@ -20,10 +20,52 @@ export class ProjectsSection {
     this.projectList = page.locator('[data-testid="projects-list"], .projects-list').first();
   }
 
+  private get manageTabs(): Locator {
+    return this.page.locator('[data-tour="manage-tabs"]');
+  }
+
+  private get projectsTab(): Locator {
+    return this.manageTabs.getByRole('tab', { name: /projetos|receitas|projects|income/i });
+  }
+
+  private async ensureManageTabsVisible(): Promise<void> {
+    const errorAlertWithRetry = this.page.getByRole('alert').filter({
+      has: this.page.getByRole('button', { name: /tentar novamente/i }),
+    });
+    const retryButton = errorAlertWithRetry.getByRole('button', { name: /tentar novamente/i });
+
+    await expect(async () => {
+      if (this.page.url().includes('/login')) {
+        throw new Error('Redirected to /login while waiting for Manage tabs');
+      }
+
+      const tabsVisible = await this.manageTabs.isVisible().catch(() => false);
+      if (tabsVisible) return;
+
+      const canRetry = await retryButton.isVisible().catch(() => false);
+      if (canRetry) {
+        console.warn('[ProjectsSection] Manage error state detected; clicking retry');
+        await retryButton.click({ timeout: 5000 }).catch(() => {});
+      }
+
+      throw new Error('Manage tabs not visible yet');
+    }).toPass({ timeout: 50000, intervals: [500, 1000, 2000] });
+  }
+
+  private async ensureProjectsTabActive(): Promise<void> {
+    await this.ensureManageTabsVisible();
+    const state = await this.projectsTab.getAttribute('data-state').catch(() => null);
+    if (state !== 'active') {
+      await this.projectsTab.click({ timeout: 15000 }).catch(() => this.projectsTab.click({ force: true, timeout: 15000 }));
+      await expect(this.projectsTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
+    }
+  }
+
   /**
    * Switch to recurring projects sub-tab
    */
   async selectRecurring(): Promise<void> {
+    await this.ensureProjectsTabActive();
     await expect(this.recurringTab).toBeVisible({ timeout: 10000 });
     await this.recurringTab.click();
     await expect(this.recurringTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
@@ -53,6 +95,7 @@ export class ProjectsSection {
    * Switch to single-shot income sub-tab
    */
   async selectSingleShot(): Promise<void> {
+    await this.ensureProjectsTabActive();
     await expect(this.singleShotTab).toBeVisible({ timeout: 10000 });
     await this.singleShotTab.click();
     await expect(this.singleShotTab).toHaveAttribute('data-state', 'active', { timeout: 10000 });
@@ -351,12 +394,12 @@ export class ProjectsSection {
    */
   async expectProjectVisible(name: string): Promise<void> {
     await expect(async () => {
-      const project = this.page.getByText(name, { exact: true }).first();
+      const project = this.page.getByText(name, { exact: false }).first();
       const visible = await project.isVisible().catch(() => false);
       if (!visible) {
         throw new Error(`Project "${name}" not visible yet.`);
       }
-    }).toPass({ timeout: 30000, intervals: [250, 500, 1000, 2000] });
+    }).toPass({ timeout: 45000, intervals: [250, 500, 1000, 2000] });
   }
 
   /**

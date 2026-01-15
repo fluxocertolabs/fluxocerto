@@ -8,24 +8,58 @@ import { createNotification } from '../utils/test-data';
 
 async function seedWelcomeNotification(db: {
   getUserIdByEmail: (email: string) => Promise<string | null>;
+  deleteNotificationsForUser: (userId: string) => Promise<void>;
   seedNotifications: (notifications: ReturnType<typeof createNotification>[]) => Promise<unknown>;
 }, email: string): Promise<string> {
   const userId = await db.getUserIdByEmail(email);
   if (!userId) {
     throw new Error(`Failed to resolve auth user id for ${email}`);
   }
-  await db.seedNotifications([createNotification(userId)]);
+  await db.deleteNotificationsForUser(userId);
+  await db.seedNotifications([
+    createNotification(userId, { dedupe_key: 'welcome-v1' }),
+  ]);
   return userId;
 }
 
-async function waitForNotificationsReady(page: { getByText: any; getByRole: any }): Promise<void> {
+async function waitForNotificationsReady(page: { getByRole: any }): Promise<void> {
   await expect(async () => {
-    const hasWelcome = await page.getByText(/bem-vindo ao fluxo certo/i).isVisible().catch(() => false);
-    const hasMarkAsRead = await page.getByRole('button', { name: /marcar como lida/i }).isVisible().catch(() => false);
-    if (!hasWelcome && !hasMarkAsRead) {
+    const welcomeCount = await page.getByRole('heading', { name: /bem-vindo ao fluxo certo/i }).count();
+    const markAsReadCount = await page.getByRole('button', { name: /marcar como lida/i }).count();
+    if (welcomeCount === 0 && markAsReadCount === 0) {
       throw new Error('Notifications not visible yet');
     }
   }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
+}
+
+async function waitForMarkAsReadRequest(page: { waitForResponse: any }): Promise<void> {
+  await page.waitForResponse(
+    (response: { url: () => string; request: () => { method: () => string }; status: () => number }) => {
+      const url = response.url();
+      const method = response.request().method();
+      const isRpc = url.includes('/rpc/mark_notification_read') && method === 'POST';
+      const isRest = url.includes('/rest/v1/notifications') && (method === 'PATCH' || method === 'POST');
+      return (isRpc || isRest) && response.status() >= 200 && response.status() < 300;
+    },
+    { timeout: 10000 }
+  );
+}
+
+async function waitForNotificationRead(db: {
+  getNotificationsForUser: (userId: string) => Promise<Array<{ dedupe_key?: string | null; title?: string; read_at?: string | null }>>;
+}, userId: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const notifications = await db.getNotificationsForUser(userId);
+        const welcome = notifications.find((n) =>
+          n.dedupe_key === 'welcome-v1' || /bem-vindo ao fluxo certo/i.test(n.title ?? '')
+        );
+        return Boolean(welcome?.read_at);
+      },
+      { timeout: 30000, intervals: [500, 1000, 2000, 4000] }
+    )
+    .toBe(true);
 }
 
 test.describe('Notifications Inbox', () => {
@@ -91,6 +125,8 @@ test.describe('Notifications Inbox', () => {
   test('unread badge reflects unread count and updates when marking as read', async ({
     page,
     dashboardPage,
+    db,
+    workerContext,
   }) => {
     // Navigate to dashboard (triggers welcome notification creation)
     await dashboardPage.goto();
@@ -105,21 +141,26 @@ test.describe('Notifications Inbox', () => {
     await page.waitForLoadState('networkidle');
 
     // Find the "Marcar como lida" button
-    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i }).first();
 
     // Assert button is visible before clicking - this ensures test fails if button doesn't render
     await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
-    await markAsReadButton.click();
+    await Promise.all([waitForMarkAsReadRequest(page), markAsReadButton.click()]);
 
     // Verify the button is no longer visible (notification is now read)
     await expect(markAsReadButton).not.toBeVisible({ timeout: 5000 });
 
     // Reload and verify read state persists
+    const userId = await db.getUserIdByEmail(workerContext.email);
+    if (userId) {
+      await waitForNotificationRead(db, userId);
+    }
+
     await page.reload();
     await page.waitForLoadState('networkidle');
 
     // The "Marcar como lida" button should still not be visible
-    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /marcar como lida/i }).first()).not.toBeVisible();
   });
 
   test('marking read is idempotent - repeated clicks do not cause errors', async ({
@@ -159,7 +200,7 @@ test.describe('Notifications Inbox', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for the primary action button (welcome notification has "Começar a usar")
-    const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
+    const primaryActionButton = page.getByRole('link', { name: /começar a usar/i }).first();
     
     if (await primaryActionButton.isVisible()) {
       await primaryActionButton.click();
@@ -181,30 +222,35 @@ test.describe('Notifications Inbox', () => {
     await waitForNotificationsReady(page);
 
     // Verify notification is unread (has "Marcar como lida" button)
-    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i }).first();
     await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
 
     // Click the primary action button
-    const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
+    const primaryActionButton = page.getByRole('link', { name: /começar a usar/i }).first();
     await expect(primaryActionButton).toBeVisible({ timeout: 5000 });
-    await primaryActionButton.click();
+    await Promise.all([waitForMarkAsReadRequest(page), primaryActionButton.click()]);
 
     // Should navigate to /manage
     await expect(page).toHaveURL(/\/manage/);
     
     // Navigate back to notifications
+    const userId = await db.getUserIdByEmail(workerContext.email);
+    if (userId) {
+      await waitForNotificationRead(db, userId);
+    }
+
     await page.goto('/notifications');
     await page.waitForLoadState('networkidle');
 
     // Verify the notification is now marked as read (no "Marcar como lida" button)
-    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /marcar como lida/i }).first()).not.toBeVisible({ timeout: 10000 });
 
     // Reload to verify persistence
     await page.reload();
     await page.waitForLoadState('networkidle');
 
     // Still should be marked as read
-    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /marcar como lida/i }).first()).not.toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -227,7 +273,7 @@ test.describe('Notifications Live Updates', () => {
     await waitForNotificationsReady(page);
 
     // Wait for welcome notification to be visible
-    const welcomeNotification = page.getByText(/bem-vindo ao fluxo certo/i);
+    const welcomeNotification = page.getByRole('heading', { name: /bem-vindo ao fluxo certo/i }).first();
     await expect(welcomeNotification).toBeVisible({ timeout: 15000 });
 
     // Create second context (simulates another tab/device)
@@ -237,23 +283,28 @@ test.describe('Notifications Live Updates', () => {
     await waitForNotificationsReady(secondPage);
 
     // Verify welcome notification is visible in second context
-    const welcomeInSecondPage = secondPage.getByText(/bem-vindo ao fluxo certo/i);
+    const welcomeInSecondPage = secondPage.getByRole('heading', { name: /bem-vindo ao fluxo certo/i }).first();
     await expect(welcomeInSecondPage).toBeVisible({ timeout: 15000 });
 
     // Mark as read in first context - MUST succeed (no conditional)
-    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i }).first();
     await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
-    await markAsReadButton.click();
+    await Promise.all([waitForMarkAsReadRequest(page), markAsReadButton.click()]);
 
     // Wait for the mark-as-read API call to complete by polling for the button to disappear
     await expect(markAsReadButton).not.toBeVisible({ timeout: 10000 });
 
     // Reload second context and verify read state propagated
+    const userId = await db.getUserIdByEmail(workerContext.email);
+    if (userId) {
+      await waitForNotificationRead(db, userId);
+    }
+
     await secondPage.reload();
     await secondPage.waitForLoadState('networkidle');
 
     // The mark as read button should not be visible in second context
-    await expect(secondPage.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 10000 });
+    await expect(secondPage.getByRole('button', { name: /marcar como lida/i }).first()).not.toBeVisible({ timeout: 10000 });
 
     await secondPage.close();
   });

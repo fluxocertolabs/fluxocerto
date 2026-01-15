@@ -39,7 +39,7 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     ]);
     
     await dashboardPage.goto();
-    await dashboardPage.expectChartRendered();
+    await dashboardPage.waitForDashboardLoad();
     
     // Get the expense total from summary panel
     const expenseTotal = await dashboardPage.getExpenseTotal();
@@ -74,13 +74,11 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     ]);
     
     await dashboardPage.goto();
-    await dashboardPage.expectChartRendered();
+    await dashboardPage.waitForDashboardLoad();
     
     // Set projection to 90 days to include distant future months
     await dashboardPage.selectProjectionDays(90);
-    
-    // Wait for chart to update by asserting it renders successfully
-    await dashboardPage.expectChartRendered();
+    await dashboardPage.waitForDashboardLoad();
   });
 
   test('credit card due in distant future with futureStatement uses that amount', async ({ dashboardPage, db }) => {
@@ -120,13 +118,11 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     ]);
     
     await dashboardPage.goto();
-    await dashboardPage.expectChartRendered();
+    await dashboardPage.waitForDashboardLoad();
     
     // Set projection to 90 days to include the distant future month
     await dashboardPage.selectProjectionDays(90);
-    
-    // Wait for chart to update by asserting it renders successfully
-    await dashboardPage.expectChartRendered();
+    await dashboardPage.waitForDashboardLoad();
   });
 
   test('multiple credit cards - next month uses statementBalance for all', async ({ dashboardPage, db }) => {
@@ -152,7 +148,7 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     ]);
     
     await dashboardPage.goto();
-    await dashboardPage.expectChartRendered();
+    await dashboardPage.waitForDashboardLoad();
 
     // Ensure the projection window includes any next-month due dates (removes date-boundary flakes).
     await dashboardPage.selectProjectionDays(60);

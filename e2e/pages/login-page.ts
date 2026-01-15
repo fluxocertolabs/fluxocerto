@@ -29,12 +29,15 @@ export class LoginPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/login');
+    await this.page.waitForLoadState('domcontentloaded');
+    await expect(this.emailInput).toBeVisible({ timeout: 15000 });
   }
 
   /**
    * Enter email and submit magic link request
    */
   async requestMagicLink(email: string): Promise<void> {
+    await this.emailInput.waitFor({ state: 'visible', timeout: 15000 });
     await this.emailInput.fill(email);
     await this.submitButton.click();
   }

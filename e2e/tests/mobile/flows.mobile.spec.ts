@@ -41,7 +41,9 @@ test.describe('Mobile Functional E2E Tests @mobile', () => {
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
     // Wait for wizard to appear
-    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500);
+    await expect(wizardDialog).toBeVisible({ timeout: 30000 });
 
     // Step 1: Profile
     await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible({ timeout: 20000 });

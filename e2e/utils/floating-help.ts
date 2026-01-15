@@ -74,7 +74,22 @@ export async function openFloatingHelpMenu(page: Page): Promise<void> {
     await container.hover();
   } else {
     // Mobile: click the FAB button to toggle menu open
-    await fab.click();
+    const alreadyExpanded = (await fab.getAttribute('aria-expanded')) === 'true';
+    if (!alreadyExpanded) {
+      await expect(async () => {
+        await fab.scrollIntoViewIfNeeded();
+        try {
+          await fab.click({ timeout: 2000 });
+        } catch {
+          await fab.click({ force: true, timeout: 2000 });
+        }
+
+        const expanded = await fab.getAttribute('aria-expanded');
+        if (expanded !== 'true') {
+          throw new Error('Floating help menu not expanded yet');
+        }
+      }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
+    }
   }
 
   // Wait for menu to be expanded

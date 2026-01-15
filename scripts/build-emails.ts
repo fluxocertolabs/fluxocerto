@@ -187,6 +187,15 @@ async function buildCustomTemplates(): Promise<void> {
     html = html.replaceAll('style width="100%"', 'style="width:100%" width="100%"')
 
     await writeFile(outputPath, html, 'utf8')
+
+    if (template.id === 'custom.welcome') {
+      const tsOutputPath = path.join(
+        repoRoot,
+        'supabase/functions/send-welcome-email/welcome-template.ts',
+      )
+      const tsContent = `export const welcomeTemplate = ${JSON.stringify(html)};\n`
+      await writeFile(tsOutputPath, tsContent, 'utf8')
+    }
   }
 
   if (failures.length > 0) {

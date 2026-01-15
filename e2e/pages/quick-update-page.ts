@@ -142,6 +142,15 @@ export class QuickUpdatePage {
   }
 
   /**
+   * Wait for a specific item name to be visible within the Quick Update dialog.
+   */
+  async waitForItem(name: string): Promise<void> {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const item = this.dialog.getByText(new RegExp(escaped, 'i')).first();
+    await expect(item).toBeVisible({ timeout: 20000 });
+  }
+
+  /**
    * Update balance for any item (account or credit card) by name
    */
   async updateBalance(name: string, newBalance: string): Promise<void> {

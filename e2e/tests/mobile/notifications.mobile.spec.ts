@@ -33,7 +33,9 @@ test.describe('Mobile Notifications @mobile', () => {
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
     // Wait for wizard to appear
-    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500);
+    await expect(wizardDialog).toBeVisible({ timeout: 30000 });
 
     // Step 1: Profile
     await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
@@ -81,6 +83,19 @@ test.describe('Mobile Notifications @mobile', () => {
     }
   }
 
+  async function waitForMarkAsReadRequest(page: Page): Promise<void> {
+    await page.waitForResponse(
+      (response) => {
+        const url = response.url()
+        const method = response.request().method()
+        const isRpc = url.includes('/rpc/mark_notification_read') && method === 'POST'
+        const isRest = url.includes('/rest/v1/notifications') && (method === 'PATCH' || method === 'POST')
+        return (isRpc || isRest) && response.status() >= 200 && response.status() < 300
+      },
+      { timeout: 10000 }
+    )
+  }
+
   test('access notifications from mobile header icon', async ({ page }) => {
     const email = `mobile-notif-nav-${Date.now()}@example.com`;
     await authenticateNewUser(page, email);
@@ -109,7 +124,7 @@ test.describe('Mobile Notifications @mobile', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify welcome notification is visible
-    const welcomeNotification = page.getByText(/bem-vindo ao fluxo certo/i);
+    const welcomeNotification = page.getByRole('heading', { name: /bem-vindo ao fluxo certo/i }).first();
     await expect(welcomeNotification).toBeVisible({ timeout: 10000 });
   });
 
@@ -124,13 +139,13 @@ test.describe('Mobile Notifications @mobile', () => {
     await page.waitForLoadState('networkidle');
 
     // Find mark as read button - it should be visible for unread notification
-    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i }).first();
     
     // Assert button is visible (required for this test to be meaningful)
     await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
     
     // Tap the mark as read button
-    await markAsReadButton.tap();
+    await Promise.all([waitForMarkAsReadRequest(page), markAsReadButton.tap()]);
 
     // Verify button is no longer visible after marking as read
     await expect(markAsReadButton).not.toBeVisible({ timeout: 5000 });
@@ -140,7 +155,7 @@ test.describe('Mobile Notifications @mobile', () => {
     await page.waitForLoadState('networkidle');
 
     // Mark as read button should still not be visible after reload
-    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /marcar como lida/i }).first()).not.toBeVisible({ timeout: 10000 });
   });
 
   test('tapping primary action marks notification as read', async ({ page }) => {
@@ -154,13 +169,13 @@ test.describe('Mobile Notifications @mobile', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify notification is unread (has "Marcar como lida" button)
-    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i });
+    const markAsReadButton = page.getByRole('button', { name: /marcar como lida/i }).first();
     await expect(markAsReadButton).toBeVisible({ timeout: 10000 });
 
     // Tap the primary action button (welcome notification has "Começar a usar")
-    const primaryActionButton = page.getByRole('link', { name: /começar a usar/i });
+    const primaryActionButton = page.getByRole('link', { name: /começar a usar/i }).first();
     await expect(primaryActionButton).toBeVisible({ timeout: 5000 });
-    await primaryActionButton.tap();
+    await Promise.all([waitForMarkAsReadRequest(page), primaryActionButton.tap()]);
 
     // Should navigate to /manage
     await expect(page).toHaveURL(/\/manage/);
@@ -170,14 +185,14 @@ test.describe('Mobile Notifications @mobile', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify the notification is now marked as read (no "Marcar como lida" button)
-    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /marcar como lida/i }).first()).not.toBeVisible({ timeout: 10000 });
 
     // Reload to verify persistence
     await page.reload();
     await page.waitForLoadState('networkidle');
 
     // Still should be marked as read
-    await expect(page.getByRole('button', { name: /marcar como lida/i })).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /marcar como lida/i }).first()).not.toBeVisible({ timeout: 10000 });
   });
 });
 

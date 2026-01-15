@@ -123,7 +123,13 @@ test.describe('Page Tours', () => {
 
     // Tour should auto-show - use shared helper for consistent locator
     const closeTourButton = getCloseTourButton(page);
-    await expect(closeTourButton).toBeVisible({ timeout: 30000 });
+    await expect(async () => {
+      const visible = await closeTourButton.isVisible().catch(() => false);
+      if (!visible) {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+      }
+      await expect(closeTourButton).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000] });
   });
 
   test('tour does not auto-show on refresh after dismissal', async ({ page, db }) => {

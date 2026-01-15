@@ -237,11 +237,14 @@ test.describe('Quick Update Modal', () => {
     await quickUpdatePage.waitForModal();
 
     // Verify items are listed
-    await expect(page.getByText(seededAccount.name, { exact: false })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(seededCard.name, { exact: false })).toBeVisible({ timeout: 10000 });
+    await quickUpdatePage.waitForItem(seededAccount.name);
+    await quickUpdatePage.waitForItem(seededCard.name);
 
-    // Verify no "Não atribuído" text is shown (OwnerBadge hides by default when null)
-    await expect(page.getByText('Não atribuído')).not.toBeVisible();
+    // Verify no "Não atribuído" text is shown within the seeded rows
+    const accountRow = page.locator('div.rounded-lg.border').filter({ hasText: seededAccount.name });
+    const cardRow = page.locator('div.rounded-lg.border').filter({ hasText: seededCard.name });
+    await expect(accountRow.getByText('Não atribuído')).not.toBeVisible();
+    await expect(cardRow.getByText('Não atribuído')).not.toBeVisible();
   });
 
   test('T077: update balance with Brazilian decimal format (comma) → saves correctly', async ({
