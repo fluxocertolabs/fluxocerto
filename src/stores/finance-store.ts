@@ -145,6 +145,8 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           balance: validated.balance,
           owner_id: validated.ownerId ?? null,
           group_id: groupId,
+          // Set balance_updated_at to now so new accounts show as "fresh"
+          balance_updated_at: new Date().toISOString(),
         })
         .select('id')
         .single()
@@ -171,7 +173,11 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       const updateData: Record<string, unknown> = {}
       if (validated.name !== undefined) updateData.name = validated.name
       if (validated.type !== undefined) updateData.type = validated.type
-      if (validated.balance !== undefined) updateData.balance = validated.balance
+      if (validated.balance !== undefined) {
+        updateData.balance = validated.balance
+        // Also update balance_updated_at when balance changes
+        updateData.balance_updated_at = new Date().toISOString()
+      }
       if (validated.ownerId !== undefined) updateData.owner_id = validated.ownerId
 
       const { error, count } = await getSupabase()
@@ -706,6 +712,8 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
           due_day: validated.dueDay,
           owner_id: validated.ownerId ?? null,
           group_id: groupId,
+          // Set balance_updated_at to now so new cards show as "fresh"
+          balance_updated_at: new Date().toISOString(),
         })
         .select('id')
         .single()
@@ -731,7 +739,11 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       // Build update object with snake_case keys
       const updateData: Record<string, unknown> = {}
       if (validated.name !== undefined) updateData.name = validated.name
-      if (validated.statementBalance !== undefined) updateData.statement_balance = validated.statementBalance
+      if (validated.statementBalance !== undefined) {
+        updateData.statement_balance = validated.statementBalance
+        // Also update balance_updated_at when balance changes
+        updateData.balance_updated_at = new Date().toISOString()
+      }
       if (validated.dueDay !== undefined) updateData.due_day = validated.dueDay
       if (validated.ownerId !== undefined) updateData.owner_id = validated.ownerId
 

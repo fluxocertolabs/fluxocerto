@@ -13,11 +13,30 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { InlineEditInput } from '@/components/manage/shared/inline-edit-input'
-import { formatCurrency, formatRelativeTime, isStale } from '@/components/manage/shared/format-utils'
+import { formatCurrency, formatRelativeTime, getBalanceFreshness, type BalanceFreshness } from '@/components/manage/shared/format-utils'
 import { cn } from '@/lib/utils'
 import type { CreditCard, FutureStatement, FutureStatementInput } from '@/types'
 import { FutureStatementList } from './future-statement-list'
 import { FutureStatementForm } from './future-statement-form'
+
+/**
+ * CSS classes for the freshness indicator bar (left edge).
+ * Colors indicate how recently the balance was updated.
+ */
+const FRESHNESS_BAR_CLASSES: Record<BalanceFreshness, string> = {
+  fresh: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  stale: 'bg-red-500',
+}
+
+/**
+ * CSS classes for the footer text color (tri-state).
+ */
+const FRESHNESS_TEXT_CLASSES: Record<BalanceFreshness, string> = {
+  fresh: 'text-emerald-500',
+  warning: 'text-amber-500',
+  stale: 'text-red-500',
+}
 
 interface CreditCardCardProps {
   card: CreditCard
@@ -57,7 +76,7 @@ export function CreditCardCard({
   const [showForm, setShowForm] = useState(false)
   const [editingStatement, setEditingStatement] = useState<FutureStatement | null>(null)
   
-  const stale = isStale(card.balanceUpdatedAt)
+  const freshness = getBalanceFreshness(card.balanceUpdatedAt)
   const dueStatus = getDueDayStatus(card.dueDay)
 
   // Filter future statements for this card and sort by date
@@ -98,10 +117,20 @@ export function CreditCardCard({
   return (
     <div
       className={cn(
-        'group relative flex flex-col p-5 rounded-xl border bg-card',
+        'group relative flex flex-col p-5 rounded-xl border bg-card overflow-hidden',
         'transition-all duration-200 hover:shadow-md hover:border-primary/20'
       )}
     >
+      {/* Freshness indicator bar (left edge) */}
+      <div
+        data-freshness={freshness}
+        className={cn(
+          'absolute left-0 top-0 bottom-0 w-1',
+          FRESHNESS_BAR_CLASSES[freshness]
+        )}
+        aria-hidden="true"
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -236,9 +265,9 @@ export function CreditCardCard({
           <span className="text-muted-foreground">Última atualização</span>
           <span className={cn(
             'font-medium',
-            stale ? 'text-amber-500' : 'text-emerald-500'
+            FRESHNESS_TEXT_CLASSES[freshness]
           )}>
-            {stale && '⚠️ '}
+            {freshness === 'stale' && '⚠️ '}
             {formatRelativeTime(card.balanceUpdatedAt)}
           </span>
         </div>

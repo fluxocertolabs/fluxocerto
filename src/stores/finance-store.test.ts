@@ -379,6 +379,29 @@ describe('Bank Account Actions - Validation', () => {
 
       expect(result.success).toBe(true)
     })
+
+    it('sets balance_updated_at to current time on creation', async () => {
+      const beforeCreate = new Date()
+      
+      await useFinanceStore.getState().addAccount({
+        name: 'Fresh Account',
+        type: 'checking',
+        balance: 100000,
+        ownerId: null,
+      })
+
+      const afterCreate = new Date()
+
+      // Verify insert was called with balance_updated_at
+      expect(mockInsertCalls.length).toBe(1)
+      const insertedData = mockInsertCalls[0] as Record<string, unknown>
+      expect(insertedData.balance_updated_at).toBeDefined()
+      
+      // Verify the timestamp is within the expected range
+      const insertedDate = new Date(insertedData.balance_updated_at as string)
+      expect(insertedDate.getTime()).toBeGreaterThanOrEqual(beforeCreate.getTime())
+      expect(insertedDate.getTime()).toBeLessThanOrEqual(afterCreate.getTime())
+    })
   })
 
   describe('updateAccount validation', () => {
@@ -410,6 +433,38 @@ describe('Bank Account Actions - Validation', () => {
       })
 
       expect(result.success).toBe(true)
+    })
+
+    it('sets balance_updated_at when balance is updated', async () => {
+      const beforeUpdate = new Date()
+      
+      await useFinanceStore.getState().updateAccount('account-id', {
+        balance: 200000,
+      })
+
+      const afterUpdate = new Date()
+
+      // Verify update was called with balance_updated_at
+      expect(mockUpdateCalls.length).toBe(1)
+      const updateData = mockUpdateCalls[0] as Record<string, unknown>
+      expect(updateData.balance).toBe(200000)
+      expect(updateData.balance_updated_at).toBeDefined()
+      
+      // Verify the timestamp is within the expected range
+      const updatedDate = new Date(updateData.balance_updated_at as string)
+      expect(updatedDate.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime())
+      expect(updatedDate.getTime()).toBeLessThanOrEqual(afterUpdate.getTime())
+    })
+
+    it('does not set balance_updated_at when only name is updated', async () => {
+      await useFinanceStore.getState().updateAccount('account-id', {
+        name: 'New Name',
+      })
+
+      expect(mockUpdateCalls.length).toBe(1)
+      const updateData = mockUpdateCalls[0] as Record<string, unknown>
+      expect(updateData.name).toBe('New Name')
+      expect(updateData.balance_updated_at).toBeUndefined()
     })
   })
 })
@@ -768,6 +823,63 @@ describe('Credit Card Actions - Validation', () => {
       })
 
       expect(result.success).toBe(true)
+    })
+
+    it('sets balance_updated_at to current time on creation', async () => {
+      const beforeCreate = new Date()
+      
+      await useFinanceStore.getState().addCreditCard({
+        name: 'Fresh Card',
+        statementBalance: 50000,
+        dueDay: 15,
+        ownerId: null,
+      })
+
+      const afterCreate = new Date()
+
+      // Verify insert was called with balance_updated_at
+      expect(mockInsertCalls.length).toBe(1)
+      const insertedData = mockInsertCalls[0] as Record<string, unknown>
+      expect(insertedData.balance_updated_at).toBeDefined()
+      
+      // Verify the timestamp is within the expected range
+      const insertedDate = new Date(insertedData.balance_updated_at as string)
+      expect(insertedDate.getTime()).toBeGreaterThanOrEqual(beforeCreate.getTime())
+      expect(insertedDate.getTime()).toBeLessThanOrEqual(afterCreate.getTime())
+    })
+  })
+
+  describe('updateCreditCard validation', () => {
+    it('sets balance_updated_at when statementBalance is updated', async () => {
+      const beforeUpdate = new Date()
+      
+      await useFinanceStore.getState().updateCreditCard('card-id', {
+        statementBalance: 150000,
+      })
+
+      const afterUpdate = new Date()
+
+      // Verify update was called with balance_updated_at
+      expect(mockUpdateCalls.length).toBe(1)
+      const updateData = mockUpdateCalls[0] as Record<string, unknown>
+      expect(updateData.statement_balance).toBe(150000)
+      expect(updateData.balance_updated_at).toBeDefined()
+      
+      // Verify the timestamp is within the expected range
+      const updatedDate = new Date(updateData.balance_updated_at as string)
+      expect(updatedDate.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime())
+      expect(updatedDate.getTime()).toBeLessThanOrEqual(afterUpdate.getTime())
+    })
+
+    it('does not set balance_updated_at when only name is updated', async () => {
+      await useFinanceStore.getState().updateCreditCard('card-id', {
+        name: 'New Card Name',
+      })
+
+      expect(mockUpdateCalls.length).toBe(1)
+      const updateData = mockUpdateCalls[0] as Record<string, unknown>
+      expect(updateData.name).toBe('New Card Name')
+      expect(updateData.balance_updated_at).toBeUndefined()
     })
   })
 })

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { InlineEditInput } from '@/components/manage/shared/inline-edit-input'
-import { formatCurrency, formatRelativeTime, isStale } from '@/components/manage/shared/format-utils'
+import { formatCurrency, formatRelativeTime, getBalanceFreshness, type BalanceFreshness } from '@/components/manage/shared/format-utils'
 import { cn } from '@/lib/utils'
 import type { BankAccount } from '@/types'
 
@@ -25,6 +25,25 @@ const TYPE_ICONS: Record<BankAccount['type'], string> = {
   investment: '📈',
 }
 
+/**
+ * CSS classes for the freshness indicator bar (left edge).
+ * Colors indicate how recently the balance was updated.
+ */
+const FRESHNESS_BAR_CLASSES: Record<BalanceFreshness, string> = {
+  fresh: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  stale: 'bg-red-500',
+}
+
+/**
+ * CSS classes for the footer text color (tri-state).
+ */
+const FRESHNESS_TEXT_CLASSES: Record<BalanceFreshness, string> = {
+  fresh: 'text-emerald-500',
+  warning: 'text-amber-500',
+  stale: 'text-red-500',
+}
+
 export function AccountCard({
   account,
   onEdit,
@@ -32,15 +51,25 @@ export function AccountCard({
   onUpdateBalance,
 }: AccountCardProps) {
   const [showActions, setShowActions] = useState(false)
-  const stale = isStale(account.balanceUpdatedAt)
+  const freshness = getBalanceFreshness(account.balanceUpdatedAt)
 
   return (
     <div
       className={cn(
-        'group relative flex flex-col p-5 rounded-xl border bg-card',
+        'group relative flex flex-col p-5 rounded-xl border bg-card overflow-hidden',
         'transition-all duration-200 hover:shadow-md hover:border-primary/20'
       )}
     >
+      {/* Freshness indicator bar (left edge) */}
+      <div
+        data-freshness={freshness}
+        className={cn(
+          'absolute left-0 top-0 bottom-0 w-1',
+          FRESHNESS_BAR_CLASSES[freshness]
+        )}
+        aria-hidden="true"
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -126,9 +155,9 @@ export function AccountCard({
           <span className="text-muted-foreground">Última atualização</span>
           <span className={cn(
             'font-medium',
-            stale ? 'text-amber-500' : 'text-emerald-500'
+            FRESHNESS_TEXT_CLASSES[freshness]
           )}>
-            {stale && '⚠️ '}
+            {freshness === 'stale' && '⚠️ '}
             {formatRelativeTime(account.balanceUpdatedAt)}
           </span>
         </div>

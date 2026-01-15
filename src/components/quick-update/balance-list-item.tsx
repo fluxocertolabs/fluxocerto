@@ -11,8 +11,19 @@ import { AccountTypeBadge } from '@/components/ui/account-type-badge'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency, parseDecimal, formatDecimalBR } from '@/lib/format'
+import { getBalanceFreshness, type BalanceFreshness } from '@/components/manage/shared/format-utils'
 import type { BalanceItem } from './types'
-import { getBalanceFromItem, getNameFromItem, getOwnerFromItem, getAccountTypeFromItem } from './types'
+import { getBalanceFromItem, getNameFromItem, getOwnerFromItem, getAccountTypeFromItem, getBalanceUpdatedAtFromItem } from './types'
+
+/**
+ * CSS classes for the freshness indicator bar (left edge).
+ * Colors indicate how recently the balance was updated.
+ */
+const FRESHNESS_BAR_CLASSES: Record<BalanceFreshness, string> = {
+  fresh: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  stale: 'bg-red-500',
+}
 
 interface BalanceListItemProps {
   /** The balance item to display */
@@ -32,6 +43,8 @@ export function BalanceListItem({
   const name = getNameFromItem(item)
   const owner = getOwnerFromItem(item)
   const accountType = getAccountTypeFromItem(item)
+  const balanceUpdatedAt = getBalanceUpdatedAtFromItem(item)
+  const freshness = getBalanceFreshness(balanceUpdatedAt)
 
   // Convert cents to reais for display/editing (using Brazilian comma format)
   const [editValue, setEditValue] = useState(() => formatDecimalBR(currentBalance / 100))
@@ -116,12 +129,22 @@ export function BalanceListItem({
   return (
     <div
       className={cn(
-        'flex items-center gap-4 p-4 rounded-lg border',
+        'relative flex items-center gap-4 p-4 rounded-lg border overflow-hidden',
         error ? 'border-red-500/50 bg-red-500/5' : 'border-border bg-card'
       )}
     >
+      {/* Freshness indicator bar (left edge) */}
+      <div
+        data-freshness={freshness}
+        className={cn(
+          'absolute left-0 top-0 bottom-0 w-1',
+          FRESHNESS_BAR_CLASSES[freshness]
+        )}
+        aria-hidden="true"
+      />
+
       {/* Type indicator */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 ml-1">
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
 
