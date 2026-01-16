@@ -68,66 +68,58 @@ describe('FloatingHelpButton', () => {
     mockIsTawkConfigured = false
   })
 
-  describe('route-based rendering (tours only, no Tawk)', () => {
-    it('renders on /dashboard', () => {
+  describe('route-based rendering', () => {
+    // Button always renders because Canny feedback is always available
+    it('renders on /dashboard (has tour + feedback)', () => {
       renderWithRouter('/dashboard')
       expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
 
-    it('renders on / (root/dashboard)', () => {
+    it('renders on / (root/dashboard, has tour + feedback)', () => {
       renderWithRouter('/')
       expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
 
-    it('renders on /manage', () => {
+    it('renders on /manage (has tour + feedback)', () => {
       renderWithRouter('/manage')
       expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
 
-    it('renders on /history', () => {
+    it('renders on /history (has tour + feedback)', () => {
       renderWithRouter('/history')
       expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
 
-    it('does not render on /login (no tour, no Tawk)', () => {
+    it('renders on /login (no tour, but has feedback)', () => {
       renderWithRouter('/login')
-      expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
+      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
 
-    it('does not render on /auth-callback (no tour, no Tawk)', () => {
+    it('renders on /auth-callback (no tour, but has feedback)', () => {
       renderWithRouter('/auth-callback')
-      expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
+      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
 
-    it('does not render on unknown routes (no tour, no Tawk)', () => {
+    it('renders on unknown routes (no tour, but has feedback)', () => {
       renderWithRouter('/unknown-route')
-      expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('route-based rendering (Tawk configured)', () => {
-    beforeEach(() => {
-      mockIsTawkConfigured = true
-    })
-
-    it('renders on /profile (no tour, but has chat)', () => {
-      renderWithRouter('/profile')
-      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
-    })
-
-    it('renders on /notifications (no tour, but has chat)', () => {
-      renderWithRouter('/notifications')
-      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
-    })
-
-    it('renders on /login when Tawk is configured', () => {
-      renderWithRouter('/login')
       expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
   })
 
   describe('menu options visibility', () => {
-    it('shows only tour option on tour route when Tawk is not configured', async () => {
+    it('always shows feedback option (Canny)', async () => {
+      const user = userEvent.setup()
+      renderWithRouter('/login') // No tour, no Tawk
+
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /sugerir melhorias/i })).toBeVisible()
+      })
+    })
+
+    it('shows tour + feedback on tour route when Tawk is not configured', async () => {
       const user = userEvent.setup()
       renderWithRouter('/dashboard')
 
@@ -136,11 +128,12 @@ describe('FloatingHelpButton', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /iniciar tour guiado/i })).toBeVisible()
+        expect(screen.getByRole('button', { name: /sugerir melhorias/i })).toBeVisible()
       })
       expect(screen.queryByRole('button', { name: /abrir chat de suporte/i })).not.toBeInTheDocument()
     })
 
-    it('shows only chat option on non-tour route when Tawk is configured', async () => {
+    it('shows chat + feedback on non-tour route when Tawk is configured', async () => {
       mockIsTawkConfigured = true
       const user = userEvent.setup()
       renderWithRouter('/profile')
@@ -150,11 +143,12 @@ describe('FloatingHelpButton', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /abrir chat de suporte/i })).toBeVisible()
+        expect(screen.getByRole('button', { name: /sugerir melhorias/i })).toBeVisible()
       })
       expect(screen.queryByRole('button', { name: /iniciar tour guiado/i })).not.toBeInTheDocument()
     })
 
-    it('shows both options on tour route when Tawk is configured', async () => {
+    it('shows all three options on tour route when Tawk is configured', async () => {
       mockIsTawkConfigured = true
       const user = userEvent.setup()
       renderWithRouter('/dashboard')
@@ -165,6 +159,7 @@ describe('FloatingHelpButton', () => {
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /iniciar tour guiado/i })).toBeVisible()
         expect(screen.getByRole('button', { name: /abrir chat de suporte/i })).toBeVisible()
+        expect(screen.getByRole('button', { name: /sugerir melhorias/i })).toBeVisible()
       })
     })
   })
@@ -336,7 +331,51 @@ describe('FloatingHelpButton', () => {
 
       consoleSpy.mockRestore()
     })
+  })
 
+  describe('feedback interaction', () => {
+    it('opens Canny portal in new tab when feedback button is clicked', async () => {
+      const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      // Open menu
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      // Click feedback button
+      const feedbackButton = screen.getByRole('button', { name: /sugerir melhorias/i })
+      await user.click(feedbackButton)
+
+      await waitFor(() => {
+        expect(windowOpenSpy).toHaveBeenCalledWith(
+          'https://fluxo-certo.canny.io',
+          '_blank',
+          'noopener,noreferrer'
+        )
+      })
+
+      windowOpenSpy.mockRestore()
+    })
+
+    it('closes menu after clicking feedback button', async () => {
+      vi.spyOn(window, 'open').mockImplementation(() => null)
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      // Open menu
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      // Click feedback button
+      const feedbackButton = screen.getByRole('button', { name: /sugerir melhorias/i })
+      await user.click(feedbackButton)
+
+      // Menu should close - check aria-expanded on FAB
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /abrir ajuda/i })).toHaveAttribute('aria-expanded', 'false')
+      })
+    })
   })
 
   describe('accessibility', () => {
@@ -381,6 +420,18 @@ describe('FloatingHelpButton', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /abrir chat de suporte/i })).toBeInTheDocument()
+      })
+    })
+
+    it('feedback button has descriptive aria-label', async () => {
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /sugerir melhorias/i })).toBeInTheDocument()
       })
     })
   })

@@ -9,11 +9,12 @@
  * The menu shows:
  * - "Conhecer a página" (tour) — only on pages with tours
  * - "Falar com suporte" (Tawk.to chat) — only when Tawk is configured
+ * - "Sugerir melhorias" (Canny feedback portal) — always visible
  */
 
 import { useState, useRef, useEffect, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import { useLocation } from 'react-router-dom'
-import { HelpCircle, Compass, MessageCircle, Loader2 } from 'lucide-react'
+import { HelpCircle, Compass, MessageCircle, Loader2, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
 import { useAuth } from '@/hooks/use-auth'
@@ -22,6 +23,7 @@ import type { TourKey } from '@/types'
 
 const CLOSE_DELAY_MS = 380
 const HOVER_SAFE_PADDING_PX = 28
+const CANNY_FEEDBACK_URL = 'https://fluxo-certo.canny.io'
 
 /**
  * Get the tour key for the current route.
@@ -59,8 +61,11 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const currentTourKey = getTourKeyForRoute(location.pathname)
   const showTawkOption = isTawkConfigured()
   
+  // Canny feedback is always available
+  const showCannyOption = true
+  
   // If there's nothing to show in the menu, don't render the button at all
-  const hasAnyOption = Boolean(currentTourKey) || showTawkOption
+  const hasAnyOption = Boolean(currentTourKey) || showTawkOption || showCannyOption
   
   // Subscribe to Tawk loading state
   useEffect(() => {
@@ -232,6 +237,13 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     }
   }
 
+  const handleOpenFeedback = () => {
+    setShouldAnimate(true)
+    setIsOpen(false)
+    setIsPinnedOpen(false)
+    window.open(CANNY_FEEDBACK_URL, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div
       ref={containerRef}
@@ -323,6 +335,38 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
               </div>
               <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
                 {isChatLoading ? 'Carregando...' : 'Falar com suporte'}
+              </span>
+            </button>
+          )}
+
+          {/* Feedback option — link to Canny.io portal */}
+          {showCannyOption && (
+            <button
+              onClick={handleOpenFeedback}
+              className={cn(
+                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
+                'bg-card border border-border shadow-lg',
+                'hover:bg-accent hover:border-accent-foreground/20',
+                'cursor-pointer',
+                'will-change-transform',
+                shouldAnimate && isOpen && 'animate-help-pill-in',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              )}
+              aria-label="Sugerir melhorias ou reportar problemas"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <div
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
+                  'bg-primary/10 text-primary',
+                  'group-hover:bg-primary group-hover:text-primary-foreground',
+                  'transition-none'
+                )}
+              >
+                <Lightbulb className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
+                Sugerir melhorias
               </span>
             </button>
           )}

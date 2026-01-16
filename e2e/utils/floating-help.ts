@@ -42,6 +42,13 @@ export function getChatOptionButton(page: Page): Locator {
 }
 
 /**
+ * Get the "Suggest Improvements" (Canny feedback) option button from the expanded menu.
+ */
+export function getFeedbackOptionButton(page: Page): Locator {
+  return page.getByRole('button', { name: /sugerir melhorias/i });
+}
+
+/**
  * Get the "Close Tour" button that appears during an active tour.
  */
 export function getCloseTourButton(page: Page): Locator {
@@ -109,18 +116,9 @@ export async function openFloatingHelpMenu(page: Page): Promise<void> {
   await expect(fab).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
 
   // Also verify at least one option is visible (menu content is rendered)
-  // Could be tour option or chat option depending on page and config
-  const tourOption = getTourOptionButton(page);
-  const chatOption = getChatOptionButton(page);
-  
-  // Wait for either option to be visible
-  await expect(async () => {
-    const tourVisible = await tourOption.isVisible().catch(() => false);
-    const chatVisible = await chatOption.isVisible().catch(() => false);
-    if (!tourVisible && !chatVisible) {
-      throw new Error('Neither tour nor chat option visible in menu');
-    }
-  }).toPass({ timeout: 5000, intervals: [100, 250, 500, 1000] });
+  // Feedback option is always visible, so we can just wait for that
+  const feedbackOption = getFeedbackOptionButton(page);
+  await expect(feedbackOption).toBeVisible({ timeout: 5000 });
 }
 
 /**
