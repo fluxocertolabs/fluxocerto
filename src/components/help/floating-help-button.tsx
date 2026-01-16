@@ -14,17 +14,10 @@
 
 import { useState, useRef, useEffect, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import { useLocation } from 'react-router-dom'
-import { HelpCircle, Compass, MessageCircle, Lightbulb } from 'lucide-react'
+import { ArrowLeft, HelpCircle, Compass, MessageCircle, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
-import { useAuth } from '@/hooks/use-auth'
-import {
-  isTawkConfigured,
-  openSupportChat,
-  preloadTawkStyles,
-  preloadTawkWidget,
-  subscribeTawkVisibility,
-} from '@/lib/support-chat/tawk'
+import { getTawkChatUrl } from '@/lib/support-chat/tawk'
 import type { TourKey } from '@/types'
 
 const CLOSE_DELAY_MS = 380
@@ -55,18 +48,20 @@ interface FloatingHelpButtonProps {
 export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const location = useLocation()
   const { startTour } = useTourStore()
-  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [isPinnedOpen, setIsPinnedOpen] = useState(false)
   const [shouldAnimate, setShouldAnimate] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const wasChatOpenRef = useRef(false)
+  const [isSupportPopoverOpen, setIsSupportPopoverOpen] = useState(false)
+  const [isSupportLoading, setIsSupportLoading] = useState(false)
+  const supportPopoverRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<number | null>(null)
+  const supportLoadRafRef = useRef<number | null>(null)
   
   const currentTourKey = getTourKeyForRoute(location.pathname)
-  const showTawkOption = isTawkConfigured()
+  const tawkChatUrl = getTawkChatUrl()
+  const showTawkOption = Boolean(tawkChatUrl)
   
   // Canny feedback is always available
   const showCannyOption = true
@@ -74,50 +69,32 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   // If there's nothing to show in the menu, don't render the button at all
   const hasAnyOption = Boolean(currentTourKey) || showTawkOption || showCannyOption
   
-  // Preload Tawk widget in background when user is authenticated
-  // This makes the chat open instantly when they click the button
-  useEffect(() => {
-    if (!showTawkOption) return
-
-    // Ensure we hide any Tawk surfaces ASAP to avoid flashes on refresh.
-    preloadTawkStyles()
-
-    if (user) {
-      preloadTawkWidget()
-    }
-  }, [user, showTawkOption])
-
-  // Track Tawk visibility so the FAB doesn't show while chat is open
-  useEffect(() => {
-    if (!showTawkOption) {
-      setIsChatOpen(false)
-      wasChatOpenRef.current = false
-      return
-    }
-
-    const unsubscribe = subscribeTawkVisibility((visible) => {
-      const wasVisible = wasChatOpenRef.current
-      setIsChatOpen(visible)
-      if (visible) {
-        setShouldAnimate(true)
-        setIsOpen(false)
-        setIsPinnedOpen(false)
-      } else if (wasVisible) {
-        // When chat closes, reopen the menu immediately to avoid flashing the FAB
-        setShouldAnimate(true)
-        setIsOpen(true)
-        setIsPinnedOpen(false)
-      }
-      wasChatOpenRef.current = visible
-    })
-
-    return unsubscribe
-  }, [showTawkOption])
-  
   // Check for reduced motion preference
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+  // Preload the iframe to reduce first-open latency.
+  useEffect(() => {
+    if (!tawkChatUrl) return
+    const preloadIframe = document.createElement('iframe')
+    preloadIframe.src = tawkChatUrl
+    preloadIframe.title = 'Pré-carregamento do chat de suporte'
+    preloadIframe.setAttribute('aria-hidden', 'true')
+    preloadIframe.tabIndex = -1
+    preloadIframe.style.position = 'fixed'
+    preloadIframe.style.width = '1px'
+    preloadIframe.style.height = '1px'
+    preloadIframe.style.opacity = '0'
+    preloadIframe.style.pointerEvents = 'none'
+    preloadIframe.style.right = '0'
+    preloadIframe.style.bottom = '0'
+    document.body.appendChild(preloadIframe)
+
+    return () => {
+      preloadIframe.remove()
+    }
+  }, [tawkChatUrl])
 
   const clearCloseTimeout = useCallback(() => {
     if (timeoutRef.current) {
@@ -156,11 +133,29 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     }
   }, [isOpen])
 
+  // Close support popover when clicking outside
+  useEffect(() => {
+    function handleSupportOutside(event: MouseEvent) {
+      const target = event.target as Node
+      if (supportPopoverRef.current?.contains(target)) return
+      if (containerRef.current?.contains(target)) return
+      setIsSupportPopoverOpen(false)
+    }
+
+    if (isSupportPopoverOpen) {
+      document.addEventListener('mousedown', handleSupportOutside)
+      return () => document.removeEventListener('mousedown', handleSupportOutside)
+    }
+  }, [isSupportPopoverOpen])
+
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
+      }
+      if (supportLoadRafRef.current) {
+        cancelAnimationFrame(supportLoadRafRef.current)
       }
     }
   }, [])
@@ -202,12 +197,13 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   }, [clearCloseTimeout, getHoverSafeRect, isOpen, isPinnedOpen])
 
   // Early return AFTER all hooks have been called
-  if (!hasAnyOption || isChatOpen) {
+  if (!hasAnyOption) {
     return null
   }
 
   const handleOpenHover = () => {
     clearCloseTimeout()
+    if (isSupportPopoverOpen) return
     if (!isPinnedOpen) {
       setShouldAnimate(true)
       setIsOpen(true)
@@ -216,6 +212,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
 
   const handleCloseHover = (event: ReactMouseEvent) => {
     if (isPinnedOpen) return
+    if (isSupportPopoverOpen) return
     const rect = getHoverSafeRect()
     if (
       rect &&
@@ -241,6 +238,12 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const handleTogglePinned = () => {
     clearCloseTimeout()
     setShouldAnimate(true)
+    if (isSupportPopoverOpen) {
+      setIsSupportPopoverOpen(false)
+      setIsOpen(true)
+      setIsPinnedOpen(false)
+      return
+    }
     setIsPinnedOpen((prev) => {
       const next = !prev
       setIsOpen(next)
@@ -261,40 +264,47 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     setShouldAnimate(true)
     setIsOpen(false)
     setIsPinnedOpen(false)
+    setIsSupportLoading(true)
+    setIsSupportPopoverOpen(true)
+  }
 
-    if (!user?.email) {
-      console.warn('[FloatingHelpButton] No user email available for chat')
-      return
+  const finishSupportLoading = () => {
+    if (supportLoadRafRef.current) {
+      cancelAnimationFrame(supportLoadRafRef.current)
     }
-
-    try {
-      await openSupportChat({
-        email: user.email,
-        name: user.user_metadata?.name as string | undefined,
+    supportLoadRafRef.current = requestAnimationFrame(() => {
+      supportLoadRafRef.current = requestAnimationFrame(() => {
+        setIsSupportLoading(false)
+        supportLoadRafRef.current = null
       })
-    } catch (err) {
-      console.error('[FloatingHelpButton] Failed to open support chat:', err)
-    }
+    })
+  }
+
+  const handleOpenChatFullscreen = () => {
+    if (!tawkChatUrl) return
+    window.location.assign(tawkChatUrl)
   }
 
   const handleOpenFeedback = () => {
     setShouldAnimate(true)
     setIsOpen(false)
     setIsPinnedOpen(false)
+    setIsSupportPopoverOpen(false)
     window.open(CANNY_FEEDBACK_URL, '_blank', 'noopener,noreferrer')
   }
 
   return (
-    <div
-      ref={containerRef}
-      data-testid="floating-help-button"
-      className={cn(
-        'fixed bottom-6 right-6 z-50',
-        className
-      )}
-      onMouseEnter={handleOpenHover}
-      onMouseLeave={handleCloseHover}
-    >
+    <>
+      <div
+        ref={containerRef}
+        data-testid="floating-help-button"
+        className={cn(
+          'fixed bottom-6 right-6 z-50',
+          className
+        )}
+        onMouseEnter={handleOpenHover}
+        onMouseLeave={handleCloseHover}
+      >
       {/* Menu (slides in from right, replaces the FAB) */}
       <div
         ref={menuRef}
@@ -411,40 +421,83 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
         </div>
       </div>
 
-      {/* Floating FAB (slides out to the right on open) */}
-      <button
-        onClick={handleTogglePinned}
-        onMouseEnter={clearCloseTimeout}
-        className={cn(
-          // Keep FAB above the menu while it animates out (menu is clickable; FAB is pointer-events-none when open).
-          'relative z-30 flex items-center justify-center',
-          'w-14 h-14 rounded-full',
-          'bg-primary text-primary-foreground',
-          'shadow-lg hover:shadow-xl',
-          'will-change-transform',
-          shouldAnimate && (isOpen ? 'animate-help-fab-out' : 'animate-help-fab-in'),
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          // Idle animation
-          !isOpen && !prefersReducedMotion && 'animate-help-pulse',
-          // When open, prevent interactions. Visuals are handled by keyframe animation.
-          isOpen && 'pointer-events-none',
-          // Safety: if the menu is forced open without animations, still hide the FAB.
-          isOpen && !shouldAnimate && 'opacity-0'
-        )}
-        aria-label={isOpen ? 'Ajuda (aberta)' : 'Abrir ajuda'}
-        aria-expanded={isOpen}
-      >
-        <HelpCircle className="w-6 h-6" />
+        {/* Floating FAB (slides out to the right on open) */}
+        <button
+          onClick={handleTogglePinned}
+          onMouseEnter={clearCloseTimeout}
+          className={cn(
+            // Keep FAB above the menu while it animates out (menu is clickable; FAB is pointer-events-none when open).
+            'relative z-30 flex items-center justify-center',
+            'w-14 h-14 rounded-full',
+            'bg-primary text-primary-foreground',
+            'shadow-lg hover:shadow-xl',
+            'will-change-transform',
+            shouldAnimate && !isSupportPopoverOpen && (isOpen ? 'animate-help-fab-out' : 'animate-help-fab-in'),
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            // Idle animation
+            !isOpen && !prefersReducedMotion && !isSupportPopoverOpen && 'animate-help-pulse',
+            // When open, prevent interactions. Visuals are handled by keyframe animation.
+            isOpen && !isSupportPopoverOpen && 'pointer-events-none',
+            // Safety: if the menu is forced open without animations, still hide the FAB.
+            isOpen && !shouldAnimate && 'opacity-0',
+            // No animations while the support popover is open (back arrow state).
+            isSupportPopoverOpen && 'animate-none',
+            isSupportPopoverOpen && 'cursor-pointer'
+          )}
+          aria-label={isSupportPopoverOpen ? 'Voltar ao menu de ajuda' : isOpen ? 'Ajuda (aberta)' : 'Abrir ajuda'}
+          aria-expanded={isOpen && !isSupportPopoverOpen}
+        >
+          {isSupportPopoverOpen ? <ArrowLeft className="w-6 h-6" /> : <HelpCircle className="w-6 h-6" />}
 
-        {/* Animated rings (only when closed) */}
-        {!isOpen && !prefersReducedMotion && (
-          <>
-            <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/30 animate-help-ring pointer-events-none" />
-            <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/20 animate-help-ring-delayed pointer-events-none" />
-          </>
-        )}
-      </button>
-    </div>
+          {/* Animated rings (only when closed) */}
+        {!isOpen && !prefersReducedMotion && !isSupportPopoverOpen && (
+            <>
+              <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/30 animate-help-ring pointer-events-none" />
+              <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/20 animate-help-ring-delayed pointer-events-none" />
+            </>
+          )}
+        </button>
+      </div>
+
+      {isSupportPopoverOpen && (
+        <div
+          ref={supportPopoverRef}
+          className={cn(
+            'fixed bottom-24 right-6 z-50',
+            'w-[360px] max-w-[90vw]',
+            'rounded-xl border border-border bg-card shadow-xl overflow-hidden'
+          )}
+        >
+          {tawkChatUrl ? (
+            <div className="relative h-[620px] w-full overflow-hidden">
+              {isSupportLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-card/80">
+                  <div
+                    className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary"
+                    style={{ animation: 'spin 0.9s linear infinite' }}
+                  />
+                </div>
+              )}
+              <iframe
+                title="Chat de suporte"
+                src={tawkChatUrl}
+                className="h-full w-[calc(100%+16px)] -mr-4 border-0"
+                data-testid="support-chat-iframe"
+                loading="lazy"
+                onLoad={finishSupportLoading}
+                onError={finishSupportLoading}
+              />
+            </div>
+          ) : (
+            <div className="p-4">
+              <p className="text-sm text-muted-foreground">
+                O chat de suporte não está configurado no momento.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   )
 }
 

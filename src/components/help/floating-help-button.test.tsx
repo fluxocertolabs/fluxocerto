@@ -28,38 +28,19 @@ vi.mock('@/stores/tour-store', () => ({
 }))
 
 // Mock auth hook
-const mockUser = { email: 'test@example.com', user_metadata: { name: 'Test User' } }
-
 vi.mock('@/hooks/use-auth', () => ({
   useAuth: vi.fn(() => ({
-    user: mockUser,
+    user: null,
     isAuthenticated: true,
     isLoading: false,
   })),
 }))
 
 // Mock Tawk.to wrapper
-const mockOpenSupportChat = vi.fn().mockResolvedValue(undefined)
-const mockPreloadTawkWidget = vi.fn()
-const mockPreloadTawkStyles = vi.fn()
-let mockIsTawkConfigured = false
-let mockVisibilityListener: ((visible: boolean) => void) | null = null
-const mockSubscribeTawkVisibility = vi.fn((listener: (visible: boolean) => void) => {
-  mockVisibilityListener = listener
-  listener(false)
-  return () => {
-    if (mockVisibilityListener === listener) {
-      mockVisibilityListener = null
-    }
-  }
-})
+let mockTawkChatUrl: string | null = null
 
 vi.mock('@/lib/support-chat/tawk', () => ({
-  isTawkConfigured: () => mockIsTawkConfigured,
-  openSupportChat: (...args: unknown[]) => mockOpenSupportChat(...args),
-  preloadTawkStyles: () => mockPreloadTawkStyles(),
-  preloadTawkWidget: () => mockPreloadTawkWidget(),
-  subscribeTawkVisibility: (listener: (visible: boolean) => void) => mockSubscribeTawkVisibility(listener),
+  getTawkChatUrl: () => mockTawkChatUrl,
 }))
 
 // Helper to render with router
@@ -74,8 +55,7 @@ function renderWithRouter(pathname: string) {
 describe('FloatingHelpButton', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockIsTawkConfigured = false
-    mockVisibilityListener = null
+    mockTawkChatUrl = null
   })
 
   describe('route-based rendering', () => {
@@ -144,7 +124,7 @@ describe('FloatingHelpButton', () => {
     })
 
     it('shows chat + feedback on non-tour route when Tawk is configured', async () => {
-      mockIsTawkConfigured = true
+      mockTawkChatUrl = 'https://tawk.to/chat/prop123/widget456'
       const user = userEvent.setup()
       renderWithRouter('/profile')
 
@@ -159,7 +139,7 @@ describe('FloatingHelpButton', () => {
     })
 
     it('shows all three options on tour route when Tawk is configured', async () => {
-      mockIsTawkConfigured = true
+      mockTawkChatUrl = 'https://tawk.to/chat/prop123/widget456'
       const user = userEvent.setup()
       renderWithRouter('/dashboard')
 
@@ -276,10 +256,10 @@ describe('FloatingHelpButton', () => {
 
   describe('chat interaction', () => {
     beforeEach(() => {
-      mockIsTawkConfigured = true
+      mockTawkChatUrl = 'https://tawk.to/chat/prop123/widget456'
     })
 
-    it('calls openSupportChat with user info when chat button is clicked', async () => {
+    it('opens the support popover when chat button is clicked', async () => {
       const user = userEvent.setup()
       renderWithRouter('/dashboard')
 
@@ -292,10 +272,8 @@ describe('FloatingHelpButton', () => {
       await user.click(chatButton)
 
       await waitFor(() => {
-        expect(mockOpenSupportChat).toHaveBeenCalledWith({
-          email: 'test@example.com',
-          name: 'Test User',
-        })
+        expect(screen.getByTestId('support-chat-iframe')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /voltar ao menu de ajuda/i })).toBeInTheDocument()
       })
     })
 
@@ -313,46 +291,28 @@ describe('FloatingHelpButton', () => {
 
       // Menu should close - check aria-expanded on FAB
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /abrir ajuda/i })).toHaveAttribute('aria-expanded', 'false')
+        expect(screen.getByRole('button', { name: /voltar ao menu de ajuda/i })).toHaveAttribute('aria-expanded', 'false')
       })
     })
 
-    it('handles openSupportChat error gracefully', async () => {
-      mockOpenSupportChat.mockRejectedValueOnce(new Error('Network error'))
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
+    it('returns to the help menu when back arrow is clicked', async () => {
       const user = userEvent.setup()
       renderWithRouter('/dashboard')
 
-      // Open menu
       const fab = screen.getByRole('button', { name: /abrir ajuda/i })
       await user.click(fab)
 
-      // Click chat button
       const chatButton = screen.getByRole('button', { name: /abrir chat de suporte/i })
       await user.click(chatButton)
 
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          '[FloatingHelpButton] Failed to open support chat:',
-          expect.any(Error)
-        )
-      })
-
-      consoleSpy.mockRestore()
-    })
-
-    it('hides the FAB when chat is visible', async () => {
-      renderWithRouter('/dashboard')
-
-      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
-
-      mockVisibilityListener?.(true)
+      const backButton = await screen.findByRole('button', { name: /voltar ao menu de ajuda/i })
+      await user.click(backButton)
 
       await waitFor(() => {
-        expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /iniciar tour guiado/i })).toBeVisible()
       })
     })
+
   })
 
   describe('feedback interaction', () => {
@@ -433,7 +393,7 @@ describe('FloatingHelpButton', () => {
     })
 
     it('chat button has descriptive aria-label', async () => {
-      mockIsTawkConfigured = true
+      mockTawkChatUrl = 'https://tawk.to/chat/prop123/widget456'
       const user = userEvent.setup()
       renderWithRouter('/dashboard')
 

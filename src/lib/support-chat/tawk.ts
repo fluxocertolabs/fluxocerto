@@ -53,6 +53,16 @@ function getWidgetId(): string | undefined {
 }
 
 /**
+ * Build the public Tawk chat link for the configured widget.
+ */
+export function getTawkChatUrl(): string | null {
+  const propertyId = getPropertyId()
+  const widgetId = getWidgetId()
+  if (!propertyId || !widgetId) return null
+  return `https://tawk.to/chat/${propertyId}/${widgetId}`
+}
+
+/**
  * Check if Tawk.to is configured (both IDs present).
  */
 export function isTawkConfigured(): boolean {
@@ -217,15 +227,6 @@ export function preloadTawkWidget(): void {
   ensureTawkLoaded().catch((err) => {
     console.warn('[Tawk.to] Failed to preload widget:', err)
   })
-}
-
-/**
- * Inject CSS to hide Tawk UI surfaces early (before script load).
- * Useful to prevent the default floating button from flashing on refresh.
- */
-export function preloadTawkStyles(): void {
-  if (!isTawkConfigured()) return
-  injectPreloadStyles()
 }
 
 /**
