@@ -54,12 +54,15 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 - **CI/CD**: `.github/workflows/ci.yml`, `.github/workflows/email-templates.yml`, `.github/workflows/update-snapshots.yml`
 - **Entry point(s)**: `src/main.tsx`, `src/App.tsx`
 - **Core domain logic**: `src/lib/cashflow/calculate.ts` (+ `src/lib/cashflow/*`), `src/hooks/use-cashflow-projection.ts`
+- **Finance data + realtime**: `src/hooks/use-finance-data.ts` (fetches + subscribes to accounts, credit cards, etc.; applies sorting)
+- **Finance CRUD operations**: `src/stores/finance-store.ts` (Zustand store with Supabase mutations)
 - **Supabase client + auth**: `src/lib/supabase.ts`
 - **DB schema + RLS**: `supabase/migrations/*.sql` (notably `20251220222000_rename_household_to_group.sql`, `20260105123000_self_serve_signup_provisioning.sql`, `20260105123100_onboarding_and_tour_state.sql`, `20260109120000_group_and_user_preferences_split.sql`)
 - **Notifications**: `src/stores/notifications-store.ts`, `src/components/notifications/`, `supabase/functions/send-welcome-email/`, `supabase/migrations/20260109120100_notifications.sql`
 - **Dev auth bypass**: `scripts/generate-dev-token.ts`, `src/main.tsx`, `src/lib/supabase.ts`
 - **Local Supabase readiness check**: `scripts/ensure-supabase.ts` (used by `pnpm db:ensure`)
 - **E2E auth flow**: `e2e/fixtures/auth.setup.ts`, `e2e/fixtures/auth.ts`, `e2e/playwright.config.ts`
+- **Balance freshness utilities**: `src/components/manage/shared/format-utils.ts` → `getBalanceFreshness()`
 
 ---
 
@@ -137,6 +140,11 @@ Deployment notes:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
   - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
 - **Array utility functions**: `src/lib/utils/array.ts` contains helpers like `upsertUniqueById()` which must be immutable (never mutate the input array).
+- **List ordering**: Accounts and credit cards are sorted alphabetically by name (pt-BR locale-aware via `Intl.Collator`), with ties broken by ID. This ensures stable, deterministic ordering even during realtime updates. See `src/hooks/use-finance-data.ts` → `sortByNameThenId()`.
+- **Balance freshness tracking**: The `balance_updated_at` field tracks when account/card balances were last updated. This field must be set:
+  - On creation (`addAccount`, `addCreditCard`)
+  - On balance update via dedicated functions (`updateAccountBalance`, `updateCreditCardBalance`)
+  - On balance update via general update functions (`updateAccount`, `updateCreditCard`) when balance is included in the update
 - **E2E test parallelism**:
   - Auth tests (`auth.spec.ts`) run **serially** with 1 worker to avoid email rate limiting (`fullyParallel: false`).
   - All other tests (visual, functional E2E, mobile) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
@@ -173,6 +181,11 @@ Deployment notes:
 - **Expense/income types**:
   - `expenses.type ∈ {fixed, single_shot}`; fixed uses `due_day`, single-shot uses `date`.
   - `projects.type ∈ {recurring, single_shot}`; recurring uses frequency + schedule, single-shot uses `date`.
+- **Balance updates must set `balance_updated_at`**:
+  - When updating account/card balance via any method (edit dialog, inline edit, quick update), the `balance_updated_at` field must be set to `new Date().toISOString()`.
+  - The `updateAccount`/`updateCreditCard` functions conditionally set this field only when the balance field is included in the update payload.
+  - The dedicated `updateAccountBalance`/`updateCreditCardBalance` functions always set it.
+  - **Gotcha**: If you add a new balance update path, ensure it sets `balance_updated_at` or the freshness indicator will show stale data.
 - **Auth hook**:
   - The `before-user-created` Edge Function currently allows self-serve signups but fails closed if `BEFORE_USER_CREATED_HOOK_SECRET` is missing.
 - **Edge Functions and RLS**:
@@ -269,10 +282,14 @@ Deployment notes:
 - **Optimistic**: projection scenario that includes all income (guaranteed + non-guaranteed).
 - **Pessimistic**: projection scenario that includes guaranteed income only.
 - **Danger day**: a day where the scenario balance is < 0 (tracked independently for optimistic and pessimistic).
-- **Account**: bank account (checking/savings/investment) used for balances and projections.
+- **Account**: bank account (checking/savings/investment) used for balances and projections. Has `balanceUpdatedAt` for freshness tracking.
 - **Project**: income source (recurring or one-time).
 - **Expense**: expense (fixed monthly or one-time).
-- **Credit Card**: card with statement balance + due day; can also have **future statements**.
+- **Credit Card**: card with statement balance + due day; can also have **future statements**. Has `balanceUpdatedAt` for freshness tracking.
+- **Balance freshness**: visual indicator showing how recently a balance was updated:
+  - **Fresh** (green): updated today or yesterday (0-1 days)
+  - **Warning** (yellow): updated 2-7 days ago
+  - **Stale** (red): updated >7 days ago or never (`balanceUpdatedAt` is null/undefined)
 - **Future statement**: pre-defined credit card statement balances for a specific future month/year (`future_statements`).
 - **Projection snapshot**: saved historical projection payload (`projection_snapshots.data`) for later inspection.
 - **Onboarding wizard**: guided setup flow persisted via `onboarding_states`.
