@@ -18,7 +18,13 @@ import { HelpCircle, Compass, MessageCircle, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
 import { useAuth } from '@/hooks/use-auth'
-import { isTawkConfigured, openSupportChat, preloadTawkWidget } from '@/lib/support-chat/tawk'
+import {
+  isTawkConfigured,
+  openSupportChat,
+  preloadTawkStyles,
+  preloadTawkWidget,
+  subscribeTawkVisibility,
+} from '@/lib/support-chat/tawk'
 import type { TourKey } from '@/types'
 
 const CLOSE_DELAY_MS = 380
@@ -53,6 +59,8 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPinnedOpen, setIsPinnedOpen] = useState(false)
   const [shouldAnimate, setShouldAnimate] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const wasChatOpenRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<number | null>(null)
@@ -69,10 +77,42 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   // Preload Tawk widget in background when user is authenticated
   // This makes the chat open instantly when they click the button
   useEffect(() => {
-    if (user && showTawkOption) {
+    if (!showTawkOption) return
+
+    // Ensure we hide any Tawk surfaces ASAP to avoid flashes on refresh.
+    preloadTawkStyles()
+
+    if (user) {
       preloadTawkWidget()
     }
   }, [user, showTawkOption])
+
+  // Track Tawk visibility so the FAB doesn't show while chat is open
+  useEffect(() => {
+    if (!showTawkOption) {
+      setIsChatOpen(false)
+      wasChatOpenRef.current = false
+      return
+    }
+
+    const unsubscribe = subscribeTawkVisibility((visible) => {
+      const wasVisible = wasChatOpenRef.current
+      setIsChatOpen(visible)
+      if (visible) {
+        setShouldAnimate(true)
+        setIsOpen(false)
+        setIsPinnedOpen(false)
+      } else if (wasVisible) {
+        // When chat closes, reopen the menu immediately to avoid flashing the FAB
+        setShouldAnimate(true)
+        setIsOpen(true)
+        setIsPinnedOpen(false)
+      }
+      wasChatOpenRef.current = visible
+    })
+
+    return unsubscribe
+  }, [showTawkOption])
   
   // Check for reduced motion preference
   const prefersReducedMotion =
@@ -162,7 +202,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   }, [clearCloseTimeout, getHoverSafeRect, isOpen, isPinnedOpen])
 
   // Early return AFTER all hooks have been called
-  if (!hasAnyOption) {
+  if (!hasAnyOption || isChatOpen) {
     return null
   }
 

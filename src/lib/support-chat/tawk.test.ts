@@ -282,6 +282,37 @@ describe('Tawk.to integration', () => {
       // Script should only be created once
       expect(scriptCreateCount).toBe(1)
     })
+
+    it('notifies visibility subscribers when chat opens', async () => {
+      vi.stubEnv('VITE_TAWK_PROPERTY_ID', 'prop123')
+      vi.stubEnv('VITE_TAWK_WIDGET_ID', 'widget456')
+      tawkModule = await import('./tawk')
+
+      const visibilityListener = vi.fn()
+      tawkModule.subscribeTawkVisibility(visibilityListener)
+
+      const originalCreateElement = document.createElement.bind(document)
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        const el = originalCreateElement(tagName)
+        if (tagName === 'script') {
+          setTimeout(() => {
+            window.Tawk_API = {
+              ...window.Tawk_API,
+              hideWidget: vi.fn(),
+              showWidget: vi.fn(),
+              maximize: vi.fn(),
+              setAttributes: vi.fn(),
+            }
+            window.Tawk_API?.onLoad?.()
+          }, 5)
+        }
+        return el
+      })
+
+      await tawkModule.openSupportChat({ email: 'test@example.com' })
+
+      expect(visibilityListener).toHaveBeenCalledWith(true)
+    })
   })
 
   describe('onChatMinimized behavior', () => {
@@ -320,6 +351,40 @@ describe('Tawk.to integration', () => {
 
       // hideWidget should be called again
       expect(mockHideWidget).toHaveBeenCalledTimes(1)
+    })
+
+    it('notifies visibility subscribers when chat is minimized', async () => {
+      vi.stubEnv('VITE_TAWK_PROPERTY_ID', 'prop123')
+      vi.stubEnv('VITE_TAWK_WIDGET_ID', 'widget456')
+      tawkModule = await import('./tawk')
+
+      const visibilityListener = vi.fn()
+      tawkModule.subscribeTawkVisibility(visibilityListener)
+
+      const originalCreateElement = document.createElement.bind(document)
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        const el = originalCreateElement(tagName)
+        if (tagName === 'script') {
+          setTimeout(() => {
+            window.Tawk_API = {
+              ...window.Tawk_API,
+              hideWidget: vi.fn(),
+              showWidget: vi.fn(),
+              maximize: vi.fn(),
+              setAttributes: vi.fn(),
+            }
+            window.Tawk_API?.onLoad?.()
+          }, 5)
+        }
+        return el
+      })
+
+      await tawkModule.openSupportChat({ email: 'test@example.com' })
+
+      visibilityListener.mockClear()
+      window.Tawk_API?.onChatMinimized?.()
+
+      expect(visibilityListener).toHaveBeenCalledWith(false)
     })
   })
 

@@ -41,12 +41,25 @@ vi.mock('@/hooks/use-auth', () => ({
 // Mock Tawk.to wrapper
 const mockOpenSupportChat = vi.fn().mockResolvedValue(undefined)
 const mockPreloadTawkWidget = vi.fn()
+const mockPreloadTawkStyles = vi.fn()
 let mockIsTawkConfigured = false
+let mockVisibilityListener: ((visible: boolean) => void) | null = null
+const mockSubscribeTawkVisibility = vi.fn((listener: (visible: boolean) => void) => {
+  mockVisibilityListener = listener
+  listener(false)
+  return () => {
+    if (mockVisibilityListener === listener) {
+      mockVisibilityListener = null
+    }
+  }
+})
 
 vi.mock('@/lib/support-chat/tawk', () => ({
   isTawkConfigured: () => mockIsTawkConfigured,
   openSupportChat: (...args: unknown[]) => mockOpenSupportChat(...args),
+  preloadTawkStyles: () => mockPreloadTawkStyles(),
   preloadTawkWidget: () => mockPreloadTawkWidget(),
+  subscribeTawkVisibility: (listener: (visible: boolean) => void) => mockSubscribeTawkVisibility(listener),
 }))
 
 // Helper to render with router
@@ -62,6 +75,7 @@ describe('FloatingHelpButton', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsTawkConfigured = false
+    mockVisibilityListener = null
   })
 
   describe('route-based rendering', () => {
@@ -326,6 +340,18 @@ describe('FloatingHelpButton', () => {
       })
 
       consoleSpy.mockRestore()
+    })
+
+    it('hides the FAB when chat is visible', async () => {
+      renderWithRouter('/dashboard')
+
+      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
+
+      mockVisibilityListener?.(true)
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
+      })
     })
   })
 

@@ -9,6 +9,7 @@ import {
   isPreviewAuthBypassEnabled,
   injectPreviewSession,
 } from './lib/supabase'
+import { isTawkConfigured, preloadTawkStyles } from './lib/support-chat/tawk'
 import { AppErrorBoundary } from '@/components/app-error-boundary'
 import { withTimeout } from '@/lib/utils/promise'
 import './index.css'
@@ -98,6 +99,11 @@ async function bootstrap() {
   const rootElement = document.getElementById('root')
   if (!rootElement) {
     throw new Error("Root element with id 'root' not found in index.html")
+  }
+
+  // Hide Tawk surfaces as early as possible to prevent refresh flashes.
+  if (isTawkConfigured()) {
+    preloadTawkStyles()
   }
 
   // Only initialize auth if Supabase is configured

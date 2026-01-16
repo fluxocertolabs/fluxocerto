@@ -65,12 +65,29 @@ export function isTawkConfigured(): boolean {
 
 let loadPromise: Promise<void> | null = null
 let preloadStylesInjected = false
+let tawkVisible = false
+const visibilityListeners = new Set<(visible: boolean) => void>()
+
+function notifyVisibilityChange(visible: boolean): void {
+  if (tawkVisible === visible) return
+  tawkVisible = visible
+  visibilityListeners.forEach((listener) => listener(visible))
+}
+
+export function subscribeTawkVisibility(listener: (visible: boolean) => void): () => void {
+  visibilityListeners.add(listener)
+  // Sync immediately with current state
+  listener(tawkVisible)
+  return () => {
+    visibilityListeners.delete(listener)
+  }
+}
 
 /**
  * Inject CSS that hides the Tawk widget by default.
  * This prevents the bubble from flashing before our onLoad handler runs.
  * 
- * We use a data attribute to control visibility:
+ * We use a data attribute on the document root to control visibility:
  * - Default: widget is hidden via CSS
  * - When we call showWidget(): we add [data-tawk-visible] to show it
  */
@@ -81,8 +98,12 @@ function injectPreloadStyles(): void {
   const style = document.createElement('style')
   style.id = 'tawk-preload-styles'
   style.textContent = `
-    /* Hide Tawk widget container by default to prevent flash */
-    [class*="widget-visible"]:not([data-tawk-visible]) {
+    /* Hide Tawk widget surfaces by default to prevent flash */
+    :root:not([data-tawk-visible]) [class*="widget-visible"],
+    :root:not([data-tawk-visible]) [class*="tawk"],
+    :root:not([data-tawk-visible]) [id^="tawk"],
+    :root:not([data-tawk-visible]) [id*="tawk"],
+    :root:not([data-tawk-visible]) iframe[src*="tawk.to"] {
       opacity: 0 !important;
       pointer-events: none !important;
     }
@@ -94,21 +115,31 @@ function injectPreloadStyles(): void {
  * Mark the Tawk container as visible (removes the CSS hiding).
  */
 function showTawkContainer(): void {
-  // Find the Tawk container and mark it visible
-  const container = document.querySelector('[class*="widget-visible"]')
-  if (container) {
-    container.setAttribute('data-tawk-visible', 'true')
-  }
+  document.documentElement.setAttribute('data-tawk-visible', 'true')
+
+  // Mark any existing containers as visible to override local hiding
+  document
+    .querySelectorAll('[class*="widget-visible"], [class*="tawk"], [id^="tawk"], [id*="tawk"]')
+    .forEach((container) => {
+      container.setAttribute('data-tawk-visible', 'true')
+    })
+
+  notifyVisibilityChange(true)
 }
 
 /**
  * Mark the Tawk container as hidden (applies the CSS hiding).
  */
 function hideTawkContainer(): void {
-  const container = document.querySelector('[class*="widget-visible"]')
-  if (container) {
-    container.removeAttribute('data-tawk-visible')
-  }
+  document.documentElement.removeAttribute('data-tawk-visible')
+
+  document
+    .querySelectorAll('[class*="widget-visible"], [class*="tawk"], [id^="tawk"], [id*="tawk"]')
+    .forEach((container) => {
+      container.removeAttribute('data-tawk-visible')
+    })
+
+  notifyVisibilityChange(false)
 }
 
 function ensureTawkLoaded(): Promise<void> {
@@ -134,6 +165,7 @@ function ensureTawkLoaded(): Promise<void> {
     // Hide widget immediately after Tawk loads (we'll show it on demand)
     window.Tawk_API.onLoad = () => {
       window.Tawk_API?.hideWidget?.()
+      hideTawkContainer()
       resolve()
     }
 
@@ -185,6 +217,15 @@ export function preloadTawkWidget(): void {
   ensureTawkLoaded().catch((err) => {
     console.warn('[Tawk.to] Failed to preload widget:', err)
   })
+}
+
+/**
+ * Inject CSS to hide Tawk UI surfaces early (before script load).
+ * Useful to prevent the default floating button from flashing on refresh.
+ */
+export function preloadTawkStyles(): void {
+  if (!isTawkConfigured()) return
+  injectPreloadStyles()
 }
 
 /**
