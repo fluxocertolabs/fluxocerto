@@ -21,6 +21,7 @@ interface TawkVisitor {
 interface TawkAPI {
   onLoad?: () => void
   onChatMinimized?: () => void
+  onChatMaximized?: () => void
   hideWidget?: () => void
   showWidget?: () => void
   maximize?: () => void
@@ -58,119 +59,103 @@ export function isTawkConfigured(): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Customize the Tawk.to widget appearance:
- * - Hide "Powered by tawk.to" branding (the third iframe)
- * - Hide home/chat navigation buttons at bottom
- * - Fix padding issues
- *
- * Note: Tawk uses iframes, so we can't style inside them with CSS.
- * Instead we hide/modify the iframe containers themselves and use
- * MutationObserver to inject styles into iframes when they load.
+ * Inject styles to hide Tawk elements BEFORE the script loads.
+ * This prevents the original bubble from flashing on first load.
  */
-function customizeTawkWidget(): void {
-  if (document.getElementById('tawk-custom-styles')) return
+function injectPreloadStyles(): void {
+  if (document.getElementById('tawk-preload-styles')) return
 
   const style = document.createElement('style')
-  style.id = 'tawk-custom-styles'
+  style.id = 'tawk-preload-styles'
   style.textContent = `
-    /* Hide the branding iframe (usually the 3rd one with min-height:45px, bottom:30px) */
-    div[id^="ki"] > iframe[style*="bottom:30px"][style*="min-height:45px"],
-    div[id^="ki"] > iframe[style*="bottom: 30px"][style*="min-height: 45px"] {
-      display: none !important;
+    /* Hide ALL Tawk iframes by default until we're ready to show */
+    div[id^="ki"] {
       visibility: hidden !important;
+      opacity: 0 !important;
+    }
+    
+    /* Hide the branding iframe completely */
+    div[id^="ki"] > iframe[style*="bottom:30px"][style*="min-height:45px"],
+    div[id^="ki"] > iframe[style*="bottom: 30px"][style*="min-height: 45px"],
+    div[id^="ki"] > iframe[style*="min-height: 45px"][style*="max-height: 45px"] {
+      display: none !important;
       height: 0 !important;
       min-height: 0 !important;
       max-height: 0 !important;
     }
+    
+    /* Hide the floating bubble iframe (64x60) */
+    div[id^="ki"] > iframe[style*="width:64px"][style*="height:60px"],
+    div[id^="ki"] > iframe[style*="width: 64px"][style*="height: 60px"],
+    div[id^="ki"] > iframe[style*="max-width:64px"],
+    div[id^="ki"] > iframe[style*="max-width: 64px"] {
+      display: none !important;
+      visibility: hidden !important;
+    }
   `
   document.head.appendChild(style)
-
-  // Use MutationObserver to inject styles into iframes as they load
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLIFrameElement && node.title === 'chat widget') {
-          injectStylesIntoIframe(node)
-        }
-      })
-    })
-  })
-
-  observer.observe(document.body, { childList: true, subtree: true })
-
-  // Also inject into any existing iframes
-  document.querySelectorAll('iframe[title="chat widget"]').forEach((iframe) => {
-    injectStylesIntoIframe(iframe as HTMLIFrameElement)
-  })
 }
 
 /**
- * Inject custom styles into a Tawk iframe
+ * Show the Tawk widget container (called after widget is ready)
  */
-function injectStylesIntoIframe(iframe: HTMLIFrameElement): void {
-  // Wait for iframe to load
-  const tryInject = () => {
-    try {
-      const doc = iframe.contentDocument || iframe.contentWindow?.document
-      if (!doc || !doc.head) return
-
-      // Skip if already injected
-      if (doc.getElementById('tawk-iframe-custom')) return
-
-      const style = doc.createElement('style')
-      style.id = 'tawk-iframe-custom'
-      style.textContent = `
-        /* Hide home and chat navigation buttons at bottom */
-        .tawk-footer,
-        .tawk-card-footer,
-        [class*="footer"],
-        [class*="navigation"] > a,
-        [class*="nav-item"],
-        .tawk-icon-home,
-        .tawk-icon-chat,
-        a[href="#/"][class*="nav"],
-        a[href="#/chat"][class*="nav"],
-        div[class*="bottom-nav"],
-        div[class*="bottomNav"],
-        nav[class*="bottom"] {
-          display: none !important;
-        }
-
-        /* Hide "Powered by tawk.to" branding */
-        .tawk-branding,
-        [class*="branding"],
-        [class*="powered"],
-        a[href*="tawk.to"] {
-          display: none !important;
-        }
-
-        /* Remove extra top padding */
-        .tawk-card-header,
-        [class*="header"] {
-          padding-top: 12px !important;
-        }
-
-        /* Fix chat container padding */
-        .tawk-card,
-        [class*="card-container"],
-        [class*="chat-container"] {
-          padding-top: 0 !important;
-        }
-      `
-      doc.head.appendChild(style)
-    } catch {
-      // Cross-origin iframe, can't access - this is expected for some iframes
-    }
+function showTawkContainer(): void {
+  const style = document.getElementById('tawk-preload-styles')
+  if (style) {
+    // Update styles to show the main chat iframe but keep bubble hidden
+    style.textContent = `
+      /* Show the main container */
+      div[id^="ki"] {
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      /* Keep branding iframe hidden */
+      div[id^="ki"] > iframe[style*="bottom:30px"][style*="min-height:45px"],
+      div[id^="ki"] > iframe[style*="bottom: 30px"][style*="min-height: 45px"],
+      div[id^="ki"] > iframe[style*="min-height: 45px"][style*="max-height: 45px"] {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+      }
+      
+      /* Keep the floating bubble iframe hidden always */
+      div[id^="ki"] > iframe[style*="width:64px"][style*="height:60px"],
+      div[id^="ki"] > iframe[style*="width: 64px"][style*="height: 60px"],
+      div[id^="ki"] > iframe[style*="max-width:64px"],
+      div[id^="ki"] > iframe[style*="max-width: 64px"] {
+        display: none !important;
+        visibility: hidden !important;
+      }
+    `
   }
+}
 
-  // Try immediately and also after load
-  tryInject()
-  iframe.addEventListener('load', tryInject)
-
-  // Retry a few times as content may load dynamically
-  setTimeout(tryInject, 500)
-  setTimeout(tryInject, 1000)
-  setTimeout(tryInject, 2000)
+/**
+ * Focus the message textarea when chat is maximized
+ */
+function focusMessageInput(): void {
+  // Try to find and focus the message input in the chat iframe
+  setTimeout(() => {
+    const iframes = document.querySelectorAll('iframe[title="chat widget"]')
+    iframes.forEach((iframe) => {
+      try {
+        const doc = (iframe as HTMLIFrameElement).contentDocument
+        if (!doc) return
+        
+        // Try various selectors for the message input
+        const textarea = doc.querySelector('textarea') ||
+                        doc.querySelector('input[type="text"]') ||
+                        doc.querySelector('[contenteditable="true"]')
+        if (textarea instanceof HTMLElement) {
+          textarea.focus()
+        }
+      } catch {
+        // Cross-origin, can't access
+      }
+    })
+  }, 500)
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +163,22 @@ function injectStylesIntoIframe(iframe: HTMLIFrameElement): void {
 // ---------------------------------------------------------------------------
 
 let loadPromise: Promise<void> | null = null
+let isLoading = false
+let loadingCallback: ((loading: boolean) => void) | null = null
+
+/**
+ * Set a callback to be notified when loading state changes
+ */
+export function onLoadingChange(callback: (loading: boolean) => void): void {
+  loadingCallback = callback
+  // Immediately notify current state
+  callback(isLoading)
+}
+
+function setLoading(loading: boolean): void {
+  isLoading = loading
+  loadingCallback?.(loading)
+}
 
 function ensureTawkLoaded(): Promise<void> {
   if (loadPromise) {
@@ -191,6 +192,10 @@ function ensureTawkLoaded(): Promise<void> {
     return Promise.reject(new Error('Tawk.to is not configured'))
   }
 
+  // Inject preload styles BEFORE loading the script to hide the bubble
+  injectPreloadStyles()
+  setLoading(true)
+
   loadPromise = new Promise<void>((resolve, reject) => {
     // Initialise global stubs
     window.Tawk_API = window.Tawk_API || {}
@@ -199,13 +204,18 @@ function ensureTawkLoaded(): Promise<void> {
     // Hide widget immediately after Tawk loads
     window.Tawk_API.onLoad = () => {
       window.Tawk_API?.hideWidget?.()
-      customizeTawkWidget()
+      setLoading(false)
       resolve()
     }
 
     // When user minimises the chat, hide the widget again (no lingering bubble)
     window.Tawk_API.onChatMinimized = () => {
       window.Tawk_API?.hideWidget?.()
+    }
+
+    // Focus message input when chat is maximized
+    window.Tawk_API.onChatMaximized = () => {
+      focusMessageInput()
     }
 
     // Inject the script
@@ -217,6 +227,7 @@ function ensureTawkLoaded(): Promise<void> {
 
     script.onerror = () => {
       loadPromise = null
+      setLoading(false)
       reject(new Error('Failed to load Tawk.to script'))
     }
 
@@ -258,8 +269,14 @@ export async function openSupportChat(visitor: SupportChatVisitor): Promise<void
     }
   })
 
+  // Show the container (unhide from preload styles)
+  showTawkContainer()
+
   // Show and maximise
   api.showWidget?.()
   api.maximize?.()
+
+  // Focus the message input
+  focusMessageInput()
 }
 
