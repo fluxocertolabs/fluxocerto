@@ -10,7 +10,7 @@
  * - Chat option calls openSupportChat and closes menu
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -65,10 +65,6 @@ function renderWithRouter(pathname: string) {
 describe('FloatingHelpButton', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockIsTawkConfigured = false
-  })
-
-  afterEach(() => {
     mockIsTawkConfigured = false
   })
 
@@ -340,6 +336,7 @@ describe('FloatingHelpButton', () => {
 
       consoleSpy.mockRestore()
     })
+
   })
 
   describe('accessibility', () => {

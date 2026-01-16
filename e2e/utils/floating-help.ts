@@ -38,7 +38,7 @@ export function getTourOptionButton(page: Page): Locator {
  * Get the "Chat with Support" option button from the expanded menu.
  */
 export function getChatOptionButton(page: Page): Locator {
-  return page.getByRole('button', { name: /conhecer nosso suporte/i });
+  return page.getByRole('button', { name: /falar com suporte|abrir chat de suporte/i });
 }
 
 /**

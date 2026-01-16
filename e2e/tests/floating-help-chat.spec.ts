@@ -14,6 +14,7 @@ import {
   getFloatingHelpFAB,
   getTourOptionButton,
   getChatOptionButton,
+  openFloatingHelpMenu,
 } from '../utils/floating-help';
 import { createAccount } from '../utils/test-data';
 
@@ -41,11 +42,8 @@ test.describe('Floating Help Button - Chat Option', () => {
 
       await dismissTourIfVisible(page);
 
-      const helpButton = getFloatingHelpContainer(page);
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
-
-      // Hover to expand menu
-      await helpButton.hover();
+      // Use shared helper for better device coverage (handles hover vs tap)
+      await openFloatingHelpMenu(page);
 
       // Tour option should be visible (dashboard has a tour)
       const tourOption = getTourOptionButton(page);
@@ -97,11 +95,8 @@ test.describe('Floating Help Button - Chat Option', () => {
 
       await dismissTourIfVisible(page);
 
-      const helpButton = getFloatingHelpContainer(page);
-      await expect(helpButton).toBeVisible({ timeout: 10000 });
-
-      // Hover to expand menu
-      await helpButton.hover();
+      // Use shared helper for better device coverage (handles hover vs tap)
+      await openFloatingHelpMenu(page);
 
       // Tour option should be visible
       const tourOption = getTourOptionButton(page);
@@ -133,8 +128,8 @@ test.describe('Floating Help Button - Chat Option', () => {
       // FAB should have aria-expanded="false" initially
       await expect(fab).toHaveAttribute('aria-expanded', 'false');
 
-      // Hover to expand
-      await helpButton.hover();
+      // Use shared helper for better device coverage (handles hover vs tap)
+      await openFloatingHelpMenu(page);
 
       // FAB should have aria-expanded="true" when expanded
       await expect(fab).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
@@ -151,8 +146,8 @@ test.describe('Floating Help Button - Chat Option', () => {
 
       await dismissTourIfVisible(page);
 
-      const helpButton = getFloatingHelpContainer(page);
-      await helpButton.hover();
+      // Use shared helper for better device coverage (handles hover vs tap)
+      await openFloatingHelpMenu(page);
 
       const tourOption = getTourOptionButton(page);
       await expect(tourOption).toBeVisible({ timeout: 5000 });
