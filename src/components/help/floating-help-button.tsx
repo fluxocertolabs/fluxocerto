@@ -246,13 +246,13 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-stretch gap-2 min-w-[220px]">
           {/* Tour option — only on pages with tours */}
           {currentTourKey && (
             <button
               onClick={handleStartTour}
               className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-full',
+                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
                 'bg-card border border-border shadow-lg',
                 'hover:bg-accent hover:border-accent-foreground/20',
                 'cursor-pointer',
@@ -266,7 +266,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
             >
               <div
                 className={cn(
-                  'flex items-center justify-center w-8 h-8 rounded-full',
+                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
                   'bg-primary/10 text-primary',
                   'group-hover:bg-primary group-hover:text-primary-foreground',
                   // Icon color should switch instantly (no delayed transition)
@@ -286,7 +286,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
             <button
               onClick={handleOpenChat}
               className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-full',
+                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
                 'bg-card border border-border shadow-lg',
                 'hover:bg-accent hover:border-accent-foreground/20',
                 'cursor-pointer',
@@ -299,7 +299,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
             >
               <div
                 className={cn(
-                  'flex items-center justify-center w-8 h-8 rounded-full',
+                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
                   'bg-primary/10 text-primary',
                   'group-hover:bg-primary group-hover:text-primary-foreground',
                   'transition-none'

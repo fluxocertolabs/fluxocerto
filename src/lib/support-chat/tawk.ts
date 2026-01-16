@@ -54,30 +54,123 @@ export function isTawkConfigured(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Branding removal (use at your own risk - may violate Tawk.to ToS)
+// Widget customization (use at your own risk - may violate Tawk.to ToS)
 // ---------------------------------------------------------------------------
 
-function hideTawkBranding(): void {
+/**
+ * Customize the Tawk.to widget appearance:
+ * - Hide "Powered by tawk.to" branding (the third iframe)
+ * - Hide home/chat navigation buttons at bottom
+ * - Fix padding issues
+ *
+ * Note: Tawk uses iframes, so we can't style inside them with CSS.
+ * Instead we hide/modify the iframe containers themselves and use
+ * MutationObserver to inject styles into iframes when they load.
+ */
+function customizeTawkWidget(): void {
+  if (document.getElementById('tawk-custom-styles')) return
+
   const style = document.createElement('style')
-  style.id = 'tawk-branding-hide'
+  style.id = 'tawk-custom-styles'
   style.textContent = `
-    /* Hide "Powered by tawk.to" branding */
-    .tawk-branding,
-    .tawk-footer,
-    [class*="tawk-branding"],
-    [class*="powered"],
-    a[href*="tawk.to"]:not([class*="tawk-button"]) {
+    /* Hide the branding iframe (usually the 3rd one with min-height:45px, bottom:30px) */
+    div[id^="ki"] > iframe[style*="bottom:30px"][style*="min-height:45px"],
+    div[id^="ki"] > iframe[style*="bottom: 30px"][style*="min-height: 45px"] {
       display: none !important;
       visibility: hidden !important;
-      opacity: 0 !important;
       height: 0 !important;
-      overflow: hidden !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
     }
   `
-  // Only inject once
-  if (!document.getElementById('tawk-branding-hide')) {
-    document.head.appendChild(style)
+  document.head.appendChild(style)
+
+  // Use MutationObserver to inject styles into iframes as they load
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node instanceof HTMLIFrameElement && node.title === 'chat widget') {
+          injectStylesIntoIframe(node)
+        }
+      })
+    })
+  })
+
+  observer.observe(document.body, { childList: true, subtree: true })
+
+  // Also inject into any existing iframes
+  document.querySelectorAll('iframe[title="chat widget"]').forEach((iframe) => {
+    injectStylesIntoIframe(iframe as HTMLIFrameElement)
+  })
+}
+
+/**
+ * Inject custom styles into a Tawk iframe
+ */
+function injectStylesIntoIframe(iframe: HTMLIFrameElement): void {
+  // Wait for iframe to load
+  const tryInject = () => {
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow?.document
+      if (!doc || !doc.head) return
+
+      // Skip if already injected
+      if (doc.getElementById('tawk-iframe-custom')) return
+
+      const style = doc.createElement('style')
+      style.id = 'tawk-iframe-custom'
+      style.textContent = `
+        /* Hide home and chat navigation buttons at bottom */
+        .tawk-footer,
+        .tawk-card-footer,
+        [class*="footer"],
+        [class*="navigation"] > a,
+        [class*="nav-item"],
+        .tawk-icon-home,
+        .tawk-icon-chat,
+        a[href="#/"][class*="nav"],
+        a[href="#/chat"][class*="nav"],
+        div[class*="bottom-nav"],
+        div[class*="bottomNav"],
+        nav[class*="bottom"] {
+          display: none !important;
+        }
+
+        /* Hide "Powered by tawk.to" branding */
+        .tawk-branding,
+        [class*="branding"],
+        [class*="powered"],
+        a[href*="tawk.to"] {
+          display: none !important;
+        }
+
+        /* Remove extra top padding */
+        .tawk-card-header,
+        [class*="header"] {
+          padding-top: 12px !important;
+        }
+
+        /* Fix chat container padding */
+        .tawk-card,
+        [class*="card-container"],
+        [class*="chat-container"] {
+          padding-top: 0 !important;
+        }
+      `
+      doc.head.appendChild(style)
+    } catch {
+      // Cross-origin iframe, can't access - this is expected for some iframes
+    }
   }
+
+  // Try immediately and also after load
+  tryInject()
+  iframe.addEventListener('load', tryInject)
+
+  // Retry a few times as content may load dynamically
+  setTimeout(tryInject, 500)
+  setTimeout(tryInject, 1000)
+  setTimeout(tryInject, 2000)
 }
 
 // ---------------------------------------------------------------------------
@@ -106,7 +199,7 @@ function ensureTawkLoaded(): Promise<void> {
     // Hide widget immediately after Tawk loads
     window.Tawk_API.onLoad = () => {
       window.Tawk_API?.hideWidget?.()
-      hideTawkBranding()
+      customizeTawkWidget()
       resolve()
     }
 
