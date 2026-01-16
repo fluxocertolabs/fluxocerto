@@ -14,11 +14,11 @@
 
 import { useState, useRef, useEffect, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import { useLocation } from 'react-router-dom'
-import { HelpCircle, Compass, MessageCircle, Loader2, Lightbulb } from 'lucide-react'
+import { HelpCircle, Compass, MessageCircle, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
 import { useAuth } from '@/hooks/use-auth'
-import { isTawkConfigured, openSupportChat, onLoadingChange } from '@/lib/support-chat/tawk'
+import { isTawkConfigured, openSupportChat } from '@/lib/support-chat/tawk'
 import type { TourKey } from '@/types'
 
 const CLOSE_DELAY_MS = 380
@@ -53,7 +53,6 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPinnedOpen, setIsPinnedOpen] = useState(false)
   const [shouldAnimate, setShouldAnimate] = useState(false)
-  const [isChatLoading, setIsChatLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<number | null>(null)
@@ -66,13 +65,6 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   
   // If there's nothing to show in the menu, don't render the button at all
   const hasAnyOption = Boolean(currentTourKey) || showTawkOption || showCannyOption
-  
-  // Subscribe to Tawk loading state
-  useEffect(() => {
-    if (showTawkOption) {
-      onLoadingChange(setIsChatLoading)
-    }
-  }, [showTawkOption])
   
   // Check for reduced motion preference
   const prefersReducedMotion =
@@ -305,7 +297,6 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
           {showTawkOption && (
             <button
               onClick={handleOpenChat}
-              disabled={isChatLoading}
               className={cn(
                 'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
                 'bg-card border border-border shadow-lg',
@@ -313,10 +304,9 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
                 'cursor-pointer',
                 'will-change-transform',
                 shouldAnimate && isOpen && 'animate-help-pill-in',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                isChatLoading && 'opacity-70 cursor-wait'
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               )}
-              aria-label={isChatLoading ? 'Carregando chat de suporte...' : 'Abrir chat de suporte'}
+              aria-label="Abrir chat de suporte"
               tabIndex={isOpen ? 0 : -1}
             >
               <div
@@ -327,14 +317,10 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
                   'transition-none'
                 )}
               >
-                {isChatLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <MessageCircle className="w-4 h-4" />
-                )}
+                <MessageCircle className="w-4 h-4" />
               </div>
               <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
-                {isChatLoading ? 'Carregando...' : 'Falar com suporte'}
+                Falar com suporte
               </span>
             </button>
           )}

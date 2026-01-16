@@ -40,17 +40,11 @@ vi.mock('@/hooks/use-auth', () => ({
 
 // Mock Tawk.to wrapper
 const mockOpenSupportChat = vi.fn().mockResolvedValue(undefined)
-const mockOnLoadingChange = vi.fn()
 let mockIsTawkConfigured = false
 
 vi.mock('@/lib/support-chat/tawk', () => ({
   isTawkConfigured: () => mockIsTawkConfigured,
   openSupportChat: (...args: unknown[]) => mockOpenSupportChat(...args),
-  onLoadingChange: (callback: (loading: boolean) => void) => {
-    mockOnLoadingChange(callback)
-    // Immediately call with false (not loading)
-    callback(false)
-  },
 }))
 
 // Helper to render with router
