@@ -64,6 +64,52 @@ export function isTawkConfigured(): boolean {
 // ---------------------------------------------------------------------------
 
 let loadPromise: Promise<void> | null = null
+let preloadStylesInjected = false
+
+/**
+ * Inject CSS that hides the Tawk widget by default.
+ * This prevents the bubble from flashing before our onLoad handler runs.
+ * 
+ * We use a data attribute to control visibility:
+ * - Default: widget is hidden via CSS
+ * - When we call showWidget(): we add [data-tawk-visible] to show it
+ */
+function injectPreloadStyles(): void {
+  if (preloadStylesInjected) return
+  preloadStylesInjected = true
+
+  const style = document.createElement('style')
+  style.id = 'tawk-preload-styles'
+  style.textContent = `
+    /* Hide Tawk widget container by default to prevent flash */
+    [class*="widget-visible"]:not([data-tawk-visible]) {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+  `
+  document.head.appendChild(style)
+}
+
+/**
+ * Mark the Tawk container as visible (removes the CSS hiding).
+ */
+function showTawkContainer(): void {
+  // Find the Tawk container and mark it visible
+  const container = document.querySelector('[class*="widget-visible"]')
+  if (container) {
+    container.setAttribute('data-tawk-visible', 'true')
+  }
+}
+
+/**
+ * Mark the Tawk container as hidden (applies the CSS hiding).
+ */
+function hideTawkContainer(): void {
+  const container = document.querySelector('[class*="widget-visible"]')
+  if (container) {
+    container.removeAttribute('data-tawk-visible')
+  }
+}
 
 function ensureTawkLoaded(): Promise<void> {
   if (loadPromise) {
@@ -76,6 +122,9 @@ function ensureTawkLoaded(): Promise<void> {
   if (!propertyId || !widgetId) {
     return Promise.reject(new Error('Tawk.to is not configured'))
   }
+
+  // Inject hiding styles BEFORE loading the script
+  injectPreloadStyles()
 
   loadPromise = new Promise<void>((resolve, reject) => {
     // Initialise global stubs
@@ -91,6 +140,7 @@ function ensureTawkLoaded(): Promise<void> {
     // When user minimises the chat, hide the widget again (no lingering bubble)
     window.Tawk_API.onChatMinimized = () => {
       window.Tawk_API?.hideWidget?.()
+      hideTawkContainer()
     }
 
     // Inject the script
@@ -160,7 +210,8 @@ export async function openSupportChat(visitor: SupportChatVisitor): Promise<void
     }
   })
 
-  // Show and maximise
+  // Show the container (removes CSS hiding) and maximise
+  showTawkContainer()
   api.showWidget?.()
   api.maximize?.()
 }

@@ -61,6 +61,7 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 - **Notifications**: `src/stores/notifications-store.ts`, `src/components/notifications/`, `supabase/functions/send-welcome-email/`, `supabase/migrations/20260109120100_notifications.sql`
 - **Dev auth bypass**: `scripts/generate-dev-token.ts`, `src/main.tsx`, `src/lib/supabase.ts`
 - **Local Supabase readiness check**: `scripts/ensure-supabase.ts` (used by `pnpm db:ensure`)
+- **Support chat (Tawk.to)**: `src/lib/support-chat/tawk.ts` (wrapper), `src/components/help/floating-help-button.tsx` (UI integration)
 - **E2E auth flow**: `e2e/fixtures/auth.setup.ts`, `e2e/fixtures/auth.ts`, `e2e/playwright.config.ts`
 - **Balance freshness utilities**: `src/components/manage/shared/format-utils.ts` → `getBalanceFreshness()`
 
@@ -139,6 +140,9 @@ Deployment notes:
 - **Testing strategy**:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
   - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
+- **Third-party integrations**:
+  - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
+  - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.
 - **Array utility functions**: `src/lib/utils/array.ts` contains helpers like `upsertUniqueById()` which must be immutable (never mutate the input array).
 - **List ordering**: Accounts and credit cards are sorted alphabetically by name (pt-BR locale-aware via `Intl.Collator`), with ties broken by ID. This ensures stable, deterministic ordering even during realtime updates. See `src/hooks/use-finance-data.ts` → `sortByNameThenId()`.
 - **Balance freshness tracking**: The `balance_updated_at` field tracks when account/card balances were last updated. This field must be set:
@@ -173,6 +177,12 @@ Deployment notes:
   - `onboarding_states` (per user + group) and `tour_states` (per user + tour key) are real tables with RLS (see `20260105123100_onboarding_and_tour_state.sql`).
   - E2E setup often marks onboarding completed and tours dismissed to avoid overlays blocking tests.
   - **Auth callback must not force-open wizard**: The onboarding wizard auto-shows based on `canAutoShow()` in `src/lib/onboarding/steps.ts` (checks status, `autoShownAt`, and `isMinimumSetupComplete`). Do not add code to `src/pages/auth-callback.tsx` that calls `openWizard()`—this breaks E2E tests that authenticate via magic link and rely on the natural auto-show flow.
+- **Third-party widget styling (Tawk.to, etc.)**:
+  - Widgets like Tawk.to use **cross-origin iframes** that cannot be styled from our application code.
+  - CSS injection, `MutationObserver` tricks, and `contentDocument` access are blocked by browser security policies.
+  - Widget appearance (colors, buttons, padding, branding) must be configured in the vendor's dashboard.
+  - We can only control: (1) when to load the script, (2) when to show/hide the widget container, (3) visitor attributes passed via their API.
+  - See `src/lib/support-chat/tawk.ts` for the implementation pattern.
 - **Preferences are split into two tables**:
   - `group_preferences`: group-scoped settings (keyed by `group_id` + `key`). Examples: theme preference, display preferences.
   - `user_preferences`: user-scoped settings (keyed by `user_id` + `key`). Examples: `email_notifications_enabled`.
@@ -297,6 +307,9 @@ Deployment notes:
 - **Notification**: in-app message stored in `notifications` table. Has `type`, `title`, `message`, `read_at`, `email_sent_at`. Currently, `type` is constrained to `'welcome'` only; additional types (e.g., `system`) may be added in the future. Realtime subscriptions push INSERT/UPDATE/DELETE events to the client.
 - **Welcome notification**: auto-created notification for new users; can trigger a welcome email via `send-welcome-email` Edge Function.
 - **UserPreferenceKey**: typed union for valid `user_preferences.key` values (e.g., `'email_notifications_enabled'`). See `src/types/index.ts`.
+- **Floating Help button**: contextual help FAB (`?` icon) that shows page tours, support chat, and feedback options. See `src/components/help/floating-help-button.tsx`.
+- **Support chat**: Tawk.to live chat integration for user support. Widget is preloaded in background for instant opening. See `src/lib/support-chat/tawk.ts`.
+- **Feedback portal**: External Canny.io board for user suggestions and bug reports (`https://fluxo-certo.canny.io`).
 
 ---
 
@@ -310,7 +323,7 @@ Deployment notes:
   - Shared utility functions: `src/lib/utils/`
   - DB schema/RLS changes: `supabase/migrations/`
   - E2E coverage: `e2e/tests/` (+ fixtures under `e2e/fixtures/`)
-  - E2E shared helpers: `e2e/utils/` (e.g., `floating-help.ts` for Floating Help/tour interactions, `auth-helper.ts` for authentication flows)
+  - E2E shared helpers: `e2e/utils/` (e.g., `floating-help.ts` for Floating Help/tour/chat interactions, `auth-helper.ts` for authentication flows)
   - Dev tooling scripts: `scripts/` (e.g., `detect-flaky-tests.ts`, `generate-dev-token.ts`)
 - **What to avoid**:
   - Storing money as floats (always use cents/integer).

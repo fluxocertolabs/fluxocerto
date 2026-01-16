@@ -266,7 +266,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-stretch gap-2 min-w-[220px]">
           {/* 
            * Button order (bottom to top, closest to FAB first):
            * 1. Support chat (most important - direct help)
