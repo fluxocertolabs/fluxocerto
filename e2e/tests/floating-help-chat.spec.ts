@@ -15,16 +15,9 @@ import {
   getTourOptionButton,
   getChatOptionButton,
   openFloatingHelpMenu,
+  dismissTourIfPresent,
 } from '../utils/floating-help';
 import { createAccount } from '../utils/test-data';
-
-async function dismissTourIfVisible(page: import('@playwright/test').Page): Promise<void> {
-  const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-  if (await closeTourButton.isVisible().catch(() => false)) {
-    await closeTourButton.click({ timeout: 5000 }).catch(() => {});
-    await expect(closeTourButton).toBeHidden({ timeout: 10000 }).catch(() => {});
-  }
-}
 
 test.describe('Floating Help Button - Chat Option', () => {
   // Run tests serially to avoid parallel flakiness
@@ -40,7 +33,7 @@ test.describe('Floating Help Button - Chat Option', () => {
       await dashboardPage.goto();
       await dashboardPage.waitForDashboardLoad();
 
-      await dismissTourIfVisible(page);
+      await dismissTourIfPresent(page);
 
       // Use shared helper for better device coverage (handles hover vs tap)
       await openFloatingHelpMenu(page);
@@ -93,7 +86,7 @@ test.describe('Floating Help Button - Chat Option', () => {
       await managePage.goto();
       await managePage.waitForReady();
 
-      await dismissTourIfVisible(page);
+      await dismissTourIfPresent(page);
 
       // Use shared helper for better device coverage (handles hover vs tap)
       await openFloatingHelpMenu(page);
@@ -118,7 +111,7 @@ test.describe('Floating Help Button - Chat Option', () => {
       await dashboardPage.goto();
       await dashboardPage.waitForDashboardLoad();
 
-      await dismissTourIfVisible(page);
+      await dismissTourIfPresent(page);
 
       const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
@@ -144,7 +137,7 @@ test.describe('Floating Help Button - Chat Option', () => {
       await dashboardPage.goto();
       await dashboardPage.waitForDashboardLoad();
 
-      await dismissTourIfVisible(page);
+      await dismissTourIfPresent(page);
 
       // Use shared helper for better device coverage (handles hover vs tap)
       await openFloatingHelpMenu(page);
