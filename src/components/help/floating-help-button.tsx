@@ -252,13 +252,13 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
         ref={menuRef}
         className={cn(
           'absolute bottom-0 right-0 z-20',
-          'origin-bottom-right will-change-transform',
+          'origin-bottom-right',
           shouldAnimate && (isOpen ? 'animate-help-menu-in' : 'animate-help-menu-out'),
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex flex-col items-stretch gap-2 min-w-[220px]">
+        <div className="flex flex-col items-end gap-2">
           {/* 
            * Button order (bottom to top, closest to FAB first):
            * 1. Support chat (most important - direct help)
@@ -271,11 +271,10 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
             <button
               onClick={handleStartTour}
               className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
+                'group flex items-center gap-3 px-4 py-3 rounded-full',
                 'bg-card border border-border shadow-lg',
                 'hover:bg-accent hover:border-accent-foreground/20',
                 'cursor-pointer',
-                'will-change-transform',
                 // Animate the pill *in* only. On close, the container animates out and carries it with it.
                 shouldAnimate && isOpen && 'animate-help-pill-in',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
@@ -305,11 +304,10 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
             <button
               onClick={handleOpenFeedback}
               className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
+                'group flex items-center gap-3 px-4 py-3 rounded-full',
                 'bg-card border border-border shadow-lg',
                 'hover:bg-accent hover:border-accent-foreground/20',
                 'cursor-pointer',
-                'will-change-transform',
                 shouldAnimate && isOpen && 'animate-help-pill-in',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               )}
@@ -337,11 +335,10 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
             <button
               onClick={handleOpenChat}
               className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
+                'group flex items-center gap-3 px-4 py-3 rounded-full',
                 'bg-card border border-border shadow-lg',
                 'hover:bg-accent hover:border-accent-foreground/20',
                 'cursor-pointer',
-                'will-change-transform',
                 shouldAnimate && isOpen && 'animate-help-pill-in',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               )}
