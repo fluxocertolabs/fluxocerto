@@ -121,6 +121,23 @@ export interface SupportChatVisitor {
 }
 
 /**
+ * Preload the Tawk.to widget in the background.
+ * 
+ * Call this when the user is authenticated to load the widget ahead of time.
+ * The widget will be hidden until `openSupportChat()` is called.
+ * 
+ * This makes the chat open instantly when the user clicks "Falar com suporte".
+ */
+export function preloadTawkWidget(): void {
+  if (!isTawkConfigured()) return
+  
+  // Fire and forget - we don't need to wait for it
+  ensureTawkLoaded().catch((err) => {
+    console.warn('[Tawk.to] Failed to preload widget:', err)
+  })
+}
+
+/**
  * Open the Tawk.to chat widget and identify the visitor.
  *
  * - Ensures the script is loaded.

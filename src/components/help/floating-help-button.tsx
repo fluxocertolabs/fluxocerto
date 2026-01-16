@@ -18,7 +18,7 @@ import { HelpCircle, Compass, MessageCircle, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
 import { useAuth } from '@/hooks/use-auth'
-import { isTawkConfigured, openSupportChat } from '@/lib/support-chat/tawk'
+import { isTawkConfigured, openSupportChat, preloadTawkWidget } from '@/lib/support-chat/tawk'
 import type { TourKey } from '@/types'
 
 const CLOSE_DELAY_MS = 380
@@ -65,6 +65,14 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   
   // If there's nothing to show in the menu, don't render the button at all
   const hasAnyOption = Boolean(currentTourKey) || showTawkOption || showCannyOption
+  
+  // Preload Tawk widget in background when user is authenticated
+  // This makes the chat open instantly when they click the button
+  useEffect(() => {
+    if (user && showTawkOption) {
+      preloadTawkWidget()
+    }
+  }, [user, showTawkOption])
   
   // Check for reduced motion preference
   const prefersReducedMotion =

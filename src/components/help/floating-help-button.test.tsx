@@ -40,11 +40,13 @@ vi.mock('@/hooks/use-auth', () => ({
 
 // Mock Tawk.to wrapper
 const mockOpenSupportChat = vi.fn().mockResolvedValue(undefined)
+const mockPreloadTawkWidget = vi.fn()
 let mockIsTawkConfigured = false
 
 vi.mock('@/lib/support-chat/tawk', () => ({
   isTawkConfigured: () => mockIsTawkConfigured,
   openSupportChat: (...args: unknown[]) => mockOpenSupportChat(...args),
+  preloadTawkWidget: () => mockPreloadTawkWidget(),
 }))
 
 // Helper to render with router
