@@ -5,13 +5,19 @@
  * - Default: floating "?" FAB in the bottom-right
  * - On hover (desktop): FAB slides/fades out, options slide/fade in *in its place*
  * - On click (touch/mobile): toggles open; click outside closes
+ *
+ * The menu shows:
+ * - "Conhecer a página" (tour) — only on pages with tours
+ * - "Falar com suporte" (Tawk.to chat) — only when Tawk is configured
  */
 
 import { useState, useRef, useEffect, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import { useLocation } from 'react-router-dom'
-import { HelpCircle, Compass } from 'lucide-react'
+import { HelpCircle, Compass, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
+import { useAuth } from '@/hooks/use-auth'
+import { isTawkConfigured, openSupportChat } from '@/lib/support-chat/tawk'
 import type { TourKey } from '@/types'
 
 const CLOSE_DELAY_MS = 380
@@ -41,6 +47,7 @@ interface FloatingHelpButtonProps {
 export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const location = useLocation()
   const { startTour } = useTourStore()
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [isPinnedOpen, setIsPinnedOpen] = useState(false)
   const [shouldAnimate, setShouldAnimate] = useState(false)
@@ -49,11 +56,36 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const timeoutRef = useRef<number | null>(null)
   
   const currentTourKey = getTourKeyForRoute(location.pathname)
+  const showTawkOption = isTawkConfigured()
+  
+  // If there's nothing to show in the menu, don't render the button at all
+  const hasAnyOption = Boolean(currentTourKey) || showTawkOption
   
   // Check for reduced motion preference
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+  const clearCloseTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+  }, [])
+
+  const getHoverSafeRect = useCallback(() => {
+    const rects: DOMRect[] = []
+    if (containerRef.current) rects.push(containerRef.current.getBoundingClientRect())
+    if (menuRef.current) rects.push(menuRef.current.getBoundingClientRect())
+    if (rects.length === 0) return null
+
+    return {
+      left: Math.min(...rects.map((r) => r.left)) - HOVER_SAFE_PADDING_PX,
+      top: Math.min(...rects.map((r) => r.top)) - HOVER_SAFE_PADDING_PX,
+      right: Math.max(...rects.map((r) => r.right)) + HOVER_SAFE_PADDING_PX,
+      bottom: Math.max(...rects.map((r) => r.bottom)) + HOVER_SAFE_PADDING_PX,
+    }
+  }, [])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -77,27 +109,6 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
-    }
-  }, [])
-
-  const clearCloseTimeout = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
-    }
-  }, [])
-
-  const getHoverSafeRect = useCallback(() => {
-    const rects: DOMRect[] = []
-    if (containerRef.current) rects.push(containerRef.current.getBoundingClientRect())
-    if (menuRef.current) rects.push(menuRef.current.getBoundingClientRect())
-    if (rects.length === 0) return null
-
-    return {
-      left: Math.min(...rects.map((r) => r.left)) - HOVER_SAFE_PADDING_PX,
-      top: Math.min(...rects.map((r) => r.top)) - HOVER_SAFE_PADDING_PX,
-      right: Math.max(...rects.map((r) => r.right)) + HOVER_SAFE_PADDING_PX,
-      bottom: Math.max(...rects.map((r) => r.bottom)) + HOVER_SAFE_PADDING_PX,
     }
   }, [])
 
@@ -136,6 +147,11 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     window.addEventListener('pointermove', handlePointerMove)
     return () => window.removeEventListener('pointermove', handlePointerMove)
   }, [clearCloseTimeout, getHoverSafeRect, isOpen, isPinnedOpen])
+
+  // Early return AFTER all hooks have been called
+  if (!hasAnyOption) {
+    return null
+  }
 
   const handleOpenHover = () => {
     clearCloseTimeout()
@@ -188,9 +204,24 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     setIsPinnedOpen(false)
   }
 
-  // Don't render if there's no tour available for this page
-  if (!currentTourKey) {
-    return null
+  const handleOpenChat = async () => {
+    setShouldAnimate(true)
+    setIsOpen(false)
+    setIsPinnedOpen(false)
+
+    if (!user?.email) {
+      console.warn('[FloatingHelpButton] No user email available for chat')
+      return
+    }
+
+    try {
+      await openSupportChat({
+        email: user.email,
+        name: user.user_metadata?.name as string | undefined,
+      })
+    } catch (err) {
+      console.error('[FloatingHelpButton] Failed to open support chat:', err)
+    }
   }
 
   return (
@@ -216,36 +247,71 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
         aria-hidden={!isOpen}
       >
         <div className="flex flex-col items-end gap-2">
-          <button
-            onClick={handleStartTour}
-            className={cn(
-              'group flex items-center gap-3 px-4 py-3 rounded-full',
-              'bg-card border border-border shadow-lg',
-              'hover:bg-accent hover:border-accent-foreground/20',
-              'cursor-pointer',
-              'will-change-transform',
-              // Animate the pill *in* only. On close, the container animates out and carries it with it.
-              shouldAnimate && isOpen && 'animate-help-pill-in',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-            )}
-            aria-label="Iniciar tour guiado da página"
-            tabIndex={isOpen ? 0 : -1}
-          >
-            <div
+          {/* Tour option — only on pages with tours */}
+          {currentTourKey && (
+            <button
+              onClick={handleStartTour}
               className={cn(
-                'flex items-center justify-center w-8 h-8 rounded-full',
-                'bg-primary/10 text-primary',
-                'group-hover:bg-primary group-hover:text-primary-foreground',
-                // Icon color should switch instantly (no delayed transition)
-                'transition-none'
+                'group flex items-center gap-3 px-4 py-3 rounded-full',
+                'bg-card border border-border shadow-lg',
+                'hover:bg-accent hover:border-accent-foreground/20',
+                'cursor-pointer',
+                'will-change-transform',
+                // Animate the pill *in* only. On close, the container animates out and carries it with it.
+                shouldAnimate && isOpen && 'animate-help-pill-in',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               )}
+              aria-label="Iniciar tour guiado da página"
+              tabIndex={isOpen ? 0 : -1}
             >
-              <Compass className="w-4 h-4" />
-            </div>
-            <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
-              Conhecer a página
-            </span>
-          </button>
+              <div
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-full',
+                  'bg-primary/10 text-primary',
+                  'group-hover:bg-primary group-hover:text-primary-foreground',
+                  // Icon color should switch instantly (no delayed transition)
+                  'transition-none'
+                )}
+              >
+                <Compass className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
+                Conhecer a página
+              </span>
+            </button>
+          )}
+
+          {/* Chat option — only when Tawk.to is configured */}
+          {showTawkOption && (
+            <button
+              onClick={handleOpenChat}
+              className={cn(
+                'group flex items-center gap-3 px-4 py-3 rounded-full',
+                'bg-card border border-border shadow-lg',
+                'hover:bg-accent hover:border-accent-foreground/20',
+                'cursor-pointer',
+                'will-change-transform',
+                shouldAnimate && isOpen && 'animate-help-pill-in',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              )}
+              aria-label="Abrir chat de suporte"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <div
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-full',
+                  'bg-primary/10 text-primary',
+                  'group-hover:bg-primary group-hover:text-primary-foreground',
+                  'transition-none'
+                )}
+              >
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
+                Falar com suporte
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

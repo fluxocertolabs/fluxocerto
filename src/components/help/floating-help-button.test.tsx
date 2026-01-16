@@ -2,12 +2,15 @@
  * Tests for FloatingHelpButton component.
  *
  * Covers:
- * - Renders only on routes with tours (/dashboard, /manage, /history)
+ * - Renders on tour routes (/dashboard, /manage, /history) with tour option
+ * - Renders on non-tour routes when Tawk.to is configured (chat option only)
+ * - Does not render when neither tour nor chat is available
  * - Pinned open via click, click "Iniciar tour guiado…" calls useTourStore.startTour(correctKey)
  * - Click outside closes menu
+ * - Chat option calls openSupportChat and closes menu
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -24,6 +27,26 @@ vi.mock('@/stores/tour-store', () => ({
   })),
 }))
 
+// Mock auth hook
+const mockUser = { email: 'test@example.com', user_metadata: { name: 'Test User' } }
+
+vi.mock('@/hooks/use-auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: mockUser,
+    isAuthenticated: true,
+    isLoading: false,
+  })),
+}))
+
+// Mock Tawk.to wrapper
+const mockOpenSupportChat = vi.fn().mockResolvedValue(undefined)
+let mockIsTawkConfigured = false
+
+vi.mock('@/lib/support-chat/tawk', () => ({
+  isTawkConfigured: () => mockIsTawkConfigured,
+  openSupportChat: (...args: unknown[]) => mockOpenSupportChat(...args),
+}))
+
 // Helper to render with router
 function renderWithRouter(pathname: string) {
   return render(
@@ -36,9 +59,14 @@ function renderWithRouter(pathname: string) {
 describe('FloatingHelpButton', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIsTawkConfigured = false
   })
 
-  describe('route-based rendering', () => {
+  afterEach(() => {
+    mockIsTawkConfigured = false
+  })
+
+  describe('route-based rendering (tours only, no Tawk)', () => {
     it('renders on /dashboard', () => {
       renderWithRouter('/dashboard')
       expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
@@ -59,23 +87,87 @@ describe('FloatingHelpButton', () => {
       expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
     })
 
-    it('does not render on /login', () => {
+    it('does not render on /login (no tour, no Tawk)', () => {
       renderWithRouter('/login')
       expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
     })
 
-    it('does not render on /auth-callback', () => {
+    it('does not render on /auth-callback (no tour, no Tawk)', () => {
       renderWithRouter('/auth-callback')
       expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
     })
 
-    it('does not render on unknown routes', () => {
+    it('does not render on unknown routes (no tour, no Tawk)', () => {
       renderWithRouter('/unknown-route')
       expect(screen.queryByTestId('floating-help-button')).not.toBeInTheDocument()
     })
   })
 
-  describe('interaction', () => {
+  describe('route-based rendering (Tawk configured)', () => {
+    beforeEach(() => {
+      mockIsTawkConfigured = true
+    })
+
+    it('renders on /profile (no tour, but has chat)', () => {
+      renderWithRouter('/profile')
+      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
+    })
+
+    it('renders on /notifications (no tour, but has chat)', () => {
+      renderWithRouter('/notifications')
+      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
+    })
+
+    it('renders on /login when Tawk is configured', () => {
+      renderWithRouter('/login')
+      expect(screen.getByTestId('floating-help-button')).toBeInTheDocument()
+    })
+  })
+
+  describe('menu options visibility', () => {
+    it('shows only tour option on tour route when Tawk is not configured', async () => {
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /iniciar tour guiado/i })).toBeVisible()
+      })
+      expect(screen.queryByRole('button', { name: /abrir chat de suporte/i })).not.toBeInTheDocument()
+    })
+
+    it('shows only chat option on non-tour route when Tawk is configured', async () => {
+      mockIsTawkConfigured = true
+      const user = userEvent.setup()
+      renderWithRouter('/profile')
+
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /abrir chat de suporte/i })).toBeVisible()
+      })
+      expect(screen.queryByRole('button', { name: /iniciar tour guiado/i })).not.toBeInTheDocument()
+    })
+
+    it('shows both options on tour route when Tawk is configured', async () => {
+      mockIsTawkConfigured = true
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /iniciar tour guiado/i })).toBeVisible()
+        expect(screen.getByRole('button', { name: /abrir chat de suporte/i })).toBeVisible()
+      })
+    })
+  })
+
+  describe('tour interaction', () => {
     it('opens menu on click', async () => {
       const user = userEvent.setup()
       renderWithRouter('/dashboard')
@@ -175,6 +267,75 @@ describe('FloatingHelpButton', () => {
     })
   })
 
+  describe('chat interaction', () => {
+    beforeEach(() => {
+      mockIsTawkConfigured = true
+    })
+
+    it('calls openSupportChat with user info when chat button is clicked', async () => {
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      // Open menu
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      // Click chat button
+      const chatButton = screen.getByRole('button', { name: /abrir chat de suporte/i })
+      await user.click(chatButton)
+
+      await waitFor(() => {
+        expect(mockOpenSupportChat).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          name: 'Test User',
+        })
+      })
+    })
+
+    it('closes menu after clicking chat button', async () => {
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      // Open menu
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      // Click chat button
+      const chatButton = screen.getByRole('button', { name: /abrir chat de suporte/i })
+      await user.click(chatButton)
+
+      // Menu should close - check aria-expanded on FAB
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /abrir ajuda/i })).toHaveAttribute('aria-expanded', 'false')
+      })
+    })
+
+    it('handles openSupportChat error gracefully', async () => {
+      mockOpenSupportChat.mockRejectedValueOnce(new Error('Network error'))
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      // Open menu
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      // Click chat button
+      const chatButton = screen.getByRole('button', { name: /abrir chat de suporte/i })
+      await user.click(chatButton)
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[FloatingHelpButton] Failed to open support chat:',
+          expect.any(Error)
+        )
+      })
+
+      consoleSpy.mockRestore()
+    })
+  })
+
   describe('accessibility', () => {
     it('has correct aria-label on FAB', () => {
       renderWithRouter('/dashboard')
@@ -206,6 +367,18 @@ describe('FloatingHelpButton', () => {
         expect(screen.getByRole('button', { name: /iniciar tour guiado/i })).toBeInTheDocument()
       })
     })
+
+    it('chat button has descriptive aria-label', async () => {
+      mockIsTawkConfigured = true
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /abrir chat de suporte/i })).toBeInTheDocument()
+      })
+    })
   })
 })
-
