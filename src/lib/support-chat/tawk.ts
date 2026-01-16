@@ -54,6 +54,33 @@ export function isTawkConfigured(): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Branding removal (use at your own risk - may violate Tawk.to ToS)
+// ---------------------------------------------------------------------------
+
+function hideTawkBranding(): void {
+  const style = document.createElement('style')
+  style.id = 'tawk-branding-hide'
+  style.textContent = `
+    /* Hide "Powered by tawk.to" branding */
+    .tawk-branding,
+    .tawk-footer,
+    [class*="tawk-branding"],
+    [class*="powered"],
+    a[href*="tawk.to"]:not([class*="tawk-button"]) {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+    }
+  `
+  // Only inject once
+  if (!document.getElementById('tawk-branding-hide')) {
+    document.head.appendChild(style)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Script loader (singleton)
 // ---------------------------------------------------------------------------
 
@@ -79,6 +106,7 @@ function ensureTawkLoaded(): Promise<void> {
     // Hide widget immediately after Tawk loads
     window.Tawk_API.onLoad = () => {
       window.Tawk_API?.hideWidget?.()
+      hideTawkBranding()
       resolve()
     }
 
