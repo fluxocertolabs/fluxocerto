@@ -259,7 +259,14 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
         aria-hidden={!isOpen}
       >
         <div className="flex flex-col items-stretch gap-2 min-w-[220px]">
-          {/* Tour option — only on pages with tours */}
+          {/* 
+           * Button order (bottom to top, closest to FAB first):
+           * 1. Support chat (most important - direct help)
+           * 2. Feedback (Canny)
+           * 3. Tour (page-specific)
+           */}
+
+          {/* Tour option — only on pages with tours (top) */}
           {currentTourKey && (
             <button
               onClick={handleStartTour}
@@ -293,39 +300,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
             </button>
           )}
 
-          {/* Chat option — only when Tawk.to is configured */}
-          {showTawkOption && (
-            <button
-              onClick={handleOpenChat}
-              className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
-                'bg-card border border-border shadow-lg',
-                'hover:bg-accent hover:border-accent-foreground/20',
-                'cursor-pointer',
-                'will-change-transform',
-                shouldAnimate && isOpen && 'animate-help-pill-in',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-              )}
-              aria-label="Abrir chat de suporte"
-              tabIndex={isOpen ? 0 : -1}
-            >
-              <div
-                className={cn(
-                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
-                  'bg-primary/10 text-primary',
-                  'group-hover:bg-primary group-hover:text-primary-foreground',
-                  'transition-none'
-                )}
-              >
-                <MessageCircle className="w-4 h-4" />
-              </div>
-              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
-                Falar com suporte
-              </span>
-            </button>
-          )}
-
-          {/* Feedback option — link to Canny.io portal */}
+          {/* Feedback option — link to Canny.io portal (middle) */}
           {showCannyOption && (
             <button
               onClick={handleOpenFeedback}
@@ -353,6 +328,38 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
               </div>
               <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
                 Sugerir melhorias
+              </span>
+            </button>
+          )}
+
+          {/* Chat option — only when Tawk.to is configured (bottom, closest to FAB) */}
+          {showTawkOption && (
+            <button
+              onClick={handleOpenChat}
+              className={cn(
+                'group flex items-center gap-3 px-4 py-3 rounded-full w-full',
+                'bg-card border border-border shadow-lg',
+                'hover:bg-accent hover:border-accent-foreground/20',
+                'cursor-pointer',
+                'will-change-transform',
+                shouldAnimate && isOpen && 'animate-help-pill-in',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              )}
+              aria-label="Abrir chat de suporte"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <div
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
+                  'bg-primary/10 text-primary',
+                  'group-hover:bg-primary group-hover:text-primary-foreground',
+                  'transition-none'
+                )}
+              >
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
+                Falar com suporte
               </span>
             </button>
           )}
