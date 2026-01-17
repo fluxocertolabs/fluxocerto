@@ -91,11 +91,8 @@ test.describe('Welcome Email Delivery @email', () => {
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    try {
-      await expect(wizardDialog).toBeVisible({ timeout: 3000 });
-    } catch {
-      return;
-    }
+    // Wait for wizard to appear with adequate timeout (15s to account for auth/data loading)
+    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
     await page.locator('#profile-name').fill('Email Test User');
     await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -177,7 +174,7 @@ test.describe('Welcome Email Delivery @email', () => {
   async function waitForWelcomeNotification(
     page: Page,
     accessToken: string,
-    timeoutMs = 15000
+    timeoutMs = 30000
   ): Promise<string> {
     let notificationId: string | null = null;
     await expect(async () => {
@@ -185,7 +182,7 @@ test.describe('Welcome Email Delivery @email', () => {
       if (!notificationId) {
         throw new Error('Welcome notification not created yet');
       }
-    }).toPass({ timeout: timeoutMs, intervals: [500, 1000, 2000] });
+    }).toPass({ timeout: timeoutMs, intervals: [1000, 2000, 4000] });
 
     return notificationId!;
   }
@@ -198,7 +195,7 @@ test.describe('Welcome Email Delivery @email', () => {
     accessToken: string,
     notificationId: string
   ): Promise<{ status: number; data: unknown }> {
-    const timeoutMs = 15000;
+    const timeoutMs = 30000;
 
     // Ensure page is in a stable state before running evaluate
     // This prevents hanging when the page is navigating
@@ -247,8 +244,8 @@ test.describe('Welcome Email Delivery @email', () => {
     // Race against a timeout to prevent indefinite hangs
     const timeoutPromise = new Promise<SendWelcomeEmailEvalResult>((resolve) => {
       setTimeout(() => {
-        resolve({ ok: false, error: 'page.evaluate timed out after 30s' });
-      }, 30000);
+        resolve({ ok: false, error: 'page.evaluate timed out after 45s' });
+      }, 45000);
     });
 
     const result = await Promise.race([evaluatePromise, timeoutPromise]);

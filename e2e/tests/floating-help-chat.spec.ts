@@ -14,6 +14,7 @@ import {
   getFloatingHelpFAB,
   getTourOptionButton,
   getChatOptionButton,
+  getFeedbackOptionButton,
   openFloatingHelpMenu,
   dismissTourIfPresent,
 } from '../utils/floating-help';
@@ -23,8 +24,8 @@ test.describe('Floating Help Button - Chat Option', () => {
   // Run tests serially to avoid parallel flakiness
   test.describe.configure({ mode: 'serial' });
 
-  test.describe('Without Tawk.to configured (default test environment)', () => {
-    test('chat option is NOT visible when Tawk is not configured', async ({
+  test.describe('Tawk.to chat option', () => {
+    test('chat option is visible when configured', async ({
       page,
       dashboardPage,
       db,
@@ -42,12 +43,11 @@ test.describe('Floating Help Button - Chat Option', () => {
       const tourOption = getTourOptionButton(page);
       await expect(tourOption).toBeVisible({ timeout: 5000 });
 
-      // Chat option should NOT be visible (Tawk not configured)
       const chatOption = getChatOptionButton(page);
-      await expect(chatOption).toBeHidden();
+      await expect(chatOption).toBeVisible();
     });
 
-    test('floating help button is hidden on profile page (no tour, no chat)', async ({
+    test('floating help button shows feedback on profile page (no tour)', async ({
       page,
     }) => {
       // Navigate to profile page (no tour defined, no Tawk configured)
@@ -57,12 +57,16 @@ test.describe('Floating Help Button - Chat Option', () => {
       // Wait for page to load
       await page.waitForLoadState('networkidle');
 
-      // Floating help button should NOT be visible (no options to show)
       const helpButton = getFloatingHelpContainer(page);
-      await expect(helpButton).toBeHidden();
+      await expect(helpButton).toBeVisible();
+
+      await openFloatingHelpMenu(page);
+      await expect(getFeedbackOptionButton(page)).toBeVisible();
+      await expect(getChatOptionButton(page)).toBeVisible();
+      await expect(getTourOptionButton(page)).toBeHidden();
     });
 
-    test('floating help button is hidden on notifications page (no tour, no chat)', async ({
+    test('floating help button shows feedback on notifications page (no tour)', async ({
       page,
     }) => {
       // Navigate to notifications page (no tour defined, no Tawk configured)
@@ -72,14 +76,18 @@ test.describe('Floating Help Button - Chat Option', () => {
       // Wait for page to load
       await page.waitForLoadState('networkidle');
 
-      // Floating help button should NOT be visible (no options to show)
       const helpButton = getFloatingHelpContainer(page);
-      await expect(helpButton).toBeHidden();
+      await expect(helpButton).toBeVisible();
+
+      await openFloatingHelpMenu(page);
+      await expect(getFeedbackOptionButton(page)).toBeVisible();
+      await expect(getChatOptionButton(page)).toBeVisible();
+      await expect(getTourOptionButton(page)).toBeHidden();
     });
   });
 
   test.describe('Menu shows only available options', () => {
-    test('expanded menu on tour page shows tour option but not chat (when Tawk not configured)', async ({
+    test('expanded menu on tour page shows available options', async ({
       page,
       managePage,
     }) => {
@@ -95,9 +103,12 @@ test.describe('Floating Help Button - Chat Option', () => {
       const tourOption = getTourOptionButton(page);
       await expect(tourOption).toBeVisible({ timeout: 5000 });
 
-      // Chat option should NOT be visible
+      // Feedback option should be visible
+      const feedbackOption = getFeedbackOptionButton(page);
+      await expect(feedbackOption).toBeVisible({ timeout: 5000 });
+
       const chatOption = getChatOptionButton(page);
-      await expect(chatOption).toBeHidden();
+      await expect(chatOption).toBeVisible();
     });
   });
 

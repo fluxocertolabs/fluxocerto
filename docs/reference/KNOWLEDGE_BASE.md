@@ -140,6 +140,7 @@ Deployment notes:
 - **Testing strategy**:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
   - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
+  - **Test suite philosophy**: Prefer fewer, high-value tests over exhaustive coverage. Remove redundant tests that cover the same patterns multiple times (e.g., one CRUD test file covers all entity types).
 - **Third-party integrations**:
   - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
   - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.
@@ -151,7 +152,8 @@ Deployment notes:
   - On balance update via general update functions (`updateAccount`, `updateCreditCard`) when balance is included in the update
 - **E2E test parallelism**:
   - Auth tests (`auth.spec.ts`) run **serially** with 1 worker to avoid email rate limiting (`fullyParallel: false`).
-  - All other tests (visual, functional E2E, mobile) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
+  - Realtime-dependent tests (`notifications.spec.ts`, `accounts.spec.ts`) use `test.describe.configure({ mode: 'serial' })` to avoid race conditions with Supabase Realtime subscriptions.
+  - All other tests (visual, functional E2E) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
   - Worker count is controlled via `e2e/fixtures/worker-count.ts`; override with `PW_WORKERS` env var.
 
 ---
@@ -216,7 +218,7 @@ Deployment notes:
 
 ### E2E test patterns and gotchas
 
-- **Test isolation**: Each test should call `db.clear()` or `db.reset()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value).
+- **Test isolation**: Each test should call `db.clear()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value). The `_perTestDbReset` auto-fixture was removed to reduce DB contention—isolation is now explicit per-test.
 - **Visual test state**: Visual regression tests for toggles/switches must reset state before capturing screenshots to avoid order-dependent failures.
 - **ESLint guardrails for E2E tests**: The ESLint config (`eslint.config.js`) enforces restrictions on flaky patterns in `e2e/**` files:
   - `page.waitForTimeout()` is disallowed — use assertion-based waits instead.
@@ -259,6 +261,7 @@ Deployment notes:
     - `click()` can move the mouse and trigger hover handlers; in visual tests where animations are effectively 0ms, that can instantly animate the FAB off-screen and cause "outside of viewport" flakes.
   - **Use the shared helper**: Import `openFloatingHelpMenu()`, `startTourViaFloatingHelp()`, etc. from `e2e/utils/floating-help.ts` instead of writing ad-hoc interactions.
   - **Verify state via aria attributes**: After opening, assert `aria-expanded="true"` on the FAB before interacting with menu items.
+  - **Always-visible entry point (authenticated routes)**: The menu always includes the Canny feedback option, so the Floating Help button renders anywhere the authenticated layout is used. Public routes (e.g., `/login`) do not mount the component. Tawk chat appears only when `VITE_TAWK_PROPERTY_ID` + `VITE_TAWK_WIDGET_ID` are set.
 
 - **Fresh group rotation** (see `e2e/fixtures/db.ts`):
   - `db.clear()` and `db.resetDatabase()` create a **new empty group** for the worker user, avoiding expensive per-test DELETE cascades.
@@ -276,6 +279,32 @@ Deployment notes:
   - These tests authenticate **new users via magic link** (not worker fixtures) and expect the wizard to auto-show based on database state.
   - **Do not** add code to `auth-callback.tsx` that force-opens the wizard—this breaks the existing onboarding E2E tests which rely on the natural auto-show flow.
 - **Always run the full test suite** (`pnpm test`) before declaring changes complete. Running only a subset (e.g., `pnpm test:visual`) can miss regressions in other test categories.
+
+### Test suite optimization principles
+
+The test suite is intentionally lean. When adding or reviewing tests, follow these principles:
+
+- **Visual tests**:
+  - Test **light theme only** by default. Dark theme is a CSS class toggle—one verification per app is sufficient.
+  - Test **populated states** (with data) over empty states when possible—empty states have less visual regression risk.
+  - Skip visual tests for simple components (buttons, badges, simple forms) that have low regression risk.
+  - Deleted visual test files: `floating-help.visual.spec.ts`, `page-tours.visual.spec.ts`, `notifications.visual.spec.ts`, `profile.visual.spec.ts` (low-value).
+
+- **E2E functional tests**:
+  - **One CRUD test file per pattern** (`accounts.spec.ts`), not per entity type. Credit cards, expenses, and projects use the same UI patterns—testing all four is redundant.
+  - Deleted redundant CRUD files: `credit-cards.spec.ts`, `expenses.spec.ts`, `projects.spec.ts`.
+  - **Mobile functional tests are redundant** with desktop tests + mobile visual tests. Deleted `e2e/tests/mobile/` directory.
+  - Consolidated dashboard tests: `dashboard-estimated-balance.spec.ts` and `dashboard-health-indicator.spec.ts` merged into `dashboard.spec.ts`.
+
+- **Database isolation**:
+  - The `_perTestDbReset` auto-fixture was removed to reduce DB contention under parallel load.
+  - Tests that need a clean state must call `db.clear()` explicitly at the start.
+  - Tests interacting with Supabase Realtime (e.g., `notifications.spec.ts`, `accounts.spec.ts`) should use `test.describe.configure({ mode: 'serial' })` to avoid race conditions.
+
+- **Current test counts** (as of Jan 2026):
+  - Unit tests: ~1,332 tests
+  - E2E functional: ~95 tests
+  - Visual regression: ~100 tests
 
 ### Unit test patterns
 

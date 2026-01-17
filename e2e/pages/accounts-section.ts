@@ -269,6 +269,15 @@ export class AccountsSection {
    * The account cards have a "More options" button that opens a dropdown with Edit option
    */
   async editAccount(name: string): Promise<void> {
+    // Ensure the accounts tab is ready before attempting to interact.
+    await this.waitForLoad();
+
+    // Close any tour tooltip that might intercept clicks.
+    const tourCloseButton = this.page.getByRole('button', { name: /fechar tour/i });
+    if (await tourCloseButton.isVisible().catch(() => false)) {
+      await tourCloseButton.click({ timeout: 2000 }).catch(() => {});
+    }
+
     // Find the card containing the account name - look for the heading with account name
     const accountCard = this.page.locator('div.group.relative').filter({ 
       has: this.page.getByRole('heading', { name, level: 3 }) 
@@ -278,16 +287,22 @@ export class AccountsSection {
     await expect(accountCard).toBeVisible({ timeout: 10000 });
     
     // Hover to reveal the actions button
+    const actionsButton = accountCard.getByRole('button', { name: /mais opções|more/i });
     await accountCard.hover();
-    
-    // Click the "More options" button (three dots) - Playwright auto-waits for actionability
-    await accountCard.getByRole('button', { name: /mais opções|more/i }).click();
-    
+    await expect(actionsButton).toBeVisible({ timeout: 10000 });
+    await actionsButton.click();
+
     // Click "Editar" in the dropdown
-    await this.page.getByRole('button', { name: /editar/i }).click();
-    
-    // Wait for dialog to open
-    await expect(this.page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    const editButton = this.page.getByRole('button', { name: /editar/i });
+    await expect(editButton).toBeVisible({ timeout: 5000 });
+    await editButton.click();
+
+    // Wait for dialog to open (anchor by expected input)
+    const dialog = this.page
+      .getByRole('dialog')
+      .filter({ has: this.page.locator('input#name') })
+      .first();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -295,12 +310,30 @@ export class AccountsSection {
    */
   async updateAccountName(currentName: string, newName: string): Promise<void> {
     await this.editAccount(currentName);
-    const dialog = this.page.getByRole('dialog');
-    const nameInput = dialog.getByLabel(/nome/i);
-    await nameInput.clear();
-    await nameInput.fill(newName);
-    await dialog.getByRole('button', { name: /salvar|save|atualizar/i }).click();
-    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    const dialog = this.page
+      .getByRole('dialog')
+      .filter({ has: this.page.locator('input#name') })
+      .first();
+    const nameInput = dialog.locator('input#name');
+    await expect(nameInput).toBeVisible({ timeout: 10000 });
+    await expect(nameInput).toBeEditable({ timeout: 10000 });
+
+    await expect(async () => {
+      await nameInput.fill('');
+      await nameInput.fill(newName);
+      await expect(nameInput).toHaveValue(newName);
+    }).toPass({ timeout: 15000, intervals: [250, 500, 1000] });
+
+    const submitButton = dialog.getByRole('button', { name: /salvar|save|atualizar/i });
+    await expect(submitButton).toBeVisible({ timeout: 5000 });
+    await submitButton.click();
+
+    await expect(async () => {
+      const isVisible = await dialog.isVisible().catch(() => false);
+      if (isVisible) {
+        throw new Error('Dialog still visible');
+      }
+    }).toPass({ timeout: 15000, intervals: [250, 500, 1000] });
   }
 
   /**

@@ -94,11 +94,8 @@ test.describe('RLS State Isolation Tests @security', () => {
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    try {
-      await expect(wizardDialog).toBeVisible({ timeout: 3000 });
-    } catch {
-      return; // No wizard to complete
-    }
+    // Wait for wizard to appear with adequate timeout (15s to account for auth/data loading)
+    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
     // Profile
     await page.locator('#profile-name').fill('RLS Test User');
@@ -127,6 +124,49 @@ test.describe('RLS State Isolation Tests @security', () => {
     await expect(wizardDialog).toBeHidden({ timeout: 15000 });
   }
 
+  async function fetchWithTimeout(
+    page: Page,
+    request: {
+      url: string;
+      method?: string;
+      headers: Record<string, string>;
+      body?: unknown;
+      timeoutMs?: number;
+    }
+  ): Promise<{ status: number; data: unknown }> {
+    const { url, method = 'GET', headers, body, timeoutMs = 20000 } = request;
+
+    return await page.evaluate(
+      async ({ url, method, headers, body, timeoutMs }) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const res = await fetch(url, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+            signal: controller.signal,
+          });
+          return {
+            status: res.status,
+            data: await res.json().catch(() => null),
+          };
+        } catch (err) {
+          const message =
+            err instanceof Error
+              ? err.name === 'AbortError'
+                ? `Request timed out after ${timeoutMs}ms`
+                : err.message
+              : String(err);
+          return { status: 0, data: { error: message } };
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      },
+      { url, method, headers, body, timeoutMs }
+    );
+  }
+
   test('user cannot read other user\'s tour_states via PostgREST', async ({ page, browser }) => {
     // Create and authenticate User A
     const userAEmail = `rls-user-a-${Date.now()}@example.com`;
@@ -147,31 +187,19 @@ test.describe('RLS State Isolation Tests @security', () => {
     const contextB = await browser.newContext();
     const pageB = await contextB.newPage();
 
-    // Authenticate User B
+    // Authenticate User B (no onboarding needed for access check)
     const userBEmail = `rls-user-b-${Date.now()}@example.com`;
     const userB = await authenticateAndGetToken(pageB, userBEmail);
-    await completeOnboarding(pageB);
 
     // User B tries to read User A's tour_states via PostgREST
-    const response = await pageB.evaluate(
-      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
-        const res = await fetch(
-          `${baseUrl}/rest/v1/tour_states?user_id=eq.${targetUserId}`,
-          {
-            headers: {
-              apikey: apiKey,
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const response = await fetchWithTimeout(page, {
+      url: `${baseApiUrl}/rest/v1/tour_states?user_id=eq.${userA.userId}`,
+      headers: {
+        apikey: anonKey!,
+        Authorization: `Bearer ${userB.accessToken}`,
+        'Content-Type': 'application/json',
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
-    );
+    });
 
     // RLS should return empty array (not 401/403) - user can query but sees no data
     expect(response.status).toBe(200);
@@ -190,31 +218,19 @@ test.describe('RLS State Isolation Tests @security', () => {
     const contextB = await browser.newContext();
     const pageB = await contextB.newPage();
 
-    // Authenticate User B
+    // Authenticate User B (no onboarding needed for access check)
     const userBEmail = `rls-onboard-b-${Date.now()}@example.com`;
     const userB = await authenticateAndGetToken(pageB, userBEmail);
-    await completeOnboarding(pageB);
 
     // User B tries to read User A's onboarding_states via PostgREST
-    const response = await pageB.evaluate(
-      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
-        const res = await fetch(
-          `${baseUrl}/rest/v1/onboarding_states?user_id=eq.${targetUserId}`,
-          {
-            headers: {
-              apikey: apiKey,
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const response = await fetchWithTimeout(page, {
+      url: `${baseApiUrl}/rest/v1/onboarding_states?user_id=eq.${userA.userId}`,
+      headers: {
+        apikey: anonKey!,
+        Authorization: `Bearer ${userB.accessToken}`,
+        'Content-Type': 'application/json',
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
-    );
+    });
 
     // RLS should return empty array
     expect(response.status).toBe(200);
@@ -233,36 +249,27 @@ test.describe('RLS State Isolation Tests @security', () => {
     const contextB = await browser.newContext();
     const pageB = await contextB.newPage();
 
-    // Authenticate User B
+    // Authenticate User B (no onboarding needed for access check)
     const userBEmail = `rls-insert-b-${Date.now()}@example.com`;
     const userB = await authenticateAndGetToken(pageB, userBEmail);
-    await completeOnboarding(pageB);
 
     // User B tries to insert a tour_state for User A
-    const response = await pageB.evaluate(
-      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
-        const res = await fetch(`${baseUrl}/rest/v1/tour_states`, {
-          method: 'POST',
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-            Prefer: 'return=minimal',
-          },
-          body: JSON.stringify({
-            user_id: targetUserId,
-            tour_key: 'dashboard',
-            status: 'completed',
-            version: 1,
-          }),
-        });
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const response = await fetchWithTimeout(pageB, {
+      url: `${baseApiUrl}/rest/v1/tour_states`,
+      method: 'POST',
+      headers: {
+        apikey: anonKey!,
+        Authorization: `Bearer ${userB.accessToken}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
-    );
+      body: {
+        user_id: userA.userId,
+        tour_key: 'dashboard',
+        status: 'completed',
+        version: 1,
+      },
+    });
 
     // RLS should reject the insert (403 or similar error)
     // The exact status depends on policy configuration
@@ -291,37 +298,25 @@ test.describe('RLS State Isolation Tests @security', () => {
     const contextB = await browser.newContext();
     const pageB = await contextB.newPage();
 
-    // Authenticate User B
+    // Authenticate User B (no onboarding needed for access check)
     const userBEmail = `rls-update-b-${Date.now()}@example.com`;
     const userB = await authenticateAndGetToken(pageB, userBEmail);
-    await completeOnboarding(pageB);
 
     // User B tries to update User A's tour_state
-    const response = await pageB.evaluate(
-      async ({ baseUrl, apiKey, accessToken, targetUserId }) => {
-        const res = await fetch(
-          `${baseUrl}/rest/v1/tour_states?user_id=eq.${targetUserId}&tour_key=eq.dashboard`,
-          {
-            method: 'PATCH',
-            headers: {
-              apikey: apiKey,
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-              Prefer: 'return=minimal',
-            },
-            body: JSON.stringify({
-              status: 'dismissed',
-              version: 999,
-            }),
-          }
-        );
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const response = await fetchWithTimeout(pageB, {
+      url: `${baseApiUrl}/rest/v1/tour_states?user_id=eq.${userA.userId}&tour_key=eq.dashboard`,
+      method: 'PATCH',
+      headers: {
+        apikey: anonKey!,
+        Authorization: `Bearer ${userB.accessToken}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userB.accessToken, targetUserId: userA.userId }
-    );
+      body: {
+        status: 'dismissed',
+        version: 999,
+      },
+    });
 
     // RLS should either reject (403) or return success with 0 rows affected
     // PostgREST returns 200/204 even if no rows match the filter (due to RLS)
@@ -329,25 +324,14 @@ test.describe('RLS State Isolation Tests @security', () => {
     expect([200, 204, 403, 401]).toContain(response.status);
 
     // Verify User A's data was NOT modified
-    const verifyResponse = await page.evaluate(
-      async ({ baseUrl, apiKey, accessToken }) => {
-        const res = await fetch(
-          `${baseUrl}/rest/v1/tour_states?tour_key=eq.dashboard`,
-          {
-            headers: {
-              apikey: apiKey,
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const verifyResponse = await fetchWithTimeout(page, {
+      url: `${baseApiUrl}/rest/v1/tour_states?tour_key=eq.dashboard`,
+      headers: {
+        apikey: anonKey!,
+        Authorization: `Bearer ${userA.accessToken}`,
+        'Content-Type': 'application/json',
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: userA.accessToken }
-    );
+    });
 
     expect(verifyResponse.status).toBe(200);
     // If User A has a tour_state, verify version is NOT 999
@@ -375,22 +359,14 @@ test.describe('RLS State Isolation Tests @security', () => {
     }
 
     // User reads their own tour_states
-    const response = await page.evaluate(
-      async ({ baseUrl, apiKey, accessToken }) => {
-        const res = await fetch(`${baseUrl}/rest/v1/tour_states`, {
-          headers: {
-            apikey: apiKey,
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        return {
-          status: res.status,
-          data: await res.json().catch(() => null),
-        };
+    const response = await fetchWithTimeout(page, {
+      url: `${baseApiUrl}/rest/v1/tour_states`,
+      headers: {
+        apikey: anonKey!,
+        Authorization: `Bearer ${user.accessToken}`,
+        'Content-Type': 'application/json',
       },
-      { baseUrl: baseApiUrl, apiKey: anonKey!, accessToken: user.accessToken }
-    );
+    });
 
     expect(response.status).toBe(200);
     // User should see their own tour_states (may be 0 or more)

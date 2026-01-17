@@ -101,11 +101,8 @@ test.describe('RLS Notifications & User Preferences Isolation Tests @security', 
       .locator('[role="dialog"]')
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
 
-    try {
-      await expect(wizardDialog).toBeVisible({ timeout: 3000 });
-    } catch {
-      return; // No wizard to complete
-    }
+    // Wait for wizard to appear with adequate timeout (15s to account for auth/data loading)
+    await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
     // Profile
     await page.locator('#profile-name').fill('RLS Test User');

@@ -24,7 +24,9 @@ export function getFloatingHelpContainer(page: Page): Locator {
  * This is the actual clickable button with aria-expanded.
  */
 export function getFloatingHelpFAB(page: Page): Locator {
-  return getFloatingHelpContainer(page).getByRole('button', { name: /abrir ajuda|ajuda \(aberta\)/i });
+  return getFloatingHelpContainer(page).getByRole('button', {
+    name: /abrir ajuda|ajuda \(aberta\)|voltar ao menu de ajuda/i,
+  });
 }
 
 /**

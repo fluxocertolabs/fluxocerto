@@ -13,17 +13,24 @@ import { createAccount, createCreditCard, createFutureStatement } from '../utils
 import { parseBRL } from '../utils/format';
 
 test.describe('Credit Card Projection - Next Month Bug Fix', () => {
+  const FIXED_NOW = new Date('2025-01-15T12:00:00');
+
+  test.beforeEach(async ({ page, db }) => {
+    await page.clock.setFixedTime(FIXED_NOW);
+    await db.clear();
+  });
+
+  test.afterEach(async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+  });
+
   test('credit card due in next month shows statementBalance (not 0)', async ({
     dashboardPage,
     db,
   }) => {
-    // Calculate next month's date (used for context, not directly in test)
-    const now = new Date();
-    const _nextMonth = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
-    const _nextMonthYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
-    
-    // Create a credit card with due day in the middle of next month
-    const dueDay = 15;
+    // Use a due day that has already passed in the fixed month,
+    // ensuring the next due date is in the following month.
+    const dueDay = 14;
     const statementBalance = 50000; // R$ 500,00
     
     await db.seedAccounts([
@@ -39,6 +46,10 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     ]);
     
     await dashboardPage.goto();
+    await dashboardPage.waitForDashboardLoad();
+
+    // Ensure the projection window includes next month deterministically
+    await dashboardPage.selectProjectionDays(60);
     await dashboardPage.waitForDashboardLoad();
     
     // Get the expense total from summary panel
@@ -58,7 +69,7 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
     db,
   }) => {
     // Create a credit card with due day
-    const dueDay = 15;
+    const dueDay = 14;
     const statementBalance = 50000; // R$ 500,00
     
     await db.seedAccounts([
@@ -91,7 +102,7 @@ test.describe('Credit Card Projection - Next Month Bug Fix', () => {
       targetYear += 1;
     }
     
-    const dueDay = 15;
+    const dueDay = 14;
     const statementBalance = 50000; // R$ 500,00
     const futureStatementAmount = 100000; // R$ 1.000,00
     

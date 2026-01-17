@@ -6,6 +6,9 @@
 import { test, expect } from '../fixtures/test-base';
 import { createNotification } from '../utils/test-data';
 
+// Run tests serially to avoid flakiness with Supabase Realtime connections
+test.describe.configure({ mode: 'serial' });
+
 async function seedWelcomeNotification(db: {
   getUserIdByEmail: (email: string) => Promise<string | null>;
   deleteNotificationsForUser: (userId: string) => Promise<void>;

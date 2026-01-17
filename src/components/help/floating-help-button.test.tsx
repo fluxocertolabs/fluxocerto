@@ -4,10 +4,10 @@
  * Covers:
  * - Renders on tour routes (/dashboard, /manage, /history) with tour option
  * - Renders on non-tour routes when Tawk.to is configured (chat option only)
- * - Does not render when neither tour nor chat is available
+ * - Always renders because feedback is always available
  * - Pinned open via click, click "Iniciar tour guiado…" calls useTourStore.startTour(correctKey)
  * - Click outside closes menu
- * - Chat option calls openSupportChat and closes menu
+ * - Chat option opens the support popover and closes the menu
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -24,15 +24,6 @@ vi.mock('@/stores/tour-store', () => ({
     startTour: mockStartTour,
     activeTourKey: null,
     stopTour: vi.fn(),
-  })),
-}))
-
-// Mock auth hook
-vi.mock('@/hooks/use-auth', () => ({
-  useAuth: vi.fn(() => ({
-    user: null,
-    isAuthenticated: true,
-    isLoading: false,
   })),
 }))
 
@@ -310,6 +301,27 @@ describe('FloatingHelpButton', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /iniciar tour guiado/i })).toBeVisible()
+      })
+    })
+
+    it('closes the support popover when clicking outside', async () => {
+      const user = userEvent.setup()
+      renderWithRouter('/dashboard')
+
+      const fab = screen.getByRole('button', { name: /abrir ajuda/i })
+      await user.click(fab)
+
+      const chatButton = screen.getByRole('button', { name: /abrir chat de suporte/i })
+      await user.click(chatButton)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('support-chat-iframe')).toBeInTheDocument()
+      })
+
+      fireEvent.mouseDown(document.body)
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('support-chat-iframe')).not.toBeInTheDocument()
       })
     })
 

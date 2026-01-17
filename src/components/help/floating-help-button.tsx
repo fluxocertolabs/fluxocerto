@@ -63,12 +63,6 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const tawkChatUrl = getTawkChatUrl()
   const showTawkOption = Boolean(tawkChatUrl)
   
-  // Canny feedback is always available
-  const showCannyOption = true
-  
-  // If there's nothing to show in the menu, don't render the button at all
-  const hasAnyOption = Boolean(currentTourKey) || showTawkOption || showCannyOption
-  
   // Check for reduced motion preference
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
@@ -196,11 +190,6 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     return () => window.removeEventListener('pointermove', handlePointerMove)
   }, [clearCloseTimeout, getHoverSafeRect, isOpen, isPinnedOpen])
 
-  // Early return AFTER all hooks have been called
-  if (!hasAnyOption) {
-    return null
-  }
-
   const handleOpenHover = () => {
     clearCloseTimeout()
     if (isSupportPopoverOpen) return
@@ -280,11 +269,6 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     })
   }
 
-  const handleOpenChatFullscreen = () => {
-    if (!tawkChatUrl) return
-    window.location.assign(tawkChatUrl)
-  }
-
   const handleOpenFeedback = () => {
     setShouldAnimate(true)
     setIsOpen(false)
@@ -358,35 +342,33 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
           )}
 
           {/* Feedback option — link to Canny.io portal (middle) */}
-          {showCannyOption && (
-            <button
-              onClick={handleOpenFeedback}
+          <button
+            onClick={handleOpenFeedback}
+            className={cn(
+              'group flex items-center gap-3 px-4 py-3 rounded-full',
+              'bg-card border border-border shadow-lg',
+              'hover:bg-accent hover:border-accent-foreground/20',
+              'cursor-pointer',
+              shouldAnimate && isOpen && 'animate-help-pill-in',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+            )}
+            aria-label="Sugerir melhorias ou reportar problemas"
+            tabIndex={isOpen ? 0 : -1}
+          >
+            <div
               className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-full',
-                'bg-card border border-border shadow-lg',
-                'hover:bg-accent hover:border-accent-foreground/20',
-                'cursor-pointer',
-                shouldAnimate && isOpen && 'animate-help-pill-in',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
+                'bg-primary/10 text-primary',
+                'group-hover:bg-primary group-hover:text-primary-foreground',
+                'transition-none'
               )}
-              aria-label="Sugerir melhorias ou reportar problemas"
-              tabIndex={isOpen ? 0 : -1}
             >
-              <div
-                className={cn(
-                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
-                  'bg-primary/10 text-primary',
-                  'group-hover:bg-primary group-hover:text-primary-foreground',
-                  'transition-none'
-                )}
-              >
-                <Lightbulb className="w-4 h-4" />
-              </div>
-              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
-                Sugerir melhorias
-              </span>
-            </button>
-          )}
+              <Lightbulb className="w-4 h-4" />
+            </div>
+            <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
+              Sugerir melhorias
+            </span>
+          </button>
 
           {/* Chat option — only when Tawk.to is configured (bottom, closest to FAB) */}
           {showTawkOption && (
