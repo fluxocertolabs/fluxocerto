@@ -24,7 +24,9 @@ export function getFloatingHelpContainer(page: Page): Locator {
  * This is the actual clickable button with aria-expanded.
  */
 export function getFloatingHelpFAB(page: Page): Locator {
-  return getFloatingHelpContainer(page).getByRole('button', { name: /abrir ajuda|ajuda \(aberta\)/i });
+  return getFloatingHelpContainer(page).getByRole('button', {
+    name: /abrir ajuda|ajuda \(aberta\)|voltar ao menu de ajuda/i,
+  });
 }
 
 /**
@@ -32,6 +34,20 @@ export function getFloatingHelpFAB(page: Page): Locator {
  */
 export function getTourOptionButton(page: Page): Locator {
   return page.getByRole('button', { name: /iniciar tour guiado/i });
+}
+
+/**
+ * Get the "Chat with Support" option button from the expanded menu.
+ */
+export function getChatOptionButton(page: Page): Locator {
+  return page.getByRole('button', { name: /falar com suporte|abrir chat de suporte/i });
+}
+
+/**
+ * Get the "Suggest Improvements" (Canny feedback) option button from the expanded menu.
+ */
+export function getFeedbackOptionButton(page: Page): Locator {
+  return page.getByRole('button', { name: /sugerir melhorias/i });
 }
 
 /**
@@ -69,7 +85,6 @@ async function isHoverCapable(page: Page): Promise<boolean> {
 export async function openFloatingHelpMenu(page: Page): Promise<void> {
   const container = getFloatingHelpContainer(page);
   const fab = getFloatingHelpFAB(page);
-  const tourOption = getTourOptionButton(page);
 
   // Ensure the help button is visible first
   await expect(container).toBeVisible({ timeout: 10000 });
@@ -102,8 +117,10 @@ export async function openFloatingHelpMenu(page: Page): Promise<void> {
   // Wait for menu to be expanded
   await expect(fab).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
 
-  // Also verify the tour option is visible (menu content is rendered)
-  await expect(tourOption).toBeVisible({ timeout: 5000 });
+  // Also verify at least one option is visible (menu content is rendered)
+  // Feedback option is always visible, so we can just wait for that
+  const feedbackOption = getFeedbackOptionButton(page);
+  await expect(feedbackOption).toBeVisible({ timeout: 5000 });
 }
 
 /**

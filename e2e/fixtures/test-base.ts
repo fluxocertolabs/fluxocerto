@@ -29,14 +29,6 @@ type TestFixtures = {
   /** Worker context with isolation information */
   workerContext: IWorkerContext;
   /**
-   * Internal auto fixture: reset this worker's group-scoped financial data before every test.
-   *
-   * Even with per-worker group isolation, data can accumulate across tests within the same worker.
-   * Under full-suite parallelism this can slow down `/manage` (which fetches all finance tables)
-   * enough to cause timeouts and flakes. Resetting group data per test keeps loads deterministic.
-   */
-  _perTestDbReset: void;
-  /**
    * Internal auto fixture: keep worker-user UI unblocked across the suite.
    *
    * Some specs intentionally mutate onboarding/tour state (e.g. recovery/self-heal flows).
@@ -305,14 +297,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: 'worker' },
   ],
 
-  // Auto-run per test: reset worker group data to prevent cross-test contamination + slowdowns.
-  _perTestDbReset: [
-    async ({ db }, use) => {
-      await db.resetDatabase();
-      await use();
-    },
-    { auto: true },
-  ],
+  // REMOVED: _perTestDbReset auto-fixture was causing DB contention under parallel load.
+  // Tests that need isolation should call db.clear() or db.resetDatabase() explicitly.
+  // The worker-scoped db fixture already resets once per worker, which is sufficient
+  // for most tests. Per-test reset was overkill and caused flakiness.
 
   // Auto-run per test to ensure onboarding/tour overlays never block interactions
   _workerUiState: [

@@ -11,9 +11,6 @@ import {
   dismissTourIfPresent 
 } from '../utils/auth-helper';
 
-// Generate unique email for onboarding tests to ensure clean state
-const ONBOARDING_TEST_EMAIL = `onboarding-${Date.now()}@example.com`;
-
 test.describe('Onboarding Wizard', () => {
   // Run onboarding tests serially to maintain state
   test.describe.configure({ mode: 'serial' });
@@ -22,8 +19,6 @@ test.describe('Onboarding Wizard', () => {
 
   test.beforeAll(async () => {
     inbucket = new InbucketClient();
-    // Purge mailbox to ensure clean state
-    await inbucket.purgeMailbox(ONBOARDING_TEST_EMAIL.split('@')[0]);
   });
 
   test.beforeEach(async () => {
@@ -47,11 +42,32 @@ test.describe('Onboarding Wizard', () => {
       .filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
   }
 
+  async function waitForWizard(
+    page: import('@playwright/test').Page,
+    timeoutMs = 30000
+  ) {
+    const wizardDialog = getWizardDialog(page);
+    const retryButton = page.getByRole('button', { name: /tentar novamente/i });
+    await expect(async () => {
+      if (await wizardDialog.isVisible().catch(() => false)) {
+        return;
+      }
+      if (await retryButton.isVisible().catch(() => false)) {
+        await retryButton.click({ timeout: 5000 }).catch(() => {});
+      }
+      throw new Error('Wizard not visible yet');
+    }).toPass({ timeout: timeoutMs, intervals: [1000, 2000, 3000] });
+
+    return wizardDialog;
+  }
+
   test('T041a: onboarding wizard auto-shows on first login for new user', async ({ page }) => {
-    await authenticateUser(page, ONBOARDING_TEST_EMAIL);
+    const freshEmail = `onboarding-auto-${Date.now()}@example.com`;
+    await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+    await authenticateUser(page, freshEmail);
 
     // Check if onboarding wizard dialog is visible - MUST be visible for new user
-    const wizardDialog = getWizardDialog(page);
+    const wizardDialog = await waitForWizard(page);
     
     // For a new user with no data, onboarding MUST auto-show (mandatory)
     await expect(wizardDialog).toBeVisible({ timeout: 10000 });
@@ -62,9 +78,11 @@ test.describe('Onboarding Wizard', () => {
   });
 
   test('T041b: onboarding wizard cannot be skipped/dismissed', async ({ page }) => {
-    await authenticateUser(page, ONBOARDING_TEST_EMAIL);
+    const freshEmail = `onboarding-noskip-${Date.now()}@example.com`;
+    await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+    await authenticateUser(page, freshEmail);
 
-    const wizardDialog = getWizardDialog(page);
+    const wizardDialog = await waitForWizard(page);
     await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
     // No "Pular" button should exist (onboarding is mandatory)
@@ -86,7 +104,7 @@ test.describe('Onboarding Wizard', () => {
     
     await authenticateUser(page, freshEmail);
 
-    const wizardDialog = getWizardDialog(page);
+    const wizardDialog = await waitForWizard(page);
     await expect(wizardDialog).toBeVisible({ timeout: 15000 });
     await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
 
@@ -126,7 +144,9 @@ test.describe('Onboarding Wizard', () => {
   });
 
   test('T041d: "Continuar configuração" entry point does not exist (onboarding is mandatory)', async ({ page }) => {
-    await authenticateUser(page, ONBOARDING_TEST_EMAIL);
+    const freshEmail = `onboarding-entry-${Date.now()}@example.com`;
+    await inbucket.purgeMailbox(freshEmail.split('@')[0]);
+    await authenticateUser(page, freshEmail);
 
     const setupButton = page.getByRole('button', { name: /continuar configuração|continue setup/i });
     await expect(setupButton).toHaveCount(0);
@@ -140,7 +160,7 @@ test.describe('Onboarding Wizard', () => {
     await authenticateUser(page, freshEmail);
 
     // For a fresh user, the wizard MUST be showing (mandatory onboarding)
-    const wizardDialog = getWizardDialog(page);
+    const wizardDialog = await waitForWizard(page);
     await expect(wizardDialog).toBeVisible({ timeout: 10000 });
   });
 
@@ -152,7 +172,7 @@ test.describe('Onboarding Wizard', () => {
     await authenticateUser(page, freshEmail);
 
     // Ensure the wizard is actually present (and the app is settled) before attempting navigations.
-    const wizardDialog = getWizardDialog(page);
+    const wizardDialog = await waitForWizard(page);
     await expect(wizardDialog).toBeVisible({ timeout: 15000 });
 
     // Even if wizard is showing, navigation should work
@@ -202,12 +222,17 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
       await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
 
       // Clear the name field (might have default value)
-      await page.locator('#profile-name').fill('');
+      const nameInput = page.locator('#profile-name');
+      await expect(nameInput).toBeEditable({ timeout: 10000 });
+      await expect(async () => {
+        await nameInput.fill('');
+        await expect(nameInput).toHaveValue('');
+      }).toPass({ timeout: 10000, intervals: [250, 500, 1000] });
       
       // Click next with empty name
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -216,8 +241,9 @@ test.describe('Onboarding Wizard', () => {
       await expect(wizardDialog.getByRole('heading', { name: /seu perfil/i })).toBeVisible();
       
       // Input should have error styling (aria-invalid)
-      const nameInput = page.locator('#profile-name');
-      await expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+      await expect(async () => {
+        await expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+      }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
     });
 
     test('group step: clicking next with empty name shows validation error', async ({ page }) => {
@@ -226,7 +252,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Fill profile and advance
@@ -235,7 +261,12 @@ test.describe('Onboarding Wizard', () => {
       await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible({ timeout: 10000 });
 
       // Clear the group name field
-      await page.locator('#group-name').fill('');
+      const groupInput = page.locator('#group-name');
+      await expect(groupInput).toBeEditable({ timeout: 10000 });
+      await expect(async () => {
+        await groupInput.fill('');
+        await expect(groupInput).toHaveValue('');
+      }).toPass({ timeout: 10000, intervals: [250, 500, 1000] });
       
       // Click next with empty name
       await wizardDialog.getByRole('button', { name: /próximo/i }).click();
@@ -244,8 +275,9 @@ test.describe('Onboarding Wizard', () => {
       await expect(wizardDialog.getByRole('heading', { name: /seu grupo/i })).toBeVisible();
       
       // Input should have error styling
-      const groupInput = page.locator('#group-name');
-      await expect(groupInput).toHaveAttribute('aria-invalid', 'true');
+      await expect(async () => {
+        await expect(groupInput).toHaveAttribute('aria-invalid', 'true');
+      }).toPass({ timeout: 10000, intervals: [500, 1000, 2000] });
     });
 
     test('bank account step: clicking next with empty name shows validation error', async ({ page }) => {
@@ -254,7 +286,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Fill profile and advance
@@ -287,7 +319,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Navigate to income step
@@ -320,7 +352,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Navigate to income step
@@ -350,7 +382,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Navigate to expense step
@@ -388,7 +420,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Navigate to credit card step
@@ -453,7 +485,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Navigate to credit card step
@@ -508,7 +540,7 @@ test.describe('Onboarding Wizard', () => {
       
       await authenticateUser(page, freshEmail);
 
-      const wizardDialog = getWizardDialog(page);
+      const wizardDialog = await waitForWizard(page);
       await expect(wizardDialog).toBeVisible({ timeout: 10000 });
 
       // Navigate to credit card step

@@ -4,40 +4,13 @@
  */
 
 import { test, expect } from '../fixtures/test-base';
+import { createAccount, createProject, createExpense } from '../utils/test-data';
 import {
-  createAccount,
-  createProject,
-  createExpense,
-} from '../utils/test-data';
-
-async function dismissTourIfVisible(page: import('@playwright/test').Page): Promise<void> {
-  const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
-  if (await closeTourButton.isVisible().catch(() => false)) {
-    await closeTourButton.click({ timeout: 5000 }).catch(() => {});
-    await expect(closeTourButton).toBeHidden({ timeout: 10000 }).catch(() => {});
-  }
-}
-
-async function openFloatingHelpMenu(page: import('@playwright/test').Page) {
-  // If a tour is already open (auto-show / leakage), it sits above the FAB (higher z-index) and
-  // prevents real clicks from reaching the help button. Close it first to keep behavior deterministic.
-  await dismissTourIfVisible(page);
-
-  const helpButton = page.locator('[data-testid="floating-help-button"]');
-  await expect(helpButton).toBeVisible({ timeout: 15000 });
-
-  const tourOption = helpButton.getByRole('button', { name: /iniciar tour guiado da página/i });
-
-  // Desktop behavior: the menu opens on hover and the FAB becomes `pointer-events: none`.
-  // Playwright's `click()` moves the mouse first, which triggers hover-open and can cause
-  // the menu pill to intercept the click (flake). Use hover + state assertion instead.
-  if (!(await tourOption.isVisible().catch(() => false))) {
-    await helpButton.hover();
-    await expect(tourOption).toBeVisible({ timeout: 15000 });
-  }
-
-  return { helpButton, tourOption };
-}
+  getFloatingHelpContainer,
+  getTourOptionButton,
+  openFloatingHelpMenu,
+  dismissTourIfPresent,
+} from '../utils/floating-help';
 
 test.describe('Floating Help Button', () => {
   // Run tests serially to avoid parallel flakiness with realtime connections
@@ -52,7 +25,7 @@ test.describe('Floating Help Button', () => {
       await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
       await dashboardPage.goto();
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
     });
 
@@ -64,17 +37,12 @@ test.describe('Floating Help Button', () => {
       await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
       await dashboardPage.goto();
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      await dismissTourIfVisible(page);
-
-      // Hover over the help button
-      await helpButton.hover();
-
-      // The menu option should be visible when expanded
-      const tourOption = helpButton.getByRole('button', { name: /iniciar tour guiado da página/i });
-      await expect(tourOption).toBeVisible({ timeout: 15000 });
+      await dismissTourIfPresent(page);
+      await openFloatingHelpMenu(page);
+      await expect(getTourOptionButton(page)).toBeVisible({ timeout: 15000 });
     });
 
     test('clicking tour option starts the dashboard tour', async ({
@@ -82,6 +50,7 @@ test.describe('Floating Help Button', () => {
       dashboardPage,
       db,
     }) => {
+      await db.clear();
       await db.seedAccounts([createAccount({ name: 'Nubank', balance: 500000 })]);
       await db.seedProjects([createProject({ name: 'Salário', amount: 800000 })]);
       await db.seedExpenses([createExpense({ name: 'Aluguel', amount: 200000 })]);
@@ -90,11 +59,14 @@ test.describe('Floating Help Button', () => {
       // Wait for dashboard to finish loading
       await dashboardPage.waitForDashboardLoad();
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      // Ensure tour targets are present before starting the tour
+      await expect(page.locator('[data-tour="projection-selector"]')).toBeVisible({ timeout: 10000 });
+
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      const { tourOption } = await openFloatingHelpMenu(page);
-      await tourOption.click();
+      await openFloatingHelpMenu(page);
+      await getTourOptionButton(page).click();
 
       // Tour should be active
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -112,16 +84,16 @@ test.describe('Floating Help Button', () => {
       // Wait for dashboard to finish loading
       await dashboardPage.waitForDashboardLoad();
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      const { tourOption } = await openFloatingHelpMenu(page);
+      await openFloatingHelpMenu(page);
 
       // Click outside - click on the page body area
       await page.click('body', { position: { x: 50, y: 50 }, force: true });
 
       // Should be collapsed (tour option hidden)
-      await expect(tourOption).toBeHidden({ timeout: 10000 });
+      await expect(getTourOptionButton(page)).toBeHidden({ timeout: 10000 });
     });
   });
 
@@ -135,7 +107,7 @@ test.describe('Floating Help Button', () => {
       await page.goto('/manage', { waitUntil: 'domcontentloaded' });
       await expect(page).toHaveURL(/\/manage/);
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
     });
 
@@ -148,11 +120,11 @@ test.describe('Floating Help Button', () => {
       await managePage.waitForReady();
       
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      const { tourOption } = await openFloatingHelpMenu(page);
-      await tourOption.click();
+      await openFloatingHelpMenu(page);
+      await getTourOptionButton(page).click();
 
       // Tour should be active
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -169,7 +141,7 @@ test.describe('Floating Help Button', () => {
       await db.clear();
       await historyPage.goto();
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
     });
 
@@ -184,11 +156,11 @@ test.describe('Floating Help Button', () => {
       // Wait for history page to load - check for heading
       await expect(page.getByRole('heading', { name: /histórico de projeções/i })).toBeVisible({ timeout: 10000 });
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeVisible({ timeout: 10000 });
 
-      const { tourOption } = await openFloatingHelpMenu(page);
-      await tourOption.click();
+      await openFloatingHelpMenu(page);
+      await getTourOptionButton(page).click();
 
       // Tour should be active
       const closeTourButton = page.getByRole('button', { name: /fechar tour/i });
@@ -208,7 +180,7 @@ test.describe('Floating Help Button', () => {
       // Wait for login page to load - check for the login form title text
       await expect(page.getByText('Entrar', { exact: true })).toBeVisible({ timeout: 10000 });
 
-      const helpButton = page.locator('[data-testid="floating-help-button"]');
+      const helpButton = getFloatingHelpContainer(page);
       await expect(helpButton).toBeHidden();
 
       await context.close();

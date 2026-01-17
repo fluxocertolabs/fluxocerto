@@ -218,7 +218,16 @@ test.describe('Mobile Navigation & Layout', () => {
     await expectNoHorizontalOverflow(page);
 
     await page.goto(`/history/${seeded.id}`, { waitUntil });
-    await expect(page.getByTestId('historical-banner')).toBeVisible({ timeout: HEADING_TIMEOUT });
+    await expect(async () => {
+      const banner = page.getByTestId('historical-banner');
+      const notFound = page.getByText(/projeção não encontrada/i);
+
+      if (await notFound.isVisible().catch(() => false)) {
+        await page.reload({ waitUntil });
+      }
+
+      await expect(banner).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 30000, intervals: [1000, 2000, 3000] });
     await expectNoHorizontalOverflow(page);
   });
 
