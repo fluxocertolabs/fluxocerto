@@ -29,6 +29,8 @@ const mockTourStore = {
   reset: vi.fn(),
 }
 
+let mockTawkChatUrl: string | null = null
+
 const getDefaultMockNotificationsStore = () => ({
   items: [] as unknown[],
   unreadCount: 0,
@@ -68,6 +70,10 @@ vi.mock('@/stores/notifications-store', () => ({
   },
 }))
 
+vi.mock('@/lib/support-chat/tawk', () => ({
+  getTawkChatUrl: () => mockTawkChatUrl,
+}))
+
 vi.mock('@/lib/supabase', () => ({
   signOut: vi.fn(async () => ({ error: null })),
   isSupabaseConfigured: vi.fn(() => true),
@@ -86,6 +92,8 @@ function renderHeader() {
 // Reset mock state to default values before each test across all describe blocks
 beforeEach(() => {
   mockNotificationsStore = getDefaultMockNotificationsStore()
+  mockTourStore.startTour.mockClear()
+  mockTawkChatUrl = null
 })
 
 describe('Header - Mobile Navigation', () => {
@@ -100,6 +108,7 @@ describe('Header - Mobile Navigation', () => {
     expect(screen.getByRole('link', { name: 'Histórico' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Gerenciar' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Perfil' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ajuda e suporte' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument()
   })
 
@@ -122,6 +131,32 @@ describe('Header - Mobile Navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Sair' }))
 
     expect(vi.mocked(signOut)).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens help submenu from mobile menu', async () => {
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+    await user.click(screen.getByRole('button', { name: 'Ajuda e suporte' }))
+
+    expect(screen.getByRole('dialog', { name: /ajuda e suporte/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /conhecer a página/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sugerir melhorias/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /falar com suporte/i })).not.toBeInTheDocument()
+  })
+
+  it('opens support chat view when chat is configured', async () => {
+    mockTawkChatUrl = 'https://tawk.to/chat/prop123/widget456'
+    const user = userEvent.setup()
+    renderHeader()
+
+    await user.click(screen.getByRole('button', { name: /abrir menu/i }))
+    await user.click(screen.getByRole('button', { name: 'Ajuda e suporte' }))
+    await user.click(screen.getByRole('button', { name: /falar com suporte/i }))
+
+    expect(screen.getByRole('dialog', { name: /falar com suporte/i })).toBeInTheDocument()
+    expect(screen.getByTitle('Chat de suporte')).toBeInTheDocument()
   })
 })
 

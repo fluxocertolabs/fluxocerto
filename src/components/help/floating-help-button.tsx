@@ -18,27 +18,12 @@ import { ArrowLeft, HelpCircle, Compass, MessageCircle, Lightbulb } from 'lucide
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
 import { getTawkChatUrl } from '@/lib/support-chat/tawk'
-import type { TourKey } from '@/types'
+import { getTourKeyForRoute } from '@/components/help/tour-helpers'
+import { useSupportChatPreload } from '@/components/help/use-support-chat-preload'
 
 const CLOSE_DELAY_MS = 380
 const HOVER_SAFE_PADDING_PX = 28
 const CANNY_FEEDBACK_URL = 'https://fluxo-certo.canny.io'
-
-/**
- * Get the tour key for the current route.
- */
-function getTourKeyForRoute(pathname: string): TourKey | null {
-  if (pathname === '/' || pathname === '/dashboard') {
-    return 'dashboard'
-  }
-  if (pathname === '/manage') {
-    return 'manage'
-  }
-  if (pathname === '/history') {
-    return 'history'
-  }
-  return null
-}
 
 interface FloatingHelpButtonProps {
   /** Additional class names */
@@ -69,26 +54,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
   // Preload the iframe to reduce first-open latency.
-  useEffect(() => {
-    if (!tawkChatUrl) return
-    const preloadIframe = document.createElement('iframe')
-    preloadIframe.src = tawkChatUrl
-    preloadIframe.title = 'Pré-carregamento do chat de suporte'
-    preloadIframe.setAttribute('aria-hidden', 'true')
-    preloadIframe.tabIndex = -1
-    preloadIframe.style.position = 'fixed'
-    preloadIframe.style.width = '1px'
-    preloadIframe.style.height = '1px'
-    preloadIframe.style.opacity = '0'
-    preloadIframe.style.pointerEvents = 'none'
-    preloadIframe.style.right = '0'
-    preloadIframe.style.bottom = '0'
-    document.body.appendChild(preloadIframe)
-
-    return () => {
-      preloadIframe.remove()
-    }
-  }, [tawkChatUrl])
+  useSupportChatPreload(tawkChatUrl)
 
   const clearCloseTimeout = useCallback(() => {
     if (timeoutRef.current) {
