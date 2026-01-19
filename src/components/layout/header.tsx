@@ -23,7 +23,7 @@ import { getTourKeyForRoute } from '@/components/help/tour-helpers'
 import { useSupportChatPreload } from '@/components/help/use-support-chat-preload'
 
 const CANNY_FEEDBACK_URL = 'https://fluxo-certo.canny.io'
-type MobileMenuView = 'nav' | 'help' | 'chat'
+type MobileMenuView = 'nav' | 'help'
 
 export function Header() {
   const location = useLocation()
@@ -34,6 +34,7 @@ export function Header() {
   const { startTour } = useTourStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mobileMenuView, setMobileMenuView] = useState<MobileMenuView>('nav')
+  const [supportModalOpen, setSupportModalOpen] = useState(false)
   const [isSupportLoading, setIsSupportLoading] = useState(false)
   const supportLoadRafRef = useRef<number | null>(null)
   const prefersReducedMotion =
@@ -51,7 +52,6 @@ export function Header() {
   const closeMobileMenu = () => {
     setMobileMenuOpen(false)
     setMobileMenuView('nav')
-    setIsSupportLoading(false)
   }
 
   const handleSignOut = async () => {
@@ -67,7 +67,6 @@ export function Header() {
     setMobileMenuOpen(open)
     if (!open) {
       setMobileMenuView('nav')
-      setIsSupportLoading(false)
     }
   }
 
@@ -77,12 +76,6 @@ export function Header() {
 
   const handleBackToNav = () => {
     setMobileMenuView('nav')
-    setIsSupportLoading(false)
-  }
-
-  const handleBackToHelp = () => {
-    setMobileMenuView('help')
-    setIsSupportLoading(false)
   }
 
   const handleStartTour = () => {
@@ -98,8 +91,9 @@ export function Header() {
   }
 
   const handleOpenChat = () => {
+    closeMobileMenu()
     setIsSupportLoading(true)
-    setMobileMenuView('chat')
+    setSupportModalOpen(true)
   }
 
   const finishSupportLoading = () => {
@@ -282,7 +276,7 @@ export function Header() {
                   variant="ghost"
                   size="icon"
                   aria-label="Voltar ao menu"
-                  onClick={mobileMenuView === 'chat' ? handleBackToHelp : handleBackToNav}
+                  onClick={handleBackToNav}
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
@@ -290,17 +284,13 @@ export function Header() {
               <DialogTitle>
                 {mobileMenuView === 'nav'
                   ? 'Menu'
-                  : mobileMenuView === 'help'
-                    ? 'Ajuda e suporte'
-                    : 'Falar com suporte'}
+                  : 'Ajuda e suporte'}
               </DialogTitle>
             </div>
             <DialogDescription className="sr-only">
               {mobileMenuView === 'nav'
                 ? 'Navegue entre as seções do app.'
-                : mobileMenuView === 'help'
-                  ? 'Acesse ajuda, suporte e feedback.'
-                  : 'Converse com o suporte pelo chat.'}
+                : 'Acesse ajuda, suporte e feedback.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -436,37 +426,51 @@ export function Header() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
 
-          {mobileMenuView === 'chat' && (
-            <div className="mt-4 flex min-h-0 flex-1 flex-col">
-              {tawkChatUrl ? (
-                <div className="relative h-full min-h-[50vh] w-full flex-1 overflow-hidden rounded-lg border border-border bg-card">
-                  {isSupportLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-card/80">
-                      <div
-                        className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary"
-                        style={{ animation: 'spin 0.9s linear infinite' }}
-                      />
-                    </div>
-                  )}
-                  <iframe
-                    title="Chat de suporte"
-                    src={tawkChatUrl}
-                    className="h-full w-[calc(100%+16px)] -mr-4 border-0"
-                    loading="lazy"
-                    onLoad={finishSupportLoading}
-                    onError={finishSupportLoading}
-                  />
-                </div>
-              ) : (
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <p className="text-sm text-muted-foreground">
-                    O chat de suporte não está configurado no momento.
-                  </p>
-                </div>
-              )}
-            </div>
+      <Dialog open={supportModalOpen} onOpenChange={setSupportModalOpen}>
+        <DialogContent
+          className={cn(
+            'left-0 right-0 top-0 bottom-0 translate-x-0 translate-y-0',
+            'h-[100dvh] w-[100vw] max-w-none rounded-none',
+            'border-0 p-4 flex flex-col overflow-hidden'
           )}
+        >
+          <DialogHeader className="text-left">
+            <DialogTitle>Falar com suporte</DialogTitle>
+            <DialogDescription className="sr-only">
+              Converse com o suporte pelo chat.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex min-h-0 flex-1 flex-col">
+            {tawkChatUrl ? (
+              <div className="relative h-full min-h-[60vh] w-full flex-1 overflow-hidden rounded-lg border border-border bg-card">
+                {isSupportLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-card/80">
+                    <div
+                      className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary"
+                      style={{ animation: 'spin 0.9s linear infinite' }}
+                    />
+                  </div>
+                )}
+                <iframe
+                  title="Chat de suporte"
+                  src={tawkChatUrl}
+                  className="h-full w-[calc(100%+16px)] -mr-4 border-0"
+                  loading="lazy"
+                  onLoad={finishSupportLoading}
+                  onError={finishSupportLoading}
+                />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="text-sm text-muted-foreground">
+                  O chat de suporte não está configurado no momento.
+                </p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </header>
