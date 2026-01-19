@@ -1,36 +1,22 @@
 /**
- * Visual Test Base Fixture
- * Extended Playwright test with helpers for visual regression testing
- * Based on test-base.ts but adds visual testing utilities
- *
- * Uses a fixed date (2025-01-15) for deterministic screenshots.
- * All test data and chart projections will be consistent across runs.
- *
- * ISOLATION STRATEGY:
- * - Each worker has its own group for complete data isolation via RLS
- * - Worker-specific elements (like group name in header) are masked in screenshots
- * - This allows parallel execution while maintaining deterministic visual comparisons
+ * Simplified Visual Test Base Fixture
+ * 
+ * Provides helpers for visual regression testing with:
+ * - Fixed date for deterministic screenshots
+ * - Theme switching
+ * - Animation disabling
+ * - Stable UI waiting
  */
 
-import { test as base, expect, type Page, type BrowserContext, type Locator } from '@playwright/test';
-import { createWorkerDbFixture, type WorkerDatabaseFixture } from './db';
-import { AuthFixture, createWorkerAuthFixture } from './auth';
-import { getWorkerContext, type IWorkerContext } from './worker-context';
-import { LoginPage } from '../pages/login-page';
+import { test as base, expect, type Page, type Locator } from '@playwright/test';
+import { Client as PgClient } from 'pg';
 import { DashboardPage } from '../pages/dashboard-page';
 import { ManagePage } from '../pages/manage-page';
 import { QuickUpdatePage } from '../pages/quick-update-page';
 import { HistoryPage } from '../pages/history-page';
-import { SnapshotDetailPage } from '../pages/snapshot-detail-page';
-import { existsSync } from 'fs';
-
-const USE_PER_TEST_CONTEXT = process.env.PW_PER_TEST_CONTEXT === '1';
 
 /**
  * Fixed date for visual tests - ensures deterministic screenshots
- * Using January 15, 2025 at noon UTC to avoid timezone edge cases.
- * The explicit 'Z' suffix ensures consistent behavior across all environments
- * (local dev, CI containers with different TZ settings).
  */
 export const VISUAL_TEST_FIXED_DATE = new Date('2025-01-15T12:00:00.000Z');
 
@@ -38,62 +24,6 @@ export const VISUAL_TEST_FIXED_DATE = new Date('2025-01-15T12:00:00.000Z');
  * Theme modes supported by the app
  */
 type ThemeMode = 'light' | 'dark' | 'system';
-
-/**
- * Visual test helper utilities
- */
-export interface VisualTestHelpers {
-  /**
-   * Wait for the UI to stabilize (animations complete, data loaded)
-   */
-  waitForStableUI(page: Page): Promise<void>;
-
-  /**
-   * Set the theme mode (call AFTER navigation)
-   */
-  setTheme(page: Page, theme: ThemeMode): Promise<void>;
-
-  /**
-   * Take a screenshot with worker-specific elements masked for consistency.
-   * Masks: group badge in header, worker-prefixed data names
-   */
-  takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean; mask?: Locator[] }): Promise<void>;
-
-  /**
-   * Get locators for elements that should be masked in screenshots.
-   * These are worker-specific elements that would differ between parallel workers.
-   */
-  getWorkerSpecificMasks(page: Page): Locator[];
-}
-
-/**
- * Custom test fixtures type for visual tests
- */
-type VisualTestFixtures = {
-  workerContext: IWorkerContext;
-  db: WorkerDatabaseFixture;
-  auth: AuthFixture;
-  loginPage: LoginPage;
-  dashboardPage: DashboardPage;
-  managePage: ManagePage;
-  quickUpdatePage: QuickUpdatePage;
-  historyPage: HistoryPage;
-  snapshotDetailPage: SnapshotDetailPage;
-  visual: VisualTestHelpers;
-};
-
-/**
- * Worker-scoped fixtures
- */
-type WorkerFixtures = {
-  workerCtx: IWorkerContext;
-  workerBrowserContext: BrowserContext;
-  workerAuthState: {
-    origin: string;
-    cookies: any[];
-    localStorage: { name: string; value: string }[];
-  };
-};
 
 /**
  * Disable all CSS animations for stable screenshots
@@ -107,375 +37,281 @@ export async function disableAnimations(page: Page): Promise<void> {
         transition-duration: 0s !important;
         transition-delay: 0s !important;
       }
-      .animate-pulse {
-        animation: none !important;
-      }
     `,
   });
 }
 
 /**
- * Wait for UI to stabilize before taking screenshots
- * Uses multiple stability checks to ensure consistent screenshots in parallel execution
+ * Wait for the UI to stabilize
  */
 export async function waitForStableUI(page: Page): Promise<void> {
-  // Wait for network to settle (with timeout since Supabase realtime keeps connections open)
-  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
-    // Supabase realtime keeps connections open; proceed after timeout.
-  });
-  
-  // Disable all CSS animations and transitions
-  await disableAnimations(page);
-  
-  // Wait for the app root to have rendered at least one element
-  await expect(page.locator('#root > *').first()).toBeVisible({ timeout: 10000 });
-  
-  // Wait for web fonts to load (prevents font-swap flicker)
-  await page.evaluate(() => document.fonts.ready);
-  
-  // Final stability check - wait for no DOM mutations
-  await page.evaluate(() => {
-    return new Promise<void>((resolve) => {
-      let timeout: ReturnType<typeof setTimeout>;
-      const observer = new MutationObserver(() => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          observer.disconnect();
-          resolve();
-        }, 300);
-      });
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-      });
-      // If no mutations occur within 500ms, consider stable
-      timeout = setTimeout(() => {
-        observer.disconnect();
-        resolve();
-      }, 500);
-    });
-  });
+  // Wait for network to be idle (or timeout)
+  await page.waitForLoadState('networkidle').catch(() => {});
+  // Small delay for any final renders
+  await page.waitForTimeout(500);
 }
 
 /**
- * Set the theme mode (call AFTER navigation)
- * 
- * This function directly manipulates localStorage and the DOM to set the theme.
- * It does NOT reload the page to avoid disrupting the current page state.
+ * Set the theme mode
  */
 export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
-  const resolvedTheme = theme === 'system' ? 'light' : theme;
+  await page.evaluate((t) => {
+    localStorage.setItem('theme', t);
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(t === 'system' ? 'light' : t);
+  }, theme);
+  await page.waitForTimeout(100);
+}
 
-  // Set localStorage and apply theme class directly to DOM
-  await page.evaluate(
-    ({ theme, resolvedTheme }) => {
-      // Update localStorage for Zustand persistence
-      window.localStorage.setItem(
-        'fluxo-certo-theme',
-        JSON.stringify({
-          state: { theme, resolvedTheme, isLoaded: true },
-          version: 0,
-        })
+/**
+ * Visual test helper utilities
+ */
+export interface VisualTestHelpers {
+  waitForStableUI(page: Page): Promise<void>;
+  setTheme(page: Page, theme: ThemeMode): Promise<void>;
+  takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean; mask?: Locator[] }): Promise<void>;
+}
+
+/**
+ * Database fixture for visual tests
+ */
+export interface VisualDbFixture {
+  clear(): Promise<void>;
+  seedAccounts(accounts: Array<{
+    name: string;
+    type?: 'checking' | 'savings' | 'investment';
+    balance: number;
+  }>): Promise<void>;
+  seedProjects(projects: Array<{
+    name: string;
+    amount: number;
+    certainty?: 'guaranteed' | 'probable' | 'uncertain';
+    frequency?: 'weekly' | 'biweekly' | 'monthly';
+    payment_schedule?: { type: string; dayOfMonth?: number };
+  }>): Promise<void>;
+  seedExpenses(expenses: Array<{
+    name: string;
+    amount: number;
+    due_day?: number;
+  }>): Promise<void>;
+  seedCreditCards(cards: Array<{
+    name: string;
+    statement_balance: number;
+    due_day?: number;
+  }>): Promise<void>;
+  seedSingleShotExpenses(expenses: Array<{
+    name: string;
+    amount: number;
+    date: string;
+  }>): Promise<void>;
+  setCheckingAccountsBalanceUpdatedAt(timestamp: string): Promise<void>;
+  setAccountsBalanceUpdatedAt(timestamp: string): Promise<void>;
+  setCreditCardsBalanceUpdatedAt(timestamp: string): Promise<void>;
+}
+
+/** PostgreSQL connection config for local Supabase */
+const PG_CONFIG = {
+  host: 'localhost',
+  port: 54322,
+  database: 'postgres',
+  user: 'postgres',
+  password: 'postgres',
+};
+
+async function executeSQL(sql: string, params?: unknown[]): Promise<void> {
+  const client = new PgClient(PG_CONFIG);
+  try {
+    await client.connect();
+    await client.query(sql, params);
+  } finally {
+    await client.end();
+  }
+}
+
+async function executeSQLWithResult<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
+  const client = new PgClient(PG_CONFIG);
+  try {
+    await client.connect();
+    const result = await client.query(sql, params);
+    return result.rows as T[];
+  } finally {
+    await client.end();
+  }
+}
+
+function createVisualDbFixture(groupId: string): VisualDbFixture {
+  return {
+    async clear() {
+      await executeSQL(`DELETE FROM public.future_statements WHERE group_id = $1`, [groupId]);
+      await executeSQL(`DELETE FROM public.expenses WHERE group_id = $1`, [groupId]);
+      await executeSQL(`DELETE FROM public.credit_cards WHERE group_id = $1`, [groupId]);
+      await executeSQL(`DELETE FROM public.projects WHERE group_id = $1`, [groupId]);
+      await executeSQL(`DELETE FROM public.accounts WHERE group_id = $1`, [groupId]);
+    },
+
+    async seedAccounts(accounts) {
+      for (const a of accounts) {
+        await executeSQL(
+          `INSERT INTO public.accounts (group_id, name, type, balance, balance_updated_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [groupId, a.name, a.type || 'checking', a.balance, VISUAL_TEST_FIXED_DATE.toISOString()]
+        );
+      }
+    },
+
+    async seedProjects(projects) {
+      for (const p of projects) {
+        await executeSQL(
+          `INSERT INTO public.projects (group_id, name, amount, certainty, type, frequency, payment_schedule, is_active)
+           VALUES ($1, $2, $3, $4, 'recurring', $5, $6, true)`,
+          [
+            groupId,
+            p.name,
+            p.amount,
+            p.certainty || 'guaranteed',
+            p.frequency || 'monthly',
+            JSON.stringify(p.payment_schedule || { type: 'dayOfMonth', dayOfMonth: 1 }),
+          ]
+        );
+      }
+    },
+
+    async seedExpenses(expenses) {
+      for (const e of expenses) {
+        await executeSQL(
+          `INSERT INTO public.expenses (group_id, name, amount, type, due_day, is_active)
+           VALUES ($1, $2, $3, 'fixed', $4, true)`,
+          [groupId, e.name, e.amount, e.due_day || 1]
+        );
+      }
+    },
+
+    async seedCreditCards(cards) {
+      for (const c of cards) {
+        const dueDay = c.due_day || 15;
+        const closingDay = ((dueDay - 7 + 30) % 30) || 8;
+        await executeSQL(
+          `INSERT INTO public.credit_cards (group_id, name, statement_balance, due_day, closing_day, balance_updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [groupId, c.name, c.statement_balance, dueDay, closingDay, VISUAL_TEST_FIXED_DATE.toISOString()]
+        );
+      }
+    },
+
+    async seedSingleShotExpenses(expenses) {
+      for (const e of expenses) {
+        await executeSQL(
+          `INSERT INTO public.expenses (group_id, name, amount, type, date, is_active)
+           VALUES ($1, $2, $3, 'single_shot', $4, true)`,
+          [groupId, e.name, e.amount, e.date]
+        );
+      }
+    },
+
+    async setCheckingAccountsBalanceUpdatedAt(timestamp: string) {
+      await executeSQL(
+        `UPDATE public.accounts SET balance_updated_at = $1 WHERE group_id = $2 AND type = 'checking'`,
+        [timestamp, groupId]
       );
-      
-      // Directly apply the theme class to the DOM
-      const root = document.documentElement;
-      root.classList.remove('light', 'dark');
-      root.classList.add(resolvedTheme);
     },
-    { theme, resolvedTheme }
-  );
 
-  // Wait for the theme class to be applied
-  await page
-    .waitForFunction(
-      (expected) => {
-        const html = document.documentElement;
-        return html.classList.contains(expected);
-      },
-      resolvedTheme,
-      { timeout: 5000 }
-    )
-    .catch(async () => {
-      // If theme not applied, try applying directly again
-      await page.evaluate((themeClass) => {
-        const root = document.documentElement;
-        root.classList.remove('light', 'dark');
-        root.classList.add(themeClass);
-      }, resolvedTheme);
-    });
-
-  // Allow styles to apply before taking screenshots (avoid fixed sleeps)
-  await page.evaluate(
-    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-  );
-}
-
-/**
- * Get locators for elements that should be masked in screenshots.
- * These are worker-specific elements that would differ between parallel workers:
- * - Group badge in header (shows "Test Worker N")
- */
-function getWorkerSpecificMasks(page: Page): Locator[] {
-  return [
-    // Group badge in header - contains worker-specific group name
-    page.locator('[data-testid="group-badge"]'),
-    // Group name in Manage → Group tab (worker-specific)
-    page.locator('[data-testid="group-name"]'),
-    // Member names are worker-specific (each worker has its own group/user)
-    page.locator('[data-testid="member-name"]'),
-  ];
-}
-
-/**
- * Take a screenshot with worker-specific elements automatically masked.
- * This ensures screenshots are consistent across parallel workers.
- */
-async function takeScreenshot(
-  page: Page,
-  name: string,
-  options?: { fullPage?: boolean; mask?: Locator[] }
-): Promise<void> {
-  // Combine default worker-specific masks with any additional masks provided
-  const defaultMasks = getWorkerSpecificMasks(page);
-  const allMasks = [...defaultMasks, ...(options?.mask ?? [])];
-
-  await expect(page).toHaveScreenshot(name, {
-    fullPage: options?.fullPage ?? false,
-    mask: allMasks,
-  });
-}
-
-/**
- * Extended test with visual testing fixtures
- * Uses the same auth pattern as test-base.ts
- * Freezes time to VISUAL_TEST_FIXED_DATE for deterministic screenshots
- */
-export const visualTest = base.extend<VisualTestFixtures, WorkerFixtures>({
-  // Worker-scoped context - same as test-base.ts
-  workerCtx: [
-    async ({}, use, workerInfo) => {
-      const context = getWorkerContext(workerInfo.workerIndex, workerInfo.project.name);
-      await use(context);
-    },
-    { scope: 'worker' },
-  ],
-
-  // Worker-scoped browser context with auth state - same as test-base.ts
-  workerBrowserContext: [
-    async ({ browser, workerCtx }, use) => {
-      const storageStatePath = workerCtx.authStatePath;
-      const hasAuthState = existsSync(storageStatePath);
-
-      if (!hasAuthState) {
-        throw new Error(
-          `❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}. Run setup first.`
-        );
-      }
-
-      // Validate auth state
-      const fs = await import('fs/promises');
-      const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
-      const authState = JSON.parse(authStateContent);
-
-      const hasCookies = authState.cookies && authState.cookies.length > 0;
-      const hasOrigins = authState.origins && authState.origins.length > 0;
-
-      if (!hasCookies && !hasOrigins) {
-        throw new Error(
-          `❌ Worker ${workerCtx.workerIndex}: Auth state file is empty! No cookies or origins found.`
-        );
-      }
-
-      if (hasOrigins) {
-        const origin = authState.origins[0];
-        const hasLocalStorage = origin.localStorage && origin.localStorage.length > 0;
-
-        if (!hasLocalStorage) {
-          throw new Error(
-            `❌ Worker ${workerCtx.workerIndex}: Auth state has origin but no localStorage data!`
-          );
-        }
-
-        const hasAuthToken = origin.localStorage.some(
-          (item: { name?: string }) =>
-            item.name && item.name.includes('sb-') && item.name.includes('auth-token')
-        );
-
-        if (!hasAuthToken) {
-          throw new Error(
-            `❌ Worker ${workerCtx.workerIndex}: No Supabase auth token found in localStorage!`
-          );
-        }
-      }
-
-      console.log(
-        `✓ Worker ${workerCtx.workerIndex} auth state validated: ${authState.origins[0].localStorage.length} localStorage items`
+    async setAccountsBalanceUpdatedAt(timestamp: string) {
+      await executeSQL(
+        `UPDATE public.accounts SET balance_updated_at = $1 WHERE group_id = $2`,
+        [timestamp, groupId]
       );
+    },
 
-      const context = await browser.newContext({ storageState: storageStatePath });
-      await use(context);
-      await context.close();
+    async setCreditCardsBalanceUpdatedAt(timestamp: string) {
+      await executeSQL(
+        `UPDATE public.credit_cards SET balance_updated_at = $1 WHERE group_id = $2`,
+        [timestamp, groupId]
+      );
+    },
+  };
+}
+
+/**
+ * Test fixtures type
+ */
+type VisualTestFixtures = {
+  db: VisualDbFixture;
+  visual: VisualTestHelpers;
+  dashboardPage: DashboardPage;
+  managePage: ManagePage;
+  quickUpdatePage: QuickUpdatePage;
+  historyPage: HistoryPage;
+};
+
+type VisualWorkerFixtures = {
+  groupId: string;
+};
+
+/**
+ * Extended test for visual regression testing
+ */
+export const visualTest = base.extend<VisualTestFixtures, VisualWorkerFixtures>({
+  // Worker-scoped group ID
+  groupId: [
+    async ({}, use) => {
+      const rows = await executeSQLWithResult<{ group_id: string }>(
+        `SELECT group_id FROM public.profiles WHERE email = $1 LIMIT 1`,
+        ['dev@local']
+      );
+      if (rows.length === 0 || !rows[0].group_id) {
+        throw new Error(`Failed to get dev user group. Run 'pnpm run gen:token' first.`);
+      }
+      await use(rows[0].group_id);
     },
     { scope: 'worker' },
   ],
 
-  workerAuthState: [
-    async ({ workerCtx }, use) => {
-      const storageStatePath = workerCtx.authStatePath;
-      if (!existsSync(storageStatePath)) {
-        throw new Error(
-          `❌ Auth state file not found for worker ${workerCtx.workerIndex}: ${storageStatePath}. Run setup first.`
-        );
-      }
+  // Database fixture
+  db: async ({ groupId }, use) => {
+    const dbFixture = createVisualDbFixture(groupId);
+    await use(dbFixture);
+  },
 
-      const fs = await import('fs/promises');
-      const authStateContent = await fs.readFile(storageStatePath, 'utf-8');
-      const authState = JSON.parse(authStateContent);
-
-      const origin = authState?.origins?.[0]?.origin;
-      const localStorage = Array.isArray(authState?.origins?.[0]?.localStorage)
-        ? authState.origins[0].localStorage.filter((item: any) => typeof item?.name === 'string' && item.name.includes('sb-'))
-        : [];
-
-      const hasAuthToken = localStorage.some((item: any) => item?.name?.includes('auth-token'));
-      if (typeof origin !== 'string' || !origin) {
-        throw new Error(`❌ Worker ${workerCtx.workerIndex}: Auth state origin is missing/invalid`);
-      }
-      if (!hasAuthToken) {
-        throw new Error(`❌ Worker ${workerCtx.workerIndex}: No Supabase auth token found in localStorage!`);
-      }
-
-      await use({
-        origin,
-        cookies: Array.isArray(authState?.cookies) ? authState.cookies : [],
-        localStorage,
-      });
-    },
-    { scope: 'worker' },
-  ],
-
-  // Override the default context to use our worker-scoped context with auth (default),
-  // or Option B per-test contexts when PW_PER_TEST_CONTEXT=1.
-  context: async ({ browser, workerBrowserContext, workerAuthState }, use) => {
-    if (!USE_PER_TEST_CONTEXT) {
-      await use(workerBrowserContext);
-      return;
-    }
-
-    const context = await browser.newContext({
-      storageState: {
-        cookies: workerAuthState.cookies,
-        origins: [{ origin: workerAuthState.origin, localStorage: workerAuthState.localStorage }],
+  // Visual helpers
+  visual: async ({}, use) => {
+    const helpers: VisualTestHelpers = {
+      async waitForStableUI(page: Page) {
+        await disableAnimations(page);
+        await waitForStableUI(page);
       },
-    });
-
-    await use(context);
-    await context.close().catch(() => {});
+      async setTheme(page: Page, theme: ThemeMode) {
+        await setTheme(page, theme);
+      },
+      async takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean; mask?: Locator[] }) {
+        await expect(page).toHaveScreenshot(name, {
+          fullPage: options?.fullPage ?? false,
+          mask: options?.mask ?? [],
+          animations: 'disabled',
+        });
+      },
+    };
+    await use(helpers);
   },
 
-  // Override page to install clock mock before any navigation
-  // Note: Clock mock is installed AFTER page creation to avoid conflicts with mobile emulation
-  page: async ({ context, workerAuthState }, use, testInfo) => {
-    const page = await context.newPage();
-
-    // Install clock mock with fixed date for deterministic visual tests
-    // Use pauseAt instead of install to avoid interfering with page load timers
-    await page.clock.setFixedTime(VISUAL_TEST_FIXED_DATE);
-
-    await use(page);
-
-    if (USE_PER_TEST_CONTEXT && testInfo.status === 'passed') {
-      try {
-        const nextLocalStorage = await Promise.race([
-          page.evaluate(() => {
-            const keys = Object.keys(localStorage);
-            return keys
-              .filter((k) => k.includes('sb-'))
-              .map((name) => ({ name, value: localStorage.getItem(name) ?? '' }))
-              .filter((item) => item.value.length > 0);
-          }),
-          new Promise<[]>(resolve => setTimeout(() => resolve([]), 1000)),
-        ]);
-
-        if (Array.isArray(nextLocalStorage) && nextLocalStorage.length > 0) {
-          workerAuthState.localStorage = nextLocalStorage;
-        }
-      } catch {
-        // ignore (page may already be closed on timeout)
-      }
-    }
-
-    if (!USE_PER_TEST_CONTEXT) {
-      await page.close().catch(() => {});
-      return;
-    }
-
-    await Promise.race([
-      page.close(),
-      new Promise<void>((resolve) => setTimeout(resolve, 2000)),
-    ]).catch(() => {});
-  },
-
-  // Test-scoped worker context
-  workerContext: async ({ workerCtx }, use) => {
-    await use(workerCtx);
-  },
-
-  // Database fixture scoped to worker - resets once per worker, not per test
-  // Tests that need a fresh DB can call db.resetDatabase() explicitly
-  db: [
-    async ({ workerCtx }, use) => {
-      const dbFixture = createWorkerDbFixture(workerCtx);
-      console.log(`[Fixture] Setting up DB for visual worker ${workerCtx.workerIndex}...`);
-      await dbFixture.resetDatabase();
-      await dbFixture.ensureTestUser();
-      console.log(`[Fixture] DB setup complete for visual worker ${workerCtx.workerIndex}`);
-      await use(dbFixture);
-    },
-    { scope: 'worker' },
-  ],
-
-  // Auth fixture scoped to worker
-  auth: async ({ workerCtx }, use) => {
-    const authFixture = createWorkerAuthFixture(workerCtx);
-    await use(authFixture);
-  },
-
-  // Page Objects
-  loginPage: async ({ page }, use) => {
-    await use(new LoginPage(page));
-  },
-
+  // Page fixtures with fixed date
   dashboardPage: async ({ page }, use) => {
+    await page.clock.setFixedTime(VISUAL_TEST_FIXED_DATE);
     await use(new DashboardPage(page));
   },
 
   managePage: async ({ page }, use) => {
+    await page.clock.setFixedTime(VISUAL_TEST_FIXED_DATE);
     await use(new ManagePage(page));
   },
 
   quickUpdatePage: async ({ page }, use) => {
+    await page.clock.setFixedTime(VISUAL_TEST_FIXED_DATE);
     await use(new QuickUpdatePage(page));
   },
 
   historyPage: async ({ page }, use) => {
+    await page.clock.setFixedTime(VISUAL_TEST_FIXED_DATE);
     await use(new HistoryPage(page));
-  },
-
-  snapshotDetailPage: async ({ page }, use) => {
-    await use(new SnapshotDetailPage(page));
-  },
-
-  // Visual test helpers
-  visual: async ({}, use) => {
-    await use({
-      waitForStableUI,
-      setTheme,
-      takeScreenshot,
-      getWorkerSpecificMasks,
-    });
   },
 });
 

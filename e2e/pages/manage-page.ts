@@ -53,17 +53,15 @@ export class ManagePage {
    */
   async goto(): Promise<void> {
     let attempts = 0;
-    const maxAttempts = 2;
+    const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
       attempts++;
       try {
-        // Avoid waiting for full page load - SPA routes + long-lived connections (Realtime/WebSockets)
-        // can make `waitUntil: 'load'` slower/flakier than needed for E2E readiness.
+        // Use domcontentloaded to avoid waiting for WebSocket connections (Supabase Realtime)
+        // which can cause 'load' event to hang or timeout.
         const start = Date.now();
-        // Use the page's default navigation timeout (set by our Playwright fixtures) instead of an
-        // aggressive hard-coded 15s, which can be exceeded under full parallel CI load.
-        await this.page.goto('/manage', { waitUntil: 'domcontentloaded' });
+        await this.page.goto('/manage', { waitUntil: 'domcontentloaded', timeout: 30000 });
         const duration = Date.now() - start;
         if (duration > 5000) {
           console.warn(`[ManagePage] Slow navigation to /manage: ${duration}ms`);
@@ -78,8 +76,8 @@ export class ManagePage {
           throw error;
         }
 
-        // Wait before retrying
-        await this.page.waitForTimeout(500).catch(() => {});
+        // Wait longer before retrying
+        await this.page.waitForTimeout(2000).catch(() => {});
       }
     }
   }

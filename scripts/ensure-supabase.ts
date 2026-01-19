@@ -58,13 +58,26 @@ function startSupabase(): void {
   execSync('npx supabase start', { stdio: 'inherit' });
 }
 
-function main(): void {
-  const before = getStatus();
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForReady(attempts: number, delayMs: number): Promise<SupabaseStatus | null> {
+  for (let i = 0; i < attempts; i += 1) {
+    const status = getStatus();
+    if (hasRequiredKeys(status)) return status;
+    await sleep(delayMs);
+  }
+  return null;
+}
+
+async function main(): Promise<void> {
+  const before = await waitForReady(2, 500);
   if (hasRequiredKeys(before)) return;
 
   startSupabase();
 
-  const after = getStatus();
+  const after = await waitForReady(10, 1000);
   if (!hasRequiredKeys(after)) {
     throw new Error(
       'Supabase started but required keys were not found in `supabase status -o json`. ' +
@@ -73,6 +86,9 @@ function main(): void {
   }
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
 
 

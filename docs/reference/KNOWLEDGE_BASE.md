@@ -98,7 +98,7 @@ pnpm dev:app           # reloads authenticated
 
 Notes:
 - The bypass is guarded by `import.meta.env.DEV` and will not run in production builds.
-- E2E tests explicitly disable the bypass by unsetting `VITE_DEV_ACCESS_TOKEN`/`VITE_DEV_REFRESH_TOKEN` in the Playwright `webServer` command.
+- You can disable the dev bypass for a single page load with `?disableDevAuth=1` (used by auth/login visual tests).
 
 ### Test
 ```bash
@@ -141,6 +141,7 @@ Deployment notes:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
   - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
   - **Test suite philosophy**: Prefer fewer, high-value tests over exhaustive coverage. Remove redundant tests that cover the same patterns multiple times (e.g., one CRUD test file covers all entity types).
+  - E2E/visual seed data uses direct Postgres (`pg`) helpers to avoid PostgREST schema cache flakiness.
 - **Third-party integrations**:
   - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
   - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.

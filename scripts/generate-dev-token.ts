@@ -121,21 +121,30 @@ async function validateConnection(client: SupabaseClient): Promise<void> {
 async function findOrCreateDevUser(
   client: SupabaseClient
 ): Promise<{ id: string; email: string; isNew: boolean }> {
-  log('Creating user...');
+  log('Ensuring dev user exists...');
   
-  // Check if user already exists
-  // Limit page size for performance in shared dev environments
-  const { data: listData, error: listError } = await client.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  
-  if (listError) {
-    throw new Error(`Failed to list users: ${listError.message}`);
-  }
-  
-  const existingUser = listData.users.find(u => u.email === DEV_USER_EMAIL);
-  
+  const findExistingUser = async () => {
+    // Supabase admin listUsers is paginated; scan pages until found or exhausted.
+    for (let page = 1; page <= 10; page += 1) {
+      const { data: listData, error: listError } = await client.auth.admin.listUsers({
+        page,
+        perPage: 1000,
+      });
+
+      if (listError) {
+        throw new Error(`Failed to list users: ${listError.message}`);
+      }
+
+      const existingUser = listData.users.find(u => u.email === DEV_USER_EMAIL);
+      if (existingUser) return existingUser;
+
+      if (listData.users.length < 1000) break;
+    }
+    return null;
+  };
+
+  const existingUser = await findExistingUser();
+
   if (existingUser) {
     logSuccess(`User found: ${DEV_USER_EMAIL}`);
     
@@ -160,6 +169,13 @@ async function findOrCreateDevUser(
   });
   
   if (createError) {
+    // If a race or pagination issue occurred, recover by re-checking.
+    if (/already been registered/i.test(createError.message)) {
+      const user = await findExistingUser();
+      if (user) {
+        return { id: user.id, email: DEV_USER_EMAIL, isNew: false };
+      }
+    }
     throw new Error(`Failed to create user: ${createError.message}`);
   }
   

@@ -197,6 +197,17 @@ export function hasDevTokens(): boolean {
 }
 
 /**
+ * Check if dev auth bypass should be disabled for the current page.
+ * Useful for login/visual/auth tests that must exercise the real login flow.
+ */
+export function isDevAuthBypassDisabled(): boolean {
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(window.location.search)
+  const raw = params.get('disableDevAuth')
+  return raw === '1' || raw === 'true'
+}
+
+/**
  * Preview-only auth bypass toggle.
  *
  * This is intended for PR preview deployments (e.g. Vercel "Preview") where we

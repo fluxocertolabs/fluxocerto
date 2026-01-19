@@ -73,7 +73,7 @@ test.describe('Authentication Flow', () => {
   }) => {
     const loginPage = new LoginPage(page);
 
-    await loginPage.goto();
+    await loginPage.goto({ disableDevAuthBypass: true });
     await loginPage.requestMagicLink(TEST_EMAIL);
     await loginPage.expectMagicLinkSent();
 
@@ -92,7 +92,7 @@ test.describe('Authentication Flow', () => {
   }) => {
     const loginPage = new LoginPage(page);
 
-    await loginPage.goto();
+    await loginPage.goto({ disableDevAuthBypass: true });
     await loginPage.requestMagicLink(SELF_SERVE_EMAIL);
     
     // Should show same success message (no enumeration)
@@ -111,7 +111,7 @@ test.describe('Authentication Flow', () => {
     const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Request magic link for a never-before-seen email
-    await loginPage.goto();
+    await loginPage.goto({ disableDevAuthBypass: true });
     await loginPage.requestMagicLink(SELF_SERVE_EMAIL);
     await loginPage.expectMagicLinkSent();
 
@@ -148,7 +148,7 @@ test.describe('Authentication Flow', () => {
     const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Request magic link
-    await loginPage.goto();
+    await loginPage.goto({ disableDevAuthBypass: true });
     await loginPage.requestMagicLink(TEST_EMAIL);
     await loginPage.expectMagicLinkSent();
     
@@ -189,7 +189,7 @@ test.describe('Authentication Flow', () => {
     const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Authenticate first
-    await loginPage.goto();
+    await loginPage.goto({ disableDevAuthBypass: true });
     await loginPage.requestMagicLink(TEST_EMAIL);
     await loginPage.expectMagicLinkSent();
     
@@ -274,7 +274,7 @@ test.describe('Authentication Flow', () => {
     const previousMessageId = (await inbucket.getLatestMessage(mailbox))?.id ?? null;
 
     // Authenticate first
-    await loginPage.goto();
+    await loginPage.goto({ disableDevAuthBypass: true });
     await loginPage.requestMagicLink(TEST_EMAIL);
     await loginPage.expectMagicLinkSent();
     
