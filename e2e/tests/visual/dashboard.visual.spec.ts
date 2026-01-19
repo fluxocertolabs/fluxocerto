@@ -14,6 +14,7 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
     await db.clear();
 
     // Seed a typical populated scenario
+    // Amounts are in cents (e.g. 100_000_00 === R$100,000.00)
     await db.seedAccounts([
       { name: 'Nubank', type: 'checking', balance: 100_000_00 },
       { name: 'Itaú Poupança', type: 'savings', balance: 20_000_00 },

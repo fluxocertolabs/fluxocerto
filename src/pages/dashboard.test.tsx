@@ -14,16 +14,18 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { Dashboard } from './dashboard'
 import type { UseCashflowProjectionResult } from '@/hooks/use-cashflow-projection'
-import type { UseCoordinatedLoadingResult } from '@/hooks/use-coordinated-loading'
+import type { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
+
+type UseCoordinatedLoadingResult = ReturnType<typeof useCoordinatedLoading>
 
 // Mock useCashflowProjection hook
-const mockUseCashflowProjection = vi.fn<[], UseCashflowProjectionResult>()
+const mockUseCashflowProjection = vi.fn<() => UseCashflowProjectionResult>()
 vi.mock('@/hooks/use-cashflow-projection', () => ({
   useCashflowProjection: () => mockUseCashflowProjection(),
 }))
 
 // Mock useCoordinatedLoading hook
-const mockUseCoordinatedLoading = vi.fn<[], UseCoordinatedLoadingResult>()
+const mockUseCoordinatedLoading = vi.fn<() => UseCoordinatedLoadingResult>()
 vi.mock('@/hooks/use-coordinated-loading', () => ({
   useCoordinatedLoading: () => mockUseCoordinatedLoading(),
 }))
@@ -186,9 +188,11 @@ const defaultCashflowResult: UseCashflowProjectionResult = {
 }
 
 const defaultLoadingState: UseCoordinatedLoadingResult = {
+  phase: 'success',
   showSkeleton: false,
   showError: false,
   errorMessage: null,
+  loadingStartTime: null,
   retry: vi.fn(),
 }
 
@@ -243,6 +247,7 @@ describe('Dashboard', () => {
       })
       mockUseCoordinatedLoading.mockReturnValue({
         ...defaultLoadingState,
+        phase: 'loading',
         showSkeleton: true,
       })
 
@@ -261,6 +266,7 @@ describe('Dashboard', () => {
       })
       mockUseCoordinatedLoading.mockReturnValue({
         ...defaultLoadingState,
+        phase: 'error',
         showError: true,
         errorMessage: 'Failed to load',
       })
@@ -274,35 +280,61 @@ describe('Dashboard', () => {
 
   describe('populated state', () => {
     it('renders chart and summary when data exists', () => {
+      const now = new Date()
       mockUseCashflowProjection.mockReturnValue({
         ...defaultCashflowResult,
         hasData: true,
         projection: {
-          days: [],
-          optimisticSummary: {
-            minBalance: 0,
-            maxBalance: 0,
-            avgBalance: 0,
-            dangerDays: 0,
+          startDate: now,
+          endDate: now,
+          startingBalance: 100_000,
+          days: [
+            {
+              date: now,
+              dayOffset: 0,
+              optimisticBalance: 100_000,
+              pessimisticBalance: 90_000,
+              incomeEvents: [],
+              expenseEvents: [],
+              isOptimisticDanger: false,
+              isPessimisticDanger: false,
+            },
+          ],
+          optimistic: {
             totalIncome: 0,
             totalExpenses: 0,
+            endBalance: 100_000,
+            dangerDays: [],
+            dangerDayCount: 0,
           },
-          pessimisticSummary: {
-            minBalance: 0,
-            maxBalance: 0,
-            avgBalance: 0,
-            dangerDays: 0,
+          pessimistic: {
             totalIncome: 0,
             totalExpenses: 0,
+            endBalance: 90_000,
+            dangerDays: [],
+            dangerDayCount: 0,
           },
         },
         summaryStats: {
-          currentBalance: 1000,
-          projectedBalance: 2000,
-          totalIncome: 5000,
-          totalExpenses: 3000,
-          lowestBalance: 500,
-          dangerDays: 0,
+          startingBalance: 1000,
+          optimistic: {
+            totalIncome: 0,
+            totalExpenses: 0,
+            endBalance: 1000,
+            dangerDayCount: 0,
+            minBalance: 1000,
+            minBalanceDate: now,
+            surplus: 0,
+          },
+          pessimistic: {
+            totalIncome: 0,
+            totalExpenses: 0,
+            endBalance: 1000,
+            dangerDayCount: 0,
+            minBalance: 1000,
+            minBalanceDate: now,
+            surplus: 0,
+          },
         },
         chartData: [
           {
@@ -314,12 +346,14 @@ describe('Dashboard', () => {
             isOptimisticDanger: false,
             isPessimisticDanger: false,
             snapshot: {
-              date: new Date(),
+              date: now,
+              dayOffset: 0,
               optimisticBalance: 100000,
               pessimisticBalance: 90000,
+              incomeEvents: [],
+              expenseEvents: [],
               isOptimisticDanger: false,
               isPessimisticDanger: false,
-              events: [],
             },
           },
         ],
@@ -337,26 +371,28 @@ describe('Dashboard', () => {
     })
 
     it('shows projection selector when data exists', () => {
+      const now = new Date()
       mockUseCashflowProjection.mockReturnValue({
         ...defaultCashflowResult,
         hasData: true,
         projection: {
+          startDate: now,
+          endDate: now,
+          startingBalance: 0,
           days: [],
-          optimisticSummary: {
-            minBalance: 0,
-            maxBalance: 0,
-            avgBalance: 0,
-            dangerDays: 0,
+          optimistic: {
             totalIncome: 0,
             totalExpenses: 0,
+            endBalance: 0,
+            dangerDays: [],
+            dangerDayCount: 0,
           },
-          pessimisticSummary: {
-            minBalance: 0,
-            maxBalance: 0,
-            avgBalance: 0,
-            dangerDays: 0,
+          pessimistic: {
             totalIncome: 0,
             totalExpenses: 0,
+            endBalance: 0,
+            dangerDays: [],
+            dangerDayCount: 0,
           },
         },
       })

@@ -24,7 +24,7 @@
     "test:unit:coverage": "vitest --coverage",
     "test:e2e": "pnpm db:ensure && pnpm run gen:token && playwright test --config e2e/playwright.config.ts --project=smoke; EXIT_CODE=$?; pnpm db:stop; exit $EXIT_CODE",
     "test:e2e:auth": "pnpm db:ensure && playwright test --config e2e/playwright.config.ts --project=auth-tests; EXIT_CODE=$?; pnpm db:stop; exit $EXIT_CODE",
-    "test:e2e:smoke": "pnpm db:ensure && pnpm run gen:token && playwright test --config e2e/playwright.config.ts --project=smoke; EXIT_CODE=$?; pnpm db:stop; exit $EXIT_CODE",
+    "test:e2e:smoke": "pnpm test:e2e",
     "test:e2e:ui": "pnpm db:ensure && playwright test --config e2e/playwright.config.ts --ui",
     "test:e2e:debug": "pnpm db:ensure && playwright test --config e2e/playwright.config.ts --debug",
     "test:e2e:report": "playwright show-report",

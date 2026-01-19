@@ -226,12 +226,6 @@ describe('performMonthProgression', () => {
                         select: () => Promise.resolve({ data: [], error: null }),
                       }
                     }
-                    // Second cleanup query: lt('target_month', currentMonth)
-                    if (ltCol === 'target_month') {
-                      return {
-                        select: () => Promise.resolve({ data: [{ id: 'fs-old' }], error: null }),
-                      }
-                    }
                     throw new Error(`Unexpected lt(${ltCol})`)
                   },
                   // Second cleanup query: eq('target_year', currentYear)

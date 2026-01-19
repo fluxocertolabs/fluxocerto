@@ -66,7 +66,7 @@ async function waitForReady(attempts: number, delayMs: number): Promise<Supabase
   for (let i = 0; i < attempts; i += 1) {
     const status = getStatus();
     if (hasRequiredKeys(status)) return status;
-    await sleep(delayMs);
+    if (i < attempts - 1) await sleep(delayMs);
   }
   return null;
 }
