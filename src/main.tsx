@@ -8,6 +8,7 @@ import {
   injectDevSession,
   isPreviewAuthBypassEnabled,
   injectPreviewSession,
+  isDevAuthBypassDisabled,
 } from './lib/supabase'
 import { AppErrorBoundary } from '@/components/app-error-boundary'
 import { withTimeout } from '@/lib/utils/promise'
@@ -105,7 +106,7 @@ async function bootstrap() {
   if (isSupabaseConfigured()) {
     // DEV MODE: Try to inject dev session tokens BEFORE normal auth init
     // This allows AI agents and developers to bypass login for local development
-    if (import.meta.env.DEV && hasDevTokens()) {
+    if (import.meta.env.DEV && hasDevTokens() && !isDevAuthBypassDisabled()) {
       let result: Awaited<ReturnType<typeof injectDevSession>>
       try {
         // Guard against hanging network requests (misconfigured URL / Supabase down).

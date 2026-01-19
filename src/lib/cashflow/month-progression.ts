@@ -142,19 +142,38 @@ export async function performMonthProgression(): Promise<ProgressionResult> {
     // Delete any future_statements where targetMonth/targetYear < current month
     // Note: RLS policies enforce group isolation, but we add explicit filter
     // as defense-in-depth for data isolation
-    const { data: deletedStatements, error: cleanupError } = await supabase
+    //
+    // We use two separate delete queries instead of a single `or` filter because
+    // PostgREST v13.x has a bug where DELETE with `or` filter fails with
+    // "column does not exist" error even though the column exists.
+    
+    // First, delete statements from past years
+    const { data: pastYearStatements, error: pastYearError } = await supabase
       .from('future_statements')
       .delete()
       .eq('group_id', groupId)
-      .or(
-        `target_year.lt.${currentYear},and(target_year.eq.${currentYear},target_month.lt.${currentMonth})`
-      )
+      .lt('target_year', currentYear)
       .select('id')
 
-    if (cleanupError) {
-      console.error('Failed to cleanup past statements:', cleanupError)
+    if (pastYearError) {
+      console.error('Failed to cleanup past year statements:', pastYearError)
     } else {
-      cleanedStatements = deletedStatements?.length ?? 0
+      cleanedStatements += pastYearStatements?.length ?? 0
+    }
+
+    // Then, delete statements from past months in current year
+    const { data: pastMonthStatements, error: pastMonthError } = await supabase
+      .from('future_statements')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('target_year', currentYear)
+      .lt('target_month', currentMonth)
+      .select('id')
+
+    if (pastMonthError) {
+      console.error('Failed to cleanup past month statements:', pastMonthError)
+    } else {
+      cleanedStatements += pastMonthStatements?.length ?? 0
     }
 
     return { success: true, progressedCards, cleanedStatements }

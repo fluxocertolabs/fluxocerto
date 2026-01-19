@@ -27,8 +27,9 @@ export class LoginPage {
   /**
    * Navigate to login page
    */
-  async goto(): Promise<void> {
-    await this.page.goto('/login');
+  async goto(options?: { disableDevAuthBypass?: boolean }): Promise<void> {
+    const url = options?.disableDevAuthBypass ? '/login?disableDevAuth=1' : '/login';
+    await this.page.goto(url);
     await this.page.waitForLoadState('domcontentloaded');
     await expect(this.emailInput).toBeVisible({ timeout: 15000 });
   }

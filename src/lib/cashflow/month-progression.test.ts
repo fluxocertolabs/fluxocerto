@@ -108,8 +108,13 @@ describe('checkAndProgressMonth', () => {
             }),
             delete: () => ({
               eq: () => ({
-                or: () => ({
+                lt: () => ({
                   select: () => Promise.resolve({ data: [], error: null }),
+                }),
+                eq: () => ({
+                  lt: () => ({
+                    select: () => Promise.resolve({ data: [], error: null }),
+                  }),
                 }),
               }),
             }),
@@ -214,13 +219,31 @@ describe('performMonthProgression', () => {
               if (col === 'group_id') {
                 expect(value).toBe('group-1')
                 return {
-                  or: () => ({
-                    select: () =>
-                      Promise.resolve({
-                        data: [{ id: 'fs-old' }],
-                        error: null,
-                      }),
-                  }),
+                  // First cleanup query: lt('target_year', currentYear)
+                  lt: (ltCol: string) => {
+                    if (ltCol === 'target_year') {
+                      return {
+                        select: () => Promise.resolve({ data: [], error: null }),
+                      }
+                    }
+                    throw new Error(`Unexpected lt(${ltCol})`)
+                  },
+                  // Second cleanup query: eq('target_year', currentYear)
+                  eq: (eqCol: string) => {
+                    if (eqCol === 'target_year') {
+                      return {
+                        lt: (ltCol: string) => {
+                          if (ltCol === 'target_month') {
+                            return {
+                              select: () => Promise.resolve({ data: [{ id: 'fs-old' }], error: null }),
+                            }
+                          }
+                          throw new Error(`Unexpected lt(${ltCol})`)
+                        },
+                      }
+                    }
+                    throw new Error(`Unexpected eq(${eqCol})`)
+                  },
                 }
               }
               throw new Error(`Unexpected eq(${col}, ${value})`)
@@ -296,11 +319,33 @@ describe('performMonthProgression', () => {
               if (col === 'id') {
                 return Promise.resolve({ error: { message: 'delete failed' } })
               }
-              return {
-                or: () => ({
-                  select: () => Promise.resolve({ data: [], error: null }),
-                }),
+              if (col === 'group_id') {
+                return {
+                  lt: (ltCol: string) => {
+                    if (ltCol === 'target_year') {
+                      return { select: () => Promise.resolve({ data: [], error: null }) }
+                    }
+                    if (ltCol === 'target_month') {
+                      return { select: () => Promise.resolve({ data: [], error: null }) }
+                    }
+                    throw new Error(`Unexpected lt(${ltCol})`)
+                  },
+                  eq: (eqCol: string) => {
+                    if (eqCol === 'target_year') {
+                      return {
+                        lt: (ltCol: string) => {
+                          if (ltCol === 'target_month') {
+                            return { select: () => Promise.resolve({ data: [], error: null }) }
+                          }
+                          throw new Error(`Unexpected lt(${ltCol})`)
+                        },
+                      }
+                    }
+                    throw new Error(`Unexpected eq(${eqCol})`)
+                  },
+                }
               }
+              throw new Error(`Unexpected eq(${col})`)
             },
           }),
         }

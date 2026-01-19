@@ -61,6 +61,7 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 - **Notifications**: `src/stores/notifications-store.ts`, `src/components/notifications/`, `supabase/functions/send-welcome-email/`, `supabase/migrations/20260109120100_notifications.sql`
 - **Dev auth bypass**: `scripts/generate-dev-token.ts`, `src/main.tsx`, `src/lib/supabase.ts`
 - **Local Supabase readiness check**: `scripts/ensure-supabase.ts` (used by `pnpm db:ensure`)
+- **Support chat (Tawk.to)**: `src/lib/support-chat/tawk.ts` (wrapper), `src/components/help/floating-help-button.tsx` (UI integration)
 - **E2E auth flow**: `e2e/fixtures/auth.setup.ts`, `e2e/fixtures/auth.ts`, `e2e/playwright.config.ts`
 - **Balance freshness utilities**: `src/components/manage/shared/format-utils.ts` → `getBalanceFreshness()`
 
@@ -97,7 +98,7 @@ pnpm dev:app           # reloads authenticated
 
 Notes:
 - The bypass is guarded by `import.meta.env.DEV` and will not run in production builds.
-- E2E tests explicitly disable the bypass by unsetting `VITE_DEV_ACCESS_TOKEN`/`VITE_DEV_REFRESH_TOKEN` in the Playwright `webServer` command.
+- You can disable the dev bypass for a single page load with `?disableDevAuth=1` (used by auth/login visual tests).
 
 ### Test
 ```bash
@@ -139,6 +140,11 @@ Deployment notes:
 - **Testing strategy**:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
   - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
+  - **Test suite philosophy**: Prefer fewer, high-value tests over exhaustive coverage. Remove redundant tests that cover the same patterns multiple times (e.g., one CRUD test file covers all entity types).
+  - E2E/visual seed data uses direct Postgres (`pg`) helpers to avoid PostgREST schema cache flakiness.
+- **Third-party integrations**:
+  - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
+  - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.
 - **Array utility functions**: `src/lib/utils/array.ts` contains helpers like `upsertUniqueById()` which must be immutable (never mutate the input array).
 - **List ordering**: Accounts and credit cards are sorted alphabetically by name (pt-BR locale-aware via `Intl.Collator`), with ties broken by ID. This ensures stable, deterministic ordering even during realtime updates. See `src/hooks/use-finance-data.ts` → `sortByNameThenId()`.
 - **Balance freshness tracking**: The `balance_updated_at` field tracks when account/card balances were last updated. This field must be set:
@@ -147,7 +153,8 @@ Deployment notes:
   - On balance update via general update functions (`updateAccount`, `updateCreditCard`) when balance is included in the update
 - **E2E test parallelism**:
   - Auth tests (`auth.spec.ts`) run **serially** with 1 worker to avoid email rate limiting (`fullyParallel: false`).
-  - All other tests (visual, functional E2E, mobile) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
+  - Realtime-dependent tests (`notifications.spec.ts`, `accounts.spec.ts`) use `test.describe.configure({ mode: 'serial' })` to avoid race conditions with Supabase Realtime subscriptions.
+  - All other tests (visual, functional E2E) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
   - Worker count is controlled via `e2e/fixtures/worker-count.ts`; override with `PW_WORKERS` env var.
 
 ---
@@ -173,6 +180,12 @@ Deployment notes:
   - `onboarding_states` (per user + group) and `tour_states` (per user + tour key) are real tables with RLS (see `20260105123100_onboarding_and_tour_state.sql`).
   - E2E setup often marks onboarding completed and tours dismissed to avoid overlays blocking tests.
   - **Auth callback must not force-open wizard**: The onboarding wizard auto-shows based on `canAutoShow()` in `src/lib/onboarding/steps.ts` (checks status, `autoShownAt`, and `isMinimumSetupComplete`). Do not add code to `src/pages/auth-callback.tsx` that calls `openWizard()`—this breaks E2E tests that authenticate via magic link and rely on the natural auto-show flow.
+- **Third-party widget styling (Tawk.to, etc.)**:
+  - Widgets like Tawk.to use **cross-origin iframes** that cannot be styled from our application code.
+  - CSS injection, `MutationObserver` tricks, and `contentDocument` access are blocked by browser security policies.
+  - Widget appearance (colors, buttons, padding, branding) must be configured in the vendor's dashboard.
+  - We can only control: (1) when to load the script, (2) when to show/hide the widget container, (3) visitor attributes passed via their API.
+  - See `src/lib/support-chat/tawk.ts` for the implementation pattern.
 - **Preferences are split into two tables**:
   - `group_preferences`: group-scoped settings (keyed by `group_id` + `key`). Examples: theme preference, display preferences.
   - `user_preferences`: user-scoped settings (keyed by `user_id` + `key`). Examples: `email_notifications_enabled`.
@@ -206,7 +219,7 @@ Deployment notes:
 
 ### E2E test patterns and gotchas
 
-- **Test isolation**: Each test should call `db.clear()` or `db.reset()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value).
+- **Test isolation**: Each test should call `db.clear()` at the start if it depends on a specific initial state (e.g., toggle tests that assume a default value). The `_perTestDbReset` auto-fixture was removed to reduce DB contention—isolation is now explicit per-test.
 - **Visual test state**: Visual regression tests for toggles/switches must reset state before capturing screenshots to avoid order-dependent failures.
 - **ESLint guardrails for E2E tests**: The ESLint config (`eslint.config.js`) enforces restrictions on flaky patterns in `e2e/**` files:
   - `page.waitForTimeout()` is disallowed — use assertion-based waits instead.
@@ -249,6 +262,7 @@ Deployment notes:
     - `click()` can move the mouse and trigger hover handlers; in visual tests where animations are effectively 0ms, that can instantly animate the FAB off-screen and cause "outside of viewport" flakes.
   - **Use the shared helper**: Import `openFloatingHelpMenu()`, `startTourViaFloatingHelp()`, etc. from `e2e/utils/floating-help.ts` instead of writing ad-hoc interactions.
   - **Verify state via aria attributes**: After opening, assert `aria-expanded="true"` on the FAB before interacting with menu items.
+  - **Always-visible entry point (authenticated routes)**: The menu always includes the Canny feedback option, so the Floating Help button renders anywhere the authenticated layout is used. Public routes (e.g., `/login`) do not mount the component. Tawk chat appears only when `VITE_TAWK_PROPERTY_ID` + `VITE_TAWK_WIDGET_ID` are set.
 
 - **Fresh group rotation** (see `e2e/fixtures/db.ts`):
   - `db.clear()` and `db.resetDatabase()` create a **new empty group** for the worker user, avoiding expensive per-test DELETE cascades.
@@ -266,6 +280,32 @@ Deployment notes:
   - These tests authenticate **new users via magic link** (not worker fixtures) and expect the wizard to auto-show based on database state.
   - **Do not** add code to `auth-callback.tsx` that force-opens the wizard—this breaks the existing onboarding E2E tests which rely on the natural auto-show flow.
 - **Always run the full test suite** (`pnpm test`) before declaring changes complete. Running only a subset (e.g., `pnpm test:visual`) can miss regressions in other test categories.
+
+### Test suite optimization principles
+
+The test suite is intentionally lean. When adding or reviewing tests, follow these principles:
+
+- **Visual tests**:
+  - Test **light theme only** by default. Dark theme is a CSS class toggle—one verification per app is sufficient.
+  - Test **populated states** (with data) over empty states when possible—empty states have less visual regression risk.
+  - Skip visual tests for simple components (buttons, badges, simple forms) that have low regression risk.
+  - Deleted visual test files: `floating-help.visual.spec.ts`, `page-tours.visual.spec.ts`, `notifications.visual.spec.ts`, `profile.visual.spec.ts` (low-value).
+
+- **E2E functional tests**:
+  - **One CRUD test file per pattern** (`accounts.spec.ts`), not per entity type. Credit cards, expenses, and projects use the same UI patterns—testing all four is redundant.
+  - Deleted redundant CRUD files: `credit-cards.spec.ts`, `expenses.spec.ts`, `projects.spec.ts`.
+  - **Mobile functional tests are redundant** with desktop tests + mobile visual tests. Deleted `e2e/tests/mobile/` directory.
+  - Consolidated dashboard tests: `dashboard-estimated-balance.spec.ts` and `dashboard-health-indicator.spec.ts` merged into `dashboard.spec.ts`.
+
+- **Database isolation**:
+  - The `_perTestDbReset` auto-fixture was removed to reduce DB contention under parallel load.
+  - Tests that need a clean state must call `db.clear()` explicitly at the start.
+  - Tests interacting with Supabase Realtime (e.g., `notifications.spec.ts`, `accounts.spec.ts`) should use `test.describe.configure({ mode: 'serial' })` to avoid race conditions.
+
+- **Current test counts** (as of Jan 2026):
+  - Unit tests: ~1,332 tests
+  - E2E functional: ~95 tests
+  - Visual regression: ~100 tests
 
 ### Unit test patterns
 
@@ -297,6 +337,9 @@ Deployment notes:
 - **Notification**: in-app message stored in `notifications` table. Has `type`, `title`, `message`, `read_at`, `email_sent_at`. Currently, `type` is constrained to `'welcome'` only; additional types (e.g., `system`) may be added in the future. Realtime subscriptions push INSERT/UPDATE/DELETE events to the client.
 - **Welcome notification**: auto-created notification for new users; can trigger a welcome email via `send-welcome-email` Edge Function.
 - **UserPreferenceKey**: typed union for valid `user_preferences.key` values (e.g., `'email_notifications_enabled'`). See `src/types/index.ts`.
+- **Floating Help button**: contextual help FAB (`?` icon) that shows page tours, support chat, and feedback options. See `src/components/help/floating-help-button.tsx`.
+- **Support chat**: Tawk.to live chat integration for user support. Widget is preloaded in background for instant opening. See `src/lib/support-chat/tawk.ts`.
+- **Feedback portal**: External Canny.io board for user suggestions and bug reports (`https://fluxo-certo.canny.io`).
 
 ---
 
@@ -310,7 +353,7 @@ Deployment notes:
   - Shared utility functions: `src/lib/utils/`
   - DB schema/RLS changes: `supabase/migrations/`
   - E2E coverage: `e2e/tests/` (+ fixtures under `e2e/fixtures/`)
-  - E2E shared helpers: `e2e/utils/` (e.g., `floating-help.ts` for Floating Help/tour interactions, `auth-helper.ts` for authentication flows)
+  - E2E shared helpers: `e2e/utils/` (e.g., `floating-help.ts` for Floating Help/tour/chat interactions, `auth-helper.ts` for authentication flows)
   - Dev tooling scripts: `scripts/` (e.g., `detect-flaky-tests.ts`, `generate-dev-token.ts`)
 - **What to avoid**:
   - Storing money as floats (always use cents/integer).

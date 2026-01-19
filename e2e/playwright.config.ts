@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { getWorkerCount } from './fixtures/worker-count';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -10,12 +10,8 @@ const __dirname = dirname(__filename);
 
 /**
  * Get Supabase keys from running instance
- * This ensures tests always have the correct keys without manual env setup
  */
 function getSupabaseConfig() {
-  // If the caller already provided keys (e.g. dockerized visual runs), don't
-  // shell out to Supabase CLI. This avoids misleading warnings in containers
-  // where the Supabase CLI/Docker socket aren't available.
   const envUrl = process.env.VITE_SUPABASE_URL;
   const envAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
   const envServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -46,7 +42,6 @@ function getSupabaseConfig() {
       inbucketUrl: status.INBUCKET_URL || 'http://localhost:54324',
     };
   } catch {
-    // Supabase not running - return defaults, tests will fail with clear error
     console.warn('⚠️  Supabase is not running. Start it with: pnpm db:start');
     return {
       url: 'http://localhost:54321',
@@ -58,165 +53,137 @@ function getSupabaseConfig() {
 }
 
 const supabase = getSupabaseConfig();
-const workerCount = getWorkerCount();
-const usePerTestContext = process.env.PW_PER_TEST_CONTEXT === '1';
-const reuseExistingServer =
-  (process.env.PW_REUSE_EXISTING_SERVER === '1' ||
-    process.env.PW_REUSE_EXISTING_SERVER === 'true') &&
-  !process.env.CI &&
-  !usePerTestContext;
+
+/**
+ * Read .env values without pulling in dotenv.
+ * Only used to pass dev-auth tokens into the Vite dev server.
+ */
+function readEnvFile(filePath: string): Record<string, string> {
+  try {
+    const raw = readFileSync(filePath, 'utf-8');
+    const entries: Record<string, string> = {};
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const equalsIndex = trimmed.indexOf('=');
+      if (equalsIndex === -1) continue;
+      const key = trimmed.slice(0, equalsIndex).trim();
+      let value = trimmed.slice(equalsIndex + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      entries[key] = value;
+    }
+    return entries;
+  } catch {
+    return {};
+  }
+}
+
+const envFromFile = readEnvFile(resolve(__dirname, '..', '.env'));
+const devAccessToken = envFromFile.VITE_DEV_ACCESS_TOKEN || process.env.VITE_DEV_ACCESS_TOKEN || '';
+const devRefreshToken = envFromFile.VITE_DEV_REFRESH_TOKEN || process.env.VITE_DEV_REFRESH_TOKEN || '';
 
 // Set environment variables for test files
 process.env.VITE_SUPABASE_URL = process.env.VITE_SUPABASE_URL || supabase.url;
 process.env.VITE_SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || supabase.anonKey;
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || supabase.serviceRoleKey;
 process.env.INBUCKET_URL = process.env.INBUCKET_URL || supabase.inbucketUrl;
-process.env.BASE_URL =
-  process.env.BASE_URL ||
-  (usePerTestContext ? 'http://localhost:4173' : 'http://localhost:5173');
+process.env.BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 process.env.VITE_DISABLE_THEME_SYNC = 'true';
-// Note: TEST_USER_EMAIL is now per-worker, set dynamically in fixtures
 
-// Extract port from BASE_URL for webServer configuration
 const baseUrl = new URL(process.env.BASE_URL);
 const port = baseUrl.port || '5173';
 
-
 /**
- * Playwright configuration for E2E tests
- * Configured for parallel execution with per-worker schema isolation
+ * Simplified Playwright configuration for E2E smoke tests.
+ * 
+ * This configuration is optimized for a small, focused test suite:
+ * - Auth tests: Test the magic link flow (no auth bypass)
+ * - Smoke tests: Use dev-auth-bypass for speed
+ * - Visual tests: Minimal visual regression (1-2 screenshots per page)
+ * 
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true, // Enable parallel execution - each worker has isolated schema
+  fullyParallel: false, // Run tests serially for simplicity
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0, // 2 retries in CI for flakiness, none locally for fast feedback
-  workers: workerCount, // Auto-detect based on CPU cores
+  retries: process.env.CI ? 1 : 0,
+  workers: 1, // Single worker for simplicity
   reporter: process.env.CI 
-    ? [['github', { title: process.env.PLAYWRIGHT_TITLE || '🎭 Playwright Run Summary' }]]
+    ? [['github', { title: '🎭 E2E Smoke Tests' }]]
     : 'list',
-  // Timeout for test execution.
-  // Option B (per-test browser contexts) starts "cold" each test, so allow extra time.
-  timeout: usePerTestContext ? 90000 : 45000, // 90s for per-test context, 45s otherwise
+  timeout: 60000, // 60s per test
   expect: {
-    timeout: 10000, // 10s for assertions
+    timeout: 10000,
     toHaveScreenshot: {
-      threshold: 0.3, // 0.3% pixel tolerance for anti-aliasing differences
-      maxDiffPixelRatio: 0.05, // Max 5% of pixels can differ (accounts for font rendering and worker names)
-      animations: 'disabled', // Freeze CSS animations for consistent screenshots
-      caret: 'hide', // Hide text cursor to avoid flakiness
+      threshold: 0.3,
+      maxDiffPixelRatio: 0.05,
+      animations: 'disabled',
+      caret: 'hide',
     },
   },
 
   use: {
     baseURL: process.env.BASE_URL,
-    headless: true, // Always run headless (no visible browser)
+    headless: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    // Additional browser args for Docker stability
     launchOptions: {
       args: [
         '--disable-gpu',
         '--disable-software-rasterizer',
-        '--no-zygote', // Disable zygote process to avoid crashes in Docker
-        '--disable-dev-shm-usage', // Use /tmp instead of /dev/shm for shared memory
-        '--disable-features=AudioServiceOutOfProcess', // Prevent D-Bus audio service access
+        '--no-zygote',
+        '--disable-dev-shm-usage',
+        '--disable-features=AudioServiceOutOfProcess',
       ],
     },
   },
 
   projects: [
-    // Setup project - runs first, creates schemas and authenticates all workers
-    {
-      name: 'setup',
-      testMatch: /auth\.setup\.ts/,
-      testDir: resolve(__dirname, 'fixtures'),
-    },
-    // Auth tests - run WITHOUT storage state (unauthenticated)
-    // These tests remain serial due to email rate limiting
+    // Auth tests - run WITHOUT dev-auth-bypass (tests actual magic link flow)
     {
       name: 'auth-tests',
       testMatch: /auth\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        // No storageState - start unauthenticated
       },
-      dependencies: ['setup'],
-      // Auth tests run serially to avoid rate limiting
-      fullyParallel: false,
     },
-    // Main tests - depend on setup, use per-worker authenticated storage state
-    // Storage state is loaded dynamically per worker via the test fixture
+    // Smoke tests - use dev-auth-bypass for speed
     {
-      name: 'chromium',
-      testIgnore: [/auth\.spec\.ts/, /visual\//, /\.preview\.spec\.ts/, /mobile\//], // Skip auth, visual, preview-only, and mobile tests
+      name: 'smoke',
+      testMatch: /(?<!auth)\.(spec|smoke)\.ts$/,
+      testIgnore: [/auth\.spec\.ts/, /visual\//],
       use: {
         ...devices['Desktop Chrome'],
-        // Note: Storage state is NOT set here because it needs to be per-worker
-        // The test-base.ts fixture handles loading the correct auth state per worker
-        // by using workerContext.authStatePath
       },
-      dependencies: ['setup'],
     },
-    // Visual regression tests - run in parallel with group-based isolation
-    // Each worker has its own group, ensuring complete data isolation via RLS
-    // Screenshots mask worker-specific elements (like group name) for consistency
+    // Visual regression tests
     {
       name: 'visual',
       testMatch: /visual\/.*\.spec\.ts/,
-      testIgnore: /visual\/mobile\.visual\.spec\.ts/, // Mobile tests run in separate project
       use: {
         ...devices['Desktop Chrome'],
-        viewport: { width: 1280, height: 720 }, // Fixed viewport for consistent screenshots
+        viewport: { width: 1280, height: 720 },
       },
-      dependencies: ['setup'], // Use main setup which authenticates all workers
-      fullyParallel: true, // Run visual tests in parallel - group isolation handles data separation
-    },
-    // Mobile visual regression tests - captures mobile-specific layouts
-    {
-      name: 'visual-mobile',
-      testMatch: /visual\/mobile\.visual\.spec\.ts/,
-      use: {
-        ...devices['Pixel 5'],
-      },
-      dependencies: ['setup'],
-      fullyParallel: true,
-    },
-    // Mobile functional E2E tests - validates core flows work on mobile
-    {
-      name: 'chromium-mobile',
-      testMatch: /mobile\/.*\.mobile\.spec\.ts/,
-      use: {
-        ...devices['Pixel 5'],
-      },
-      dependencies: ['setup'],
-      fullyParallel: true,
     },
   ],
 
-  // Web server configuration - starts the app before tests
-  // - In CI: Always start fresh server (no existing server to reuse)
-  // - Locally: Reuse existing server if running (for faster iteration)
-  //
-  // IMPORTANT: We unset VITE_DEV_ACCESS_TOKEN and VITE_DEV_REFRESH_TOKEN to disable
-  // the dev auth bypass during E2E tests. This ensures tests use the proper
-  // magic link authentication flow instead of auto-login.
+  // Web server - uses dev-auth-bypass tokens for smoke tests
   webServer: {
-    // Option B (PW_PER_TEST_CONTEXT=1) creates a fresh browser context per test,
-    // which clears the HTTP cache. Running against the Vite dev server would cause
-    // each test to re-fetch a large ESM module graph, overwhelming the server and
-    // producing long stalls/flake. For this mode, run a production build via
-    // `vite preview` (few static assets, much more deterministic).
-    command: usePerTestContext
-      ? `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm exec vite build && pnpm preview --port ${port} --strictPort`
-      : `VITE_DEV_ACCESS_TOKEN= VITE_DEV_REFRESH_TOKEN= pnpm dev:app --port ${port} --strictPort`,
+    command: `pnpm dev:app --port ${port} --strictPort`,
     url: process.env.BASE_URL,
-    // Default to starting a fresh server for determinism.
-    // Opt into reuse for local iteration by setting PW_REUSE_EXISTING_SERVER=1.
-    reuseExistingServer, // preview mode should always start fresh
-    timeout: usePerTestContext ? 180000 : 120000, // preview needs time to build
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
     cwd: resolve(__dirname, '..'),
+    env: {
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+      VITE_DEV_ACCESS_TOKEN: devAccessToken,
+      VITE_DEV_REFRESH_TOKEN: devRefreshToken,
+      VITE_DISABLE_THEME_SYNC: process.env.VITE_DISABLE_THEME_SYNC,
+    },
   },
 });

@@ -5,33 +5,25 @@
  * - Default: floating "?" FAB in the bottom-right
  * - On hover (desktop): FAB slides/fades out, options slide/fade in *in its place*
  * - On click (touch/mobile): toggles open; click outside closes
+ *
+ * The menu shows:
+ * - "Conhecer a página" (tour) — only on pages with tours
+ * - "Falar com suporte" (Tawk.to chat) — only when Tawk is configured
+ * - "Sugerir melhorias" (Canny feedback portal) — always visible
  */
 
 import { useState, useRef, useEffect, useCallback, type MouseEvent as ReactMouseEvent } from 'react'
 import { useLocation } from 'react-router-dom'
-import { HelpCircle, Compass } from 'lucide-react'
+import { ArrowLeft, HelpCircle, Compass, MessageCircle, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTourStore } from '@/stores/tour-store'
-import type { TourKey } from '@/types'
+import { getTawkChatUrl } from '@/lib/support-chat/tawk'
+import { getTourKeyForRoute } from '@/components/help/tour-helpers'
+import { useSupportChatPreload } from '@/components/help/use-support-chat-preload'
 
 const CLOSE_DELAY_MS = 380
 const HOVER_SAFE_PADDING_PX = 28
-
-/**
- * Get the tour key for the current route.
- */
-function getTourKeyForRoute(pathname: string): TourKey | null {
-  if (pathname === '/' || pathname === '/dashboard') {
-    return 'dashboard'
-  }
-  if (pathname === '/manage') {
-    return 'manage'
-  }
-  if (pathname === '/history') {
-    return 'history'
-  }
-  return null
-}
+const CANNY_FEEDBACK_URL = 'https://fluxo-certo.canny.io'
 
 interface FloatingHelpButtonProps {
   /** Additional class names */
@@ -44,41 +36,25 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPinnedOpen, setIsPinnedOpen] = useState(false)
   const [shouldAnimate, setShouldAnimate] = useState(false)
+  const [isSupportPopoverOpen, setIsSupportPopoverOpen] = useState(false)
+  const [isSupportLoading, setIsSupportLoading] = useState(false)
+  const supportPopoverRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<number | null>(null)
+  const supportLoadRafRef = useRef<number | null>(null)
   
   const currentTourKey = getTourKeyForRoute(location.pathname)
+  const tawkChatUrl = getTawkChatUrl()
+  const showTawkOption = Boolean(tawkChatUrl)
   
   // Check for reduced motion preference
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShouldAnimate(true)
-        setIsOpen(false)
-        setIsPinnedOpen(false)
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
-
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [])
+  // Preload the iframe to reduce first-open latency.
+  useSupportChatPreload(tawkChatUrl)
 
   const clearCloseTimeout = useCallback(() => {
     if (timeoutRef.current) {
@@ -98,6 +74,49 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
       top: Math.min(...rects.map((r) => r.top)) - HOVER_SAFE_PADDING_PX,
       right: Math.max(...rects.map((r) => r.right)) + HOVER_SAFE_PADDING_PX,
       bottom: Math.max(...rects.map((r) => r.bottom)) + HOVER_SAFE_PADDING_PX,
+    }
+  }, [])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShouldAnimate(true)
+        setIsOpen(false)
+        setIsPinnedOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+
+  // Close support popover when clicking outside
+  useEffect(() => {
+    function handleSupportOutside(event: MouseEvent) {
+      const target = event.target as Node
+      if (supportPopoverRef.current?.contains(target)) return
+      if (containerRef.current?.contains(target)) return
+      setIsSupportPopoverOpen(false)
+    }
+
+    if (isSupportPopoverOpen) {
+      document.addEventListener('mousedown', handleSupportOutside)
+      return () => document.removeEventListener('mousedown', handleSupportOutside)
+    }
+  }, [isSupportPopoverOpen])
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+      if (supportLoadRafRef.current) {
+        cancelAnimationFrame(supportLoadRafRef.current)
+      }
     }
   }, [])
 
@@ -139,6 +158,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
 
   const handleOpenHover = () => {
     clearCloseTimeout()
+    if (isSupportPopoverOpen) return
     if (!isPinnedOpen) {
       setShouldAnimate(true)
       setIsOpen(true)
@@ -147,6 +167,7 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
 
   const handleCloseHover = (event: ReactMouseEvent) => {
     if (isPinnedOpen) return
+    if (isSupportPopoverOpen) return
     const rect = getHoverSafeRect()
     if (
       rect &&
@@ -172,6 +193,12 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
   const handleTogglePinned = () => {
     clearCloseTimeout()
     setShouldAnimate(true)
+    if (isSupportPopoverOpen) {
+      setIsSupportPopoverOpen(false)
+      setIsOpen(true)
+      setIsPinnedOpen(false)
+      return
+    }
     setIsPinnedOpen((prev) => {
       const next = !prev
       setIsOpen(next)
@@ -188,101 +215,237 @@ export function FloatingHelpButton({ className }: FloatingHelpButtonProps) {
     setIsPinnedOpen(false)
   }
 
-  // Don't render if there's no tour available for this page
-  if (!currentTourKey) {
-    return null
+  const handleOpenChat = async () => {
+    setShouldAnimate(true)
+    setIsOpen(false)
+    setIsPinnedOpen(false)
+    setIsSupportLoading(true)
+    setIsSupportPopoverOpen(true)
+  }
+
+  const finishSupportLoading = () => {
+    if (supportLoadRafRef.current) {
+      cancelAnimationFrame(supportLoadRafRef.current)
+    }
+    supportLoadRafRef.current = requestAnimationFrame(() => {
+      supportLoadRafRef.current = requestAnimationFrame(() => {
+        setIsSupportLoading(false)
+        supportLoadRafRef.current = null
+      })
+    })
+  }
+
+  const handleOpenFeedback = () => {
+    setShouldAnimate(true)
+    setIsOpen(false)
+    setIsPinnedOpen(false)
+    setIsSupportPopoverOpen(false)
+    window.open(CANNY_FEEDBACK_URL, '_blank', 'noopener,noreferrer')
   }
 
   return (
-    <div
-      ref={containerRef}
-      data-testid="floating-help-button"
-      className={cn(
-        'fixed bottom-6 right-6 z-50',
-        className
-      )}
-      onMouseEnter={handleOpenHover}
-      onMouseLeave={handleCloseHover}
-    >
+    <>
+      <div
+        ref={containerRef}
+        data-testid="floating-help-button"
+        className={cn(
+          'fixed bottom-6 right-6 z-50',
+          className
+        )}
+        onMouseEnter={handleOpenHover}
+        onMouseLeave={handleCloseHover}
+      >
       {/* Menu (slides in from right, replaces the FAB) */}
       <div
         ref={menuRef}
         className={cn(
           'absolute bottom-0 right-0 z-20',
-          'origin-bottom-right will-change-transform',
+          'origin-bottom-right',
           shouldAnimate && (isOpen ? 'animate-help-menu-in' : 'animate-help-menu-out'),
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-stretch gap-2 min-w-[220px]">
+          {/* 
+           * Button order (bottom to top, closest to FAB first):
+           * 1. Support chat (most important - direct help)
+           * 2. Feedback (Canny)
+           * 3. Tour (page-specific)
+           */}
+
+          {/* Tour option — only on pages with tours (top) */}
+          {currentTourKey && (
+            <button
+              onClick={handleStartTour}
+              className={cn(
+                'group flex items-center gap-3 px-4 py-3 rounded-full',
+                'bg-card border border-border shadow-lg',
+                'hover:bg-accent hover:border-accent-foreground/20',
+                'cursor-pointer',
+                // Animate the pill *in* only. On close, the container animates out and carries it with it.
+                shouldAnimate && isOpen && 'animate-help-pill-in',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              )}
+              aria-label="Iniciar tour guiado da página"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <div
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
+                  'bg-primary/10 text-primary',
+                  'group-hover:bg-primary group-hover:text-primary-foreground',
+                  // Icon color should switch instantly (no delayed transition)
+                  'transition-none'
+                )}
+              >
+                <Compass className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
+                Conhecer a página
+              </span>
+            </button>
+          )}
+
+          {/* Feedback option — link to Canny.io portal (middle) */}
           <button
-            onClick={handleStartTour}
+            onClick={handleOpenFeedback}
             className={cn(
               'group flex items-center gap-3 px-4 py-3 rounded-full',
               'bg-card border border-border shadow-lg',
               'hover:bg-accent hover:border-accent-foreground/20',
               'cursor-pointer',
-              'will-change-transform',
-              // Animate the pill *in* only. On close, the container animates out and carries it with it.
               shouldAnimate && isOpen && 'animate-help-pill-in',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
             )}
-            aria-label="Iniciar tour guiado da página"
+            aria-label="Sugerir melhorias ou reportar problemas"
             tabIndex={isOpen ? 0 : -1}
           >
             <div
               className={cn(
-                'flex items-center justify-center w-8 h-8 rounded-full',
+                'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
                 'bg-primary/10 text-primary',
                 'group-hover:bg-primary group-hover:text-primary-foreground',
-                // Icon color should switch instantly (no delayed transition)
                 'transition-none'
               )}
             >
-              <Compass className="w-4 h-4" />
+              <Lightbulb className="w-4 h-4" />
             </div>
             <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
-              Conhecer a página
+              Sugerir melhorias
             </span>
           </button>
+
+          {/* Chat option — only when Tawk.to is configured (bottom, closest to FAB) */}
+          {showTawkOption && (
+            <button
+              onClick={handleOpenChat}
+              className={cn(
+                'group flex items-center gap-3 px-4 py-3 rounded-full',
+                'bg-card border border-border shadow-lg',
+                'hover:bg-accent hover:border-accent-foreground/20',
+                'cursor-pointer',
+                shouldAnimate && isOpen && 'animate-help-pill-in',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              )}
+              aria-label="Abrir chat de suporte"
+              tabIndex={isOpen ? 0 : -1}
+            >
+              <div
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
+                  'bg-primary/10 text-primary',
+                  'group-hover:bg-primary group-hover:text-primary-foreground',
+                  'transition-none'
+                )}
+              >
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium text-foreground whitespace-nowrap pr-1">
+                Falar com suporte
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Floating FAB (slides out to the right on open) */}
-      <button
-        onClick={handleTogglePinned}
-        onMouseEnter={clearCloseTimeout}
-        className={cn(
-          // Keep FAB above the menu while it animates out (menu is clickable; FAB is pointer-events-none when open).
-          'relative z-30 flex items-center justify-center',
-          'w-14 h-14 rounded-full',
-          'bg-primary text-primary-foreground',
-          'shadow-lg hover:shadow-xl',
-          'will-change-transform',
-          shouldAnimate && (isOpen ? 'animate-help-fab-out' : 'animate-help-fab-in'),
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          // Idle animation
-          !isOpen && !prefersReducedMotion && 'animate-help-pulse',
-          // When open, prevent interactions. Visuals are handled by keyframe animation.
-          isOpen && 'pointer-events-none',
-          // Safety: if the menu is forced open without animations, still hide the FAB.
-          isOpen && !shouldAnimate && 'opacity-0'
-        )}
-        aria-label={isOpen ? 'Ajuda (aberta)' : 'Abrir ajuda'}
-        aria-expanded={isOpen}
-      >
-        <HelpCircle className="w-6 h-6" />
+        {/* Floating FAB (slides out to the right on open) */}
+        <button
+          onClick={handleTogglePinned}
+          onMouseEnter={clearCloseTimeout}
+          className={cn(
+            // Keep FAB above the menu while it animates out (menu is clickable; FAB is pointer-events-none when open).
+            'relative z-30 flex items-center justify-center',
+            'w-14 h-14 rounded-full',
+            'bg-primary text-primary-foreground',
+            'shadow-lg hover:shadow-xl',
+            'will-change-transform',
+            shouldAnimate && !isSupportPopoverOpen && (isOpen ? 'animate-help-fab-out' : 'animate-help-fab-in'),
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            // Idle animation
+            !isOpen && !prefersReducedMotion && !isSupportPopoverOpen && 'animate-help-pulse',
+            // When open, prevent interactions. Visuals are handled by keyframe animation.
+            isOpen && !isSupportPopoverOpen && 'pointer-events-none',
+            // Safety: if the menu is forced open without animations, still hide the FAB.
+            isOpen && !shouldAnimate && 'opacity-0',
+            // No animations while the support popover is open (back arrow state).
+            isSupportPopoverOpen && 'animate-none',
+            isSupportPopoverOpen && 'cursor-pointer'
+          )}
+          aria-label={isSupportPopoverOpen ? 'Voltar ao menu de ajuda' : isOpen ? 'Ajuda (aberta)' : 'Abrir ajuda'}
+          aria-expanded={isOpen && !isSupportPopoverOpen}
+        >
+          {isSupportPopoverOpen ? <ArrowLeft className="w-6 h-6" /> : <HelpCircle className="w-6 h-6" />}
 
-        {/* Animated rings (only when closed) */}
-        {!isOpen && !prefersReducedMotion && (
-          <>
-            <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/30 animate-help-ring pointer-events-none" />
-            <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/20 animate-help-ring-delayed pointer-events-none" />
-          </>
-        )}
-      </button>
-    </div>
+          {/* Animated rings (only when closed) */}
+        {!isOpen && !prefersReducedMotion && !isSupportPopoverOpen && (
+            <>
+              <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/30 animate-help-ring pointer-events-none" />
+              <span className="absolute inset-0 rounded-full border-2 border-primary-foreground/20 animate-help-ring-delayed pointer-events-none" />
+            </>
+          )}
+        </button>
+      </div>
+
+      {isSupportPopoverOpen && (
+        <div
+          ref={supportPopoverRef}
+          className={cn(
+            'fixed bottom-24 right-6 z-50',
+            'w-[360px] max-w-[90vw]',
+            'rounded-xl border border-border bg-card shadow-xl overflow-hidden'
+          )}
+        >
+          {tawkChatUrl ? (
+            <div className="relative h-[620px] w-full overflow-hidden">
+              {isSupportLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-card/80">
+                  <div
+                    className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary"
+                    style={{ animation: 'spin 0.9s linear infinite' }}
+                  />
+                </div>
+              )}
+              <iframe
+                title="Chat de suporte"
+                src={tawkChatUrl}
+                className="h-full w-[calc(100%+16px)] -mr-4 border-0"
+                data-testid="support-chat-iframe"
+                loading="lazy"
+                onLoad={finishSupportLoading}
+                onError={finishSupportLoading}
+              />
+            </div>
+          ) : (
+            <div className="p-4">
+              <p className="text-sm text-muted-foreground">
+                O chat de suporte não está configurado no momento.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   )
 }
 

@@ -39,8 +39,8 @@ function AuthenticatedLayout() {
       <Outlet />
       {/* Onboarding wizard - renders as dialog overlay when active */}
       <OnboardingWizard />
-      {/* Floating help button - bottom right corner */}
-      <FloatingHelpButton />
+      {/* Floating help button - bottom right corner (desktop/tablet only) */}
+      <FloatingHelpButton className="hidden md:block" />
     </div>
   )
 }
