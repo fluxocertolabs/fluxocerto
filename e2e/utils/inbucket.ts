@@ -4,12 +4,12 @@
  * API docs: https://mailpit.axllent.org/docs/api-v1/
  */
 
-export interface MailpitAddress {
+interface MailpitAddress {
   Name: string;
   Address: string;
 }
 
-export interface MailpitMessageSummary {
+interface MailpitMessageSummary {
   ID: string;
   MessageID: string;
   Read: boolean;
@@ -59,7 +59,7 @@ export interface InbucketMessageHeader {
   size: number;
 }
 
-export interface InbucketMessageBody {
+interface InbucketMessageBody {
   text: string;
   html: string;
 }

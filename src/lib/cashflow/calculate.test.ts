@@ -34,7 +34,6 @@ function createTestProject(overrides: Partial<{
   id: string
   name: string
   amount: number
-  paymentDay: number
   frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
   certainty: 'guaranteed' | 'probable' | 'uncertain'
   isActive: boolean
@@ -44,7 +43,6 @@ function createTestProject(overrides: Partial<{
     | { type: 'twiceMonthly'; firstDay: number; secondDay: number; firstAmount?: number; secondAmount?: number }
 }> = {}) {
   const frequency = overrides.frequency ?? 'monthly'
-  const paymentDay = overrides.paymentDay ?? 15
 
   // Build appropriate paymentSchedule based on frequency if not explicitly provided
   let paymentSchedule = overrides.paymentSchedule
@@ -55,7 +53,7 @@ function createTestProject(overrides: Partial<{
     } else if (frequency === 'twice-monthly') {
       paymentSchedule = { type: 'twiceMonthly', firstDay: 1, secondDay: 15 }
     } else {
-      paymentSchedule = { type: 'dayOfMonth', dayOfMonth: paymentDay }
+      paymentSchedule = { type: 'dayOfMonth', dayOfMonth: 15 }
     }
   }
 
@@ -64,7 +62,6 @@ function createTestProject(overrides: Partial<{
     type: 'recurring' as const,
     name: overrides.name ?? 'Test Project',
     amount: overrides.amount ?? 50000, // $500
-    paymentDay: overrides.paymentDay ?? 15, // Legacy field for backward compatibility
     frequency,
     paymentSchedule,
     certainty: overrides.certainty ?? 'guaranteed',
@@ -150,8 +147,8 @@ describe('ScenarioSummary - totalIncome accumulation (T031)', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 500000 })],
       projects: [
-        createTestProject({ paymentDay: 5, amount: 100000, certainty: 'guaranteed' }),
-        createTestProject({ paymentDay: 15, amount: 200000, certainty: 'guaranteed' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 5 }, amount: 100000, certainty: 'guaranteed' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, amount: 200000, certainty: 'guaranteed' }),
       ],
       expenses: [],
       creditCards: [],
@@ -171,8 +168,8 @@ describe('ScenarioSummary - totalIncome accumulation (T031)', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 500000 })],
       projects: [
-        createTestProject({ paymentDay: 10, amount: 100000, certainty: 'guaranteed' }),
-        createTestProject({ paymentDay: 20, amount: 150000, certainty: 'uncertain' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 10 }, amount: 100000, certainty: 'guaranteed' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 20 }, amount: 150000, certainty: 'uncertain' }),
       ],
       expenses: [],
       creditCards: [],
@@ -221,8 +218,8 @@ describe('ScenarioSummary - totalExpenses accumulation (T032)', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 1000000 })],
       projects: [
-        createTestProject({ paymentDay: 10, amount: 100000, certainty: 'guaranteed' }),
-        createTestProject({ paymentDay: 20, amount: 200000, certainty: 'uncertain' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 10 }, amount: 100000, certainty: 'guaranteed' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 20 }, amount: 200000, certainty: 'uncertain' }),
       ],
       expenses: [
         createTestExpense({ dueDay: 15, amount: 80000 }),
@@ -245,7 +242,7 @@ describe('ScenarioSummary - endBalance equals final day balance (T033)', () => {
 
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 500000 })],
-      projects: [createTestProject({ paymentDay: 15, amount: 200000 })],
+      projects: [createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, amount: 200000 })],
       expenses: [createTestExpense({ dueDay: 10, amount: 100000 })],
       creditCards: [],
       options: { startDate, projectionDays: 30 },
@@ -262,7 +259,7 @@ describe('ScenarioSummary - endBalance equals final day balance (T033)', () => {
 
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 500000 })],
-      projects: [createTestProject({ paymentDay: 15, amount: 200000, certainty: 'guaranteed' })],
+      projects: [createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, amount: 200000, certainty: 'guaranteed' })],
       expenses: [createTestExpense({ dueDay: 10, amount: 100000 })],
       creditCards: [],
       options: { startDate, projectionDays: 30 },
@@ -327,8 +324,8 @@ describe('calculateCashflow - basic projection', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 100000 })],
       projects: [
-        createTestProject({ paymentDay: 5, amount: 50000, isActive: true }),
-        createTestProject({ paymentDay: 10, amount: 100000, isActive: false }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 5 }, amount: 50000, isActive: true }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 10 }, amount: 100000, isActive: false }),
       ],
       expenses: [],
       creditCards: [],
@@ -373,9 +370,9 @@ describe('calculateCashflow - dual scenarios', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 100000 })],
       projects: [
-        createTestProject({ paymentDay: 5, amount: 100000, certainty: 'guaranteed' }),
-        createTestProject({ paymentDay: 10, amount: 50000, certainty: 'probable' }),
-        createTestProject({ paymentDay: 15, amount: 75000, certainty: 'uncertain' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 5 }, amount: 100000, certainty: 'guaranteed' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 10 }, amount: 50000, certainty: 'probable' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, amount: 75000, certainty: 'uncertain' }),
       ],
       expenses: [],
       creditCards: [],
@@ -394,9 +391,9 @@ describe('calculateCashflow - dual scenarios', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 100000 })],
       projects: [
-        createTestProject({ paymentDay: 5, amount: 100000, certainty: 'guaranteed' }),
-        createTestProject({ paymentDay: 10, amount: 50000, certainty: 'probable' }),
-        createTestProject({ paymentDay: 15, amount: 75000, certainty: 'uncertain' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 5 }, amount: 100000, certainty: 'guaranteed' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 10 }, amount: 50000, certainty: 'probable' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, amount: 75000, certainty: 'uncertain' }),
       ],
       expenses: [],
       creditCards: [],
@@ -415,7 +412,7 @@ describe('calculateCashflow - dual scenarios', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 50000 })],
       projects: [
-        createTestProject({ paymentDay: 15, amount: 200000, certainty: 'uncertain' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, amount: 200000, certainty: 'uncertain' }),
       ],
       expenses: [
         createTestExpense({ dueDay: 10, amount: 100000 }),
@@ -465,7 +462,7 @@ describe('calculateCashflow - danger days', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 50000 })],
       projects: [
-        createTestProject({ paymentDay: 3, amount: 100000, certainty: 'uncertain' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 3 }, amount: 100000, certainty: 'uncertain' }),
       ],
       expenses: [
         createTestExpense({ dueDay: 5, amount: 100000 }),
@@ -510,7 +507,7 @@ describe('calculateCashflow - danger days', () => {
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 50000 })],
       projects: [
-        createTestProject({ paymentDay: 3, amount: 100000, certainty: 'uncertain' }),
+        createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 3 }, amount: 100000, certainty: 'uncertain' }),
       ],
       expenses: [
         createTestExpense({ dueDay: 5, amount: 100000 }),
@@ -730,7 +727,7 @@ describe('calculateCashflow - edge cases', () => {
 
     const input: CashflowEngineInput = {
       accounts: [],
-      projects: [createTestProject({ paymentDay: 5, amount: 100000 })],
+      projects: [createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 5 }, amount: 100000 })],
       expenses: [],
       creditCards: [],
       options: { startDate, projectionDays: 10 },
@@ -765,7 +762,7 @@ describe('calculateCashflow - edge cases', () => {
 
     const input: CashflowEngineInput = {
       accounts: [createTestAccount({ balance: 100000 })],
-      projects: [createTestProject({ paymentDay: 15, amount: 200000 })],
+      projects: [createTestProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, amount: 200000 })],
       expenses: [],
       creditCards: [],
       options: { startDate, projectionDays: 20 },

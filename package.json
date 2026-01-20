@@ -31,6 +31,10 @@
     "test:visual": "pnpm db:ensure && pnpm run gen:token && playwright test --config e2e/playwright.config.ts --project=visual; EXIT_CODE=$?; pnpm db:stop; exit $EXIT_CODE",
     "test:visual:update": "pnpm db:ensure && pnpm run gen:token && playwright test --config e2e/playwright.config.ts --project=visual --update-snapshots; EXIT_CODE=$?; pnpm db:stop; exit $EXIT_CODE",
     "test:visual:docker": "pnpm db:ensure && docker run --rm --network host --shm-size=1gb --ipc=host -v $(pwd):/work -w /work -e CI=true -e VITE_SUPABASE_URL=http://localhost:54321 -e VITE_SUPABASE_ANON_KEY=$(npx supabase status -o json 2>/dev/null | sed -n '/^{/,/^}/p' | jq -r '(.ANON_KEY // .PUBLISHABLE_KEY // empty)') -e SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o json 2>/dev/null | sed -n '/^{/,/^}/p' | jq -r '(.SERVICE_ROLE_KEY // .SECRET_KEY // empty)') -e INBUCKET_URL=http://localhost:54324 -e BASE_URL=http://localhost:5173 mcr.microsoft.com/playwright:v1.57.0-jammy /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test --config e2e/playwright.config.ts --project=visual'; EXIT_CODE=$?; docker run --rm -v $(pwd):/work alpine chown -R $(id -u):$(id -g) /work/e2e/tests/visual 2>/dev/null || true; pnpm db:stop; exit $EXIT_CODE",
+    "audit:unused": "pnpm dlx knip --reporter compact",
+    "audit:deps": "pnpm dlx depcheck",
+    "audit:exports": "pnpm dlx ts-prune -p tsconfig.json",
+    "audit:all": "pnpm audit:unused && pnpm audit:deps && pnpm audit:exports",
     "prepare": "husky",
     "gen:token": "tsx scripts/generate-dev-token.ts"
   },

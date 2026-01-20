@@ -4,59 +4,7 @@
  */
 
 import { cn } from '@/lib/utils'
-import type { SkeletonCardProps, SkeletonLineProps } from '@/types/loading'
-
-/**
- * Base skeleton element with pulse animation.
- * Used as a foundation for other skeleton primitives.
- */
-export function SkeletonBase({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      aria-hidden="true"
-      className={cn('animate-pulse rounded bg-muted', className)}
-      {...props}
-    />
-  )
-}
-
-/**
- * Skeleton card component matching the app's card styling.
- * Used for summary panels, chart containers, and list items.
- */
-export function SkeletonCard({
-  width,
-  height,
-  shimmer = false,
-  className,
-}: SkeletonCardProps) {
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        'rounded-xl border border-border bg-card',
-        'animate-pulse',
-        shimmer && 'relative overflow-hidden',
-        width,
-        height,
-        className
-      )}
-    >
-      {shimmer && (
-        <div
-          className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite]"
-          style={{
-            background:
-              'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
-          }}
-        />
-      )}
-    </div>
-  )
-}
+import type { SkeletonLineProps } from '@/types/loading'
 
 /**
  * Skeleton text line for simulating text content.

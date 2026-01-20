@@ -4,12 +4,7 @@
  * Supports per-worker schema isolation for parallel test execution
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { getWorkerSchemaName } from '../fixtures/worker-context';
 import { Client as PgClient } from 'pg';
-
-/** Default admin client (uses public schema) */
-let adminClient: SupabaseClient | null = null;
 
 /** Cached PG client connection settings */
 const PG_CONFIG = {
@@ -19,41 +14,6 @@ const PG_CONFIG = {
   user: 'postgres',
   password: 'postgres',
 };
-
-/**
- * Get or create Supabase admin client with service role
- * This client uses the default public schema
- */
-export function getAdminClient(): SupabaseClient {
-  if (adminClient) {
-    return adminClient;
-  }
-
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || 'http://localhost:54321';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!serviceRoleKey) {
-    throw new Error(
-      'SUPABASE_SERVICE_ROLE_KEY environment variable is required for E2E tests'
-    );
-  }
-
-  adminClient = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  return adminClient;
-}
-
-/**
- * Reset the default admin client (useful for test isolation)
- */
-export function resetAdminClient(): void {
-  adminClient = null;
-}
 
 /**
  * Get user ID from email (for seeding test data with correct user_id)
@@ -70,6 +30,44 @@ export async function getUserIdFromEmail(email: string): Promise<string> {
   }
 
   return rows[0].id;
+}
+
+async function getDefaultGroupId(): Promise<string> {
+  const rows = await executeSQLWithResult<{ id: string }>(
+    `SELECT id FROM public.groups WHERE name = $1 LIMIT 1`,
+    ['Fonseca Floriano']
+  );
+
+  if (rows.length > 0) {
+    return rows[0].id;
+  }
+
+  const inserted = await executeSQLWithResult<{ id: string }>(
+    `INSERT INTO public.groups (name) VALUES ($1) RETURNING id`,
+    ['Fonseca Floriano']
+  );
+
+  if (inserted.length === 0) {
+    throw new Error('Failed to create default group');
+  }
+
+  return inserted[0].id;
+}
+
+/**
+ * Ensure test user email exists in profiles table with group assignment.
+ */
+export async function ensureTestUser(email: string): Promise<void> {
+  const name = email.split('@')[0];
+  const groupId = await getDefaultGroupId();
+
+  await executeSQL(
+    `INSERT INTO public.profiles (email, name, group_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (email)
+     DO UPDATE SET name = EXCLUDED.name, group_id = EXCLUDED.group_id`,
+    [email, name, groupId]
+  );
 }
 
 /**
@@ -106,90 +104,3 @@ export async function executeSQLWithResult<T = unknown>(sql: string, params?: un
   }
 }
 
-/**
- * Insert records into a worker schema table
- */
-export async function insertIntoWorkerSchema<T extends Record<string, any>>(
-  workerIndex: number,
-  table: string,
-  records: T[]
-): Promise<T[]> {
-  if (records.length === 0) {
-    return [];
-  }
-
-  const schemaName = getWorkerSchemaName(workerIndex);
-  const columns = Object.keys(records[0]);
-
-  const values = records.map((record) =>
-    columns.map((col) => {
-      const val = record[col];
-      if (val === null || val === undefined) return 'NULL';
-      if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
-      if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
-      if (typeof val === 'boolean') return val ? 'true' : 'false';
-      return val;
-    })
-  );
-
-  const valueStrings = values.map((v) => `(${v.join(', ')})`).join(', ');
-  const sql = `INSERT INTO ${schemaName}.${table} (${columns.join(', ')}) VALUES ${valueStrings} RETURNING *`;
-
-  return executeSQLWithResult<T>(sql);
-}
-
-/**
- * Upsert a record into a worker schema table
- */
-export async function upsertIntoWorkerSchema<T extends Record<string, any>>(
-  workerIndex: number,
-  table: string,
-  record: T,
-  conflictColumn: string = 'email'
-): Promise<void> {
-  const schemaName = getWorkerSchemaName(workerIndex);
-  const columns = Object.keys(record);
-
-  const values = columns.map((col) => {
-    const val = record[col];
-    if (val === null || val === undefined) return 'NULL';
-    if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
-    if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
-    if (typeof val === 'boolean') return val ? 'true' : 'false';
-    return val;
-  });
-
-  const updateCols = columns
-    .filter((c) => c !== conflictColumn)
-    .map((c) => `${c} = EXCLUDED.${c}`)
-    .join(', ');
-
-  const sql = `
-    INSERT INTO ${schemaName}.${table} (${columns.join(', ')}) 
-    VALUES (${values.join(', ')})
-    ON CONFLICT (${conflictColumn}) DO UPDATE SET ${updateCols}
-  `;
-
-  await executeSQL(sql);
-}
-
-/**
- * Delete records from a worker schema table
- */
-export async function deleteFromWorkerSchema(
-  workerIndex: number,
-  table: string,
-  where?: { column: string; op: string; value: any }
-): Promise<void> {
-  const schemaName = getWorkerSchemaName(workerIndex);
-
-  let sql = `DELETE FROM ${schemaName}.${table}`;
-
-  if (where) {
-    const escapedValue =
-      typeof where.value === 'string' ? `'${where.value.replace(/'/g, "''")}'` : where.value;
-    sql += ` WHERE ${where.column} ${where.op} ${escapedValue}`;
-  }
-
-  await executeSQL(sql);
-}

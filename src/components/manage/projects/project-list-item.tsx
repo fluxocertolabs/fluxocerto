@@ -61,7 +61,7 @@ const WEEKDAY_LABELS: Record<number, string> = {
   7: 'Domingo',
 }
 
-function formatPaymentSchedule(schedule: PaymentSchedule | undefined, legacyPaymentDay?: number): string {
+function formatPaymentSchedule(schedule: PaymentSchedule | undefined): string {
   if (schedule) {
     switch (schedule.type) {
       case 'dayOfWeek':
@@ -71,10 +71,6 @@ function formatPaymentSchedule(schedule: PaymentSchedule | undefined, legacyPaym
       case 'twiceMonthly':
         return `Dias ${schedule.firstDay} e ${schedule.secondDay}`
     }
-  }
-  // Legacy fallback
-  if (legacyPaymentDay !== undefined) {
-    return `Dia ${legacyPaymentDay}`
   }
   return 'Não definido'
 }
@@ -109,7 +105,7 @@ export function ProjectListItem({
           )}
         </div>
         <div className="text-sm text-muted-foreground mt-1">
-          {formatPaymentSchedule(project.paymentSchedule, project.paymentDay)}
+          {formatPaymentSchedule(project.paymentSchedule)}
         </div>
       </div>
 

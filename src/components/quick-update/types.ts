@@ -18,22 +18,6 @@ export type BalanceItem =
     }
 
 /**
- * Balance field state for controlled input
- */
-export interface BalanceFieldState {
-  /** Current display value (formatted string) */
-  displayValue: string
-  /** Actual value in cents */
-  valueInCents: number
-  /** Whether the field is currently being edited */
-  isEditing: boolean
-  /** Whether a save operation is in progress */
-  isSaving: boolean
-  /** Error message from failed save (null if no error) */
-  error: string | null
-}
-
-/**
  * Get the balance value from a balance item
  */
 export function getBalanceFromItem(item: BalanceItem): number {

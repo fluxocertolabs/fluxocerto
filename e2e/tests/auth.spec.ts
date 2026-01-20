@@ -6,8 +6,7 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/login-page';
 import { InbucketClient } from '../utils/inbucket';
-import { ensureTestUser } from '../fixtures/db';
-import { executeSQL, executeSQLWithResult, getUserIdFromEmail } from '../utils/supabase-admin';
+import { ensureTestUser, executeSQL, executeSQLWithResult, getUserIdFromEmail } from '../utils/supabase-admin';
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
 // For self-serve signup testing: generate unique email per test run

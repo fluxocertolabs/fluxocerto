@@ -135,37 +135,3 @@ export async function saveThemePreference(theme: ThemeValue): Promise<void> {
   }
 }
 
-/**
- * Delete theme preference from Supabase.
- * After deletion, app should fall back to system preference.
- */
-export async function deleteThemePreference(): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    return
-  }
-
-  const supabase = getSupabase()
-
-  try {
-    // Explicitly filter by group_id for defensive consistency.
-    // This ensures we only delete preferences for the current user's group.
-    const groupId = await getGroupId()
-    if (!groupId) {
-      console.warn('Cannot delete theme preference: group not found')
-      return
-    }
-
-    const { error } = await supabase
-      .from('group_preferences')
-      .delete()
-      .eq('group_id', groupId)
-      .eq('key', 'theme')
-
-    if (error) {
-      console.warn('Failed to delete theme preference:', error.message)
-    }
-  } catch (error) {
-    console.warn('Error deleting theme preference:', error)
-  }
-}
-

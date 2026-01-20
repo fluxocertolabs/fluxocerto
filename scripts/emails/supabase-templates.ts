@@ -1,4 +1,4 @@
-export type SupabaseAuthEmailTemplateType =
+type SupabaseAuthEmailTemplateType =
   | 'invite'
   | 'confirmation'
   | 'recovery'
@@ -6,7 +6,7 @@ export type SupabaseAuthEmailTemplateType =
   | 'email_change'
   | 'reauthentication'
 
-export type SupabaseSecurityNotificationTemplateType =
+type SupabaseSecurityNotificationTemplateType =
   | 'password_changed'
   | 'email_changed'
   | 'phone_changed'
@@ -15,7 +15,7 @@ export type SupabaseSecurityNotificationTemplateType =
   | 'identity_linked'
   | 'identity_unlinked'
 
-export type SupabaseEmailTemplate =
+type SupabaseEmailTemplate =
   | {
       kind: 'auth'
       type: SupabaseAuthEmailTemplateType

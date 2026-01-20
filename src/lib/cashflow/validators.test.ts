@@ -34,14 +34,12 @@ function createValidProject(overrides: Partial<{
   id: string
   name: string
   amount: number
-  paymentDay: number
   frequency: 'weekly' | 'biweekly' | 'twice-monthly' | 'monthly'
   certainty: 'guaranteed' | 'probable' | 'uncertain'
   isActive: boolean
   paymentSchedule: { type: 'dayOfWeek'; dayOfWeek: number } | { type: 'dayOfMonth'; dayOfMonth: number } | { type: 'twiceMonthly'; firstDay: number; secondDay: number }
 }> = {}) {
   const frequency = overrides.frequency ?? 'monthly'
-  const paymentDay = overrides.paymentDay ?? 15
 
   // Build appropriate paymentSchedule based on frequency if not explicitly provided
   let paymentSchedule = overrides.paymentSchedule
@@ -51,7 +49,7 @@ function createValidProject(overrides: Partial<{
     } else if (frequency === 'twice-monthly') {
       paymentSchedule = { type: 'twiceMonthly', firstDay: 1, secondDay: 15 }
     } else {
-      paymentSchedule = { type: 'dayOfMonth', dayOfMonth: paymentDay }
+      paymentSchedule = { type: 'dayOfMonth', dayOfMonth: 15 }
     }
   }
 
@@ -60,7 +58,6 @@ function createValidProject(overrides: Partial<{
     type: 'recurring' as const,
     name: overrides.name ?? 'Test Project',
     amount: overrides.amount ?? 50000,
-    paymentDay: overrides.paymentDay ?? 15,
     frequency,
     paymentSchedule,
     certainty: overrides.certainty ?? 'guaranteed',
@@ -214,7 +211,7 @@ describe('validateAndFilterInput', () => {
     it('throws on invalid payment day', () => {
       const input: CashflowEngineInput = {
         accounts: [],
-        projects: [createValidProject({ paymentDay: 32 })],
+        projects: [createValidProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 32 } })],
         expenses: [],
         creditCards: [],
       }
@@ -225,7 +222,7 @@ describe('validateAndFilterInput', () => {
     it('throws on zero payment day', () => {
       const input: CashflowEngineInput = {
         accounts: [],
-        projects: [createValidProject({ paymentDay: 0 })],
+        projects: [createValidProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 0 } })],
         expenses: [],
         creditCards: [],
       }
@@ -324,7 +321,7 @@ describe('validateAndFilterInput', () => {
     it('uses INVALID_INPUT code for general validation errors', () => {
       const input: CashflowEngineInput = {
         accounts: [],
-        projects: [createValidProject({ paymentDay: 32 })],
+        projects: [createValidProject({ paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 32 } })],
         expenses: [],
         creditCards: [],
       }

@@ -1,0 +1,8 @@
+{
+  "ignoreMatches": [
+    "@vitest/coverage-v8",
+    "autoprefixer",
+    "postcss"
+  ]
+}
+
