@@ -399,3 +399,41 @@ body {
     to { opacity: 0; }
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Quick Update freshness bar glow                                             */
+/* -------------------------------------------------------------------------- */
+
+@keyframes fcEdgeGlowPulse {
+  0%, 100% { opacity: 0.28; }
+  50% { opacity: 0.62; }
+}
+
+.fc-edge-glow-emerald {
+  background: radial-gradient(70% 120% at 100% 50%, rgba(16, 185, 129, 0.85), rgba(16, 185, 129, 0) 72%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  animation: fcEdgeGlowPulse 2.8s ease-in-out infinite;
+}
+
+.fc-edge-glow-amber {
+  background: radial-gradient(70% 120% at 100% 50%, rgba(245, 158, 11, 0.82), rgba(245, 158, 11, 0) 72%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  animation: fcEdgeGlowPulse 2.8s ease-in-out infinite;
+}
+
+.fc-edge-glow-red {
+  background: radial-gradient(70% 120% at 100% 50%, rgba(239, 68, 68, 0.78), rgba(239, 68, 68, 0) 72%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  animation: fcEdgeGlowPulse 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-edge-glow-emerald,
+  .fc-edge-glow-amber,
+  .fc-edge-glow-red {
+    animation: none;
+  }
+}

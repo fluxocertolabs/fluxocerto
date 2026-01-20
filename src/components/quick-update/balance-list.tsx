@@ -4,6 +4,7 @@
  */
 
 import { useMemo } from 'react'
+import { motion, useReducedMotion } from 'motion/react'
 import { useFinanceData } from '@/hooks/use-finance-data'
 import { useFinanceStore } from '@/stores/finance-store'
 import { BalanceListItem } from './balance-list-item'
@@ -16,6 +17,7 @@ interface BalanceListProps {
 
 export function BalanceList({ initialBalances }: BalanceListProps) {
   const { updateAccountBalance, updateCreditCardBalance } = useFinanceStore()
+  const shouldReduceMotion = useReducedMotion()
 
   // Fetch accounts and credit cards
   const { accounts, creditCards, isLoading } = useFinanceData()
@@ -77,19 +79,39 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
           <h3 className="text-sm font-medium text-muted-foreground px-1">
             Contas Bancárias
           </h3>
-          {items
-            .filter((item): item is BalanceItem & { type: 'account' } => item.type === 'account')
-            .map((item) => (
-              <BalanceListItem
-                key={item.entity.id}
-                item={item}
-                previousBalance={
-                  initialBalances.get(item.entity.id) ??
-                  item.entity.balance
-                }
-                onSave={(newBalance) => handleSave(item, newBalance)}
-              />
-            ))}
+          <motion.div
+            className="space-y-2"
+            initial={shouldReduceMotion ? false : 'hidden'}
+            animate={shouldReduceMotion ? undefined : 'show'}
+            variants={{
+              hidden: {},
+              show: {
+                transition: { staggerChildren: 0.06, delayChildren: 0.03 },
+              },
+            }}
+          >
+            {items
+              .filter((item): item is BalanceItem & { type: 'account' } => item.type === 'account')
+              .map((item) => (
+                <motion.div
+                  key={item.entity.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    show: { opacity: 1, y: 0 },
+                  }}
+                  transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <BalanceListItem
+                    item={item}
+                    previousBalance={
+                      initialBalances.get(item.entity.id) ??
+                      item.entity.balance
+                    }
+                    onSave={(newBalance) => handleSave(item, newBalance)}
+                  />
+                </motion.div>
+              ))}
+          </motion.div>
         </div>
       )}
 
@@ -99,19 +121,39 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
           <h3 className="text-sm font-medium text-muted-foreground px-1">
             Cartões de Crédito
           </h3>
-          {items
-            .filter((item): item is BalanceItem & { type: 'card' } => item.type === 'card')
-            .map((item) => (
-              <BalanceListItem
-                key={item.entity.id}
-                item={item}
-                previousBalance={
-                  initialBalances.get(item.entity.id) ??
-                  item.entity.statementBalance
-                }
-                onSave={(newBalance) => handleSave(item, newBalance)}
-              />
-            ))}
+          <motion.div
+            className="space-y-2"
+            initial={shouldReduceMotion ? false : 'hidden'}
+            animate={shouldReduceMotion ? undefined : 'show'}
+            variants={{
+              hidden: {},
+              show: {
+                transition: { staggerChildren: 0.06, delayChildren: 0.03 },
+              },
+            }}
+          >
+            {items
+              .filter((item): item is BalanceItem & { type: 'card' } => item.type === 'card')
+              .map((item) => (
+                <motion.div
+                  key={item.entity.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    show: { opacity: 1, y: 0 },
+                  }}
+                  transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <BalanceListItem
+                    item={item}
+                    previousBalance={
+                      initialBalances.get(item.entity.id) ??
+                      item.entity.statementBalance
+                    }
+                    onSave={(newBalance) => handleSave(item, newBalance)}
+                  />
+                </motion.div>
+              ))}
+          </motion.div>
         </div>
       )}
     </div>
