@@ -63,13 +63,25 @@ jobs:
         run: |
           sudo chown -R $(id -u):$(id -g) e2e/tests/visual/ || true
 
+      - name: Write baseline metadata
+        run: |
+          cat > e2e/tests/visual/visual-baseline.json << 'EOF'
+          {
+            "commitSha": "${{ github.sha }}",
+            "ref": "${{ github.ref }}",
+            "runId": "${{ github.run_id }}"
+          }
+          EOF
+
       # Upload snapshots as artifacts - these will be downloaded by CI visual tests
       # Using a long retention period since these are the baseline for visual regression
       - name: Upload Visual Snapshots
         uses: actions/upload-artifact@v4
         with:
           name: visual-snapshots
-          path: e2e/tests/visual/**/*-snapshots/
+          path: |
+            e2e/tests/visual/**/*-snapshots/
+            e2e/tests/visual/visual-baseline.json
           retention-days: 90
           if-no-files-found: error
 
