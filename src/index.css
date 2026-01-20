@@ -29,6 +29,10 @@
   --color-input: #d7e3f0;
   --color-ring: var(--color-brand-blue);
   --radius: 0.5rem;
+  /* Animation/glow helpers (rgb channels) */
+  --fc-glow-emerald-rgb: 16 185 129;
+  --fc-glow-amber-rgb: 245 158 11;
+  --fc-glow-red-rgb: 239 68 68;
   /* Chart colors for light mode */
   --color-chart-1: var(--color-brand-blue);
   --color-chart-2: hsl(160 60% 45%);
@@ -59,6 +63,10 @@
   --color-border: #30363d;
   --color-input: #30363d;
   --color-ring: var(--color-brand-blue);
+  /* Same hues, but allow tweaking per theme in one place if needed */
+  --fc-glow-emerald-rgb: 16 185 129;
+  --fc-glow-amber-rgb: 245 158 11;
+  --fc-glow-red-rgb: 239 68 68;
   /* Chart colors for dark mode - more vibrant for visibility */
   --color-chart-1: var(--color-brand-blue);
   --color-chart-2: hsl(160 60% 55%);
@@ -320,26 +328,26 @@ body {
 @keyframes fcGlowAmber {
   0%, 100% {
     box-shadow:
-      0 0 0 0 rgba(245, 158, 11, 0.0),
-      0 0 0 0 rgba(245, 158, 11, 0.0);
+      0 0 0 0 rgb(var(--fc-glow-amber-rgb) / 0),
+      0 0 0 0 rgb(var(--fc-glow-amber-rgb) / 0);
   }
   50% {
     box-shadow:
-      0 0 0 1px rgba(245, 158, 11, 0.22),
-      0 0 24px rgba(245, 158, 11, 0.18);
+      0 0 0 1px rgb(var(--fc-glow-amber-rgb) / 0.22),
+      0 0 24px rgb(var(--fc-glow-amber-rgb) / 0.18);
   }
 }
 
 @keyframes fcGlowRed {
   0%, 100% {
     box-shadow:
-      0 0 0 0 rgba(239, 68, 68, 0.0),
-      0 0 0 0 rgba(239, 68, 68, 0.0);
+      0 0 0 0 rgb(var(--fc-glow-red-rgb) / 0),
+      0 0 0 0 rgb(var(--fc-glow-red-rgb) / 0);
   }
   50% {
     box-shadow:
-      0 0 0 1px rgba(239, 68, 68, 0.20),
-      0 0 28px rgba(239, 68, 68, 0.18);
+      0 0 0 1px rgb(var(--fc-glow-red-rgb) / 0.20),
+      0 0 28px rgb(var(--fc-glow-red-rgb) / 0.18);
   }
 }
 
@@ -410,21 +418,21 @@ body {
 }
 
 .fc-edge-glow-emerald {
-  background: radial-gradient(70% 120% at 100% 50%, rgba(16, 185, 129, 0.85), rgba(16, 185, 129, 0) 72%);
+  background: radial-gradient(70% 120% at 100% 50%, rgb(var(--fc-glow-emerald-rgb) / 0.85), rgb(var(--fc-glow-emerald-rgb) / 0) 72%);
   filter: blur(6px);
   mix-blend-mode: screen;
   animation: fcEdgeGlowPulse 2.8s ease-in-out infinite;
 }
 
 .fc-edge-glow-amber {
-  background: radial-gradient(70% 120% at 100% 50%, rgba(245, 158, 11, 0.82), rgba(245, 158, 11, 0) 72%);
+  background: radial-gradient(70% 120% at 100% 50%, rgb(var(--fc-glow-amber-rgb) / 0.82), rgb(var(--fc-glow-amber-rgb) / 0) 72%);
   filter: blur(6px);
   mix-blend-mode: screen;
   animation: fcEdgeGlowPulse 2.8s ease-in-out infinite;
 }
 
 .fc-edge-glow-red {
-  background: radial-gradient(70% 120% at 100% 50%, rgba(239, 68, 68, 0.78), rgba(239, 68, 68, 0) 72%);
+  background: radial-gradient(70% 120% at 100% 50%, rgb(var(--fc-glow-red-rgb) / 0.78), rgb(var(--fc-glow-red-rgb) / 0) 72%);
   filter: blur(6px);
   mix-blend-mode: screen;
   animation: fcEdgeGlowPulse 2.8s ease-in-out infinite;

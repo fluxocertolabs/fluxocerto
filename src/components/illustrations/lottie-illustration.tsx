@@ -29,41 +29,66 @@ export function LottieIllustration({
   const shouldReduceMotion = useReducedMotion()
   const [animationData, setAnimationData] = useState<object | null>(null)
   const [LottieComponent, setLottieComponent] = useState<LottieComponentType | null>(null)
+  const [hasLoadError, setHasLoadError] = useState(false)
+  const [hasComponentError, setHasComponentError] = useState(false)
 
   useEffect(() => {
-    if (shouldReduceMotion && staticFallback) {
-      return
-    }
+    if (shouldReduceMotion) return
+    if (hasLoadError) return
 
     let isActive = true
-    void animationLoader().then((module) => {
-      if (!isActive) return
-      const resolved = 'default' in module ? module.default : module
-      setAnimationData(resolved)
-    })
+    void animationLoader()
+      .then((module) => {
+        if (!isActive) return
+        const resolved = 'default' in module ? module.default : module
+        setAnimationData(resolved)
+      })
+      .catch(() => {
+        if (!isActive) return
+        setHasLoadError(true)
+      })
 
     return () => {
       isActive = false
     }
-  }, [animationLoader, shouldReduceMotion, staticFallback])
+  }, [animationLoader, shouldReduceMotion, hasLoadError])
 
   useEffect(() => {
     if (shouldReduceMotion) return
     if (!animationData) return
     if (LottieComponent) return
+    if (hasComponentError) return
 
     let isActive = true
-    void import('lottie-react').then((mod) => {
-      if (!isActive) return
-      setLottieComponent(() => mod.default as unknown as LottieComponentType)
-    })
+    void import('lottie-react')
+      .then((mod) => {
+        if (!isActive) return
+        setLottieComponent(() => mod.default as unknown as LottieComponentType)
+      })
+      .catch(() => {
+        if (!isActive) return
+        setHasComponentError(true)
+      })
 
     return () => {
       isActive = false
     }
-  }, [shouldReduceMotion, animationData, LottieComponent])
+  }, [shouldReduceMotion, animationData, LottieComponent, hasComponentError])
 
-  if (shouldReduceMotion && staticFallback) {
+  if (shouldReduceMotion) {
+    return (
+      <div
+        className={cn('flex items-center justify-center', className)}
+        role={ariaLabel ? 'img' : 'presentation'}
+        aria-label={ariaLabel}
+        aria-hidden={ariaLabel ? undefined : true}
+      >
+        {staticFallback ?? null}
+      </div>
+    )
+  }
+
+  if ((hasLoadError || hasComponentError) && staticFallback) {
     return (
       <div
         className={cn('flex items-center justify-center', className)}

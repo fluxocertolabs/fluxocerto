@@ -3,12 +3,14 @@
  * Displays success or error messages with auto-dismiss.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { CheckCircledIcon, CrossCircledIcon, Cross2Icon } from '@radix-ui/react-icons'
 
 export type ToastType = 'success' | 'error'
+
+const TOAST_EXIT_ANIMATION_MS = 340
 
 interface ToastProps {
   message: string
@@ -28,15 +30,15 @@ export function Toast({
   const [isExiting, setIsExiting] = useState(false)
   const dismissTimeoutRef = useRef<number | null>(null)
 
-  const requestDismiss = () => {
+  const requestDismiss = useCallback(() => {
     if (isExiting) return
     setIsExiting(true)
 
     // Let the exit animation play before unmounting.
     dismissTimeoutRef.current = window.setTimeout(() => {
       onDismiss()
-    }, 190)
-  }
+    }, TOAST_EXIT_ANIMATION_MS)
+  }, [isExiting, onDismiss])
 
   useEffect(() => {
     const timer = window.setTimeout(requestDismiss, duration)
@@ -46,8 +48,7 @@ export function Toast({
         window.clearTimeout(dismissTimeoutRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration])
+  }, [duration, requestDismiss])
 
   const isError = type === 'error'
 
