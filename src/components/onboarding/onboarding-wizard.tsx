@@ -161,6 +161,7 @@ export function OnboardingWizard() {
 
       {toast && (
         <Toast
+          key={toast.id}
           message={toast.message}
           type={toast.type}
           onDismiss={hideToast}

@@ -2,10 +2,11 @@
  * Hook for managing toast notification state.
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { ToastType } from '@/components/ui/toast'
 
 interface ToastState {
+  id: number
   message: string
   type: ToastType
   onRetry?: () => void
@@ -13,9 +14,11 @@ interface ToastState {
 
 export function useToast() {
   const [toast, setToast] = useState<ToastState | null>(null)
+  const toastIdRef = useRef(0)
 
   const showToast = useCallback((message: string, type: ToastType, onRetry?: () => void) => {
-    setToast({ message, type, onRetry })
+    toastIdRef.current += 1
+    setToast({ id: toastIdRef.current, message, type, onRetry })
   }, [])
 
   const hideToast = useCallback(() => {
