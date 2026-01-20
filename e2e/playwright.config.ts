@@ -166,6 +166,7 @@ export default defineConfig({
       testMatch: /visual\/.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
+        reducedMotion: 'reduce',
         viewport: { width: 1280, height: 720 },
       },
     },
