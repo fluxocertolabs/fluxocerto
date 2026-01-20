@@ -3,6 +3,7 @@
  * Displays starting balance, income, expenses, ending balance, danger day count, and surplus/deficit.
  */
 
+import { motion, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import { SurplusDeficit } from './surplus-deficit'
@@ -37,7 +38,7 @@ function StatCard({ label, value, sublabel, variant = 'default' }: StatCardProps
   return (
     <div
       className={cn(
-        'rounded-xl border bg-card p-4',
+        'rounded-xl border bg-card p-4 h-full',
         variantStyles[variant]
       )}
     >
@@ -54,6 +55,7 @@ function StatCard({ label, value, sublabel, variant = 'default' }: StatCardProps
 
 export function SummaryPanel({ stats }: SummaryPanelProps) {
   const { startingBalance, optimistic, pessimistic } = stats
+  const shouldReduceMotion = useReducedMotion()
 
   // Determine danger status
   const hasDangerDays = optimistic.dangerDayCount > 0 || pessimistic.dangerDayCount > 0
@@ -67,57 +69,119 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
   }
 
   return (
-    <div data-testid="summary-panel" className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <motion.div
+      data-testid="summary-panel"
+      className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      initial={shouldReduceMotion ? false : 'hidden'}
+      animate={shouldReduceMotion ? undefined : 'show'}
+      variants={{
+        hidden: {},
+        show: {
+          transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+        },
+      }}
+    >
       {/* Starting Balance */}
-      <StatCard
-        label="Saldo Inicial"
-        value={formatCurrency(startingBalance * 100)}
-      />
+      <motion.div
+        className="h-full"
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          show: { opacity: 1, y: 0 },
+        }}
+        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <StatCard
+          label="Saldo Inicial"
+          value={formatCurrency(startingBalance * 100)}
+        />
+      </motion.div>
 
       {/* Total Income (showing both scenarios) */}
-      <StatCard
-        label="Renda Esperada"
-        value={formatCurrency(optimistic.totalIncome * 100)}
-        sublabel={
-          optimistic.totalIncome !== pessimistic.totalIncome
-            ? `Garantido: ${formatCurrency(pessimistic.totalIncome * 100)}`
-            : undefined
-        }
-        variant="success"
-      />
+      <motion.div
+        className="h-full"
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          show: { opacity: 1, y: 0 },
+        }}
+        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <StatCard
+          label="Renda Esperada"
+          value={formatCurrency(optimistic.totalIncome * 100)}
+          sublabel={
+            optimistic.totalIncome !== pessimistic.totalIncome
+              ? `Garantido: ${formatCurrency(pessimistic.totalIncome * 100)}`
+              : undefined
+          }
+          variant="success"
+        />
+      </motion.div>
 
       {/* Total Expenses */}
-      <StatCard
-        label="Total de Despesas"
-        value={formatCurrency(optimistic.totalExpenses * 100)}
-      />
+      <motion.div
+        className="h-full"
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          show: { opacity: 1, y: 0 },
+        }}
+        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <StatCard
+          label="Total de Despesas"
+          value={formatCurrency(optimistic.totalExpenses * 100)}
+        />
+      </motion.div>
 
       {/* Ending Balance (optimistic) */}
-      <StatCard
-        label="Saldo Final"
-        value={formatCurrency(optimistic.endBalance * 100)}
-        sublabel={
-          optimistic.endBalance !== pessimistic.endBalance
-            ? `Pessimista: ${formatCurrency(pessimistic.endBalance * 100)}`
-            : undefined
-        }
-        variant={getBalanceVariant(optimistic.endBalance)}
-      />
+      <motion.div
+        className="h-full"
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          show: { opacity: 1, y: 0 },
+        }}
+        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <StatCard
+          label="Saldo Final"
+          value={formatCurrency(optimistic.endBalance * 100)}
+          sublabel={
+            optimistic.endBalance !== pessimistic.endBalance
+              ? `Pessimista: ${formatCurrency(pessimistic.endBalance * 100)}`
+              : undefined
+          }
+          variant={getBalanceVariant(optimistic.endBalance)}
+        />
+      </motion.div>
 
       {/* Surplus/Deficit */}
-      <div className="col-span-2 md:col-span-2">
+      <motion.div
+        className="col-span-2 md:col-span-2 h-full"
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          show: { opacity: 1, y: 0 },
+        }}
+        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      >
         <SurplusDeficit
           optimistic={optimistic.surplus}
           pessimistic={pessimistic.surplus}
         />
-      </div>
+      </motion.div>
 
       {/* Danger Days (only show if there are any) */}
       {hasDangerDays && (
-        <div className="col-span-2 md:col-span-4">
+        <motion.div
+          className="col-span-2 md:col-span-4"
+          variants={{
+            hidden: { opacity: 0, y: 10 },
+            show: { opacity: 1, y: 0 },
+          }}
+          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div
             className={cn(
               'rounded-xl border border-red-500/30 bg-red-500/5 p-4',
+              'fc-glow-red',
               'flex items-center gap-3'
             )}
           >
@@ -154,9 +218,9 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   )
 }
 

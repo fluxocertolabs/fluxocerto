@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { MotionConfig } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { motionTransitions } from '@/lib/motion'
@@ -10,7 +10,6 @@ import { FloatingHelpButton } from '@/components/help'
 import { BrandSymbol } from '@/components/brand'
 import { SetupRequired } from '@/components/setup-required'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
-import { AnimatedOutlet } from '@/components/motion/animated-outlet'
 import { Dashboard } from '@/pages/dashboard'
 import { ManagePage } from '@/pages/manage'
 import { HistoryPage } from '@/pages/history'
@@ -39,7 +38,7 @@ function AuthenticatedLayout() {
   return (
     <div className={cn('min-h-screen bg-background text-foreground')}>
       <Header />
-      <AnimatedOutlet />
+      <Outlet />
       {/* Onboarding wizard - renders as dialog overlay when active */}
       <OnboardingWizard />
       {/* Floating help button - bottom right corner (desktop/tablet only) */}
