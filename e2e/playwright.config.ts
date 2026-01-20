@@ -107,6 +107,8 @@ const port = baseUrl.port || '5173';
  */
 export default defineConfig({
   testDir: './tests',
+  // Avoid permission issues with a root-owned `test-results/` directory in some environments.
+  outputDir: 'playwright-results',
   fullyParallel: false, // Run tests serially for simplicity
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
-import Lottie from 'lottie-react'
 import { useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 type AnimationModule = { default: object } | object
+type LottieComponentType = React.ComponentType<{
+  animationData: object
+  loop?: boolean | number
+  autoplay?: boolean
+}>
 
 interface LottieIllustrationProps {
   animationLoader: () => Promise<AnimationModule>
@@ -24,6 +28,7 @@ export function LottieIllustration({
 }: LottieIllustrationProps) {
   const shouldReduceMotion = useReducedMotion()
   const [animationData, setAnimationData] = useState<object | null>(null)
+  const [LottieComponent, setLottieComponent] = useState<LottieComponentType | null>(null)
 
   useEffect(() => {
     if (shouldReduceMotion && staticFallback) {
@@ -41,6 +46,22 @@ export function LottieIllustration({
       isActive = false
     }
   }, [animationLoader, shouldReduceMotion, staticFallback])
+
+  useEffect(() => {
+    if (shouldReduceMotion) return
+    if (!animationData) return
+    if (LottieComponent) return
+
+    let isActive = true
+    void import('lottie-react').then((mod) => {
+      if (!isActive) return
+      setLottieComponent(() => mod.default as unknown as LottieComponentType)
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [shouldReduceMotion, animationData, LottieComponent])
 
   if (shouldReduceMotion && staticFallback) {
     return (
@@ -65,6 +86,16 @@ export function LottieIllustration({
     )
   }
 
+  if (!LottieComponent) {
+    return (
+      <div
+        className={cn('flex items-center justify-center', className)}
+        role="presentation"
+        aria-hidden="true"
+      />
+    )
+  }
+
   return (
     <div
       className={cn('flex items-center justify-center', className)}
@@ -72,7 +103,7 @@ export function LottieIllustration({
       aria-label={ariaLabel}
       aria-hidden={ariaLabel ? undefined : true}
     >
-      <Lottie
+      <LottieComponent
         animationData={animationData}
         loop={shouldReduceMotion ? false : loop}
         autoplay={shouldReduceMotion ? false : autoplay}
