@@ -161,7 +161,7 @@ export type RecurringProject = z.infer<typeof RecurringProjectSchema>
 
 // Backward compatibility aliases - Project refers to RecurringProject
 export const ProjectInputSchema = RecurringProjectInputSchema
-const ProjectSchema = RecurringProjectSchema
+export const ProjectSchema = RecurringProjectSchema
 export type ProjectInput = RecurringProjectInput
 export type Project = RecurringProject
 
@@ -435,7 +435,7 @@ export function transformTourStateRow(row: TourStateRow): TourState {
  * Notification type identifiers.
  * v1 supports only 'welcome', extensible in future versions.
  */
-const NotificationTypeSchema = z.enum(['welcome'])
+export const NotificationTypeSchema = z.enum(['welcome'])
 export type NotificationType = z.infer<typeof NotificationTypeSchema>
 
 /**

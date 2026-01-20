@@ -26,9 +26,6 @@
         "**/.pnpm-store/**",
         "**/e2e/tests/visual/**/*-snapshots/**",
         "**/.specify/**"
-      ],
-      "ignoreBinaries": [
-        "supabase"
       ]
     }
   },

@@ -10,8 +10,6 @@ import type { BankAccount, CreditCard, FixedExpense, SingleShotExpense, SingleSh
 import { isSameDay } from 'date-fns'
 import {
   isMonthlyPaymentDue,
-  isBiweeklyPaymentDue,
-  isWeeklyPaymentDue,
   isDayOfWeekPaymentDue,
   isTwiceMonthlyPaymentDue,
   getEffectiveDay,
