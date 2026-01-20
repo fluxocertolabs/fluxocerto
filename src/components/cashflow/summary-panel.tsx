@@ -57,6 +57,13 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
   const { startingBalance, optimistic, pessimistic } = stats
   const shouldReduceMotion = useReducedMotion()
 
+  const cardVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 },
+  } as const
+
+  const cardTransition = { duration: 0.38, ease: [0.22, 1, 0.36, 1] } as const
+
   // Determine danger status
   const hasDangerDays = optimistic.dangerDayCount > 0 || pessimistic.dangerDayCount > 0
   const maxDangerDays = Math.max(optimistic.dangerDayCount, pessimistic.dangerDayCount)
@@ -84,11 +91,8 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
       {/* Starting Balance */}
       <motion.div
         className="h-full"
-        variants={{
-          hidden: { opacity: 0, y: 10 },
-          show: { opacity: 1, y: 0 },
-        }}
-        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        variants={cardVariants}
+        transition={cardTransition}
       >
         <StatCard
           label="Saldo Inicial"
@@ -99,11 +103,8 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
       {/* Total Income (showing both scenarios) */}
       <motion.div
         className="h-full"
-        variants={{
-          hidden: { opacity: 0, y: 10 },
-          show: { opacity: 1, y: 0 },
-        }}
-        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        variants={cardVariants}
+        transition={cardTransition}
       >
         <StatCard
           label="Renda Esperada"
@@ -120,11 +121,8 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
       {/* Total Expenses */}
       <motion.div
         className="h-full"
-        variants={{
-          hidden: { opacity: 0, y: 10 },
-          show: { opacity: 1, y: 0 },
-        }}
-        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        variants={cardVariants}
+        transition={cardTransition}
       >
         <StatCard
           label="Total de Despesas"
@@ -135,11 +133,8 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
       {/* Ending Balance (optimistic) */}
       <motion.div
         className="h-full"
-        variants={{
-          hidden: { opacity: 0, y: 10 },
-          show: { opacity: 1, y: 0 },
-        }}
-        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        variants={cardVariants}
+        transition={cardTransition}
       >
         <StatCard
           label="Saldo Final"
@@ -156,11 +151,8 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
       {/* Surplus/Deficit */}
       <motion.div
         className="col-span-2 md:col-span-2 h-full"
-        variants={{
-          hidden: { opacity: 0, y: 10 },
-          show: { opacity: 1, y: 0 },
-        }}
-        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        variants={cardVariants}
+        transition={cardTransition}
       >
         <SurplusDeficit
           optimistic={optimistic.surplus}
@@ -172,11 +164,8 @@ export function SummaryPanel({ stats }: SummaryPanelProps) {
       {hasDangerDays && (
         <motion.div
           className="col-span-2 md:col-span-4"
-          variants={{
-            hidden: { opacity: 0, y: 10 },
-            show: { opacity: 1, y: 0 },
-          }}
-          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+          variants={cardVariants}
+          transition={cardTransition}
         >
           <div
             className={cn(

@@ -223,7 +223,7 @@ export function BalanceListItem({
 
           {/* Error display with retry */}
           {error && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" role="alert">
               <span className="text-xs text-red-600">{error}</span>
               <Button
                 variant="ghost"

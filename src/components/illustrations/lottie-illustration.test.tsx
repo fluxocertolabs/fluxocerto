@@ -2,10 +2,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { LottieIllustration } from '@/components/illustrations/lottie-illustration'
 
-const useReducedMotionMock = vi.fn<[], boolean>()
+const useReducedMotionMock = vi.fn(() => false)
 
 vi.mock('motion/react', async () => {
-  const actual = await vi.importActual<object>('motion/react')
+  const actual = (await vi.importActual('motion/react')) as Record<string, unknown>
   return {
     ...actual,
     useReducedMotion: () => useReducedMotionMock(),
@@ -18,6 +18,7 @@ vi.mock('lottie-react', () => ({
 
 function mockMatchMedia(matches: boolean) {
   Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
       matches: query.includes('prefers-reduced-motion') ? matches : false,
@@ -33,6 +34,17 @@ function mockMatchMedia(matches: boolean) {
 }
 
 describe('LottieIllustration', () => {
+  const originalMatchMedia = window.matchMedia
+
+  afterEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: originalMatchMedia,
+    })
+    vi.clearAllMocks()
+  })
+
   it('renders the static fallback when reduced motion is preferred', () => {
     mockMatchMedia(true)
     useReducedMotionMock.mockReturnValue(true)
