@@ -45,10 +45,33 @@ export async function disableAnimations(page: Page): Promise<void> {
  * Wait for the UI to stabilize
  */
 export async function waitForStableUI(page: Page): Promise<void> {
-  // Wait for network to be idle (or timeout)
-  await page.waitForLoadState('networkidle').catch(() => {});
-  // Small delay for any final renders
-  await page.waitForTimeout(500);
+  // Ensure the document is loaded. Visual tests run the full app (realtime, support chat, etc.)
+  // so `networkidle` is often unreachable; keep any "idle" wait short and best-effort.
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForLoadState('networkidle', { timeout: 2000 }).catch(() => {});
+
+  // Give React a couple frames to commit layout after any async data resolves.
+  // (More stable than an arbitrary long timeout, and cheap.)
+  await page.evaluate(() => {
+    return new Promise<void>((resolve) => {
+      const raf =
+        typeof requestAnimationFrame === 'function'
+          ? requestAnimationFrame
+          : (cb: FrameRequestCallback) => window.setTimeout(() => cb(performance.now()), 0);
+      raf(() => raf(() => resolve()));
+    });
+  });
+
+  // Give chart libraries a moment to paint after layout without using fixed sleeps.
+  await page.evaluate(() => {
+    return new Promise<void>((resolve) => {
+      const raf =
+        typeof requestAnimationFrame === 'function'
+          ? requestAnimationFrame
+          : (cb: FrameRequestCallback) => window.setTimeout(() => cb(performance.now()), 0);
+      raf(() => raf(() => raf(() => resolve())));
+    });
+  });
 }
 
 /**
@@ -60,7 +83,13 @@ export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(t === 'system' ? 'light' : t);
   }, theme);
-  await page.waitForTimeout(100);
+
+  // Wait for the class to be applied (no fixed sleeps).
+  const expected = theme === 'system' ? 'light' : theme;
+  await expect.poll(
+    () => page.evaluate((cls) => document.documentElement.classList.contains(cls), expected),
+    { timeout: 2000 }
+  ).toBe(true);
 }
 
 /**

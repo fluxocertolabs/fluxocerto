@@ -51,7 +51,7 @@ UI interaction → Zustand store actions → Supabase (PostgREST/RPC + Realtime)
 
 ### “Source of truth” pointers
 - **Configuration**: `package.json`, `vite.config.ts`, `supabase/config.toml`, `vercel.json`
-- **CI/CD**: `.github/workflows/ci.yml`, `.github/workflows/email-templates.yml`, `.github/workflows/update-snapshots.yml`
+- **CI/CD**: GitHub Actions workflows live in `.github/workflows/` (notably `ci.yml`, `email-templates.yml`, `update-snapshots.yml`).
 - **Entry point(s)**: `src/main.tsx`, `src/App.tsx`
 - **Core domain logic**: `src/lib/cashflow/calculate.ts` (+ `src/lib/cashflow/*`), `src/hooks/use-cashflow-projection.ts`
 - **Finance data + realtime**: `src/hooks/use-finance-data.ts` (fetches + subscribes to accounts, credit cards, etc.; applies sorting)
@@ -102,12 +102,12 @@ Notes:
 
 ### Test
 ```bash
+pnpm test               # Prints guidance; choose a specific test target
 pnpm test:unit          # Vitest (jsdom)
-pnpm test:e2e           # Playwright functional E2E
-pnpm test:visual        # Playwright visual regression (Docker locally/CI)
-pnpm test               # unit + visual + e2e (starts/stops Supabase)
-pnpm test:flakes        # Detect flaky tests (scans test-results/ for retry artifacts)
-pnpm test:flakes:fail   # Same as above, but exits non-zero if flakes found (for CI)
+pnpm test:e2e           # Playwright smoke E2E (starts/stops Supabase)
+pnpm test:e2e:auth      # Playwright auth E2E (magic link flow)
+pnpm test:visual        # Playwright visual regression
+pnpm test:all           # Runs unit + e2e + auth + visual sequentially
 ```
 
 ### Build / Release / Deploy
@@ -139,9 +139,10 @@ Deployment notes:
 - **Money**: stored as integer cents (DB `INTEGER`, app types/formatters should preserve this).
 - **Testing strategy**:
   - Unit tests: `src/**/*.test.{ts,tsx}` via Vitest (`vitest.config.ts`).
-  - E2E/visual: Playwright (`e2e/playwright.config.ts`), with per-worker group isolation.
-  - **Test suite philosophy**: Prefer fewer, high-value tests over exhaustive coverage. Remove redundant tests that cover the same patterns multiple times (e.g., one CRUD test file covers all entity types).
+  - E2E/visual: Playwright (`e2e/playwright.config.ts`) with a small smoke suite plus auth flow tests.
+  - **Test suite philosophy**: Prefer fewer, high-value tests over exhaustive coverage.
   - E2E/visual seed data uses direct Postgres (`pg`) helpers to avoid PostgREST schema cache flakiness.
+  - Smoke tests use the dev-auth bypass; the Playwright `webServer` injects `VITE_DEV_ACCESS_TOKEN` and `VITE_DEV_REFRESH_TOKEN` from `.env` to ensure the Vite dev server has tokens.
 - **Third-party integrations**:
   - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
   - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.
@@ -152,10 +153,9 @@ Deployment notes:
   - On balance update via dedicated functions (`updateAccountBalance`, `updateCreditCardBalance`)
   - On balance update via general update functions (`updateAccount`, `updateCreditCard`) when balance is included in the update
 - **E2E test parallelism**:
-  - Auth tests (`auth.spec.ts`) run **serially** with 1 worker to avoid email rate limiting (`fullyParallel: false`).
-  - Realtime-dependent tests (`notifications.spec.ts`, `accounts.spec.ts`) use `test.describe.configure({ mode: 'serial' })` to avoid race conditions with Supabase Realtime subscriptions.
-  - All other tests (visual, functional E2E) run in **parallel** with multiple workers (default: 4 locally, up to 8 in CI).
-  - Worker count is controlled via `e2e/fixtures/worker-count.ts`; override with `PW_WORKERS` env var.
+  - `e2e/playwright.config.ts` currently runs with `fullyParallel: false` and `workers: 1` for stability/simplicity.
+  - The auth suite in `e2e/tests/auth.spec.ts` is explicitly `mode: 'serial'` to avoid mailbox/rate-limit interference.
+  - If you increase worker count in the future, re-validate: email polling timing, mailbox isolation, and any assumptions about DB state.
 
 ---
 
@@ -225,19 +225,18 @@ Deployment notes:
   - `page.waitForTimeout()` is disallowed — use assertion-based waits instead.
   - `locator.isVisible({ timeout })` conditionals are disallowed — use strict `expect()` assertions.
   - Run `pnpm lint` to catch these patterns before committing.
+- **Avoid long `networkidle` waits in Playwright**:
+  - The app uses long-lived connections and third-party widgets (notably Tawk.to in cross-origin iframes) which can keep the page from ever reaching “network idle”.
+  - Prefer `domcontentloaded` + **UI-based readiness** (e.g. dashboard heading visible vs login form visible).
+  - If you use `networkidle`, keep it **bounded** (e.g. `timeout: 2000`) and treat it as best-effort.
 - **Visual test determinism** (see `e2e/fixtures/visual-test-base.ts`):
   - **Fixed date**: `VISUAL_TEST_FIXED_DATE` is set to `'2025-01-15T12:00:00.000Z'` (explicit UTC) to ensure consistent timestamps across all environments.
   - **Animations disabled**: CSS `* { animation: none !important; transition: none !important; }` is injected.
-  - **Caret hidden**: Input carets are hidden via CSS to avoid blinking cursor differences.
-  - **Font loading**: Tests wait for fonts to load before taking screenshots.
-  - **Worker-scoped context**: Visual tests share a browser context per worker. React state (Zustand stores, component state like `hasAutoShown`) persists across tests within the same worker. To reset React state, navigate to `about:blank` before navigating to the target URL.
-- **Onboarding wizard in visual tests**: The wizard auto-shows based on `canAutoShow()` which checks: (1) status not completed/dismissed, (2) `autoShownAt` is null, (3) `isMinimumSetupComplete` is false. Tests that need the wizard must call `db.clearOnboardingState()` and ensure the group has no finance data (use `db.clear()` in `beforeEach` to create a fresh empty group).
-- **Flake detection**: Run `pnpm test:flakes` after test runs to detect tests that passed via retry. Use `pnpm test:flakes:fail` in CI to fail the build if flakes are detected. Script location: `scripts/detect-flaky-tests.ts`.
-- **Visual snapshot updates**: When visual tests fail due to legitimate UI changes (not flakiness), regenerate snapshots by triggering the **"Update Visual Snapshots"** workflow in GitHub Actions. This ensures snapshots are generated in the same Docker environment as CI. Do not update snapshots locally unless you're using the same Docker image (`mcr.microsoft.com/playwright:v1.57.0-jammy`).
-- **Web server mode depends on `PW_PER_TEST_CONTEXT`**:
-  - `PW_PER_TEST_CONTEXT=1` runs `vite build` + `vite preview` in Playwright `webServer` for determinism (cold browser context per test).
-  - Default mode runs the Vite dev server for faster iteration.
-  - **CI uses default mode** (no `PW_PER_TEST_CONTEXT`). Per-test contexts were tested in CI but introduced timing-related flakes due to increased overhead. Worker-scoped contexts with proper state management are more reliable.
+  - **Theme setting**: Theme is set via `localStorage` and the root `<html>` class list; tests should wait for the expected class to be applied (avoid fixed sleeps).
+- **Visual snapshot updates**:
+  - Local update command: `pnpm test:visual:update`.
+  - CI provides an “Update Visual Snapshots” workflow (`.github/workflows/update-snapshots.yml`) that generates snapshots in the Playwright Docker image (`mcr.microsoft.com/playwright:v1.57.0-jammy`).
+  - Snapshot PNGs are stored under `e2e/tests/visual/*-snapshots/` and are not tracked in git (they’re expected to be present locally/CI via generation or artifacts).
 - **Playwright element waiting**:
   - ❌ `element.isVisible({ timeout })` - The timeout parameter is deprecated and ineffective for waiting.
   - ✅ `element.waitFor({ state: 'visible', timeout })` - Properly waits for element visibility.
@@ -286,26 +285,19 @@ Deployment notes:
 The test suite is intentionally lean. When adding or reviewing tests, follow these principles:
 
 - **Visual tests**:
-  - Test **light theme only** by default. Dark theme is a CSS class toggle—one verification per app is sufficient.
-  - Test **populated states** (with data) over empty states when possible—empty states have less visual regression risk.
+  - Currently limited to `dashboard.visual.spec.ts` and `login.visual.spec.ts` (light theme only).
+  - Prefer **populated states** over empty states when possible.
   - Skip visual tests for simple components (buttons, badges, simple forms) that have low regression risk.
-  - Deleted visual test files: `floating-help.visual.spec.ts`, `page-tours.visual.spec.ts`, `notifications.visual.spec.ts`, `profile.visual.spec.ts` (low-value).
 
 - **E2E functional tests**:
   - **One CRUD test file per pattern** (`accounts.spec.ts`), not per entity type. Credit cards, expenses, and projects use the same UI patterns—testing all four is redundant.
-  - Deleted redundant CRUD files: `credit-cards.spec.ts`, `expenses.spec.ts`, `projects.spec.ts`.
-  - **Mobile functional tests are redundant** with desktop tests + mobile visual tests. Deleted `e2e/tests/mobile/` directory.
-  - Consolidated dashboard tests: `dashboard-estimated-balance.spec.ts` and `dashboard-health-indicator.spec.ts` merged into `dashboard.spec.ts`.
+  - **Mobile functional tests are redundant** with desktop tests; keep mobile coverage lean.
+  - Dashboard smoke coverage lives in `dashboard.spec.ts`.
 
 - **Database isolation**:
-  - The `_perTestDbReset` auto-fixture was removed to reduce DB contention under parallel load.
   - Tests that need a clean state must call `db.clear()` explicitly at the start.
-  - Tests interacting with Supabase Realtime (e.g., `notifications.spec.ts`, `accounts.spec.ts`) should use `test.describe.configure({ mode: 'serial' })` to avoid race conditions.
 
-- **Current test counts** (as of Jan 2026):
-  - Unit tests: ~1,332 tests
-  - E2E functional: ~95 tests
-  - Visual regression: ~100 tests
+- **Current test counts**: not tracked here; rely on `pnpm test:unit` / Playwright output for real totals.
 
 ### Unit test patterns
 

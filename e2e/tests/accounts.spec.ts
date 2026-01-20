@@ -16,7 +16,7 @@
 import { test, expect } from '../fixtures/smoke-test-base';
 
 test.describe('Account Management Smoke Tests', () => {
-  test.skip('can create a new checking account', async ({ page, managePage, db }) => {
+  test.skip('can create a new checking account', async ({ page: _page, managePage, db }) => {
     // Seed some initial data so we're not on empty state
     await db.seedAccounts([{ name: 'Existing Account', type: 'checking', balance: 100000 }]);
 
@@ -38,7 +38,7 @@ test.describe('Account Management Smoke Tests', () => {
     await accounts.expectAccountVisible(accountName);
   });
 
-  test.skip('can edit an account name', async ({ page, managePage, db }) => {
+  test.skip('can edit an account name', async ({ page: _page, managePage, db }) => {
     const uniqueId = Date.now();
     const originalName = `Original Account ${uniqueId}`;
     const newName = `Updated Account ${uniqueId}`;

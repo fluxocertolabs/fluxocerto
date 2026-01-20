@@ -243,21 +243,24 @@ test.describe('Authentication Flow', () => {
         }
       }
     }
-    // Wait for network to settle or continue after timeout (long-lived connections may prevent full idle)
-    await page.waitForLoadState('networkidle').catch(() => {});
+    // Avoid long `networkidle` waits; the app uses long-lived connections that can keep it "busy".
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle', { timeout: 2000 }).catch(() => {});
 
-    // Should still be on dashboard (not redirected to login)
-    const dashboardUrl = /\/(dashboard)?$/;
-    const loginUrl = /\/login(?:\/|$)/;
+    // Deterministic outcome: either we land on dashboard UI or the login form shows.
+    const dashboardHeading = page.getByRole('heading', { name: /painel de fluxo de caixa/i });
+    const loginEmail = page.locator('#email');
+
     const outcome = await Promise.race([
-      page.waitForURL(dashboardUrl, { timeout: isPerTestContext ? 30000 : 30000 }).then(() => 'dashboard' as const),
-      page.waitForURL(loginUrl, { timeout: isPerTestContext ? 30000 : 30000 }).then(() => 'login' as const),
+      dashboardHeading.waitFor({ state: 'visible', timeout: isPerTestContext ? 30000 : 20000 }).then(() => 'dashboard' as const),
+      loginEmail.waitFor({ state: 'visible', timeout: isPerTestContext ? 30000 : 20000 }).then(() => 'login' as const),
     ]);
+
     if (outcome === 'login') {
-      throw new Error(`Expected session to persist after reload, but was redirected to login. url=${page.url()}`);
+      throw new Error(`Expected session to persist after reload, but login form is visible. url=${page.url()}`);
     }
-    // Prefer asserting the absence of the actual login form (more deterministic than generic text).
-    await expect(page.locator('#email')).toBeHidden({ timeout: isPerTestContext ? 30000 : 20000 });
+
+    await expect(dashboardHeading).toBeVisible({ timeout: isPerTestContext ? 30000 : 20000 });
   });
 
   test('T026: authenticated user clicks sign out → logged out, redirected to login', async ({
@@ -301,9 +304,10 @@ test.describe('Authentication Flow', () => {
       return hasAuthToken || hasSessionAuth;
     }, null, { timeout: 20000 });
 
-    // Wait for the page to fully load (long-lived connections may prevent full idle)
-    await page.waitForLoadState('networkidle').catch(() => {});
-    
+    // Ensure the dashboard has mounted. Avoid waiting for `networkidle` because the app uses
+    // long-lived connections (realtime/support chat) that can keep the network "busy".
+    await page.waitForLoadState('domcontentloaded');
+
     // Ensure onboarding/tour overlays never block the sign-out flow in this auth-only spec.
     // We mark onboarding as completed + dismiss tours via admin SQL and then reload.
     const userId = await getUserIdFromEmail(TEST_EMAIL);
@@ -345,9 +349,14 @@ test.describe('Authentication Flow', () => {
       [userId]
     );
 
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 });
-    // Wait for network to settle or continue after timeout (long-lived connections may prevent full idle)
-    await page.waitForLoadState('networkidle').catch(() => {});
+    // Refresh app state so it re-reads onboarding/tour state. `page.reload()` can hang under
+    // suite load; fall back to a clean navigation which is typically more reliable.
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 15000 });
+    } catch (err) {
+      console.warn('page.reload failed; falling back to page.goto:', err);
+      await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+    }
 
     const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
     await expect(wizardDialog).toBeHidden({ timeout: 20000 });
@@ -365,10 +374,13 @@ test.describe('Authentication Flow', () => {
     // Click sign out - the button text is "Sair" in Portuguese
     const signOutButton = page.getByRole('button', { name: /sair/i });
     await expect(signOutButton).toBeVisible({ timeout: 10000 });
-    await signOutButton.click();
+    await Promise.all([
+      page.waitForURL(/\/login(?:\/|$)/, { timeout: 20000 }),
+      signOutButton.click(),
+    ]);
 
-    // Verify redirected to login (with longer timeout for auth state to update)
-    await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+    // Prefer asserting the actual login form is visible (more deterministic than URL alone).
+    await expect(page.locator('#email')).toBeVisible({ timeout: 20000 });
   });
 
   test('T027: unauthenticated user accesses dashboard directly → redirected to login', async ({

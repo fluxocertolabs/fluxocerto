@@ -11,6 +11,10 @@ import { visualTest, expect } from '../../fixtures/visual-test-base';
 
 visualTest.describe('Dashboard Visual Regression @visual', () => {
   visualTest('dashboard - populated state', async ({ page, dashboardPage, db, visual }) => {
+    // Visual tests can be slower under load (cold cache + chart rendering + screenshot).
+    // Keep assertions strict but give the test enough headroom to avoid flaky timeouts.
+    visualTest.setTimeout(120000);
+
     await db.clear();
 
     // Seed a typical populated scenario

@@ -145,12 +145,14 @@ pnpm preview      # Preview production build locally
 pnpm lint         # Run ESLint
 pnpm lint:fix     # Fix ESLint issues
 pnpm typecheck    # Run TypeScript type checking
-pnpm test         # Full test suite (unit + visual + e2e)
+pnpm test         # Prints guidance; choose a test target
 pnpm test:unit    # Unit tests (Vitest)
 pnpm test:unit:watch
 pnpm test:unit:coverage
-pnpm test:e2e     # Playwright functional E2E
+pnpm test:e2e     # Playwright smoke E2E
+pnpm test:e2e:auth
 pnpm test:visual  # Playwright visual regression
+pnpm test:all     # Unit + E2E + auth + visual
 ```
 
 ## Usage
