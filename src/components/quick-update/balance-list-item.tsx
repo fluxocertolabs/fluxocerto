@@ -226,6 +226,7 @@ export function BalanceListItem({
             <div className="flex items-center gap-2" role="alert">
               <span className="text-xs text-red-600">{error}</span>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={handleRetry}

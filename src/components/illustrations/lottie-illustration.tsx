@@ -130,8 +130,8 @@ export function LottieIllustration({
     >
       <LottieComponent
         animationData={animationData}
-        loop={shouldReduceMotion ? false : loop}
-        autoplay={shouldReduceMotion ? false : autoplay}
+        loop={loop}
+        autoplay={autoplay}
       />
     </div>
   )
