@@ -249,43 +249,53 @@ async function ensureAllowedEmail(client: SupabaseClient): Promise<void> {
 // ============================================================================
 
 /**
- * Create dev group (formerly household) if not exists
- * Idempotent: returns existing group if found
+ * Ensure the dev group exists and is the one the dev user is associated with.
+ *
+ * IMPORTANT:
+ * The database provisioning migration (`ensure_current_user_group` / `handle_new_user`)
+ * uses a deterministic invariant for self-serve users:
+ *   group_id = user_id
+ *
+ * So for dev@local we must ensure the group with id = dev user id exists and has the
+ * expected name, rather than creating an unrelated group by name (which the app
+ * would not be associated with).
  */
-async function createDevHousehold(
-  client: SupabaseClient
+async function ensureDevGroup(
+  client: SupabaseClient,
+  userId: string
 ): Promise<{ id: string; isNew: boolean }> {
-  log('Creating group...');
-  
-  // Check if group exists (by name)
+  log('Ensuring dev group exists...');
+
   const { data: existing, error: checkError } = await client
     .from('groups')
-    .select('id')
-    .eq('name', DEV_HOUSEHOLD_NAME)
+    .select('id, name')
+    .eq('id', userId)
     .maybeSingle();
-  
+
   if (checkError && !checkError.message.includes('no rows')) {
     throw new Error(`Failed to check group: ${checkError.message}`);
   }
-  
+
+  // Create or update group (idempotent)
+  const { error: upsertError } = await client.from('groups').upsert(
+    {
+      id: userId,
+      name: DEV_HOUSEHOLD_NAME,
+    },
+    { onConflict: 'id' }
+  );
+
+  if (upsertError) {
+    throw new Error(`Failed to upsert group: ${upsertError.message}`);
+  }
+
   if (existing) {
-    logSuccess(`Group found: ${DEV_HOUSEHOLD_NAME}`);
-    return { id: existing.id, isNew: false };
+    logSuccess(`Group ensured: ${DEV_HOUSEHOLD_NAME}`);
+    return { id: userId, isNew: false };
   }
-  
-  // Create new group
-  const { data: created, error: createError } = await client
-    .from('groups')
-    .insert({ name: DEV_HOUSEHOLD_NAME })
-    .select('id')
-    .single();
-  
-  if (createError) {
-    throw new Error(`Failed to create group: ${createError.message}`);
-  }
-  
+
   logSuccess(`Group created: ${DEV_HOUSEHOLD_NAME}`);
-  return { id: created.id, isNew: true };
+  return { id: userId, isNew: true };
 }
 
 /**
@@ -294,6 +304,7 @@ async function createDevHousehold(
  */
 async function createDevProfile(
   client: SupabaseClient,
+  userId: string,
   groupId: string
 ): Promise<{ id: string; isNew: boolean }> {
   log('Creating profile...');
@@ -301,7 +312,7 @@ async function createDevProfile(
   // Check if profile exists (by email)
   const { data: existing, error: checkError } = await client
     .from('profiles')
-    .select('id')
+    .select('id, group_id')
     .eq('email', DEV_USER_EMAIL)
     .maybeSingle();
   
@@ -310,6 +321,19 @@ async function createDevProfile(
   }
   
   if (existing) {
+    // Ensure the profile is linked to the deterministic group id (user_id).
+    // This keeps dev@local consistent with the signup provisioning invariant.
+    if (existing.group_id !== groupId) {
+      const { error: updateError } = await client
+        .from('profiles')
+        .update({ group_id: groupId })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        throw new Error(`Failed to relink profile to group: ${updateError.message}`);
+      }
+    }
+
     logSuccess('Profile found, linked to group');
     return { id: existing.id, isNew: false };
   }
@@ -318,9 +342,10 @@ async function createDevProfile(
   const { data: created, error: createError } = await client
     .from('profiles')
     .insert({
-      name: DEV_PROFILE_NAME,
+      id: userId,
       email: DEV_USER_EMAIL,
       group_id: groupId,
+      name: DEV_PROFILE_NAME,
     })
     .select('id')
     .single();
@@ -384,6 +409,79 @@ async function createSeedAccount(
 }
 
 // ============================================================================
+// Onboarding / Tours (keep dev workflow unblocked)
+// ============================================================================
+
+async function ensureOnboardingCompleted(
+  client: SupabaseClient,
+  userId: string,
+  groupId: string
+): Promise<void> {
+  log('Ensuring onboarding is marked completed...');
+
+  const { error } = await client.from('onboarding_states').upsert(
+    {
+      user_id: userId,
+      group_id: groupId,
+      status: 'completed',
+      current_step: 'done',
+      auto_shown_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      dismissed_at: null,
+      metadata: { seeded_by: 'scripts/generate-dev-token.ts' },
+    },
+    { onConflict: 'user_id,group_id' }
+  );
+
+  if (error) {
+    // If the table doesn't exist yet (older local DB), don't fail dev token generation.
+    const msg = error.message.toLowerCase();
+    if (msg.includes('relation') && msg.includes('does not exist')) {
+      log('  (onboarding_states table not found - skipping)');
+      return;
+    }
+    if (msg.includes('could not find the table') && msg.includes('onboarding_states')) {
+      log('  (onboarding_states table not found in schema cache - skipping)');
+      return;
+    }
+    throw new Error(`Failed to upsert onboarding state: ${error.message}`);
+  }
+
+  logSuccess('Onboarding marked completed');
+}
+
+async function ensureToursDismissed(client: SupabaseClient, userId: string): Promise<void> {
+  log('Ensuring page tours are dismissed...');
+
+  const now = new Date().toISOString();
+  const rows = (['dashboard', 'manage', 'history'] as const).map((tourKey) => ({
+    user_id: userId,
+    tour_key: tourKey,
+    status: 'dismissed',
+    version: 1,
+    dismissed_at: now,
+    completed_at: null,
+  }));
+
+  const { error } = await client.from('tour_states').upsert(rows, { onConflict: 'user_id,tour_key' });
+
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('relation') && msg.includes('does not exist')) {
+      log('  (tour_states table not found - skipping)');
+      return;
+    }
+    if (msg.includes('could not find the table') && msg.includes('tour_states')) {
+      log('  (tour_states table not found in schema cache - skipping)');
+      return;
+    }
+    throw new Error(`Failed to upsert tour states: ${error.message}`);
+  }
+
+  logSuccess('Tours dismissed');
+}
+
+// ============================================================================
 // Token Generation (US1)
 // ============================================================================
 
@@ -443,19 +541,23 @@ async function main(): Promise<void> {
     console.log('');
     
     // Create dev user (US1 + US2)
-    await findOrCreateDevUser(client);
+    const devUser = await findOrCreateDevUser(client);
     
     // Add to allowed_emails (US2)
     await ensureAllowedEmail(client);
     
-    // Create household (US3)
-    const household = await createDevHousehold(client);
-    
-    // Create profile (US3)
-    const profile = await createDevProfile(client, household.id);
+    // Ensure the dev user's group exists (deterministic: group_id = user_id)
+    const group = await ensureDevGroup(client, devUser.id);
+
+    // Ensure profile exists and is linked to that group
+    const profile = await createDevProfile(client, devUser.id, group.id);
     
     // Create seed account (US3)
-    await createSeedAccount(client, household.id, profile.id);
+    await createSeedAccount(client, group.id, profile.id);
+
+    // Ensure onboarding/tours don't block the dashboard in local dev and CI E2E.
+    await ensureOnboardingCompleted(client, devUser.id, group.id);
+    await ensureToursDismissed(client, devUser.id);
     
     console.log('');
     
