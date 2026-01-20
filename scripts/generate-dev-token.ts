@@ -20,6 +20,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { Client as PgClient } from 'pg';
 
 // ============================================================================
 // Configuration
@@ -33,6 +34,13 @@ const DEV_ACCOUNT_NAME = 'Dev Checking';
 const DEV_ACCOUNT_BALANCE = 1000000; // $10,000.00 in cents
 
 const SUPABASE_URL = 'http://127.0.0.1:54321';
+const PG_CONFIG = {
+  host: '127.0.0.1',
+  port: 54322,
+  database: 'postgres',
+  user: 'postgres',
+  password: 'postgres',
+};
 
 // ============================================================================
 // Utilities
@@ -48,6 +56,16 @@ function logSuccess(message: string): void {
 
 function logError(message: string): void {
   console.error(`✗ ${message}`);
+}
+
+async function executeSQL(sql: string, params?: unknown[]): Promise<void> {
+  const client = new PgClient(PG_CONFIG);
+  try {
+    await client.connect();
+    await client.query(sql, params);
+  } finally {
+    await client.end();
+  }
 }
 
 /**
@@ -413,70 +431,51 @@ async function createSeedAccount(
 // ============================================================================
 
 async function ensureOnboardingCompleted(
-  client: SupabaseClient,
   userId: string,
   groupId: string
 ): Promise<void> {
   log('Ensuring onboarding is marked completed...');
 
-  const { error } = await client.from('onboarding_states').upsert(
-    {
-      user_id: userId,
-      group_id: groupId,
-      status: 'completed',
-      current_step: 'done',
-      auto_shown_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
-      dismissed_at: null,
-      metadata: { seeded_by: 'scripts/generate-dev-token.ts' },
-    },
-    { onConflict: 'user_id,group_id' }
+  // Use direct SQL instead of PostgREST to avoid schema-cache races in CI.
+  const now = new Date().toISOString();
+  await executeSQL(
+    `INSERT INTO public.onboarding_states
+      (user_id, group_id, status, current_step, auto_shown_at, dismissed_at, completed_at, metadata)
+     VALUES
+      ($1, $2, 'completed', 'done', $3, NULL, $4, $5::jsonb)
+     ON CONFLICT (user_id, group_id) DO UPDATE SET
+      status = EXCLUDED.status,
+      current_step = EXCLUDED.current_step,
+      auto_shown_at = EXCLUDED.auto_shown_at,
+      dismissed_at = NULL,
+      completed_at = EXCLUDED.completed_at,
+      metadata = EXCLUDED.metadata`,
+    [userId, groupId, now, now, JSON.stringify({ seeded_by: 'scripts/generate-dev-token.ts' })]
   );
-
-  if (error) {
-    // If the table doesn't exist yet (older local DB), don't fail dev token generation.
-    const msg = error.message.toLowerCase();
-    if (msg.includes('relation') && msg.includes('does not exist')) {
-      log('  (onboarding_states table not found - skipping)');
-      return;
-    }
-    if (msg.includes('could not find the table') && msg.includes('onboarding_states')) {
-      log('  (onboarding_states table not found in schema cache - skipping)');
-      return;
-    }
-    throw new Error(`Failed to upsert onboarding state: ${error.message}`);
-  }
 
   logSuccess('Onboarding marked completed');
 }
 
-async function ensureToursDismissed(client: SupabaseClient, userId: string): Promise<void> {
+async function ensureToursDismissed(userId: string): Promise<void> {
   log('Ensuring page tours are dismissed...');
 
+  // Use direct SQL instead of PostgREST to avoid schema-cache races in CI.
   const now = new Date().toISOString();
-  const rows = (['dashboard', 'manage', 'history'] as const).map((tourKey) => ({
-    user_id: userId,
-    tour_key: tourKey,
-    status: 'dismissed',
-    version: 1,
-    dismissed_at: now,
-    completed_at: null,
-  }));
-
-  const { error } = await client.from('tour_states').upsert(rows, { onConflict: 'user_id,tour_key' });
-
-  if (error) {
-    const msg = error.message.toLowerCase();
-    if (msg.includes('relation') && msg.includes('does not exist')) {
-      log('  (tour_states table not found - skipping)');
-      return;
-    }
-    if (msg.includes('could not find the table') && msg.includes('tour_states')) {
-      log('  (tour_states table not found in schema cache - skipping)');
-      return;
-    }
-    throw new Error(`Failed to upsert tour states: ${error.message}`);
-  }
+  const version = 1;
+  await executeSQL(
+    `INSERT INTO public.tour_states
+      (user_id, tour_key, status, version, dismissed_at, completed_at)
+     VALUES
+      ($1, 'dashboard', 'dismissed', $2, $3, NULL),
+      ($1, 'manage',    'dismissed', $2, $3, NULL),
+      ($1, 'history',   'dismissed', $2, $3, NULL)
+     ON CONFLICT (user_id, tour_key) DO UPDATE SET
+      status = EXCLUDED.status,
+      version = EXCLUDED.version,
+      dismissed_at = EXCLUDED.dismissed_at,
+      completed_at = EXCLUDED.completed_at`,
+    [userId, version, now]
+  );
 
   logSuccess('Tours dismissed');
 }
@@ -556,8 +555,8 @@ async function main(): Promise<void> {
     await createSeedAccount(client, group.id, profile.id);
 
     // Ensure onboarding/tours don't block the dashboard in local dev and CI E2E.
-    await ensureOnboardingCompleted(client, devUser.id, group.id);
-    await ensureToursDismissed(client, devUser.id);
+    await ensureOnboardingCompleted(devUser.id, group.id);
+    await ensureToursDismissed(devUser.id);
     
     console.log('');
     

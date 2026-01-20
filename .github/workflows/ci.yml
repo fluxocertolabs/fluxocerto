@@ -114,38 +114,6 @@ jobs:
           if_no_artifact_found: warn
           search_artifacts: true
 
-      - name: Check visual baseline matches current commit
-        id: baseline
-        run: |
-          EXPECTED_SHA="${{ github.sha }}"
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            EXPECTED_SHA="${{ github.event.workflow_run.head_sha }}"
-          fi
-
-          META_FILE="e2e/tests/visual/visual-baseline.json"
-          if [ ! -f "$META_FILE" ]; then
-            echo "run=false" >> $GITHUB_OUTPUT
-            echo "reason=missing_metadata" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          BASELINE_SHA="$(jq -r '.commitSha // empty' "$META_FILE")"
-          if [ -z "$BASELINE_SHA" ]; then
-            echo "run=false" >> $GITHUB_OUTPUT
-            echo "reason=missing_sha" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          if [ "$BASELINE_SHA" != "$EXPECTED_SHA" ]; then
-            echo "run=false" >> $GITHUB_OUTPUT
-            echo "reason=stale_baseline" >> $GITHUB_OUTPUT
-            echo "baseline_sha=$BASELINE_SHA" >> $GITHUB_OUTPUT
-            echo "expected_sha=$EXPECTED_SHA" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "run=true" >> $GITHUB_OUTPUT
-
       # Step 3: Install Supabase CLI
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -171,7 +139,6 @@ jobs:
       # don't matter in CI since the workspace is ephemeral
       # Playwright's webServer config handles starting the dev server automatically
       - name: Run Visual Regression tests
-        if: steps.baseline.outputs.run == 'true'
         run: |
           docker run --rm \
             --network host \
@@ -187,20 +154,6 @@ jobs:
             -e PLAYWRIGHT_TITLE="🖼️ Visual Regression Tests" \
             mcr.microsoft.com/playwright:v1.57.0-jammy \
             /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm run gen:token && pnpm exec playwright test --config e2e/playwright.config.ts --project=visual'
-
-      - name: Visual baseline missing or stale (skipping)
-        if: steps.baseline.outputs.run != 'true'
-        run: |
-          echo "## 🖼️ Visual Regression: skipped (baseline not up to date)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Reason:** \`${{ steps.baseline.outputs.reason }}\`" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.baseline.outputs.reason }}" = "stale_baseline" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Expected baseline SHA:** \`${{ steps.baseline.outputs.expected_sha }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Found baseline SHA:** \`${{ steps.baseline.outputs.baseline_sha }}\`" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Run the **Update Visual Snapshots** workflow on this commit to regenerate the baseline snapshots artifact." >> $GITHUB_STEP_SUMMARY
 
       # Step 7: Upload visual diff artifacts on failure
       - name: Upload Visual Regression report
