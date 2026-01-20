@@ -192,8 +192,12 @@ export function Dashboard() {
             </div>
           )}
 
-          {/* Estimated-today indicator (scenario-specific) */}
-          {estimate?.hasBase && estimate.base && estimate.isEstimated[activeScenario] && (
+          {/* Estimated-today indicator (scenario-specific)
+              Hide when there is stale data guidance, to avoid duplicate banners. */}
+          {estimate?.hasBase &&
+            estimate.base &&
+            estimate.isEstimated[activeScenario] &&
+            !healthIndicator.isStale && (
             <EstimatedBalanceIndicator
               base={estimate.base}
               onUpdateBalances={() => setShowQuickUpdate(true)}
