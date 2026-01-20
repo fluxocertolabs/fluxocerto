@@ -58,6 +58,11 @@ test.describe('Dashboard Smoke Tests', () => {
     // Open quick update
     await dashboardPage.openQuickUpdate();
     await quickUpdatePage.waitForModal();
+
+    // Clean up: close the dialog so it can't interfere with subsequent interactions
+    // (particularly important in CI where contexts may be reused/slow to tear down).
+    await quickUpdatePage.cancel();
+    await quickUpdatePage.expectModalClosed();
   });
 
   test('can change projection period', async ({ page, dashboardPage, db }) => {

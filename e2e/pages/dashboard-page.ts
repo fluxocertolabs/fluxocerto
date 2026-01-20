@@ -114,9 +114,38 @@ export class DashboardPage {
    * Change projection period
    */
   async selectProjectionDays(days: 7 | 14 | 30 | 60 | 90): Promise<void> {
+    // In CI we occasionally end up with a dialog overlay still open (e.g. Quick Update / onboarding),
+    // which will intercept clicks and cause long timeouts. Make this interaction self-healing.
+    await this.dismissBlockingDialogOverlay();
     await this.projectionSelector.click();
     // The Select component shows options like "7 dias", "30 dias", "60 dias", "90 dias"
     await this.page.getByRole('option', { name: new RegExp(`${days}\\s*dias?`, 'i') }).click();
+  }
+
+  /**
+   * Dismiss any open Radix dialog overlay that would intercept pointer events.
+   * We prefer a small, targeted recovery (Escape + wait) rather than force-clicking.
+   */
+  private async dismissBlockingDialogOverlay(): Promise<void> {
+    const overlay = this.page
+      .locator('div[data-state="open"][aria-hidden="true"][data-aria-hidden="true"]')
+      .first();
+
+    // Fast path: no overlay.
+    const isVisible = await overlay.isVisible().catch(() => false);
+    if (!isVisible) return;
+
+    // Try a couple of Esc presses to close whatever dialog is open.
+    for (let i = 0; i < 3; i += 1) {
+      await this.page.keyboard.press('Escape').catch(() => {});
+      // Give Radix time to update state/animations.
+      await this.page.waitForTimeout(150);
+      const stillVisible = await overlay.isVisible().catch(() => false);
+      if (!stillVisible) return;
+    }
+
+    // If it's still visible, fail with context instead of silently forcing interactions.
+    await expect(overlay).not.toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -127,6 +156,7 @@ export class DashboardPage {
    * "Atualizar Saldos" buttons are present on the page.
    */
   async openQuickUpdate(): Promise<void> {
+    await this.dismissBlockingDialogOverlay();
     // Wait for page to be fully loaded first
     await Promise.race([this.page.waitForLoadState('networkidle'), this.page.waitForTimeout(5000)]);
 
