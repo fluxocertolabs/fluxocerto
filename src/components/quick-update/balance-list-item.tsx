@@ -133,11 +133,11 @@ export function BalanceListItem({
   })()
 
   return (
-    <div className="relative pl-6">
+    <div className="relative pl-4 -ml-4 md:pl-6 md:-ml-6">
       {/* Outward glow (kept inside the scroll container gutter so it won't be clipped) */}
       <div
         className={cn(
-          'pointer-events-none absolute inset-y-0 left-0 w-6 rounded-l-lg',
+          'pointer-events-none absolute inset-y-0 left-0 w-4 rounded-l-lg md:w-6',
           FRESHNESS_GLOW_CLASSES[freshness],
         )}
         aria-hidden="true"

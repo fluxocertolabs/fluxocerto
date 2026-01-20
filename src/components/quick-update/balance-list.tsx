@@ -59,7 +59,7 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {/* Loading skeleton */}
         {[1, 2, 3].map((i) => (
           <div
@@ -72,15 +72,15 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {/* Section: Bank Accounts */}
       {accounts.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted-foreground px-1">
             Contas Bancárias
           </h3>
           <motion.div
-            className="space-y-2"
+            className="space-y-3"
             initial={shouldReduceMotion ? false : 'hidden'}
             animate={shouldReduceMotion ? undefined : 'show'}
             variants={{
@@ -117,12 +117,12 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
 
       {/* Section: Credit Cards */}
       {creditCards.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted-foreground px-1">
             Cartões de Crédito
           </h3>
           <motion.div
-            className="space-y-2"
+            className="space-y-3"
             initial={shouldReduceMotion ? false : 'hidden'}
             animate={shouldReduceMotion ? undefined : 'show'}
             variants={{
