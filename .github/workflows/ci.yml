@@ -146,7 +146,7 @@ jobs:
             -e TEST_USER_EMAIL=e2e-test@example.com \
             -e PLAYWRIGHT_TITLE="🖼️ Visual Regression Tests" \
             mcr.microsoft.com/playwright:v1.57.0-jammy \
-            /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test --config e2e/playwright.config.ts --project=visual'
+            /bin/bash -c 'corepack enable && pnpm install --frozen-lockfile && pnpm run gen:token && pnpm exec playwright test --config e2e/playwright.config.ts --project=visual'
 
       # Step 7: Upload visual diff artifacts on failure
       - name: Upload Visual Regression report
@@ -234,6 +234,7 @@ jobs:
       - name: Run E2E tests
         run: |
           pnpm db:ensure
+          pnpm run gen:token
           pnpm exec playwright test --config e2e/playwright.config.ts --project=smoke
           EXIT_CODE=$?
           pnpm db:stop
