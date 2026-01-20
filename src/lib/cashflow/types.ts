@@ -6,20 +6,6 @@
  */
 
 // =============================================================================
-// ENGINE CONFIGURATION
-// =============================================================================
-
-/**
- * Configuration options for cashflow projection
- */
-export interface CashflowEngineOptions {
-  /** Start date for projection (default: today) */
-  startDate?: Date
-  /** Number of days to project (default: 30, min: 1) */
-  projectionDays?: number
-}
-
-// =============================================================================
 // OUTPUT TYPES
 // =============================================================================
 
@@ -129,10 +115,6 @@ export interface CashflowProjection {
 export enum CashflowErrorCode {
   INVALID_INPUT = 'INVALID_INPUT',
   INVALID_AMOUNT = 'INVALID_AMOUNT',
-  INVALID_DAY = 'INVALID_DAY',
-  INVALID_FREQUENCY = 'INVALID_FREQUENCY',
-  INVALID_CERTAINTY = 'INVALID_CERTAINTY',
-  INVALID_PROJECTION_DAYS = 'INVALID_PROJECTION_DAYS',
 }
 
 /**

@@ -44,42 +44,10 @@ export interface CoordinatedLoadingState {
 }
 
 /**
- * Props for skeleton wrapper components.
- */
-export interface SkeletonWrapperProps {
-  /** Whether content is currently loading */
-  isLoading: boolean
-  /** Error object if loading failed */
-  error?: Error | null
-  /** Callback to retry loading */
-  onRetry?: () => void
-  /** Page-specific skeleton component to render */
-  skeleton: React.ReactNode
-  /** Actual content to render when loaded */
-  children: React.ReactNode
-  /** Optional custom loading config */
-  config?: LoadingConfig
-}
-
-/**
  * Props for page-level skeleton components.
  * Each page has its own skeleton that matches its layout.
  */
 export interface PageSkeletonProps {
-  /** Optional additional CSS classes */
-  className?: string
-}
-
-/**
- * Props for the base skeleton card building block.
- */
-export interface SkeletonCardProps {
-  /** Width of the card (Tailwind class) */
-  width?: string
-  /** Height of the card (Tailwind class) */
-  height?: string
-  /** Whether to show shimmer animation */
-  shimmer?: boolean
   /** Optional additional CSS classes */
   className?: string
 }
@@ -99,7 +67,7 @@ export interface SkeletonLineProps {
 /**
  * Error state information for display.
  */
-export interface LoadingErrorState {
+interface LoadingErrorState {
   /** Type of error that occurred */
   type: 'network' | 'timeout' | 'api' | 'unknown'
   /** User-friendly error message */

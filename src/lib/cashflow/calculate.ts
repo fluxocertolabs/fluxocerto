@@ -10,8 +10,6 @@ import type { BankAccount, CreditCard, FixedExpense, SingleShotExpense, SingleSh
 import { isSameDay } from 'date-fns'
 import {
   isMonthlyPaymentDue,
-  isBiweeklyPaymentDue,
-  isWeeklyPaymentDue,
   isDayOfWeekPaymentDue,
   isTwiceMonthlyPaymentDue,
   getEffectiveDay,
@@ -83,7 +81,6 @@ function getAmountForTwiceMonthlyPayment(
 
 /**
  * Create income events for a specific day based on project payment schedules.
- * Supports both new PaymentSchedule system and legacy paymentDay field for backward compatibility.
  */
 function createIncomeEvents(
   date: Date,
@@ -135,19 +132,6 @@ function createIncomeEvents(
           if (schedule.type === 'dayOfWeek') {
             isDue = isDayOfWeekPaymentDue(date, schedule.dayOfWeek)
           }
-          break
-      }
-    } else if (project.paymentDay !== undefined) {
-      // Backward compatibility: fall back to legacy paymentDay field
-      switch (project.frequency) {
-        case 'monthly':
-          isDue = isMonthlyPaymentDue(date, project.paymentDay)
-          break
-        case 'biweekly':
-          isDue = isBiweeklyPaymentDue(date, dayOffset, project.paymentDay, project.id, firstOccurrences)
-          break
-        case 'weekly':
-          isDue = isWeeklyPaymentDue(date, dayOffset, project.paymentDay, project.id, firstOccurrences)
           break
       }
     }
@@ -398,7 +382,7 @@ export function generateScenarioSummary(
  * ```typescript
  * const projection = calculateCashflow({
  *   accounts: [{ id: '1', name: 'Checking', type: 'checking', balance: 500000, ... }],
- *   projects: [{ id: '1', name: 'Salary', amount: 300000, paymentDay: 15, ... }],
+ *   projects: [{ id: '1', name: 'Salary', amount: 300000, paymentSchedule: { type: 'dayOfMonth', dayOfMonth: 15 }, ... }],
  *   expenses: [{ id: '1', name: 'Rent', amount: 150000, dueDay: 1, ... }],
  *   creditCards: [{ id: '1', name: 'Visa', statementBalance: 50000, dueDay: 20, ... }],
  *   options: { projectionDays: 30 }

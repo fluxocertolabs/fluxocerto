@@ -90,7 +90,6 @@ function createProjects(): Project[] {
           : i % 4 === 2
             ? { type: 'twiceMonthly', firstDay: 5, secondDay: 20 }
             : { type: 'dayOfMonth', dayOfMonth: ((i % 28) + 1) as number },
-      paymentDay: undefined,
       certainty: i % 3 === 0 ? 'guaranteed' : i % 3 === 1 ? 'probable' : 'uncertain',
       isActive: true,
       createdAt: now,

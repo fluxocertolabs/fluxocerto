@@ -1,15 +1,5 @@
 import { z } from 'zod'
 
-// === Group ===
-export const GroupSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1).max(100),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-})
-
-export type Group = z.infer<typeof GroupSchema>
-
 // === Profile (Owner) ===
 export const ProfileSchema = z.object({
   id: z.string().uuid(),
@@ -50,7 +40,7 @@ export type BankAccount = z.infer<typeof BankAccountSchema>
  * Payment schedule for weekly/biweekly frequencies.
  * Uses ISO 8601 day numbering: 1 = Monday, 7 = Sunday
  */
-export const DayOfWeekScheduleSchema = z.object({
+const DayOfWeekScheduleSchema = z.object({
   type: z.literal('dayOfWeek'),
   dayOfWeek: z.number().int().min(1).max(7, 'Day of week must be 1-7 (Monday-Sunday)'),
 })
@@ -59,7 +49,7 @@ export const DayOfWeekScheduleSchema = z.object({
  * Payment schedule for monthly frequency.
  * Day of month (1-31), with month-end handling for shorter months.
  */
-export const DayOfMonthScheduleSchema = z.object({
+const DayOfMonthScheduleSchema = z.object({
   type: z.literal('dayOfMonth'),
   dayOfMonth: z.number().int().min(1).max(31, 'Day of month must be 1-31'),
 })
@@ -104,9 +94,6 @@ export const PaymentScheduleSchema = z.discriminatedUnion('type', [
   TwiceMonthlyScheduleSchema,
 ])
 
-export type DayOfWeekSchedule = z.infer<typeof DayOfWeekScheduleSchema>
-export type DayOfMonthSchedule = z.infer<typeof DayOfMonthScheduleSchema>
-export type TwiceMonthlySchedule = z.infer<typeof TwiceMonthlyScheduleSchema>
 export type PaymentSchedule = z.infer<typeof PaymentScheduleSchema>
 
 /**
@@ -134,12 +121,6 @@ export function validateFrequencyScheduleMatch(
   }
 }
 
-// === Project Types ===
-
-// Project type discriminator
-export const ProjectTypeSchema = z.enum(['recurring', 'single_shot'])
-export type ProjectType = z.infer<typeof ProjectTypeSchema>
-
 // === Recurring Project (Income Source) ===
 
 // Base schema without refinement (for extension)
@@ -154,7 +135,7 @@ const RecurringProjectInputBaseSchema = z.object({
 })
 
 // Input schema with frequency-schedule validation
-export const RecurringProjectInputSchema = RecurringProjectInputBaseSchema.refine(
+const RecurringProjectInputSchema = RecurringProjectInputBaseSchema.refine(
   (data) => validateFrequencyScheduleMatch(data.frequency, data.paymentSchedule),
   {
     message: 'Payment schedule type must match frequency',
@@ -165,8 +146,6 @@ export const RecurringProjectInputSchema = RecurringProjectInputBaseSchema.refin
 // Full schema with system fields
 export const RecurringProjectSchema = RecurringProjectInputBaseSchema.extend({
   id: z.string().uuid(),
-  // Legacy field - kept for backward compatibility during migration
-  paymentDay: z.number().int().min(1).max(31).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 }).refine(
@@ -217,12 +196,6 @@ export function isRecurringProject(project: unknown): project is RecurringProjec
     'type' in project && project.type === 'recurring'
 }
 
-// === Expense Types ===
-
-// Expense type discriminator
-export const ExpenseTypeSchema = z.enum(['fixed', 'single_shot'])
-export type ExpenseType = z.infer<typeof ExpenseTypeSchema>
-
 // === Fixed Expense ===
 export const FixedExpenseInputSchema = z.object({
   type: z.literal('fixed'),
@@ -258,18 +231,11 @@ export const SingleShotExpenseSchema = SingleShotExpenseInputSchema.extend({
 export type SingleShotExpenseInput = z.infer<typeof SingleShotExpenseInputSchema>
 export type SingleShotExpense = z.infer<typeof SingleShotExpenseSchema>
 
-// === Unified Expense Types ===
-export const ExpenseInputSchema = z.discriminatedUnion('type', [
-  FixedExpenseInputSchema,
-  SingleShotExpenseInputSchema,
-])
-
 export const ExpenseSchema = z.discriminatedUnion('type', [
   FixedExpenseSchema,
   SingleShotExpenseSchema,
 ])
 
-export type ExpenseInput = z.infer<typeof ExpenseInputSchema>
 export type Expense = z.infer<typeof ExpenseSchema>
 
 // Type guards for filtering
@@ -311,43 +277,20 @@ export const ProjectionDaysSchema = z.union([
 
 export type ProjectionDays = z.infer<typeof ProjectionDaysSchema>
 
-// === User Preferences ===
-export interface UserPreferences {
-  projectionDays: ProjectionDays
-}
-
 // === Future Statement ===
 export {
   FutureStatementInputSchema,
-  FutureStatementSchema,
   FutureStatementUpdateSchema,
   type FutureStatementInput,
   type FutureStatement,
   type FutureStatementUpdate,
-  type FormattedFutureStatement,
-  type FutureStatementLookupKey,
-  type FutureStatementMap,
   type FutureStatementRow,
-  createFutureStatementKey,
   transformFutureStatementRow,
   getAvailableMonthOptions,
   formatMonthYear,
   isMonthInPast,
   isCurrentMonth,
 } from './future-statement'
-
-// === Snapshot ===
-export {
-  CURRENT_SCHEMA_VERSION,
-  SnapshotInputSchema,
-  type SnapshotInputState,
-  type SnapshotSummaryMetrics,
-  type SnapshotData,
-  type ProjectionSnapshot,
-  type SnapshotInput,
-  type CreateSnapshotInput,
-  type SnapshotListItem,
-} from './snapshot'
 
 // === Onboarding ===
 
@@ -546,56 +489,6 @@ export function transformNotificationRow(row: NotificationRow): Notification {
     dedupeKey: row.dedupe_key,
     readAt: row.read_at ? new Date(row.read_at) : null,
     emailSentAt: row.email_sent_at ? new Date(row.email_sent_at) : null,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-  }
-}
-
-// === User Preferences (per-user) ===
-
-/**
- * Known user preference keys.
- * email_notifications_enabled: 'true' | 'false' - controls email notification opt-out
- */
-export const UserPreferenceKeySchema = z.enum(['email_notifications_enabled'])
-export type UserPreferenceKey = z.infer<typeof UserPreferenceKeySchema>
-
-/**
- * User preference row shape (matches database table).
- * Note: key is typed as UserPreferenceKey for compile-time safety.
- * If arbitrary keys are needed for future extensibility, consider using a string union type.
- */
-export interface UserPreferenceRow {
-  id: string
-  user_id: string
-  key: UserPreferenceKey
-  value: string
-  created_at: string
-  updated_at: string
-}
-
-/**
- * User preference for client use (camelCase).
- * Note: key is typed as UserPreferenceKey for compile-time safety.
- */
-export interface UserPreference {
-  id: string
-  userId: string
-  key: UserPreferenceKey
-  value: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-/**
- * Transform user preference row to client format.
- */
-export function transformUserPreferenceRow(row: UserPreferenceRow): UserPreference {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    key: row.key,
-    value: row.value,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   }

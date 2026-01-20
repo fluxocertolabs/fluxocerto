@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { getISODay } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Input } from '@/components/ui/input'
@@ -41,17 +40,7 @@ const WEEKDAYS = [
 ] as const
 
 /**
- * Convert legacy paymentDay (day-of-month) to day-of-week for weekly/biweekly projects.
- * Maps the day-of-month to the weekday it would fall on in the current month.
- */
-function convertLegacyPaymentDay(paymentDay: number): number {
-  const today = new Date()
-  const targetDate = new Date(today.getFullYear(), today.getMonth(), paymentDay)
-  return getISODay(targetDate)
-}
-
-/**
- * Extract initial schedule state from a project (handles both new and legacy formats).
+ * Extract initial schedule state from a project.
  */
 function getInitialScheduleState(project?: Project): {
   dayOfWeek: number
@@ -95,14 +84,6 @@ function getInitialScheduleState(project?: Project): {
         }
       }
     }
-  }
-
-  // Legacy fallback: convert paymentDay to appropriate schedule
-  if (project.paymentDay !== undefined) {
-    if (project.frequency === 'weekly' || project.frequency === 'biweekly') {
-      return { ...defaultState, dayOfWeek: convertLegacyPaymentDay(project.paymentDay) }
-    }
-    return { ...defaultState, dayOfMonth: project.paymentDay }
   }
 
   return defaultState

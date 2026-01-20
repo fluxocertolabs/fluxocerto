@@ -69,8 +69,6 @@ export const SnapshotInputSchema = z.object({
   name: z.string().min(1, 'Nome da projeção é obrigatório').max(100),
 })
 
-export type SnapshotInput = z.infer<typeof SnapshotInputSchema>
-
 /**
  * Input for creating a new snapshot via store action.
  * Used by SaveSnapshotDialog to pass data to createSnapshot().

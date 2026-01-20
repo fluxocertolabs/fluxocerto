@@ -18,7 +18,7 @@ import { HistoryPage } from '../pages/history-page';
 /**
  * Fixed date for visual tests - ensures deterministic screenshots
  */
-export const VISUAL_TEST_FIXED_DATE = new Date('2025-01-15T12:00:00.000Z');
+const VISUAL_TEST_FIXED_DATE = new Date('2025-01-15T12:00:00.000Z');
 
 /**
  * Theme modes supported by the app
@@ -95,7 +95,7 @@ export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
 /**
  * Visual test helper utilities
  */
-export interface VisualTestHelpers {
+interface VisualTestHelpers {
   waitForStableUI(page: Page): Promise<void>;
   setTheme(page: Page, theme: ThemeMode): Promise<void>;
   takeScreenshot(page: Page, name: string, options?: { fullPage?: boolean; mask?: Locator[] }): Promise<void>;
@@ -104,7 +104,7 @@ export interface VisualTestHelpers {
 /**
  * Database fixture for visual tests
  */
-export interface VisualDbFixture {
+interface VisualDbFixture {
   clear(): Promise<void>;
   seedAccounts(accounts: Array<{
     name: string;

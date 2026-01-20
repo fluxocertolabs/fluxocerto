@@ -10,7 +10,7 @@
 /**
  * Format a Date into a YYYY-MM-DD string in a specific IANA timezone.
  */
-export function formatDateOnlyInTimeZone(date: Date, timeZone: string): string {
+function formatDateOnlyInTimeZone(date: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en', {
     timeZone,
     year: 'numeric',
@@ -32,7 +32,7 @@ export function formatDateOnlyInTimeZone(date: Date, timeZone: string): string {
 /**
  * Parse a YYYY-MM-DD string into a JS Date at local midnight.
  */
-export function parseDateOnly(dateOnly: string): Date {
+function parseDateOnly(dateOnly: string): Date {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOnly)
   if (!match) {
     throw new Error(`Invalid date-only string: ${dateOnly}`)

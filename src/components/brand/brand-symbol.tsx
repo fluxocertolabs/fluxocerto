@@ -1,7 +1,7 @@
 import type { CSSProperties, SVGProps } from 'react'
 import { cn } from '@/lib/utils'
 
-export type BrandSymbolAnimation = 'none' | 'once' | 'spin'
+type BrandSymbolAnimation = 'none' | 'once' | 'spin'
 
 interface BrandSymbolProps extends SVGProps<SVGSVGElement> {
   /** Controls the intro / orbit animation */

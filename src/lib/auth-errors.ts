@@ -3,7 +3,7 @@
  * Maps Supabase auth error codes to clear, actionable messages.
  */
 
-export interface AuthErrorMapping {
+interface AuthErrorMapping {
   [key: string]: string
 }
 

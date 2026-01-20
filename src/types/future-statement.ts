@@ -81,41 +81,6 @@ export type FutureStatement = z.infer<typeof FutureStatementSchema>
 export type FutureStatementUpdate = z.infer<typeof FutureStatementUpdateSchema>
 
 // =============================================================================
-// HELPER TYPES
-// =============================================================================
-
-/**
- * For UI display: includes formatted labels and editability status.
- */
-export interface FormattedFutureStatement extends FutureStatement {
-  /** Localized month/year label, e.g., "Janeiro/2025" */
-  monthLabel: string
-  /** Whether this statement can still be edited (not past month) */
-  isEditable: boolean
-  /** Whether this is the current month (requires confirmation to save) */
-  isCurrentMonth: boolean
-}
-
-/**
- * For cashflow calculation: efficient lookup by card + date.
- * Key format: `${creditCardId}-${targetYear}-${targetMonth}`
- */
-export type FutureStatementLookupKey = `${string}-${number}-${number}`
-
-export type FutureStatementMap = Map<FutureStatementLookupKey, FutureStatement>
-
-/**
- * Creates a lookup key for FutureStatementMap.
- */
-export function createFutureStatementKey(
-  creditCardId: string,
-  targetYear: number,
-  targetMonth: number
-): FutureStatementLookupKey {
-  return `${creditCardId}-${targetYear}-${targetMonth}`
-}
-
-// =============================================================================
 // DATABASE ROW TRANSFORMATION
 // =============================================================================
 
@@ -207,29 +172,5 @@ export function isMonthInPast(month: number, year: number): boolean {
 export function isCurrentMonth(month: number, year: number): boolean {
   const today = new Date()
   return month === today.getMonth() + 1 && year === today.getFullYear()
-}
-
-// =============================================================================
-// STORE OPERATION CONTRACTS
-// =============================================================================
-
-/**
- * Expected return type from store operations.
- * Matches existing Result<T> pattern in finance-store.
- */
-export type FutureStatementResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string; details?: unknown }
-
-/**
- * Store action signatures for FutureStatement operations.
- */
-export interface FutureStatementStoreActions {
-  addFutureStatement: (input: FutureStatementInput) => Promise<FutureStatementResult<string>>
-  updateFutureStatement: (
-    id: string,
-    input: FutureStatementUpdate
-  ) => Promise<FutureStatementResult<void>>
-  deleteFutureStatement: (id: string) => Promise<FutureStatementResult<void>>
 }
 

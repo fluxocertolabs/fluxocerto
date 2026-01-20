@@ -59,7 +59,7 @@ async function executeSQLWithResult<T = unknown>(sql: string, params?: unknown[]
  * - projects: both recurring (type='recurring') and single-shot income (type='single_shot')
  * - credit_cards: credit card accounts
  */
-export interface SmokeDbFixture {
+interface SmokeDbFixture {
   /** Clear all test data */
   clear(): Promise<void>;
   /** Seed bank accounts */

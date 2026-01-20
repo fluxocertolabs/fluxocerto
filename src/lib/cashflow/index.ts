@@ -7,21 +7,8 @@
 
 export { calculateCashflow } from './calculate'
 
-export type {
-  CashflowEngineOptions,
-  CashflowProjection,
-  DailySnapshot,
-  DangerDay,
-  ExpenseEvent,
-  IncomeEvent,
-  ScenarioSummary,
-} from './types'
-
-export { CashflowCalculationError, CashflowErrorCode } from './types'
-
 export {
   calculateEstimatedTodayBalance,
-  getCheckingBalanceUpdateBase,
   rebaseProjectionFromEstimatedToday,
 } from './estimate-today'
 

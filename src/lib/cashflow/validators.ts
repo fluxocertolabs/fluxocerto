@@ -26,7 +26,7 @@ export const CashflowEngineOptionsSchema = z.object({
   projectionDays: z.number().int().positive('Projection days must be positive').optional().default(30),
 })
 
-export type ValidatedOptions = z.infer<typeof CashflowEngineOptionsSchema>
+type ValidatedOptions = z.infer<typeof CashflowEngineOptionsSchema>
 
 // =============================================================================
 // INPUT VALIDATION SCHEMAS
@@ -35,7 +35,7 @@ export type ValidatedOptions = z.infer<typeof CashflowEngineOptionsSchema>
 /**
  * Schema for validating BankAccount input to the engine
  */
-export const BankAccountEngineSchema = z.object({
+const BankAccountEngineSchema = z.object({
   id: z.string(),
   name: z.string(),
   type: z.enum(['checking', 'savings', 'investment']),
@@ -47,11 +47,10 @@ export const BankAccountEngineSchema = z.object({
 /**
  * Schema for validating Project input to the engine
  */
-export const ProjectEngineSchema = z.object({
+const ProjectEngineSchema = z.object({
   id: z.string(),
   name: z.string(),
   amount: z.number().positive('Amount must be positive'),
-  paymentDay: z.number().int().min(1).max(31, 'Payment day must be 1-31').optional(),
   paymentSchedule: z.union([
     z.object({
       type: z.literal('dayOfWeek'),
@@ -79,7 +78,7 @@ export const ProjectEngineSchema = z.object({
 /**
  * Schema for validating FixedExpense input to the engine
  */
-export const FixedExpenseEngineSchema = z.object({
+const FixedExpenseEngineSchema = z.object({
   id: z.string(),
   type: z.literal('fixed'),
   name: z.string(),
@@ -93,7 +92,7 @@ export const FixedExpenseEngineSchema = z.object({
 /**
  * Schema for validating CreditCard input to the engine
  */
-export const CreditCardEngineSchema = z.object({
+const CreditCardEngineSchema = z.object({
   id: z.string(),
   name: z.string(),
   statementBalance: z.number().min(0, 'Balance cannot be negative'),
