@@ -3,7 +3,7 @@
  * Orchestrates all dashboard components with coordinated loading/error/empty states.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCashflowProjection } from '@/hooks/use-cashflow-projection'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { useHealthIndicator } from '@/hooks/use-health-indicator'
@@ -27,6 +27,7 @@ import { Toast } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { getTourDefinition } from '@/lib/tours/definitions'
+import { captureEvent } from '@/lib/analytics/posthog'
 import type { ProjectionDays } from '@/types'
 import { DEFAULT_LINE_VISIBILITY, type LineVisibility } from '@/components/cashflow/types'
 
@@ -34,6 +35,7 @@ export function Dashboard() {
   const [showQuickUpdate, setShowQuickUpdate] = useState(false)
   const [showSaveSnapshot, setShowSaveSnapshot] = useState(false)
   const [chartVisibility, setChartVisibility] = useState<LineVisibility>(DEFAULT_LINE_VISIBILITY)
+  const hasTrackedProjectionView = useRef(false)
   const { projectionDays, setProjectionDays } = usePreferencesStore()
   const { openWizard } = useOnboardingStore()
   const { toast, showSuccess, showError, hideToast } = useToast()
@@ -76,6 +78,20 @@ export function Dashboard() {
     return 'optimistic'
   }, [chartVisibility])
 
+  useEffect(() => {
+    if (loadingState.showSkeleton || loadingState.showError) {
+      return
+    }
+    if (!projection || !hasData || hasTrackedProjectionView.current) {
+      return
+    }
+    hasTrackedProjectionView.current = true
+    captureEvent('projection_viewed', {
+      has_danger_days: dangerRanges.length > 0,
+      time_window: projection.days.length,
+    })
+  }, [loadingState.showSkeleton, loadingState.showError, projection, hasData, dangerRanges.length])
+
   // Handle save snapshot
   const handleSaveSnapshot = async (name: string) => {
     if (!projection) {
@@ -99,6 +115,9 @@ export function Dashboard() {
 
     if (result.success) {
       showSuccess('Projeção salva com sucesso!')
+      captureEvent('snapshot_saved', {
+        projection_days: projection.days.length as ProjectionDays,
+      })
     } else {
       showError(result.error, () => handleSaveSnapshot(name))
     }

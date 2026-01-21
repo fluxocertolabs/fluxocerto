@@ -235,7 +235,7 @@ export function useOnboardingState(): UseOnboardingStateReturn {
   // Auto-open the wizard when eligible or when resuming an in-progress onboarding
   useEffect(() => {
     if ((shouldAutoShow || shouldResume) && !isWizardOpen) {
-      openWizardUi()
+      openWizardUi('auto')
       setHasAutoShown(true)
       if (shouldAutoShow) {
         // Mark as auto-shown in the database
@@ -260,7 +260,7 @@ export function useOnboardingState(): UseOnboardingStateReturn {
   }, [])
 
   const openWizard = useCallback(() => {
-    openWizardUi()
+    openWizardUi('manual')
     // Update state to in_progress if not already
     if (state?.status !== 'in_progress') {
       void (async () => {

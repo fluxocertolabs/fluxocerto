@@ -146,6 +146,7 @@ Deployment notes:
 - **Third-party integrations**:
   - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
   - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.
+  - **PostHog** (product analytics): Initialized in `src/main.tsx` with a wrapper in `src/lib/analytics/posthog.ts`. Controlled by `VITE_POSTHOG_KEY`, optional `VITE_POSTHOG_HOST`, and `VITE_POSTHOG_DISABLED`. User preferences live in `user_preferences` (`analytics_enabled`, `session_recordings_enabled`) and are surfaced in `src/pages/profile.tsx`. Session recordings are enabled by default but masked (all inputs + all text).
 - **Array utility functions**: `src/lib/utils/array.ts` contains helpers like `upsertUniqueById()` which must be immutable (never mutate the input array).
 - **List ordering**: Accounts and credit cards are sorted alphabetically by name (pt-BR locale-aware via `Intl.Collator`), with ties broken by ID. This ensures stable, deterministic ordering even during realtime updates. See `src/hooks/use-finance-data.ts` → `sortByNameThenId()`.
 - **Balance freshness tracking**: The `balance_updated_at` field tracks when account/card balances were last updated. This field must be set:

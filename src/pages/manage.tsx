@@ -18,6 +18,8 @@ import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
 import { usePageTour } from '@/hooks/use-page-tour'
 import { useOnboardingStore } from '@/stores/onboarding-store'
 import { useFinanceStore } from '@/stores/finance-store'
+import { captureEvent } from '@/lib/analytics/posthog'
+import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { TourRunner } from '@/components/tours'
 import { getTourDefinition } from '@/lib/tours/definitions'
 import { AccountList } from '@/components/manage/accounts/account-list'
@@ -75,6 +77,7 @@ type DeleteState =
   | { type: 'card'; id: string; name: string }
 
 export function ManagePage() {
+  const isManageBetaEnabled = useFeatureFlagEnabled('ff_manage_new_layout') ?? false
   const [activeTab, setActiveTab] = useState<TabValue>(() => {
     const stored = sessionStorage.getItem('manage-active-tab')
     if (stored && ['accounts', 'projects', 'expenses', 'cards', 'group'].includes(stored)) {
@@ -112,6 +115,7 @@ export function ManagePage() {
   const tourDefinition = getTourDefinition('manage')
   const [isRecoveringGroup, setIsRecoveringGroup] = useState(false)
   const [copied, setCopied] = useState(false)
+  const analyticsMeta = { source: 'manage' as const }
 
   const handleGroupRecovery = useCallback(async () => {
     setIsRecoveringGroup(true)
@@ -123,6 +127,7 @@ export function ManagePage() {
   }, [recoverProvisioning])
 
   const handleSignOut = useCallback(async () => {
+    captureEvent('logout_clicked')
     await signOut()
     navigate('/login', { replace: true })
   }, [navigate])
@@ -152,6 +157,7 @@ export function ManagePage() {
     const tabValue = value as TabValue
     setActiveTab(tabValue)
     sessionStorage.setItem('manage-active-tab', tabValue)
+    captureEvent('manage_tab_changed', { tab: tabValue })
   }
 
   const closeDialog = () => {
@@ -168,7 +174,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.addAccount(data)
+      const result = await store.addAccount(data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -186,7 +192,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.updateAccount(id, data)
+      const result = await store.updateAccount(id, data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -205,7 +211,7 @@ export function ManagePage() {
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteAccount(deleteState.id)
+      const result = await store.deleteAccount(deleteState.id, analyticsMeta)
       if (result.success) {
         closeDeleteDialog()
       } else {
@@ -220,7 +226,7 @@ export function ManagePage() {
   }
 
   const handleUpdateAccountBalance = async (id: string, balance: number) => {
-    const result = await store.updateAccount(id, { balance })
+    const result = await store.updateAccount(id, { balance }, analyticsMeta)
     if (!result.success) {
       console.error('Failed to update account balance:', result.error)
     }
@@ -231,7 +237,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.addProject(data)
+      const result = await store.addProject(data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -249,7 +255,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.updateProject(id, data)
+      const result = await store.updateProject(id, data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -268,7 +274,7 @@ export function ManagePage() {
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteProject(deleteState.id)
+      const result = await store.deleteProject(deleteState.id, analyticsMeta)
       if (result.success) {
         closeDeleteDialog()
       } else {
@@ -283,7 +289,7 @@ export function ManagePage() {
   }
 
   const handleToggleProjectActive = async (id: string) => {
-    const result = await store.toggleProjectActive(id)
+    const result = await store.toggleProjectActive(id, analyticsMeta)
     if (!result.success) {
       console.error('Failed to toggle project active:', result.error)
     }
@@ -297,7 +303,7 @@ export function ManagePage() {
       const result = await store.addSingleShotIncome({
         type: 'single_shot',
         ...data,
-      })
+      }, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -315,7 +321,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.updateSingleShotIncome(id, data)
+      const result = await store.updateSingleShotIncome(id, data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -334,7 +340,7 @@ export function ManagePage() {
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteSingleShotIncome(deleteState.id)
+      const result = await store.deleteSingleShotIncome(deleteState.id, analyticsMeta)
       if (result.success) {
         closeDeleteDialog()
       } else {
@@ -353,7 +359,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.addExpense(data)
+      const result = await store.addExpense(data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -371,7 +377,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.updateExpense(id, data)
+      const result = await store.updateExpense(id, data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -391,7 +397,7 @@ export function ManagePage() {
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteExpense(id)
+      const result = await store.deleteExpense(id, analyticsMeta)
       if (result.success) {
         optimisticallyRemoveExpense(id)
         closeDeleteDialog()
@@ -407,7 +413,7 @@ export function ManagePage() {
   }
 
   const handleToggleExpenseActive = async (id: string) => {
-    const result = await store.toggleExpenseActive(id)
+    const result = await store.toggleExpenseActive(id, analyticsMeta)
     if (!result.success) {
       console.error('Failed to toggle expense active:', result.error)
     }
@@ -421,7 +427,7 @@ export function ManagePage() {
       const result = await store.addSingleShotExpense({
         type: 'single_shot',
         ...data,
-      })
+      }, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -439,7 +445,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.updateSingleShotExpense(id, data)
+      const result = await store.updateSingleShotExpense(id, data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -459,7 +465,7 @@ export function ManagePage() {
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteSingleShotExpense(id)
+      const result = await store.deleteSingleShotExpense(id, analyticsMeta)
       if (result.success) {
         optimisticallyRemoveExpense(id)
         closeDeleteDialog()
@@ -479,7 +485,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.addCreditCard(data)
+      const result = await store.addCreditCard(data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -497,7 +503,7 @@ export function ManagePage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const result = await store.updateCreditCard(id, data)
+      const result = await store.updateCreditCard(id, data, analyticsMeta)
       if (result.success) {
         closeDialog()
       } else {
@@ -516,7 +522,7 @@ export function ManagePage() {
     setIsDeleting(true)
     setError(null)
     try {
-      const result = await store.deleteCreditCard(deleteState.id)
+      const result = await store.deleteCreditCard(deleteState.id, analyticsMeta)
       if (result.success) {
         closeDeleteDialog()
       } else {
@@ -531,7 +537,7 @@ export function ManagePage() {
   }
 
   const handleUpdateCreditCardBalance = async (id: string, balance: number) => {
-    const result = await store.updateCreditCard(id, { statementBalance: balance })
+    const result = await store.updateCreditCard(id, { statementBalance: balance }, analyticsMeta)
     if (!result.success) {
       console.error('Failed to update credit card balance:', result.error)
     }
@@ -539,7 +545,7 @@ export function ManagePage() {
 
   // Future statement handlers
   const handleAddFutureStatement = async (data: FutureStatementInput) => {
-    const result = await store.addFutureStatement(data)
+    const result = await store.addFutureStatement(data, analyticsMeta)
     if (!result.success) {
       setError(result.error)
       console.error('Failed to add future statement:', result.error)
@@ -547,7 +553,7 @@ export function ManagePage() {
   }
 
   const handleUpdateFutureStatement = async (id: string, amount: number) => {
-    const result = await store.updateFutureStatement(id, { amount })
+    const result = await store.updateFutureStatement(id, { amount }, analyticsMeta)
     if (!result.success) {
       setError(result.error)
       console.error('Failed to update future statement:', result.error)
@@ -555,7 +561,7 @@ export function ManagePage() {
   }
 
   const handleDeleteFutureStatement = async (id: string) => {
-    const result = await store.deleteFutureStatement(id)
+    const result = await store.deleteFutureStatement(id, analyticsMeta)
     if (!result.success) {
       setError(result.error)
       console.error('Failed to delete future statement:', result.error)
@@ -590,9 +596,16 @@ export function ManagePage() {
 
   return (
     <div className={cn('container mx-auto p-4 md:p-6 max-w-4xl')}>
-      <h1 className="text-2xl font-bold text-foreground mb-6">
-        Gerenciar Dados Financeiros
-      </h1>
+      <div className="flex items-center gap-2 mb-6">
+        <h1 className="text-2xl font-bold text-foreground">
+          Gerenciar Dados Financeiros
+        </h1>
+        {isManageBetaEnabled && (
+          <span className="text-xs font-semibold uppercase tracking-wide bg-primary/10 text-primary px-2 py-1 rounded-full">
+            Beta
+          </span>
+        )}
+      </div>
 
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">

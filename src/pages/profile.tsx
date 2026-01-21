@@ -58,8 +58,16 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
 }
 
 export function ProfilePage() {
-  const { profile, isLoading, error, updateName, updateEmailNotifications, refetch } =
-    useProfile()
+  const {
+    profile,
+    isLoading,
+    error,
+    updateName,
+    updateEmailNotifications,
+    updateAnalytics,
+    updateSessionRecordings,
+    refetch,
+  } = useProfile()
 
   return (
     <main className="container mx-auto px-4 py-6 max-w-2xl">
@@ -88,6 +96,8 @@ export function ProfilePage() {
           profile={profile}
           onUpdateName={updateName}
           onUpdateEmailNotifications={updateEmailNotifications}
+          onUpdateAnalytics={updateAnalytics}
+          onUpdateSessionRecordings={updateSessionRecordings}
         />
       ) : null}
     </main>

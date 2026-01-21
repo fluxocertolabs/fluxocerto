@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import posthog from 'posthog-js'
+import { PostHogProvider } from 'posthog-js/react'
 import App from './App'
 import {
   initializeAuth,
@@ -12,6 +14,7 @@ import {
 } from './lib/supabase'
 import { AppErrorBoundary } from '@/components/app-error-boundary'
 import { withTimeout } from '@/lib/utils/promise'
+import { initPosthog } from '@/lib/analytics/posthog'
 import './index.css'
 
 /**
@@ -96,6 +99,7 @@ function showAuthBypassError(titleText: string, message: string): void {
  * @see scripts/generate-dev-token.ts for token generation script
  */
 async function bootstrap() {
+  initPosthog()
   const rootElement = document.getElementById('root')
   if (!rootElement) {
     throw new Error("Root element with id 'root' not found in index.html")
@@ -161,9 +165,11 @@ async function bootstrap() {
 
   createRoot(rootElement).render(
     <StrictMode>
-      <AppErrorBoundary>
-        <App />
-      </AppErrorBoundary>
+      <PostHogProvider client={posthog}>
+        <AppErrorBoundary>
+          <App />
+        </AppErrorBoundary>
+      </PostHogProvider>
     </StrictMode>,
   )
 }

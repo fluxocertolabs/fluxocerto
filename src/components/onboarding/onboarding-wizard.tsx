@@ -29,11 +29,13 @@ import { Progress } from '@/components/ui/progress'
 import { useOnboardingState } from '@/hooks/use-onboarding-state'
 import { useToast } from '@/hooks/use-toast'
 import { useFinanceStore } from '@/stores/finance-store'
+import { useOnboardingStore } from '@/stores/onboarding-store'
 import { useGroup } from '@/hooks/use-group'
 import { getSupabase } from '@/lib/supabase'
 import { notifyGroupDataInvalidated } from '@/lib/group-data-events'
 import { cn } from '@/lib/utils'
 import { getStepConfig, isFirstStep, getNextStep, getTotalSteps, getStepIndex } from '@/lib/onboarding/steps'
+import { captureEvent } from '@/lib/analytics/posthog'
 import type { BankAccount, OnboardingStep } from '@/types'
 
 function triggerShake(el: HTMLElement | null): void {
@@ -77,6 +79,7 @@ export function OnboardingWizard() {
     accounts,
     isFinanceLoading,
   } = useOnboardingState()
+  const { openReason } = useOnboardingStore()
 
   const { group, members, isLoading: isGroupLoading, retry: retryGroup } = useGroup()
   const currentMemberName = members.find(m => m.isCurrentUser)?.name ?? ''
@@ -85,12 +88,26 @@ export function OnboardingWizard() {
 
   const { toast, showError, hideToast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const hasTrackedStart = useRef(false)
 
   useEffect(() => {
     if (onboardingError) {
       showError(onboardingError, refetch)
     }
   }, [onboardingError, refetch, showError])
+
+  useEffect(() => {
+    if (isWizardActive && !hasTrackedStart.current) {
+      hasTrackedStart.current = true
+      captureEvent('onboarding_started', {
+        entrypoint: openReason ?? 'auto',
+        step: currentStep,
+      })
+    }
+    if (!isWizardActive) {
+      hasTrackedStart.current = false
+    }
+  }, [isWizardActive, openReason, currentStep])
 
   // Safety: never render the legacy "done" confirmation screen.
   // If state transitions to 'done' for any reason, just close the wizard.
@@ -100,13 +117,25 @@ export function OnboardingWizard() {
     }
   }, [isWizardActive, currentStep, closeWizard])
 
-  const handleStepComplete = useCallback(async () => {
+  const handleStepComplete = useCallback(async (options?: { skipped?: boolean }) => {
+    const skipped = options?.skipped ?? false
     const next = getNextStep(currentStep)
     // Don't navigate to the "done" step UI; just complete onboarding and close.
     if (!next || next === 'done') {
       await complete()
+      captureEvent('onboarding_step_completed', {
+        step: currentStep,
+        skipped,
+      })
+      captureEvent('onboarding_completed', {
+        steps_completed_count: getTotalSteps(),
+      })
     } else {
       await nextStep()
+      captureEvent('onboarding_step_completed', {
+        step: currentStep,
+        skipped,
+      })
     }
   }, [currentStep, complete, nextStep])
 
@@ -117,6 +146,16 @@ export function OnboardingWizard() {
   const stepConfig = getStepConfig(currentStep)
   const totalSteps = getTotalSteps()
   const stepNumber = Math.min(getStepIndex(currentStep) + 1, totalSteps)
+  const handleStepError = useCallback(
+    (message: string, onRetry?: () => void) => {
+      captureEvent('onboarding_error', {
+        step: currentStep,
+        surface: 'wizard',
+      })
+      showError(message, onRetry)
+    },
+    [currentStep, showError]
+  )
 
   return (
     <>
@@ -146,7 +185,7 @@ export function OnboardingWizard() {
               onBack={handleBack}
               isSubmitting={isSubmitting}
               setIsSubmitting={setIsSubmitting}
-              showError={showError}
+              showError={handleStepError}
               isFirstStep={isFirstStep(currentStep)}
               groupId={groupId}
               currentGroupName={currentGroupName}
@@ -176,7 +215,7 @@ export function OnboardingWizard() {
 
 interface StepContentProps {
   step: OnboardingStep
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
   onBack: () => Promise<void>
   isSubmitting: boolean
   setIsSubmitting: (value: boolean) => void
@@ -319,7 +358,7 @@ function StepNavigation({
 
 // Profile step - update user's display name
 interface ProfileStepProps {
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
   onBack: () => Promise<void>
   isSubmitting: boolean
   setIsSubmitting: (value: boolean) => void
@@ -484,7 +523,7 @@ function ProfileStep({
 
 // Group step - update group name
 interface GroupStepProps {
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
   onBack: () => Promise<void>
   isSubmitting: boolean
   setIsSubmitting: (value: boolean) => void
@@ -637,7 +676,7 @@ function GroupStep({
 
 // Bank account step
 interface BankAccountStepProps {
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
   onBack: () => Promise<void>
   isSubmitting: boolean
   setIsSubmitting: (value: boolean) => void
@@ -656,6 +695,7 @@ function BankAccountStep({
   isFinanceLoading,
 }: BankAccountStepProps) {
   const store = useFinanceStore()
+  const analyticsMeta = { source: 'onboarding' as const }
   const existingAccount = accounts.length > 0
     ? [...accounts].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0]
     : null
@@ -705,8 +745,8 @@ function BankAccountStep({
       const balanceCents = Math.round((parseFloat(balance) || 0) * 100)
 
       const result = accountId
-        ? await store.updateAccount(accountId, { name: trimmedName, type, balance: balanceCents, ownerId: null })
-        : await store.addAccount({ name: trimmedName, type, balance: balanceCents, ownerId: null })
+        ? await store.updateAccount(accountId, { name: trimmedName, type, balance: balanceCents, ownerId: null }, analyticsMeta)
+        : await store.addAccount({ name: trimmedName, type, balance: balanceCents, ownerId: null }, analyticsMeta)
 
       if (!result.success) {
         showError(result.error)
@@ -836,7 +876,7 @@ function BankAccountStep({
 
 // Income step
 interface IncomeStepProps {
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
   onBack: () => Promise<void>
   isSubmitting: boolean
   setIsSubmitting: (value: boolean) => void
@@ -845,6 +885,7 @@ interface IncomeStepProps {
 
 function IncomeStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showError }: IncomeStepProps) {
   const store = useFinanceStore()
+  const analyticsMeta = { source: 'onboarding' as const }
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [paymentDay, setPaymentDay] = useState('5')
@@ -864,7 +905,7 @@ function IncomeStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showErr
 
     // Optional step: if left completely empty, just continue.
     if (!trimmedName && !trimmedAmount) {
-      await onComplete()
+      await onComplete({ skipped: true })
       return
     }
 
@@ -903,7 +944,7 @@ function IncomeStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showErr
         },
         certainty: 'guaranteed',
         isActive: true,
-      })
+      }, analyticsMeta)
 
       if (!result.success) {
         showError(result.error)
@@ -1011,7 +1052,7 @@ function IncomeStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showErr
 
 // Expense step
 interface ExpenseStepProps {
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
   onBack: () => Promise<void>
   isSubmitting: boolean
   setIsSubmitting: (value: boolean) => void
@@ -1020,6 +1061,7 @@ interface ExpenseStepProps {
 
 function ExpenseStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showError }: ExpenseStepProps) {
   const store = useFinanceStore()
+  const analyticsMeta = { source: 'onboarding' as const }
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [dueDay, setDueDay] = useState('10')
@@ -1039,7 +1081,7 @@ function ExpenseStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showEr
 
     // Optional step: if left completely empty, just continue.
     if (!trimmedName && !trimmedAmount) {
-      await onComplete()
+      await onComplete({ skipped: true })
       return
     }
     if (!trimmedName) {
@@ -1073,7 +1115,7 @@ function ExpenseStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showEr
         amount: Math.round(amountValue * 100),
         dueDay: parseInt(dueDay) || 10,
         isActive: true,
-      })
+      }, analyticsMeta)
 
       if (!result.success) {
         showError(result.error)
@@ -1181,7 +1223,7 @@ function ExpenseStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showEr
 
 // Credit card step
 interface CreditCardStepProps {
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
   onBack: () => Promise<void>
   isSubmitting: boolean
   setIsSubmitting: (value: boolean) => void
@@ -1190,6 +1232,7 @@ interface CreditCardStepProps {
 
 function CreditCardStep({ onComplete, onBack, isSubmitting, setIsSubmitting, showError }: CreditCardStepProps) {
   const store = useFinanceStore()
+  const analyticsMeta = { source: 'onboarding' as const }
   const [name, setName] = useState('')
   const [balance, setBalance] = useState('')
   const [dueDay, setDueDay] = useState('15')
@@ -1200,7 +1243,7 @@ function CreditCardStep({ onComplete, onBack, isSubmitting, setIsSubmitting, sho
     const trimmedName = name.trim()
     if (!trimmedName) {
       // Optional step: allow continuing without adding a credit card
-      await onComplete()
+      await onComplete({ skipped: true })
       return
     }
 
@@ -1212,7 +1255,7 @@ function CreditCardStep({ onComplete, onBack, isSubmitting, setIsSubmitting, sho
         statementBalance: Math.round((parseFloat(balance) || 0) * 100),
         dueDay: parseInt(dueDay) || 15,
         ownerId: null,
-      })
+      }, analyticsMeta)
 
       if (!result.success) {
         showError(result.error)
@@ -1281,7 +1324,7 @@ function CreditCardStep({ onComplete, onBack, isSubmitting, setIsSubmitting, sho
 
 // Done step - completion message
 interface DoneStepProps {
-  onComplete: () => Promise<void>
+  onComplete: (options?: { skipped?: boolean }) => Promise<void>
 }
 
 function DoneStep({ onComplete }: DoneStepProps) {
@@ -1307,7 +1350,7 @@ function DoneStep({ onComplete }: DoneStepProps) {
       <p className="text-muted-foreground text-sm mb-6">
         Seu Fluxo Certo está pronto. Agora você pode ver suas projeções de fluxo de caixa.
       </p>
-      <Button onClick={onComplete} size="lg">
+      <Button onClick={() => onComplete()} size="lg">
         Ir para o Dashboard
       </Button>
     </div>

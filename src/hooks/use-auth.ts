@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
 import type { AuthState } from '@/types/auth'
+import { captureEvent, identifyUser, resetAnalytics } from '@/lib/analytics/posthog'
 
 /**
  * Hook for managing authentication state.
@@ -11,6 +12,7 @@ export function useAuth(): AuthState {
   const [user, setUser] = useState<User | null>(null)
   // Start as not loading if Supabase isn't configured (avoids setState in effect)
   const [isLoading, setIsLoading] = useState(() => isSupabaseConfigured())
+  const lastUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     // Early return if not configured - isLoading already set to false via initializer
@@ -64,6 +66,22 @@ export function useAuth(): AuthState {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    const currentUserId = user?.id ?? null
+    const previousUserId = lastUserIdRef.current
+
+    if (currentUserId && currentUserId !== previousUserId) {
+      identifyUser(currentUserId)
+      captureEvent('login_succeeded')
+    }
+
+    if (!currentUserId && previousUserId) {
+      resetAnalytics()
+    }
+
+    lastUserIdRef.current = currentUserId
+  }, [user?.id])
 
   return {
     user,

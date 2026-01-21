@@ -15,10 +15,15 @@ import {
   isSupabaseConfigured,
   getEmailNotificationsEnabled,
   setEmailNotificationsEnabled,
+  getAnalyticsEnabled,
+  setAnalyticsEnabled,
+  getSessionRecordingsEnabled,
+  setSessionRecordingsEnabled,
   handleSupabaseError,
 } from '@/lib/supabase'
 import { notifyGroupDataInvalidated } from '@/lib/group-data-events'
 import type { Result } from '@/stores/finance-store'
+import { setAnalyticsConsent } from '@/lib/analytics/posthog'
 
 export interface ProfileData {
   /** Display name from profiles.name */
@@ -27,6 +32,10 @@ export interface ProfileData {
   email: string
   /** Whether email notifications are enabled (default: true when missing) */
   emailNotificationsEnabled: boolean
+  /** Whether analytics are enabled (default: true when missing) */
+  analyticsEnabled: boolean
+  /** Whether session recordings are enabled (default: true when missing) */
+  sessionRecordingsEnabled: boolean
 }
 
 export interface UseProfileReturn {
@@ -40,6 +49,10 @@ export interface UseProfileReturn {
   updateName: (name: string) => Promise<Result<void>>
   /** Update the email notifications preference */
   updateEmailNotifications: (enabled: boolean) => Promise<Result<void>>
+  /** Update analytics preference */
+  updateAnalytics: (enabled: boolean) => Promise<Result<void>>
+  /** Update session recordings preference */
+  updateSessionRecordings: (enabled: boolean) => Promise<Result<void>>
   /** Refetch the profile data */
   refetch: () => Promise<void>
 }
@@ -84,10 +97,26 @@ export function useProfile(): UseProfileReturn {
         ? emailPrefResult.data ?? true
         : true // Default to enabled on error
 
+      const analyticsPrefResult = await getAnalyticsEnabled()
+      const analyticsEnabled = analyticsPrefResult.success
+        ? analyticsPrefResult.data ?? true
+        : true
+
+      const recordingsPrefResult = await getSessionRecordingsEnabled()
+      const sessionRecordingsEnabled = recordingsPrefResult.success
+        ? recordingsPrefResult.data ?? true
+        : true
+
       setProfile({
         name: profileData?.name ?? '',
         email: user.email,
         emailNotificationsEnabled,
+        analyticsEnabled,
+        sessionRecordingsEnabled,
+      })
+      setAnalyticsConsent({
+        analytics: analyticsEnabled,
+        recordings: sessionRecordingsEnabled,
       })
       setIsLoading(false)
     } catch (err) {
@@ -158,12 +187,74 @@ export function useProfile(): UseProfileReturn {
     [profile?.emailNotificationsEnabled]
   )
 
+  const updateAnalytics = useCallback(
+    async (enabled: boolean): Promise<Result<void>> => {
+      const previousValue = profile?.analyticsEnabled ?? true
+
+      setProfile((prev) =>
+        prev ? { ...prev, analyticsEnabled: enabled } : null
+      )
+
+      setAnalyticsConsent({
+        analytics: enabled,
+        recordings: profile?.sessionRecordingsEnabled ?? true,
+      })
+
+      const result = await setAnalyticsEnabled(enabled)
+
+      if (!result.success) {
+        setProfile((prev) =>
+          prev ? { ...prev, analyticsEnabled: previousValue } : null
+        )
+        setAnalyticsConsent({
+          analytics: previousValue,
+          recordings: profile?.sessionRecordingsEnabled ?? true,
+        })
+      }
+
+      return result
+    },
+    [profile?.analyticsEnabled, profile?.sessionRecordingsEnabled]
+  )
+
+  const updateSessionRecordings = useCallback(
+    async (enabled: boolean): Promise<Result<void>> => {
+      const previousValue = profile?.sessionRecordingsEnabled ?? true
+
+      setProfile((prev) =>
+        prev ? { ...prev, sessionRecordingsEnabled: enabled } : null
+      )
+
+      setAnalyticsConsent({
+        analytics: profile?.analyticsEnabled ?? true,
+        recordings: enabled,
+      })
+
+      const result = await setSessionRecordingsEnabled(enabled)
+
+      if (!result.success) {
+        setProfile((prev) =>
+          prev ? { ...prev, sessionRecordingsEnabled: previousValue } : null
+        )
+        setAnalyticsConsent({
+          analytics: profile?.analyticsEnabled ?? true,
+          recordings: previousValue,
+        })
+      }
+
+      return result
+    },
+    [profile?.analyticsEnabled, profile?.sessionRecordingsEnabled]
+  )
+
   return {
     profile,
     isLoading,
     error,
     updateName,
     updateEmailNotifications,
+    updateAnalytics,
+    updateSessionRecordings,
     refetch: fetchProfile,
   }
 }

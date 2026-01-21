@@ -1055,13 +1055,14 @@ export async function markNotificationRead(notificationId: string): Promise<Resu
 // USER PREFERENCE HELPERS (per-user preferences)
 // ============================================================================
 
-/**
- * Get the email notifications enabled preference for the current user.
- * Returns true (enabled) when the preference row is missing (opt-out semantics).
- * 
- * @returns Result with boolean indicating if email notifications are enabled
- */
-export async function getEmailNotificationsEnabled(): Promise<Result<boolean>> {
+type UserPreferenceKey =
+  | 'email_notifications_enabled'
+  | 'analytics_enabled'
+  | 'session_recordings_enabled'
+
+async function getUserPreferenceValue(
+  key: UserPreferenceKey
+): Promise<Result<string | null>> {
   if (!isSupabaseConfigured()) {
     return { success: false, error: 'Supabase não está configurado' }
   }
@@ -1078,28 +1079,23 @@ export async function getEmailNotificationsEnabled(): Promise<Result<boolean>> {
       .from('user_preferences')
       .select('value')
       .eq('user_id', user.id)
-      .eq('key', 'email_notifications_enabled')
+      .eq('key', key)
       .maybeSingle()
 
     if (error) {
       return handleSupabaseError(error)
     }
 
-    // No row means enabled (opt-out semantics); 'false' means disabled
-    const enabled = data?.value !== 'false'
-    return { success: true, data: enabled }
+    return { success: true, data: data?.value ?? null }
   } catch (err) {
     return handleSupabaseError(err)
   }
 }
 
-/**
- * Set the email notifications enabled preference for the current user.
- * 
- * @param enabled - Whether email notifications should be enabled
- * @returns Result indicating success or failure
- */
-export async function setEmailNotificationsEnabled(enabled: boolean): Promise<Result<void>> {
+async function setUserPreferenceValue(
+  key: UserPreferenceKey,
+  value: string
+): Promise<Result<void>> {
   if (!isSupabaseConfigured()) {
     return { success: false, error: 'Supabase não está configurado' }
   }
@@ -1115,8 +1111,8 @@ export async function setEmailNotificationsEnabled(enabled: boolean): Promise<Re
     const { error } = await client.from('user_preferences').upsert(
       {
         user_id: user.id,
-        key: 'email_notifications_enabled',
-        value: enabled ? 'true' : 'false',
+        key,
+        value,
         updated_at: new Date().toISOString(),
       },
       {
@@ -1132,6 +1128,79 @@ export async function setEmailNotificationsEnabled(enabled: boolean): Promise<Re
   } catch (err) {
     return handleSupabaseError(err)
   }
+}
+
+async function getUserPreferenceBoolean(
+  key: UserPreferenceKey,
+  defaultValue: boolean
+): Promise<Result<boolean>> {
+  const result = await getUserPreferenceValue(key)
+  if (!result.success) {
+    return result
+  }
+
+  if (result.data === null) {
+    return { success: true, data: defaultValue }
+  }
+
+  return { success: true, data: result.data !== 'false' }
+}
+
+async function setUserPreferenceBoolean(
+  key: UserPreferenceKey,
+  enabled: boolean
+): Promise<Result<void>> {
+  return setUserPreferenceValue(key, enabled ? 'true' : 'false')
+}
+
+/**
+ * Get the email notifications enabled preference for the current user.
+ * Returns true (enabled) when the preference row is missing (opt-out semantics).
+ * 
+ * @returns Result with boolean indicating if email notifications are enabled
+ */
+export async function getEmailNotificationsEnabled(): Promise<Result<boolean>> {
+  return getUserPreferenceBoolean('email_notifications_enabled', true)
+}
+
+/**
+ * Set the email notifications enabled preference for the current user.
+ * 
+ * @param enabled - Whether email notifications should be enabled
+ * @returns Result indicating success or failure
+ */
+export async function setEmailNotificationsEnabled(enabled: boolean): Promise<Result<void>> {
+  return setUserPreferenceBoolean('email_notifications_enabled', enabled)
+}
+
+/**
+ * Get analytics enabled preference for the current user.
+ * Defaults to true (opt-out semantics).
+ */
+export async function getAnalyticsEnabled(): Promise<Result<boolean>> {
+  return getUserPreferenceBoolean('analytics_enabled', true)
+}
+
+/**
+ * Set analytics enabled preference for the current user.
+ */
+export async function setAnalyticsEnabled(enabled: boolean): Promise<Result<void>> {
+  return setUserPreferenceBoolean('analytics_enabled', enabled)
+}
+
+/**
+ * Get session recordings enabled preference for the current user.
+ * Defaults to true (opt-out semantics).
+ */
+export async function getSessionRecordingsEnabled(): Promise<Result<boolean>> {
+  return getUserPreferenceBoolean('session_recordings_enabled', true)
+}
+
+/**
+ * Set session recordings enabled preference for the current user.
+ */
+export async function setSessionRecordingsEnabled(enabled: boolean): Promise<Result<void>> {
+  return setUserPreferenceBoolean('session_recordings_enabled', enabled)
 }
 
 // ============================================================================
