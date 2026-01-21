@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { MotionConfig } from 'motion/react'
 import { cn } from '@/lib/utils'
+import { motionTransitions } from '@/lib/motion'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
 import { useMonthProgression } from '@/hooks/use-month-progression'
@@ -88,13 +90,19 @@ function AppRoutes() {
 function App() {
   // Show setup screen if Supabase is not configured
   if (!isSupabaseConfigured()) {
-    return <SetupRequired />
+    return (
+      <MotionConfig reducedMotion="user" transition={motionTransitions.ui}>
+        <SetupRequired />
+      </MotionConfig>
+    )
   }
 
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <MotionConfig reducedMotion="user" transition={motionTransitions.ui}>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </MotionConfig>
   )
 }
 

@@ -36,6 +36,7 @@ export function EstimatedBalanceIndicator({
       className={cn(
         'rounded-xl border p-4',
         'bg-amber-500/10 border-amber-500/30',
+        'fc-glow-amber',
         'flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4',
         className
       )}

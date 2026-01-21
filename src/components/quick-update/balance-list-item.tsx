@@ -25,6 +25,12 @@ const FRESHNESS_BAR_CLASSES: Record<BalanceFreshness, string> = {
   stale: 'bg-red-500',
 }
 
+const FRESHNESS_GLOW_CLASSES: Record<BalanceFreshness, string> = {
+  fresh: 'fc-edge-glow-emerald',
+  warning: 'fc-edge-glow-amber',
+  stale: 'fc-edge-glow-red',
+}
+
 interface BalanceListItemProps {
   /** The balance item to display */
   item: BalanceItem
@@ -127,93 +133,110 @@ export function BalanceListItem({
   })()
 
   return (
-    <div
-      className={cn(
-        'relative flex items-center gap-4 p-4 rounded-lg border overflow-hidden',
-        error ? 'border-red-500/50 bg-red-500/5' : 'border-border bg-card'
-      )}
-    >
-      {/* Freshness indicator bar (left edge) */}
+    <div className="relative pl-4 -ml-4 md:pl-6 md:-ml-6">
+      {/* Outward glow (kept inside the scroll container gutter so it won't be clipped) */}
       <div
-        data-freshness={freshness}
         className={cn(
-          'absolute left-0 top-0 bottom-0 w-1',
-          FRESHNESS_BAR_CLASSES[freshness]
+          'pointer-events-none absolute inset-y-0 left-0 w-4 rounded-l-lg md:w-6',
+          FRESHNESS_GLOW_CLASSES[freshness],
         )}
         aria-hidden="true"
       />
 
-      {/* Type indicator */}
-      <div className="flex-shrink-0 ml-1">
-        <Icon className="h-5 w-5 text-muted-foreground" />
-      </div>
-
-      {/* Name, owner, account type, and previous balance */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="font-medium text-foreground truncate">{name}</p>
-          <OwnerBadge owner={owner} />
-          <AccountTypeBadge type={accountType} />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Anterior: {formatCurrency(previousBalance)}
-        </p>
-      </div>
-
-      {/* Balance input */}
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          {/* Reserve fixed space for spinner so layout doesn't shift while saving */}
-          <div className="w-4 h-4 flex items-center justify-center">
-            {isSaving ? (
-              <Loader2
-                className="h-4 w-4 animate-spin text-muted-foreground"
-                role="img"
-                aria-label="Salvando"
-              />
-            ) : (
-              <span aria-hidden="true" className="h-4 w-4" />
-            )}
-          </div>
-
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              R$
-            </span>
-            <Input
-              ref={inputRef}
-              type="text"
-              inputMode="decimal"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={handleBlur}
-              onKeyDown={handleKeyDown}
-              disabled={isSaving}
-              aria-busy={isSaving}
-              className={cn(
-                'w-32 pl-7 text-right',
-                isSaving && 'opacity-50'
-              )}
-              aria-label={`Saldo de ${name}`}
-              placeholder="0,00"
-            />
-          </div>
-        </div>
-
-        {/* Error display with retry */}
-        {error && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-red-600">{error}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRetry}
-              className="h-6 px-2 text-xs"
-            >
-              Tentar novamente
-            </Button>
-          </div>
+      <div
+        className={cn(
+          'relative flex items-center gap-4 p-4 rounded-lg border overflow-hidden',
+          error ? 'border-red-500/50 bg-red-500/5' : 'border-border bg-card'
         )}
+      >
+        {/* Freshness indicator bar (left edge) */}
+        <div
+          data-freshness={freshness}
+          className="absolute left-0 top-0 bottom-0 w-2 pointer-events-none z-10"
+          aria-hidden="true"
+        >
+          {/* Solid bar */}
+          <div
+            className={cn(
+              'absolute inset-y-0 left-0 w-[3px]',
+              FRESHNESS_BAR_CLASSES[freshness]
+            )}
+          />
+        </div>
+
+        {/* Type indicator */}
+        <div className="flex-shrink-0 ml-1">
+          <Icon className="h-5 w-5 text-muted-foreground" />
+        </div>
+
+        {/* Name, owner, account type, and previous balance */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium text-foreground truncate">{name}</p>
+            <OwnerBadge owner={owner} />
+            <AccountTypeBadge type={accountType} />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Anterior: {formatCurrency(previousBalance)}
+          </p>
+        </div>
+
+        {/* Balance input */}
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            {/* Reserve fixed space for spinner so layout doesn't shift while saving */}
+            <div className="w-4 h-4 flex items-center justify-center">
+              {isSaving ? (
+                <Loader2
+                  className="h-4 w-4 animate-spin text-muted-foreground"
+                  role="img"
+                  aria-label="Salvando"
+                />
+              ) : (
+                <span aria-hidden="true" className="h-4 w-4" />
+              )}
+            </div>
+
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                R$
+              </span>
+              <Input
+                ref={inputRef}
+                type="text"
+                inputMode="decimal"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                disabled={isSaving}
+                aria-busy={isSaving}
+                className={cn(
+                  'w-32 pl-7 text-right',
+                  isSaving && 'opacity-50'
+                )}
+                aria-label={`Saldo de ${name}`}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+
+          {/* Error display with retry */}
+          {error && (
+            <div className="flex items-center gap-2" role="alert">
+              <span className="text-xs text-red-600">{error}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleRetry}
+                className="h-6 px-2 text-xs"
+              >
+                Tentar novamente
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

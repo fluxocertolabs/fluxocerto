@@ -107,6 +107,9 @@ const port = baseUrl.port || '5173';
  */
 export default defineConfig({
   testDir: './tests',
+  // Avoid permission issues with a root-owned artifacts directory in some environments.
+  // Keep in sync with CI/scripts that upload or read Playwright artifacts.
+  outputDir: 'playwright-results',
   fullyParallel: false, // Run tests serially for simplicity
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -166,6 +169,7 @@ export default defineConfig({
       testMatch: /visual\/.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
+        reducedMotion: 'reduce',
         viewport: { width: 1280, height: 720 },
       },
     },

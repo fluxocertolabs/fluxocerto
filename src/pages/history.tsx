@@ -84,6 +84,7 @@ export function HistoryPage() {
       {/* Toast notifications */}
       {toast && (
         <Toast
+          key={toast.id}
           message={toast.message}
           type={toast.type}
           onDismiss={hideToast}

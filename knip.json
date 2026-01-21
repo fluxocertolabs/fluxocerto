@@ -21,7 +21,7 @@
         "**/node_modules/**",
         "**/dist/**",
         "**/coverage/**",
-        "**/test-results/**",
+        "**/playwright-results/**",
         "**/playwright-report/**",
         "**/.pnpm-store/**",
         "**/e2e/tests/visual/**/*-snapshots/**",

@@ -2,7 +2,7 @@
 /**
  * Flaky Test Detection Script
  *
- * Scans Playwright test-results directory for retry artifacts and reports
+ * Scans Playwright results directory for retry artifacts and reports
  * which tests are flaky (passed after retry). This helps surface instability
  * that would otherwise go unnoticed when the suite "passes".
  *
@@ -18,7 +18,7 @@
 import { readdirSync, existsSync, statSync } from 'fs';
 import { join } from 'path';
 
-const TEST_RESULTS_DIR = join(process.cwd(), 'test-results');
+const TEST_RESULTS_DIR = join(process.cwd(), 'playwright-results');
 const FAIL_ON_FLAKES = process.argv.includes('--fail-on-flakes');
 
 interface FlakeInfo {
@@ -29,7 +29,7 @@ interface FlakeInfo {
 
 function detectFlakes(): FlakeInfo[] {
   if (!existsSync(TEST_RESULTS_DIR)) {
-    console.log('📁 No test-results directory found. Run tests first.');
+    console.log('📁 No playwright-results directory found. Run tests first.');
     return [];
   }
 
@@ -144,7 +144,7 @@ function main(): void {
   }
 
   console.log('\n💡 Tip: Investigate tests with highest retry counts first.');
-  console.log('   Check test-results/<artifact-dir>/ for screenshots and traces.\n');
+  console.log('   Check playwright-results/<artifact-dir>/ for screenshots and traces.\n');
 
   if (FAIL_ON_FLAKES) {
     console.log('❌ Failing due to --fail-on-flakes flag.\n');

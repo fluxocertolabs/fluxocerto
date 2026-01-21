@@ -185,7 +185,7 @@ export class AccountsSection {
       if (!(await dialog.isVisible().catch(() => false))) {
         // Best-effort diagnostics for flakes (Playwright doesn't always attach screenshots for toPass timeouts).
         await this.page
-          .screenshot({ path: `test-results/debug-accounts-add-dialog-${Date.now()}.png`, fullPage: true })
+          .screenshot({ path: `playwright-results/debug-accounts-add-dialog-${Date.now()}.png`, fullPage: true })
           .catch(() => {});
         throw new Error('Failed to open "Adicionar Conta" dialog');
       }
@@ -252,7 +252,7 @@ export class AccountsSection {
       if (await pageError.isVisible().catch(() => false)) {
         const message = (await pageError.textContent().catch(() => null))?.trim() || 'Unknown error';
         await this.page
-          .screenshot({ path: `test-results/debug-accounts-submit-error-${Date.now()}.png`, fullPage: true })
+          .screenshot({ path: `playwright-results/debug-accounts-submit-error-${Date.now()}.png`, fullPage: true })
           .catch(() => {});
         throw new Error(`Account submit failed: ${message}`);
       }

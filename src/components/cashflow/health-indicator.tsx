@@ -59,6 +59,12 @@ export function HealthIndicator({
 }: HealthIndicatorProps) {
   const config = statusConfig[status]
   const Icon = config.icon
+  const glowClass =
+    status === 'danger'
+      ? 'fc-glow-red'
+      : status === 'warning' || status === 'caution'
+        ? 'fc-glow-amber'
+        : null
 
   return (
     <div
@@ -67,6 +73,7 @@ export function HealthIndicator({
         'rounded-xl border p-4',
         config.bgColor,
         config.borderColor,
+        glowClass,
         'flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'
       )}
     >

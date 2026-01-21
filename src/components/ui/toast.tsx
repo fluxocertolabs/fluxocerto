@@ -3,12 +3,14 @@
  * Displays success or error messages with auto-dismiss.
  */
 
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { CheckCircledIcon, CrossCircledIcon, Cross2Icon } from '@radix-ui/react-icons'
 
 export type ToastType = 'success' | 'error'
+
+const TOAST_EXIT_ANIMATION_MS = 340
 
 interface ToastProps {
   message: string
@@ -25,10 +27,28 @@ export function Toast({
   onRetry,
   duration = 5000,
 }: ToastProps) {
+  const [isExiting, setIsExiting] = useState(false)
+  const dismissTimeoutRef = useRef<number | null>(null)
+
+  const requestDismiss = useCallback(() => {
+    if (isExiting) return
+    setIsExiting(true)
+
+    // Let the exit animation play before unmounting.
+    dismissTimeoutRef.current = window.setTimeout(() => {
+      onDismiss()
+    }, TOAST_EXIT_ANIMATION_MS)
+  }, [isExiting, onDismiss])
+
   useEffect(() => {
-    const timer = setTimeout(onDismiss, duration)
-    return () => clearTimeout(timer)
-  }, [onDismiss, duration])
+    const timer = window.setTimeout(requestDismiss, duration)
+    return () => {
+      window.clearTimeout(timer)
+      if (dismissTimeoutRef.current) {
+        window.clearTimeout(dismissTimeoutRef.current)
+      }
+    }
+  }, [duration, requestDismiss])
 
   const isError = type === 'error'
 
@@ -39,7 +59,8 @@ export function Toast({
         'w-[360px] max-w-[calc(100vw-2rem)]',
         'rounded-lg shadow-lg',
         'flex items-center gap-3 p-4',
-        'animate-in slide-in-from-bottom-5',
+        'fc-toast-enter',
+        isExiting && 'fc-toast-exit',
         isError
           ? 'bg-destructive text-destructive-foreground'
           : 'bg-emerald-600 text-white'
@@ -85,7 +106,7 @@ export function Toast({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onDismiss}
+          onClick={requestDismiss}
           className={cn(
             'h-8 w-8 text-white/90 hover:text-white',
             isError ? 'hover:bg-white/10' : 'hover:bg-white/10'

@@ -163,7 +163,7 @@ jobs:
           name: visual-regression-report
           path: |
             playwright-report/
-            test-results/
+            playwright-results/
           retention-days: 7
 
   e2e:
@@ -258,7 +258,7 @@ jobs:
           name: playwright-report
           path: |
             playwright-report/
-            test-results/
+            playwright-results/
           retention-days: 7
 
   migrate-staging:
