@@ -14,23 +14,31 @@ const createMockProfile = (overrides: Partial<ProfileData> = {}): ProfileData =>
   name: 'Test User',
   email: 'test@example.com',
   emailNotificationsEnabled: true,
+  analyticsEnabled: true,
+  sessionRecordingsEnabled: true,
   ...overrides,
 })
 
 // Default mock handlers
 const mockOnUpdateName = vi.fn()
 const mockOnUpdateEmailNotifications = vi.fn()
+const mockOnUpdateAnalytics = vi.fn()
+const mockOnUpdateSessionRecordings = vi.fn()
 
 const renderForm = (
   profile: ProfileData = createMockProfile(),
   onUpdateName = mockOnUpdateName,
-  onUpdateEmailNotifications = mockOnUpdateEmailNotifications
+  onUpdateEmailNotifications = mockOnUpdateEmailNotifications,
+  onUpdateAnalytics = mockOnUpdateAnalytics,
+  onUpdateSessionRecordings = mockOnUpdateSessionRecordings
 ) => {
   return render(
     <ProfileSettingsForm
       profile={profile}
       onUpdateName={onUpdateName}
       onUpdateEmailNotifications={onUpdateEmailNotifications}
+      onUpdateAnalytics={onUpdateAnalytics}
+      onUpdateSessionRecordings={onUpdateSessionRecordings}
     />
   )
 }
@@ -40,6 +48,8 @@ describe('ProfileSettingsForm', () => {
     vi.clearAllMocks()
     mockOnUpdateName.mockResolvedValue({ success: true })
     mockOnUpdateEmailNotifications.mockResolvedValue({ success: true })
+    mockOnUpdateAnalytics.mockResolvedValue({ success: true })
+    mockOnUpdateSessionRecordings.mockResolvedValue({ success: true })
   })
 
   // =============================================================================
@@ -62,6 +72,16 @@ describe('ProfileSettingsForm', () => {
     it('displays "Notificações por email" heading', () => {
       renderForm()
       expect(screen.getByText('Notificações por email')).toBeInTheDocument()
+    })
+
+    it('displays analytics section heading', () => {
+      renderForm()
+      expect(screen.getByText('Analytics de uso')).toBeInTheDocument()
+    })
+
+    it('displays session recordings section heading', () => {
+      renderForm()
+      expect(screen.getByText('Gravações de sessão')).toBeInTheDocument()
     })
 
     it('displays "Salvar nome" button text', () => {
@@ -199,14 +219,14 @@ describe('ProfileSettingsForm', () => {
     it('displays toggle in checked state when enabled', () => {
       renderForm(createMockProfile({ emailNotificationsEnabled: true }))
 
-      const toggle = screen.getByRole('switch')
+      const toggle = screen.getByLabelText('Ativar notificações por email')
       expect(toggle).toHaveAttribute('data-state', 'checked')
     })
 
     it('displays toggle in unchecked state when disabled', () => {
       renderForm(createMockProfile({ emailNotificationsEnabled: false }))
 
-      const toggle = screen.getByRole('switch')
+      const toggle = screen.getByLabelText('Ativar notificações por email')
       expect(toggle).toHaveAttribute('data-state', 'unchecked')
     })
 
@@ -214,11 +234,41 @@ describe('ProfileSettingsForm', () => {
       const user = userEvent.setup()
       renderForm(createMockProfile({ emailNotificationsEnabled: true }))
 
-      const toggle = screen.getByRole('switch')
+      const toggle = screen.getByLabelText('Ativar notificações por email')
       await user.click(toggle)
 
       await waitFor(() => {
         expect(mockOnUpdateEmailNotifications).toHaveBeenCalledWith(false)
+      })
+    })
+  })
+
+  // =============================================================================
+  // ANALYTICS TOGGLES
+  // =============================================================================
+
+  describe('analytics toggles', () => {
+    it('toggles analytics preference', async () => {
+      const user = userEvent.setup()
+      renderForm(createMockProfile({ analyticsEnabled: true }))
+
+      const toggle = screen.getByLabelText('Ativar analytics de uso')
+      await user.click(toggle)
+
+      await waitFor(() => {
+        expect(mockOnUpdateAnalytics).toHaveBeenCalledWith(false)
+      })
+    })
+
+    it('toggles session recordings preference', async () => {
+      const user = userEvent.setup()
+      renderForm(createMockProfile({ sessionRecordingsEnabled: true }))
+
+      const toggle = screen.getByLabelText('Ativar gravações de sessão')
+      await user.click(toggle)
+
+      await waitFor(() => {
+        expect(mockOnUpdateSessionRecordings).toHaveBeenCalledWith(false)
       })
     })
   })
@@ -273,7 +323,7 @@ describe('ProfileSettingsForm', () => {
       mockOnUpdateEmailNotifications.mockResolvedValue({ success: false, error: 'Failed' })
       renderForm(createMockProfile({ emailNotificationsEnabled: true }))
 
-      const toggle = screen.getByRole('switch')
+      const toggle = screen.getByLabelText('Ativar notificações por email')
       expect(toggle).toHaveAttribute('data-state', 'checked')
 
       await user.click(toggle)

@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Mail, User, Bell } from 'lucide-react'
+import { Loader2, Mail, User, Bell, BarChart3, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,12 +21,16 @@ interface ProfileSettingsFormProps {
   profile: ProfileData
   onUpdateName: (name: string) => Promise<Result<void>>
   onUpdateEmailNotifications: (enabled: boolean) => Promise<Result<void>>
+  onUpdateAnalytics: (enabled: boolean) => Promise<Result<void>>
+  onUpdateSessionRecordings: (enabled: boolean) => Promise<Result<void>>
 }
 
 export function ProfileSettingsForm({
   profile,
   onUpdateName,
   onUpdateEmailNotifications,
+  onUpdateAnalytics,
+  onUpdateSessionRecordings,
 }: ProfileSettingsFormProps) {
   const [name, setName] = useState(profile.name)
   const [nameError, setNameError] = useState<string | null>(null)
@@ -36,6 +40,14 @@ export function ProfileSettingsForm({
     profile.emailNotificationsEnabled
   )
   const [isSavingEmail, setIsSavingEmail] = useState(false)
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(
+    profile.analyticsEnabled
+  )
+  const [recordingsEnabled, setRecordingsEnabled] = useState(
+    profile.sessionRecordingsEnabled
+  )
+  const [isSavingAnalytics, setIsSavingAnalytics] = useState(false)
+  const [isSavingRecordings, setIsSavingRecordings] = useState(false)
 
   // Sync name with profile when it changes externally
   useEffect(() => {
@@ -46,6 +58,14 @@ export function ProfileSettingsForm({
   useEffect(() => {
     setEmailNotifications(profile.emailNotificationsEnabled)
   }, [profile.emailNotificationsEnabled])
+
+  useEffect(() => {
+    setAnalyticsEnabled(profile.analyticsEnabled)
+  }, [profile.analyticsEnabled])
+
+  useEffect(() => {
+    setRecordingsEnabled(profile.sessionRecordingsEnabled)
+  }, [profile.sessionRecordingsEnabled])
 
   const handleNameSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,6 +111,28 @@ export function ProfileSettingsForm({
     if (!result.success) {
       // Revert on failure
       setEmailNotifications(!checked)
+    }
+  }
+
+  const handleAnalyticsChange = async (checked: boolean) => {
+    setAnalyticsEnabled(checked)
+    setIsSavingAnalytics(true)
+    const result = await onUpdateAnalytics(checked)
+    setIsSavingAnalytics(false)
+
+    if (!result.success) {
+      setAnalyticsEnabled(!checked)
+    }
+  }
+
+  const handleRecordingsChange = async (checked: boolean) => {
+    setRecordingsEnabled(checked)
+    setIsSavingRecordings(true)
+    const result = await onUpdateSessionRecordings(checked)
+    setIsSavingRecordings(false)
+
+    if (!result.success) {
+      setRecordingsEnabled(!checked)
     }
   }
 
@@ -215,6 +257,82 @@ export function ProfileSettingsForm({
               {emailNotifications
                 ? 'Você receberá emails sobre notificações importantes.'
                 : 'Você não receberá emails de notificações.'}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Analytics Section */}
+      <Card className="p-6">
+        <div className="flex items-start gap-4">
+          <div className="rounded-full bg-primary/10 p-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-foreground">
+                  Analytics de uso
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Ajude a melhorar o Fluxo Certo com métricas de uso anônimas
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isSavingAnalytics && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                <Switch
+                  id="analytics-enabled"
+                  checked={analyticsEnabled}
+                  onCheckedChange={handleAnalyticsChange}
+                  disabled={isSavingAnalytics}
+                  aria-label="Ativar analytics de uso"
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {analyticsEnabled
+                ? 'Coletamos eventos de uso sem dados sensíveis.'
+                : 'Nenhum evento de uso será coletado.'}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Session Recordings Section */}
+      <Card className="p-6">
+        <div className="flex items-start gap-4">
+          <div className="rounded-full bg-primary/10 p-2">
+            <Video className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-foreground">
+                  Gravações de sessão
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Permite reproduzir sessões com dados mascarados
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isSavingRecordings && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                <Switch
+                  id="session-recordings"
+                  checked={recordingsEnabled}
+                  onCheckedChange={handleRecordingsChange}
+                  disabled={isSavingRecordings || !analyticsEnabled}
+                  aria-label="Ativar gravações de sessão"
+                />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {recordingsEnabled
+                ? 'Campos sensíveis são mascarados automaticamente.'
+                : 'Gravações de sessão estão desativadas.'}
             </p>
           </div>
         </div>

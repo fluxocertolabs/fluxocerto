@@ -10,8 +10,10 @@ import { create } from 'zustand'
 interface OnboardingStoreState {
   /** Whether the wizard dialog is open */
   isWizardOpen: boolean
+  /** Last known open reason */
+  openReason: 'manual' | 'auto' | null
   /** Open the wizard */
-  openWizard: () => void
+  openWizard: (reason?: 'manual' | 'auto') => void
   /** Close the wizard */
   closeWizard: () => void
   /** Toggle the wizard */
@@ -20,9 +22,13 @@ interface OnboardingStoreState {
 
 export const useOnboardingStore = create<OnboardingStoreState>()((set) => ({
   isWizardOpen: false,
-  openWizard: () => set({ isWizardOpen: true }),
-  closeWizard: () => set({ isWizardOpen: false }),
-  toggleWizard: () => set((state) => ({ isWizardOpen: !state.isWizardOpen })),
+  openReason: null,
+  openWizard: (reason = 'manual') => set({ isWizardOpen: true, openReason: reason }),
+  closeWizard: () => set({ isWizardOpen: false, openReason: null }),
+  toggleWizard: () => set((state) => ({
+    isWizardOpen: !state.isWizardOpen,
+    openReason: state.isWizardOpen ? null : 'manual',
+  })),
 }))
 
 

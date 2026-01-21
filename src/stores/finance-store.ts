@@ -7,6 +7,7 @@ import {
   isSupabaseConfigured,
 } from '../lib/supabase'
 import { notifyFinanceDataInvalidated } from '../lib/finance-data-events'
+import { captureEvent } from '../lib/analytics/posthog'
 import {
   BankAccountInputSchema,
   ProjectInputSchema,
@@ -34,72 +35,86 @@ export type Result<T> =
 // Store interface with all action signatures
 interface FinanceStore {
   // Bank Account Actions
-  addAccount: (input: BankAccountInput) => Promise<Result<string>>
+  addAccount: (input: BankAccountInput, meta?: AnalyticsMeta) => Promise<Result<string>>
   updateAccount: (
     id: string,
-    input: Partial<BankAccountInput>
+    input: Partial<BankAccountInput>,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
-  deleteAccount: (id: string) => Promise<Result<void>>
+  deleteAccount: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
 
   // Project Actions
-  addProject: (input: ProjectInput) => Promise<Result<string>>
+  addProject: (input: ProjectInput, meta?: AnalyticsMeta) => Promise<Result<string>>
   updateProject: (
     id: string,
-    input: Partial<ProjectInput>
+    input: Partial<ProjectInput>,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
-  deleteProject: (id: string) => Promise<Result<void>>
-  toggleProjectActive: (id: string) => Promise<Result<void>>
+  deleteProject: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
+  toggleProjectActive: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
 
   // Fixed Expense Actions
-  addExpense: (input: FixedExpenseInput) => Promise<Result<string>>
+  addExpense: (input: FixedExpenseInput, meta?: AnalyticsMeta) => Promise<Result<string>>
   updateExpense: (
     id: string,
-    input: Partial<FixedExpenseInput>
+    input: Partial<FixedExpenseInput>,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
-  deleteExpense: (id: string) => Promise<Result<void>>
-  toggleExpenseActive: (id: string) => Promise<Result<void>>
+  deleteExpense: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
+  toggleExpenseActive: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
 
   // Single-Shot Expense Actions
-  addSingleShotExpense: (input: SingleShotExpenseInput) => Promise<Result<string>>
+  addSingleShotExpense: (input: SingleShotExpenseInput, meta?: AnalyticsMeta) => Promise<Result<string>>
   updateSingleShotExpense: (
     id: string,
-    input: Partial<Omit<SingleShotExpenseInput, 'type'>>
+    input: Partial<Omit<SingleShotExpenseInput, 'type'>>,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
-  deleteSingleShotExpense: (id: string) => Promise<Result<void>>
+  deleteSingleShotExpense: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
 
   // Single-Shot Income Actions
-  addSingleShotIncome: (input: SingleShotIncomeInput) => Promise<Result<string>>
+  addSingleShotIncome: (input: SingleShotIncomeInput, meta?: AnalyticsMeta) => Promise<Result<string>>
   updateSingleShotIncome: (
     id: string,
-    input: Partial<Omit<SingleShotIncomeInput, 'type'>>
+    input: Partial<Omit<SingleShotIncomeInput, 'type'>>,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
-  deleteSingleShotIncome: (id: string) => Promise<Result<void>>
+  deleteSingleShotIncome: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
 
   // Credit Card Actions
-  addCreditCard: (input: CreditCardInput) => Promise<Result<string>>
+  addCreditCard: (input: CreditCardInput, meta?: AnalyticsMeta) => Promise<Result<string>>
   updateCreditCard: (
     id: string,
-    input: Partial<CreditCardInput>
+    input: Partial<CreditCardInput>,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
-  deleteCreditCard: (id: string) => Promise<Result<void>>
+  deleteCreditCard: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
 
   // Future Statement Actions
-  addFutureStatement: (input: FutureStatementInput) => Promise<Result<string>>
+  addFutureStatement: (input: FutureStatementInput, meta?: AnalyticsMeta) => Promise<Result<string>>
   updateFutureStatement: (
     id: string,
-    input: FutureStatementUpdate
+    input: FutureStatementUpdate,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
-  deleteFutureStatement: (id: string) => Promise<Result<void>>
+  deleteFutureStatement: (id: string, meta?: AnalyticsMeta) => Promise<Result<void>>
 
   // Balance Update Actions (for Quick Balance Update feature)
-  updateAccountBalance: (id: string, balance: number) => Promise<Result<void>>
+  updateAccountBalance: (id: string, balance: number, meta?: AnalyticsMeta) => Promise<Result<void>>
   updateCreditCardBalance: (
     id: string,
-    statementBalance: number
+    statementBalance: number,
+    meta?: AnalyticsMeta
   ) => Promise<Result<void>>
   
   // Mark all balances as updated (for Quick Update "Concluir" action)
-  markAllBalancesUpdated: () => Promise<Result<void>>
+  markAllBalancesUpdated: (meta?: AnalyticsMeta) => Promise<Result<void>>
+}
+
+type AnalyticsSource = 'app' | 'manage' | 'onboarding' | 'quick_update'
+
+interface AnalyticsMeta {
+  source?: AnalyticsSource
 }
 
 // Helper to handle common errors (Zod validation + Supabase errors)
@@ -122,9 +137,24 @@ function checkSupabaseConfigured(): Result<never> | null {
   return null
 }
 
+function getAnalyticsSource(meta?: AnalyticsMeta): AnalyticsSource {
+  return meta?.source ?? 'app'
+}
+
+function captureFinanceEvent(
+  event: string,
+  meta: AnalyticsMeta | undefined,
+  properties: Record<string, unknown>
+): void {
+  captureEvent(event, {
+    source: getAnalyticsSource(meta),
+    ...properties,
+  })
+}
+
 export const useFinanceStore = create<FinanceStore>()(() => ({
   // === Bank Account Actions ===
-  addAccount: async (input) => {
+  addAccount: async (input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -156,13 +186,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('account_created', meta, {
+        entity_type: 'account',
+        owner_assigned: Boolean(validated.ownerId),
+      })
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateAccount: async (id, input) => {
+  updateAccount: async (id, input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -194,13 +228,18 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('account_updated', meta, {
+        entity_type: 'account',
+        owner_assigned: validated.ownerId !== undefined ? validated.ownerId !== null : undefined,
+        balance_updated: validated.balance !== undefined,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  deleteAccount: async (id) => {
+  deleteAccount: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -219,6 +258,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('account_deleted', meta, {
+        entity_type: 'account',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -226,7 +268,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   // === Project Actions ===
-  addProject: async (input) => {
+  addProject: async (input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -258,13 +300,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('project_created', meta, {
+        entity_type: 'project',
+        is_active: validated.isActive,
+      })
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateProject: async (id, input) => {
+  updateProject: async (id, input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -294,13 +340,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('project_updated', meta, {
+        entity_type: 'project',
+        is_active: validated.isActive,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  deleteProject: async (id) => {
+  deleteProject: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -319,13 +369,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('project_deleted', meta, {
+        entity_type: 'project',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  toggleProjectActive: async (id) => {
+  toggleProjectActive: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -355,6 +408,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('project_toggled_active', meta, {
+        entity_type: 'project',
+        is_active: !existing.is_active,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -362,7 +419,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   // === Fixed Expense Actions ===
-  addExpense: async (input) => {
+  addExpense: async (input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -394,13 +451,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('expense_created', meta, {
+        entity_type: 'expense',
+        is_active: validated.isActive,
+      })
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateExpense: async (id, input) => {
+  updateExpense: async (id, input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -428,13 +489,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('expense_updated', meta, {
+        entity_type: 'expense',
+        is_active: validated.isActive,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  deleteExpense: async (id) => {
+  deleteExpense: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -453,13 +518,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('expense_deleted', meta, {
+        entity_type: 'expense',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  toggleExpenseActive: async (id) => {
+  toggleExpenseActive: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -489,6 +557,10 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('expense_toggled_active', meta, {
+        entity_type: 'expense',
+        is_active: !existing.is_active,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -496,7 +568,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   // === Single-Shot Expense Actions ===
-  addSingleShotExpense: async (input) => {
+  addSingleShotExpense: async (input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -528,13 +600,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('single_shot_expense_created', meta, {
+        entity_type: 'single_shot_expense',
+      })
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateSingleShotExpense: async (id, input) => {
+  updateSingleShotExpense: async (id, input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -559,13 +634,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('single_shot_expense_updated', meta, {
+        entity_type: 'single_shot_expense',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  deleteSingleShotExpense: async (id) => {
+  deleteSingleShotExpense: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -585,6 +663,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('single_shot_expense_deleted', meta, {
+        entity_type: 'single_shot_expense',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -592,7 +673,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   // === Single-Shot Income Actions ===
-  addSingleShotIncome: async (input) => {
+  addSingleShotIncome: async (input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -626,13 +707,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('single_shot_income_created', meta, {
+        entity_type: 'single_shot_income',
+      })
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateSingleShotIncome: async (id, input) => {
+  updateSingleShotIncome: async (id, input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -658,13 +742,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('single_shot_income_updated', meta, {
+        entity_type: 'single_shot_income',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  deleteSingleShotIncome: async (id) => {
+  deleteSingleShotIncome: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -684,6 +771,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('single_shot_income_deleted', meta, {
+        entity_type: 'single_shot_income',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -691,7 +781,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   // === Credit Card Actions ===
-  addCreditCard: async (input) => {
+  addCreditCard: async (input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -723,13 +813,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('credit_card_created', meta, {
+        entity_type: 'credit_card',
+        owner_assigned: Boolean(validated.ownerId),
+      })
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateCreditCard: async (id, input) => {
+  updateCreditCard: async (id, input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -761,13 +855,18 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('credit_card_updated', meta, {
+        entity_type: 'credit_card',
+        owner_assigned: validated.ownerId !== undefined ? validated.ownerId !== null : undefined,
+        balance_updated: validated.statementBalance !== undefined,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  deleteCreditCard: async (id) => {
+  deleteCreditCard: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -786,6 +885,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('credit_card_deleted', meta, {
+        entity_type: 'credit_card',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -793,7 +895,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   // === Future Statement Actions ===
-  addFutureStatement: async (input) => {
+  addFutureStatement: async (input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -827,13 +929,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('future_statement_created', meta, {
+        entity_type: 'future_statement',
+      })
       return { success: true, data: data.id }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateFutureStatement: async (id, input) => {
+  updateFutureStatement: async (id, input, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -864,13 +969,16 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('future_statement_updated', meta, {
+        entity_type: 'future_statement',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  deleteFutureStatement: async (id) => {
+  deleteFutureStatement: async (id, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -889,6 +997,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('future_statement_deleted', meta, {
+        entity_type: 'future_statement',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
@@ -896,7 +1007,7 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
   },
 
   // === Balance Update Actions ===
-  updateAccountBalance: async (id, balance) => {
+  updateAccountBalance: async (id, balance, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -923,13 +1034,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('account_updated', meta, {
+        entity_type: 'account',
+        balance_updated: true,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  updateCreditCardBalance: async (id, statementBalance) => {
+  updateCreditCardBalance: async (id, statementBalance, meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -956,13 +1071,17 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('credit_card_updated', meta, {
+        entity_type: 'credit_card',
+        balance_updated: true,
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)
     }
   },
 
-  markAllBalancesUpdated: async () => {
+  markAllBalancesUpdated: async (meta) => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -991,6 +1110,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       }
 
       notifyFinanceDataInvalidated()
+      captureFinanceEvent('balances_marked_updated', meta, {
+        entity_type: 'balances',
+      })
       return { success: true, data: undefined }
     } catch (error) {
       return handleDatabaseError(error)

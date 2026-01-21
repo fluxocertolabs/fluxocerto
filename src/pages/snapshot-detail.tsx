@@ -3,7 +3,7 @@
  * Shows a read-only historical view with "Projeção Histórica" banner.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -27,6 +27,7 @@ import { Toast } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { ArrowLeftIcon, InfoCircledIcon, TrashIcon } from '@radix-ui/react-icons'
+import { captureEvent } from '@/lib/analytics/posthog'
 
 export function SnapshotDetailPage() {
   const { snapshotId } = useParams<{ snapshotId: string }>()
@@ -35,6 +36,7 @@ export function SnapshotDetailPage() {
   const { toast, showSuccess, showError, hideToast } = useToast()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const hasTrackedView = useRef(false)
 
   // Fetch snapshot on mount or when ID changes
   useEffect(() => {
@@ -42,6 +44,12 @@ export function SnapshotDetailPage() {
       fetchSnapshot(snapshotId)
     }
   }, [snapshotId, fetchSnapshot])
+
+  useEffect(() => {
+    if (!currentSnapshot || hasTrackedView.current) return
+    hasTrackedView.current = true
+    captureEvent('snapshot_viewed')
+  }, [currentSnapshot])
 
   // Transform snapshot data for chart/summary
   const { chartData, dangerRanges, summaryStats } = useSnapshotProjection(currentSnapshot)

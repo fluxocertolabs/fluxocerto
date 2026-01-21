@@ -2,6 +2,7 @@ import React from 'react'
 import { BrandSymbol } from '@/components/brand'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { captureEvent } from '@/lib/analytics/posthog'
 
 type AppErrorBoundaryProps = {
   children: React.ReactNode
@@ -30,6 +31,9 @@ export class AppErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('App crashed:', error, info)
+    captureEvent('app_error_boundary_triggered', {
+      error_name: error.name,
+    })
   }
 
   private handleReload = () => {

@@ -3,7 +3,7 @@
  * Full-screen modal for rapid balance updates with smooth loading transitions.
  */
 
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useMemo, useState } from 'react'
 import { useFinanceData } from '@/hooks/use-finance-data'
 import { useFinanceStore } from '@/stores/finance-store'
 import { useCoordinatedLoading } from '@/hooks/use-coordinated-loading'
@@ -47,6 +47,7 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
   // Fetch data to check if empty and capture initial balances
   const { accounts, creditCards, isLoading, error, retry } = useFinanceData()
   const { markAllBalancesUpdated } = useFinanceStore()
+  const analyticsMeta = useMemo(() => ({ source: 'quick_update' as const }), [])
   const [isMarkingComplete, setIsMarkingComplete] = useState(false)
 
   // Coordinated loading state for smooth transitions
@@ -83,7 +84,7 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
     if (accounts.length > 0 || creditCards.length > 0) {
       setIsMarkingComplete(true)
       try {
-        await markAllBalancesUpdated()
+        await markAllBalancesUpdated(analyticsMeta)
       } catch (err) {
         console.error('Failed to mark balances as updated:', err)
         // Continue with onDone even if marking fails - user still wants to close
@@ -92,7 +93,7 @@ export function QuickUpdateView({ onDone, onCancel }: QuickUpdateViewProps) {
       }
     }
     onDone()
-  }, [accounts.length, creditCards.length, markAllBalancesUpdated, onDone])
+  }, [accounts.length, creditCards.length, markAllBalancesUpdated, analyticsMeta, onDone])
 
   // Handle Escape key
   const handleKeyDown = useCallback(

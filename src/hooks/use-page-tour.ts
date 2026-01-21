@@ -9,12 +9,13 @@
  * - Integration with global tour store for manual triggering
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useOnboardingStore } from '@/stores/onboarding-store'
 import { useTourStore } from '@/stores/tour-store'
 import { getTourState, upsertTourState } from '@/lib/supabase'
 import { getTourDefinition, getTourVersion, isTourUpdated } from '@/lib/tours/definitions'
+import { captureEvent } from '@/lib/analytics/posthog'
 import type { TourKey, TourState, TourStatus } from '@/types'
 
 type LocalTourCache = {
@@ -100,6 +101,7 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [hasAutoShown, setHasAutoShown] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+  const hasTrackedStart = useRef(false)
 
   const tourDefinition = useMemo(() => getTourDefinition(tourKey), [tourKey])
   const totalSteps = tourDefinition.steps.length
@@ -114,18 +116,28 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
   // Read on each render so changes written during this session are reflected immediately.
   const localCache = localStorageKey ? readLocalTourCache(localStorageKey) : null
   
+  const trackTourStart = useCallback(
+    (reason: 'auto' | 'manual') => {
+      if (hasTrackedStart.current) return
+      hasTrackedStart.current = true
+      captureEvent('tour_started', { tour_key: tourKey, reason })
+    },
+    [tourKey]
+  )
+
   // Respond to global tour store triggers (from header "Mostrar tour" button)
   useEffect(() => {
     if (activeTourKey === tourKey && !isTourActive && !isWizardActive) {
       setIsTourActive(true)
       setCurrentStepIndex(0)
+      trackTourStart('manual')
       // Clear the global trigger
       stopGlobalTour()
     } else if (activeTourKey === tourKey && isWizardActive) {
       // Clear the trigger but don't start tour - wizard is active
       stopGlobalTour()
     }
-  }, [activeTourKey, tourKey, isTourActive, isWizardActive, stopGlobalTour])
+  }, [activeTourKey, tourKey, isTourActive, isWizardActive, stopGlobalTour, trackTourStart])
 
   // Compute whether auto-show should happen
   const shouldAutoShow = useMemo(() => {
@@ -205,8 +217,9 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
       setIsTourActive(true)
       setHasAutoShown(true)
       setCurrentStepIndex(0)
+      trackTourStart('auto')
     }
-  }, [shouldAutoShow, isTourActive])
+  }, [shouldAutoShow, isTourActive, trackTourStart])
 
   // Stop tour if onboarding wizard becomes active (handles race condition)
   useEffect(() => {
@@ -216,6 +229,7 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
       setCurrentStepIndex(0)
       // Don't mark as auto-shown so it can auto-show after wizard closes
       setHasAutoShown(false)
+      hasTrackedStart.current = false
     }
   }, [isWizardActive, isTourActive])
 
@@ -226,7 +240,8 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
   const startTour = useCallback(() => {
     setIsTourActive(true)
     setCurrentStepIndex(0)
-  }, [])
+    trackTourStart('manual')
+  }, [trackTourStart])
 
   const nextStep = useCallback(() => {
     setCurrentStepIndex(i => (i < totalSteps - 1 ? i + 1 : i))
@@ -247,6 +262,8 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
     // Close immediately; persist in background.
     setIsTourActive(false)
     setCurrentStepIndex(0)
+    hasTrackedStart.current = false
+    captureEvent('tour_completed', { tour_key: tourKey })
 
     const result = await upsertTourState(tourKey, {
       status: 'completed' as TourStatus,
@@ -270,6 +287,8 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
     // Close immediately; persist in background.
     setIsTourActive(false)
     setCurrentStepIndex(0)
+    hasTrackedStart.current = false
+    captureEvent('tour_dismissed', { tour_key: tourKey })
 
     const result = await upsertTourState(tourKey, {
       status: 'dismissed' as TourStatus,

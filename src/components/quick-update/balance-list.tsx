@@ -18,6 +18,7 @@ interface BalanceListProps {
 export function BalanceList({ initialBalances }: BalanceListProps) {
   const { updateAccountBalance, updateCreditCardBalance } = useFinanceStore()
   const shouldReduceMotion = useReducedMotion()
+  const analyticsMeta = { source: 'quick_update' as const }
 
   // Fetch accounts and credit cards
   const { accounts, creditCards, isLoading } = useFinanceData()
@@ -45,12 +46,12 @@ export function BalanceList({ initialBalances }: BalanceListProps) {
     newBalance: number
   ): Promise<{ success: boolean; error?: string }> => {
     if (item.type === 'account') {
-      const result = await updateAccountBalance(item.entity.id, newBalance)
+      const result = await updateAccountBalance(item.entity.id, newBalance, analyticsMeta)
       return result.success
         ? { success: true }
         : { success: false, error: result.error }
     } else {
-      const result = await updateCreditCardBalance(item.entity.id, newBalance)
+      const result = await updateCreditCardBalance(item.entity.id, newBalance, analyticsMeta)
       return result.success
         ? { success: true }
         : { success: false, error: result.error }

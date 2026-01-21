@@ -28,6 +28,7 @@ let mockInsertResponse: { data: Record<string, unknown>; error: unknown } = {
 let mockUpdateResponse = { error: null as unknown, count: 1 }
 let mockGroupId: string | null = 'test-group-id'
 let mockIsConfigured = true
+const mockCaptureEvent = vi.fn()
 
 // Create chainable query builder
 function createQueryBuilder() {
@@ -75,6 +76,10 @@ vi.mock('../lib/supabase', () => ({
 // Mock data invalidation event dispatch so we can assert when it's triggered
 vi.mock('../lib/finance-data-events', () => ({
   notifyFinanceDataInvalidated: vi.fn(),
+}))
+
+vi.mock('../lib/analytics/posthog', () => ({
+  captureEvent: (...args: unknown[]) => mockCaptureEvent(...args),
 }))
 
 // =============================================================================

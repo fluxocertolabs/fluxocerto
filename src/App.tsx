@@ -10,6 +10,7 @@ import { FloatingHelpButton } from '@/components/help'
 import { BrandSymbol } from '@/components/brand'
 import { SetupRequired } from '@/components/setup-required'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
+import { PosthogPageviews } from '@/components/analytics/posthog-pageviews'
 import { Dashboard } from '@/pages/dashboard'
 import { ManagePage } from '@/pages/manage'
 import { HistoryPage } from '@/pages/history'
@@ -18,6 +19,8 @@ import { NotificationsPage } from '@/pages/notifications'
 import { ProfilePage } from '@/pages/profile'
 import { LoginPage } from '@/pages/login'
 import { AuthCallbackPage } from '@/pages/auth-callback'
+import { useAnalyticsConsent } from '@/hooks/use-analytics-consent'
+import { usePosthogGroup } from '@/hooks/use-posthog-group'
 
 function LoadingSpinner() {
   return (
@@ -87,6 +90,12 @@ function AppRoutes() {
   )
 }
 
+function AnalyticsBridge() {
+  useAnalyticsConsent()
+  usePosthogGroup()
+  return <PosthogPageviews />
+}
+
 function App() {
   // Show setup screen if Supabase is not configured
   if (!isSupabaseConfigured()) {
@@ -100,6 +109,7 @@ function App() {
   return (
     <MotionConfig reducedMotion="user" transition={motionTransitions.ui}>
       <BrowserRouter>
+        <AnalyticsBridge />
         <AppRoutes />
       </BrowserRouter>
     </MotionConfig>

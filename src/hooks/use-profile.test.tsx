@@ -12,18 +12,32 @@ const mockGetSupabase = vi.fn()
 const mockIsSupabaseConfigured = vi.fn()
 const mockGetEmailNotificationsEnabled = vi.fn()
 const mockSetEmailNotificationsEnabled = vi.fn()
+const mockGetAnalyticsEnabled = vi.fn()
+const mockSetAnalyticsEnabled = vi.fn()
+const mockGetSessionRecordingsEnabled = vi.fn()
+const mockSetSessionRecordingsEnabled = vi.fn()
 const mockNotifyGroupDataInvalidated = vi.fn()
+const mockSetAnalyticsConsent = vi.fn()
 
 vi.mock('@/lib/supabase', () => ({
   getSupabase: () => mockGetSupabase(),
   isSupabaseConfigured: () => mockIsSupabaseConfigured(),
   getEmailNotificationsEnabled: () => mockGetEmailNotificationsEnabled(),
   setEmailNotificationsEnabled: (enabled: boolean) => mockSetEmailNotificationsEnabled(enabled),
+  getAnalyticsEnabled: () => mockGetAnalyticsEnabled(),
+  setAnalyticsEnabled: (enabled: boolean) => mockSetAnalyticsEnabled(enabled),
+  getSessionRecordingsEnabled: () => mockGetSessionRecordingsEnabled(),
+  setSessionRecordingsEnabled: (enabled: boolean) => mockSetSessionRecordingsEnabled(enabled),
   handleSupabaseError: (err: unknown) => ({ success: false, error: String(err) }),
 }))
 
 vi.mock('@/lib/group-data-events', () => ({
   notifyGroupDataInvalidated: () => mockNotifyGroupDataInvalidated(),
+}))
+
+vi.mock('@/lib/analytics/posthog', () => ({
+  setAnalyticsConsent: (consent: { analytics: boolean; recordings: boolean }) =>
+    mockSetAnalyticsConsent(consent),
 }))
 
 // Default auth state - use a function to get fresh values
@@ -95,6 +109,24 @@ describe('useProfile', () => {
     mockSetEmailNotificationsEnabled.mockResolvedValue({
       success: true,
     })
+
+    mockGetAnalyticsEnabled.mockResolvedValue({
+      success: true,
+      data: true,
+    })
+
+    mockSetAnalyticsEnabled.mockResolvedValue({
+      success: true,
+    })
+
+    mockGetSessionRecordingsEnabled.mockResolvedValue({
+      success: true,
+      data: true,
+    })
+
+    mockSetSessionRecordingsEnabled.mockResolvedValue({
+      success: true,
+    })
   })
 
   // =============================================================================
@@ -126,6 +158,8 @@ describe('useProfile', () => {
       })
 
       expect(result.current.profile?.emailNotificationsEnabled).toBe(true)
+      expect(result.current.profile?.analyticsEnabled).toBe(true)
+      expect(result.current.profile?.sessionRecordingsEnabled).toBe(true)
     })
 
     it('returns null profile when not authenticated', async () => {
@@ -333,6 +367,74 @@ describe('useProfile', () => {
 
       // Should revert to original value
       expect(result.current.profile?.emailNotificationsEnabled).toBe(true)
+    })
+
+    it('loads analytics preferences on mount', async () => {
+      mockGetAnalyticsEnabled.mockResolvedValue({
+        success: true,
+        data: false,
+      })
+
+      const { result } = renderHook(() => useProfile())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(result.current.profile?.analyticsEnabled).toBe(false)
+    })
+
+    it('loads session recordings preference on mount', async () => {
+      mockGetSessionRecordingsEnabled.mockResolvedValue({
+        success: true,
+        data: false,
+      })
+
+      const { result } = renderHook(() => useProfile())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(result.current.profile?.sessionRecordingsEnabled).toBe(false)
+    })
+  })
+
+  // =============================================================================
+  // ANALYTICS PREFERENCES
+  // =============================================================================
+
+  describe('analytics preferences', () => {
+    it('updates analytics preference', async () => {
+      const { result } = renderHook(() => useProfile())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      let updateResult: { success: boolean } = { success: false }
+      await act(async () => {
+        updateResult = await result.current.updateAnalytics(false)
+      })
+
+      expect(updateResult.success).toBe(true)
+      expect(mockSetAnalyticsEnabled).toHaveBeenCalledWith(false)
+    })
+
+    it('updates session recordings preference', async () => {
+      const { result } = renderHook(() => useProfile())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      let updateResult: { success: boolean } = { success: false }
+      await act(async () => {
+        updateResult = await result.current.updateSessionRecordings(false)
+      })
+
+      expect(updateResult.success).toBe(true)
+      expect(mockSetSessionRecordingsEnabled).toHaveBeenCalledWith(false)
     })
   })
 

@@ -188,6 +188,7 @@ export default defineConfig({
       VITE_DEV_ACCESS_TOKEN: devAccessToken,
       VITE_DEV_REFRESH_TOKEN: devRefreshToken,
       VITE_DISABLE_THEME_SYNC: process.env.VITE_DISABLE_THEME_SYNC,
+      VITE_POSTHOG_DISABLED: 'true',
     },
   },
 });
