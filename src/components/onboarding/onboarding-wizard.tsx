@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useFinanceStore } from '@/stores/finance-store'
 import { useGroup } from '@/hooks/use-group'
 import { getSupabase } from '@/lib/supabase'
+import { notifyGroupDataInvalidated } from '@/lib/group-data-events'
 import { cn } from '@/lib/utils'
 import { getStepConfig, isFirstStep, getNextStep, getTotalSteps, getStepIndex } from '@/lib/onboarding/steps'
 import type { BankAccount, OnboardingStep } from '@/types'
@@ -553,6 +554,8 @@ function GroupStep({
 
       // Refresh group/member data so the updated name is reflected when navigating back.
       retryGroup()
+      // Also invalidate any other mounted useGroup() instances (e.g., header badge).
+      notifyGroupDataInvalidated()
       await onComplete()
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Erro ao atualizar grupo')
