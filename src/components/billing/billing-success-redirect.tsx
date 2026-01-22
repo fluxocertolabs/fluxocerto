@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-const BILLING_SUCCESS_FLAG = 'fluxo-certo:billing-success-overlay'
+import { setBillingSuccessFlag } from '@/components/billing/billing-success-flag'
 
 /**
  * Stripe redirects the user back to `/billing/success` after checkout.
@@ -12,31 +11,9 @@ export function BillingSuccessRedirectPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    try {
-      window.sessionStorage.setItem(BILLING_SUCCESS_FLAG, '1')
-    } catch {
-      // ignore storage errors
-    }
+    setBillingSuccessFlag()
     navigate('/', { replace: true })
   }, [navigate])
 
   return null
 }
-
-export function readBillingSuccessFlag(): boolean {
-  try {
-    return window.sessionStorage.getItem(BILLING_SUCCESS_FLAG) === '1'
-  } catch {
-    return false
-  }
-}
-
-export function clearBillingSuccessFlag(): void {
-  try {
-    window.sessionStorage.removeItem(BILLING_SUCCESS_FLAG)
-  } catch {
-    // ignore
-  }
-}
-
-

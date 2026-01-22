@@ -42,11 +42,18 @@ async function capturePosthogEvent(
     properties,
   }
 
-  await fetch(`${config.host}/capture`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
+  try {
+    const response = await fetch(`${config.host}/capture`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      console.warn('PostHog capture failed', { status: response.status })
+    }
+  } catch (err) {
+    console.warn('PostHog capture failed', { err })
+  }
 }
 
 function subscriptionMetadata(subscription: StripeSubscription) {
@@ -254,7 +261,7 @@ Deno.serve(async (req) => {
       return null
     }
 
-    const { data } = await adminClient
+    const { data, error } = await adminClient
       .from('billing_subscriptions')
       .upsert(
         {
@@ -271,6 +278,12 @@ Deno.serve(async (req) => {
       .select('group_id')
       .maybeSingle()
 
+    if (error) {
+      throw new Error(
+        `Failed to upsert billing_subscriptions for groupId=${groupId} customerId=${customerId ?? 'null'} subscriptionId=${subscriptionId}: ${error.message}`
+      )
+    }
+
     return data?.group_id ?? groupId
   }
 
@@ -283,7 +296,7 @@ Deno.serve(async (req) => {
         const metadataGroupId = session.metadata?.group_id ?? null
 
         if (metadataGroupId) {
-          await adminClient
+          const { error } = await adminClient
             .from('billing_subscriptions')
             .upsert(
               {
@@ -294,6 +307,12 @@ Deno.serve(async (req) => {
               },
               { onConflict: 'group_id' }
             )
+
+          if (error) {
+            throw new Error(
+              `Failed to mark checkout_completed for groupId=${metadataGroupId} customerId=${customerId ?? 'null'} subscriptionId=${subscriptionId ?? 'null'}: ${error.message}`
+            )
+          }
         }
         break
       }

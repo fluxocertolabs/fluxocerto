@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { useBillingStatus } from '@/hooks/use-billing-status'
-import { clearBillingSuccessFlag, readBillingSuccessFlag } from '@/components/billing/billing-success-redirect'
+import { clearBillingSuccessFlag, readBillingSuccessFlag } from '@/components/billing/billing-success-flag'
 
 const loadingAnimation = () => import('@/assets/lottie/loading.json')
 const completeAnimation = () => import('@/assets/lottie/complete.json')
@@ -54,15 +54,16 @@ export function BillingSuccessOverlay() {
     if (typeof window === 'undefined') return
     const active = readBillingSuccessFlag()
     setIsActive(active)
-    if (!active) return
+  }, [])
 
-    // Poll billing status while waiting.
+  // Poll billing status only while the overlay is active.
+  useEffect(() => {
+    if (!isActive) return
     const interval = window.setInterval(() => {
       refetch()
     }, 2000)
-
     return () => window.clearInterval(interval)
-  }, [refetch])
+  }, [isActive, refetch])
 
   // Lazy-load lottie-react + both animations (best effort).
   useEffect(() => {
