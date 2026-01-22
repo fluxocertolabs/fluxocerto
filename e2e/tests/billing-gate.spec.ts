@@ -12,7 +12,7 @@ test('billing gate blocks the app when no subscription exists', async ({ page, d
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByRole('heading', { name: 'Assinatura necessária' })).toBeVisible({
+  await expect(page.getByRole('heading', { name: 'Ative seu teste grátis' })).toBeVisible({
     timeout: 15000,
   });
   await expect(page.getByRole('button', { name: 'Começar teste grátis' })).toBeVisible({

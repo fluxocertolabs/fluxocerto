@@ -17,7 +17,9 @@ import { createStripeCheckoutSession } from '@/lib/supabase'
 import { captureEvent } from '@/lib/analytics/posthog'
 import { AlertTriangle, ArrowRight, ShieldCheck } from 'lucide-react'
 
-const cashflowAnimation = () => import('@/assets/lottie/cashflow-empty.json')
+// Animation source: https://lottiefiles.com/free-animation/fake-3d-vector-coin-0N5eblUHrK
+// Free to use under the Lottie Simple License.
+const coinAnimation = () => import('@/assets/lottie/coin-3d.json')
 
 export function BillingGate() {
   const location = useLocation()
@@ -104,36 +106,34 @@ export function BillingGate() {
 
           <div className="relative p-6 sm:p-7">
             <DialogHeader className="space-y-2">
-              <DialogTitle>Assinatura necessária</DialogTitle>
+              <DialogTitle>Ative seu teste grátis</DialogTitle>
               <DialogDescription>
-                Para continuar, é preciso ativar o teste grátis do Plano Único.
+                É rapidinho: confirme seu teste grátis de 14 dias para continuar usando o app.
               </DialogDescription>
             </DialogHeader>
 
             <motion.div
-              className="mt-5 grid gap-5 sm:grid-cols-[140px_1fr] sm:items-start"
+              className="mt-5 grid gap-4 sm:gap-x-4 sm:gap-y-5 sm:grid-cols-[120px_1fr] sm:items-start"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
               animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="flex justify-center sm:justify-start">
-                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-muted ring-1 ring-border/50 flex items-center justify-center">
-                  <LottieIllustration
-                    animationLoader={cashflowAnimation}
-                    className="h-16 w-16 sm:h-20 sm:w-20"
-                    ariaLabel="Ilustração do plano"
-                    staticFallback={<ShieldCheck className="h-10 w-10 text-primary" aria-hidden="true" />}
-                  />
-                </div>
+                <LottieIllustration
+                  animationLoader={coinAnimation}
+                  className="h-24 w-24 sm:h-28 sm:w-28 drop-shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
+                  ariaLabel="Ilustração de moedas"
+                  staticFallback={<ShieldCheck className="h-12 w-12 text-primary" aria-hidden="true" />}
+                />
               </div>
 
               <div className="space-y-4">
                 <div className="rounded-xl border border-border/70 bg-card/60 backdrop-blur p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">Plano Único</h3>
+                      <h3 className="text-sm font-semibold text-foreground">Acesso completo</h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        14 dias grátis para testar tudo. Depois, a cobrança acontece automaticamente.
+                        Você testa por 14 dias. Se quiser continuar, a assinatura segue automaticamente.
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full bg-primary/10 text-primary px-2.5 py-1 text-xs font-medium">
@@ -142,17 +142,19 @@ export function BillingGate() {
                   </div>
 
                   <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
-                      <span>Checkout seguro via Stripe</span>
+                    <div className="flex items-start gap-2">
+                      <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+                      <span className="leading-snug">Pagamento seguro (Stripe)</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
-                      <span>Você pode cancelar a qualquer momento</span>
+                    <div className="flex items-start gap-2">
+                      <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+                      <span className="leading-snug">Cancele quando quiser</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
-                      <span>É necessário cadastrar um cartão para iniciar o teste</span>
+                    <div className="flex items-start gap-2">
+                      <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
+                      <span className="leading-snug">
+                        Precisamos de um cartão para iniciar o teste (você não paga agora)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -175,7 +177,7 @@ export function BillingGate() {
                     <span className="inline-flex items-center justify-center gap-2">
                       {isSubmitting ? (
                         <>
-                          <span>Redirecionando...</span>
+                          <span>Indo para o checkout…</span>
                           <ArrowRight className="h-4 w-4 opacity-80" aria-hidden="true" />
                         </>
                       ) : (
@@ -187,7 +189,7 @@ export function BillingGate() {
                     </span>
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Ao continuar, você será redirecionado para o checkout e retornará automaticamente ao app.
+                    Você será redirecionado para o checkout e voltará automaticamente ao app.
                   </p>
                 </div>
               </div>
