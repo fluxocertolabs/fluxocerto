@@ -106,6 +106,12 @@ interface VisualTestHelpers {
  */
 interface VisualDbFixture {
   clear(): Promise<void>;
+  seedBillingSubscription(options?: {
+    status?: string;
+    trial_end?: string | null;
+    current_period_end?: string | null;
+    cancel_at_period_end?: boolean;
+  }): Promise<void>;
   seedAccounts(accounts: Array<{
     name: string;
     type?: 'checking' | 'savings' | 'investment';
@@ -171,11 +177,38 @@ async function executeSQLWithResult<T = unknown>(sql: string, params?: unknown[]
 function createVisualDbFixture(groupId: string): VisualDbFixture {
   return {
     async clear() {
+      await executeSQL(`DELETE FROM public.billing_subscriptions WHERE group_id = $1`, [groupId]);
       await executeSQL(`DELETE FROM public.future_statements WHERE group_id = $1`, [groupId]);
       await executeSQL(`DELETE FROM public.expenses WHERE group_id = $1`, [groupId]);
       await executeSQL(`DELETE FROM public.credit_cards WHERE group_id = $1`, [groupId]);
       await executeSQL(`DELETE FROM public.projects WHERE group_id = $1`, [groupId]);
       await executeSQL(`DELETE FROM public.accounts WHERE group_id = $1`, [groupId]);
+    },
+
+    async seedBillingSubscription(options) {
+      const now = new Date();
+      const nextPeriod = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const status = options?.status ?? 'active';
+      const trialEnd = options?.trial_end ?? null;
+      const currentPeriodEnd = options?.current_period_end ?? nextPeriod;
+      const cancelAtPeriodEnd = options?.cancel_at_period_end ?? false;
+
+      await executeSQL(
+        `INSERT INTO public.billing_subscriptions (
+          group_id,
+          status,
+          trial_end,
+          current_period_end,
+          cancel_at_period_end
+        ) VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (group_id)
+        DO UPDATE SET
+          status = EXCLUDED.status,
+          trial_end = EXCLUDED.trial_end,
+          current_period_end = EXCLUDED.current_period_end,
+          cancel_at_period_end = EXCLUDED.cancel_at_period_end`,
+        [groupId, status, trialEnd, currentPeriodEnd, cancelAtPeriodEnd]
+      );
     },
 
     async seedAccounts(accounts) {
@@ -298,6 +331,8 @@ export const visualTest = base.extend<VisualTestFixtures, VisualWorkerFixtures>(
   // Database fixture
   db: async ({ groupId }, use) => {
     const dbFixture = createVisualDbFixture(groupId);
+    await dbFixture.clear();
+    await dbFixture.seedBillingSubscription();
     await use(dbFixture);
   },
 

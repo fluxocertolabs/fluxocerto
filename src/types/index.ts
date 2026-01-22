@@ -493,3 +493,12 @@ export function transformNotificationRow(row: NotificationRow): Notification {
     updatedAt: new Date(row.updated_at),
   }
 }
+
+// === Billing ===
+
+export {
+  type BillingSubscriptionStatus,
+  type BillingSubscriptionRow,
+  type BillingSubscription,
+  transformBillingSubscriptionRow,
+} from './billing'
