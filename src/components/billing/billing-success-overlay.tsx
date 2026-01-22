@@ -15,6 +15,10 @@ type LottieComponentType = React.ComponentType<{
   autoplay?: boolean
 }>
 
+const LOADING_SIZE = 'w-20 h-20'
+const COMPLETE_SIZE = 'w-28 h-28'
+const FALLBACK_DURATION_MS = 900
+
 function resolveDefault(module: AnimationModule): unknown {
   return module && typeof module === 'object' && 'default' in module
     ? (module as { default: unknown }).default
@@ -25,7 +29,7 @@ function getLottieDurationMs(animationData: AnimationData): number {
   const fr = typeof animationData.fr === 'number' ? animationData.fr : null
   const ip = typeof animationData.ip === 'number' ? animationData.ip : 0
   const op = typeof animationData.op === 'number' ? animationData.op : null
-  if (!fr || !op || fr <= 0) return 1200
+  if (!fr || !op || fr <= 0) return FALLBACK_DURATION_MS
   const frames = Math.max(0, op - ip)
   return Math.min(10_000, Math.max(600, Math.round((frames / fr) * 1000)))
 }
@@ -49,7 +53,7 @@ export function BillingSuccessOverlay() {
   const [completeData, setCompleteData] = useState<object | null>(null)
   const [LottieComponent, setLottieComponent] = useState<LottieComponentType | null>(null)
   const completionSequenceStarted = useRef(false)
-  const completionDurationMsRef = useRef<number>(1200)
+  const completionDurationMsRef = useRef<number>(FALLBACK_DURATION_MS)
 
   // Activate overlay if a success flag exists.
   useEffect(() => {
@@ -108,7 +112,7 @@ export function BillingSuccessOverlay() {
   }, [isActive, shouldReduceMotion])
 
   const completeDurationMs = useMemo(() => {
-    if (!completeData) return 1200
+    if (!completeData) return FALLBACK_DURATION_MS
     return getLottieDurationMs(completeData as AnimationData)
   }, [completeData])
 
@@ -139,16 +143,16 @@ export function BillingSuccessOverlay() {
     completionSequenceStarted.current = true
     // If the completion animation failed to load, we still proceed and close
     // the overlay using a fallback duration (the placeholder will render).
-    completionDurationMsRef.current = completeData ? completeDurationMs : 1200
+    completionDurationMsRef.current = completeData ? completeDurationMs : FALLBACK_DURATION_MS
 
     // Access granted: run shrink -> complete -> done.
     setPhase('shrink')
-    const t1 = window.setTimeout(() => setPhase('complete'), 220)
-    const t2 = window.setTimeout(() => setPhase('done'), 220 + completionDurationMsRef.current + 150)
+    const t1 = window.setTimeout(() => setPhase('complete'), 160)
+    const t2 = window.setTimeout(() => setPhase('done'), 160 + completionDurationMsRef.current + 30)
     const t3 = window.setTimeout(() => {
       clearBillingSuccessFlag()
       setIsActive(false)
-    }, 220 + completionDurationMsRef.current + 250)
+    }, 160 + completionDurationMsRef.current + 60)
 
     return () => {
       window.clearTimeout(t1)
@@ -175,19 +179,19 @@ export function BillingSuccessOverlay() {
                 : { scale: 1, opacity: 1 }
           }
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="w-[min(78vw,520px)] sm:w-[min(60vw,620px)]"
+          className={phase === 'complete' || phase === 'done' ? COMPLETE_SIZE : LOADING_SIZE}
         >
           {phase === 'complete' || phase === 'done' ? (
             canRenderComplete ? (
               <LottieComponent animationData={completeData!} autoplay loop={false} />
             ) : (
-              <div className="h-[min(78vw,520px)] sm:h-[min(60vw,620px)]" />
+              <div className={COMPLETE_SIZE} />
             )
           ) : (
             canRenderLoading ? (
               <LottieComponent animationData={loadingData!} autoplay loop />
             ) : (
-              <div className="h-[min(78vw,520px)] sm:h-[min(60vw,620px)]" />
+              <div className={LOADING_SIZE} />
             )
           )}
         </motion.div>
