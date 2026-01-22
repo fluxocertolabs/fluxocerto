@@ -11,8 +11,15 @@ import type {
   TourStatus,
   NotificationRow,
   Notification,
+  BillingSubscriptionRow,
+  BillingSubscription,
 } from '@/types'
-import { transformOnboardingStateRow, transformTourStateRow, transformNotificationRow } from '@/types'
+import {
+  transformOnboardingStateRow,
+  transformTourStateRow,
+  transformNotificationRow,
+  transformBillingSubscriptionRow,
+} from '@/types'
 
 // Database row types for type-safe responses
 
@@ -769,6 +776,109 @@ export async function upsertOnboardingState(
     }
 
     return { success: true, data: transformOnboardingStateRow(data as OnboardingStateRow) }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+// ============================================================================
+// BILLING SUBSCRIPTION HELPERS
+// ============================================================================
+
+/**
+ * Get the current group's billing subscription status.
+ * Returns null if no billing record exists yet.
+ */
+export async function getBillingSubscription(): Promise<Result<BillingSubscription | null>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const groupId = await getGroupId()
+    if (!groupId) {
+      return { success: false, error: 'Grupo não encontrado' }
+    }
+
+    const { data, error } = await client
+      .from('billing_subscriptions')
+      .select('*')
+      .eq('group_id', groupId)
+      .maybeSingle()
+
+    if (error) {
+      return handleSupabaseError(error)
+    }
+
+    if (!data) {
+      return { success: true, data: null }
+    }
+
+    return { success: true, data: transformBillingSubscriptionRow(data as BillingSubscriptionRow) }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+/**
+ * Create a Stripe Checkout Session for the current group.
+ * Returns the Stripe-hosted checkout URL.
+ */
+export async function createStripeCheckoutSession(): Promise<Result<{ url: string }>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { data: { session }, error: sessionError } = await client.auth.getSession()
+    if (sessionError || !session) {
+      return { success: false, error: 'Você precisa estar autenticado' }
+    }
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const functionUrl = `${supabaseUrl}/functions/v1/create-stripe-checkout-session`
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!anonKey) {
+      return { success: false, error: 'Supabase não está configurado' }
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 10_000)
+
+    let response: Response
+    try {
+      response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anonKey,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        signal: controller.signal,
+      })
+    } finally {
+      window.clearTimeout(timeout)
+    }
+
+    let payload: { ok: boolean; url?: string; error?: string } | null = null
+    try {
+      payload = await response.json()
+    } catch {
+      payload = null
+    }
+
+    if (!response.ok || !payload?.ok || !payload.url) {
+      return {
+        success: false,
+        error: payload?.error ?? 'Falha ao iniciar pagamento',
+      }
+    }
+
+    return { success: true, data: { url: payload.url } }
   } catch (err) {
     return handleSupabaseError(err)
   }

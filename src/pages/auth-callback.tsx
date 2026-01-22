@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getSupabase, isSupabaseConfigured, ensureCurrentUserGroup, signOut } from '@/lib/supabase'
 import { getAuthErrorMessage, isExpiredLinkError } from '@/lib/auth-errors'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { StatusScreen } from '@/components/status/status-screen'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { AlertTriangle, Copy, Loader2 } from 'lucide-react'
+
+const snapshotAnimation = () => import('@/assets/lottie/snapshot-empty.json')
+const cashflowAnimation = () => import('@/assets/lottie/cashflow-empty.json')
 
 type CallbackState = 
   | { type: 'loading' }
@@ -148,156 +152,110 @@ export function AuthCallbackPage() {
   // Auth error state (expired/invalid link)
   if (state.type === 'auth_error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="rounded-full bg-destructive/10 w-16 h-16 mx-auto flex items-center justify-center mb-4">
-              <svg
-                className="w-8 h-8 text-destructive"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-            <CardTitle>
-              {state.isExpired ? 'Link Inválido ou Expirado' : 'Erro ao Entrar'}
-            </CardTitle>
-            <CardDescription className="text-destructive">
-              {state.message}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <Button onClick={() => navigate('/login', { replace: true })}>
-              Solicitar Novo Link
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <StatusScreen
+        tone="error"
+        title={state.isExpired ? 'Link inválido ou expirado' : 'Erro ao entrar'}
+        description={<span className="text-destructive">{state.message}</span>}
+        illustration={{
+          animationLoader: snapshotAnimation,
+          ariaLabel: 'Ilustração de erro de autenticação',
+          staticFallback: <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />,
+        }}
+        primaryAction={
+          <Button onClick={() => navigate('/login', { replace: true })}>
+            Solicitar novo link
+          </Button>
+        }
+        footer="Se você acabou de solicitar o link, verifique também a caixa de spam."
+      />
     )
   }
 
   // Provisioning error state (recoverable)
   if (state.type === 'provisioning_error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="rounded-full bg-destructive/10 w-16 h-16 mx-auto flex items-center justify-center mb-4">
-              <svg
-                className="w-8 h-8 text-destructive"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-            <CardTitle>Erro ao Configurar Conta</CardTitle>
-            <CardDescription className="text-destructive">
-              {state.message}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <Button onClick={handleProvisioningRetry} disabled={isRetrying}>
-              {isRetrying ? 'Tentando...' : 'Tentar Novamente'}
+      <StatusScreen
+        tone="error"
+        title="Erro ao configurar conta"
+        description={<span className="text-destructive">{state.message}</span>}
+        illustration={{
+          animationLoader: snapshotAnimation,
+          ariaLabel: 'Ilustração de erro de provisionamento',
+          staticFallback: <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />,
+        }}
+        primaryAction={
+          <Button onClick={handleProvisioningRetry} disabled={isRetrying}>
+            {isRetrying ? 'Tentando...' : 'Tentar novamente'}
+          </Button>
+        }
+        secondaryAction={
+          <Button variant="outline" onClick={handleSignOut} disabled={isRetrying}>
+            Sair
+          </Button>
+        }
+        footer="Se persistir, abra “Ajuda” e copie os detalhes para o suporte."
+      >
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full">
+              Ajuda
             </Button>
-            <Button variant="outline" onClick={handleSignOut}>
-              Sair
-            </Button>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  Ajuda
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Precisa de Ajuda?</DialogTitle>
-                  <DialogDescription asChild>
-                    <div className="space-y-4 text-sm text-muted-foreground">
-                      <p>
-                        Ocorreu um erro ao configurar sua conta. Tente as seguintes soluções:
-                      </p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>Verifique sua conexão com a internet</li>
-                        <li>Clique em "Tentar Novamente"</li>
-                        <li>Se o problema persistir, saia e solicite um novo link de acesso</li>
-                      </ul>
-                      <p>
-                        Se precisar de suporte, copie os detalhes abaixo e entre em contato conosco.
-                      </p>
-                    </div>
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => handleCopyDiagnostics(state.diagnosticPayload)}
-                  >
-                    {copied ? 'Copiado!' : 'Copiar Detalhes'}
-                  </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Precisa de ajuda?</DialogTitle>
+              <DialogDescription asChild>
+                <div className="space-y-4 text-sm text-muted-foreground">
+                  <p>Ocorreu um erro ao configurar sua conta. Tente:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Verifique sua conexão com a internet</li>
+                    <li>Clique em "Tentar Novamente"</li>
+                    <li>Se o problema persistir, saia e solicite um novo link de acesso</li>
+                  </ul>
+                  <p>
+                    Se precisar de suporte, copie os detalhes abaixo e envie para nós.
+                  </p>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
-      </div>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => handleCopyDiagnostics(state.diagnosticPayload)}
+              >
+                <Copy className="h-4 w-4 mr-2" aria-hidden="true" />
+                {copied ? 'Copiado!' : 'Copiar Detalhes'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </StatusScreen>
     )
   }
 
   // Loading/provisioning state
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="rounded-full bg-primary/10 w-16 h-16 mx-auto flex items-center justify-center mb-4">
-            <svg
-              className="animate-spin w-8 h-8 text-primary"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          </div>
-          <CardTitle>
-            {state.type === 'provisioning' ? 'Configurando sua conta...' : 'Completando login...'}
-          </CardTitle>
-          <CardDescription>
-            {state.type === 'provisioning'
-              ? 'Estamos preparando tudo para você.'
-              : 'Por favor, aguarde enquanto verificamos seu link de acesso.'}
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    </div>
+    <StatusScreen
+      tone="info"
+      title={state.type === 'provisioning' ? 'Configurando sua conta…' : 'Completando login…'}
+      description={
+        state.type === 'provisioning'
+          ? 'Estamos preparando tudo para você.'
+          : 'Por favor, aguarde enquanto verificamos seu link de acesso.'
+      }
+      illustration={{
+        animationLoader: cashflowAnimation,
+        ariaLabel: 'Ilustração de carregamento',
+        staticFallback: <Loader2 className="h-10 w-10 text-primary animate-spin" aria-hidden="true" />,
+      }}
+      footer="Você será redirecionado automaticamente."
+    >
+      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        <span>{state.type === 'provisioning' ? 'Provisionando…' : 'Validando sessão…'}</span>
+      </div>
+    </StatusScreen>
   )
 }

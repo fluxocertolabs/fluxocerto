@@ -99,6 +99,7 @@ pnpm dev:app           # reloads authenticated
 Notes:
 - The bypass is guarded by `import.meta.env.DEV` and will not run in production builds.
 - You can disable the dev bypass for a single page load with `?disableDevAuth=1` (used by auth/login visual tests).
+- `gen:token` also seeds a **group-level billing subscription** in `billing_subscriptions` (status `trialing`, 14-day trial) so the billing gate/paywall doesn’t block local dev or CI smoke tests.
 
 ### Test
 ```bash
@@ -147,6 +148,15 @@ Deployment notes:
   - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
   - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.
   - **PostHog** (product analytics): Initialized in `src/main.tsx` with a wrapper in `src/lib/analytics/posthog.ts`. Controlled by `VITE_POSTHOG_KEY`, optional `VITE_POSTHOG_HOST`, and `VITE_POSTHOG_DISABLED`. User preferences live in `user_preferences` (`analytics_enabled`, `session_recordings_enabled`) and are surfaced in `src/pages/profile.tsx`. Session recordings are enabled by default but masked (all inputs + all text).
+  - **Stripe** (billing): Group-level subscription state lives in `billing_subscriptions`. Checkout session creation and webhook handling live in Supabase Edge Functions (`supabase/functions/create-stripe-checkout-session`, `supabase/functions/stripe-webhook`).
+    - Edge Function **timeouts**: Prefer bounded Stripe API calls. `create-stripe-checkout-session` uses a ~15s timeout (via `AbortSignal.timeout` when available, with a safe fallback).
+    - Edge Function **CORS vs redirects**: Browser `Origin` headers never include a path. `APP_BASE_URL` *can* include a path (e.g. `https://example.com/app`), so `create-stripe-checkout-session` normalizes allowlist matching against the **origin** while still preserving the **full base URL** (including path) for `success_url`/`cancel_url` when the request origin matches.
+    - Webhook analytics: `stripe-webhook` posts best-effort PostHog events and ensures request timers are always cleaned up (clear timeout in `finally`) to avoid stray abort timers.
+
+- **Billing access gating UX**:
+  - Paywall gating: `src/components/billing/billing-gate.tsx` can block the app for authenticated users when onboarding is complete but billing access is not granted.
+  - Stripe return flow: The app uses a sessionStorage flag (`src/components/billing/billing-success-flag.ts`) + overlay (`src/components/billing/billing-success-overlay.tsx`) to cover the post-checkout “waiting for access” period while webhooks propagate.
+    - The overlay shows **only a loading animation** and closes once access is granted; it is written to handle re-activation safely (does not get stuck if triggered multiple times in a session).
 - **Array utility functions**: `src/lib/utils/array.ts` contains helpers like `upsertUniqueById()` which must be immutable (never mutate the input array).
 - **List ordering**: Accounts and credit cards are sorted alphabetically by name (pt-BR locale-aware via `Intl.Collator`), with ties broken by ID. This ensures stable, deterministic ordering even during realtime updates. See `src/hooks/use-finance-data.ts` → `sortByNameThenId()`.
 - **Balance freshness tracking**: The `balance_updated_at` field tracks when account/card balances were last updated. This field must be set:
@@ -230,6 +240,9 @@ Deployment notes:
   - The app uses long-lived connections and third-party widgets (notably Tawk.to in cross-origin iframes) which can keep the page from ever reaching “network idle”.
   - Prefer `domcontentloaded` + **UI-based readiness** (e.g. dashboard heading visible vs login form visible).
   - If you use `networkidle`, keep it **bounded** (e.g. `timeout: 2000`) and treat it as best-effort.
+- **BillingGate can block dashboard E2E flows**:
+  - Many authenticated routes expect a “hasAccess” state derived from `billing_subscriptions.status` (client code treats `trialing`/`active` as access; see `src/hooks/use-billing-status.ts`).
+  - If an E2E test needs the dashboard to be interactable after login/reload, seed a billing subscription row for the test group (typically with status `active`) using the DB fixtures (`seedBillingSubscription()` in `e2e/fixtures/*-test-base.ts`) or equivalent SQL seeding.
 - **Visual test determinism** (see `e2e/fixtures/visual-test-base.ts`):
   - **Fixed date**: `VISUAL_TEST_FIXED_DATE` is set to `'2025-01-15T12:00:00.000Z'` (explicit UTC) to ensure consistent timestamps across all environments.
   - **Animations disabled**: CSS `* { animation: none !important; transition: none !important; }` is injected.

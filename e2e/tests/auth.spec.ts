@@ -216,12 +216,84 @@ test.describe('Authentication Flow', () => {
       return hasAuthToken || hasSessionAuth;
     }, null, { timeout: isPerTestContext ? 30000 : 20000 });
 
+    // Prevent UI overlays from affecting dashboard mount/reload stability in this auth-only spec.
+    // We only care about session persistence here:
+    // - Mark onboarding as completed + dismiss tours so they don't cover the dashboard
+    // - Seed an active billing subscription so BillingGate doesn't block the dashboard
+    const userId = await getUserIdFromEmail(TEST_EMAIL);
+    const groupRows = await executeSQLWithResult<{ group_id: string | null }>(
+      `SELECT group_id FROM public.profiles WHERE email = $1 LIMIT 1`,
+      [TEST_EMAIL]
+    );
+    const groupId = groupRows[0]?.group_id ?? null;
+    if (!groupId) {
+      throw new Error(`Expected profiles.group_id for ${TEST_EMAIL} but none found`);
+    }
+
+    await executeSQL(
+      `
+        INSERT INTO public.billing_subscriptions (
+          group_id,
+          status,
+          trial_end,
+          current_period_end,
+          cancel_at_period_end
+        ) VALUES ($1, 'active', NULL, now() + interval '30 days', false)
+        ON CONFLICT (group_id)
+        DO UPDATE SET
+          status = EXCLUDED.status,
+          trial_end = EXCLUDED.trial_end,
+          current_period_end = EXCLUDED.current_period_end,
+          cancel_at_period_end = EXCLUDED.cancel_at_period_end
+      `,
+      [groupId]
+    );
+
+    await executeSQL(
+      `
+        INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, auto_shown_at, completed_at)
+        VALUES ($1, $2, 'completed', 'done', now(), now())
+        ON CONFLICT (user_id, group_id) DO UPDATE
+        SET status = EXCLUDED.status,
+            current_step = EXCLUDED.current_step,
+            auto_shown_at = EXCLUDED.auto_shown_at,
+            completed_at = EXCLUDED.completed_at
+      `,
+      [userId, groupId]
+    );
+
+    await executeSQL(
+      `
+        INSERT INTO public.tour_states (user_id, tour_key, status, version, dismissed_at, completed_at)
+        VALUES
+          ($1, 'dashboard', 'dismissed', 1, now(), NULL),
+          ($1, 'manage', 'dismissed', 1, now(), NULL),
+          ($1, 'history', 'dismissed', 1, now(), NULL)
+        ON CONFLICT (user_id, tour_key) DO UPDATE
+        SET status = EXCLUDED.status,
+            version = EXCLUDED.version,
+            dismissed_at = EXCLUDED.dismissed_at,
+            completed_at = NULL
+      `,
+      [userId]
+    );
+
     // Ensure the app is fully mounted before attempting a hard reload.
     // Reloads can be aborted if a redirect/hydration navigation is still in-flight.
     await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('header, main, [data-testid="app-shell"]').first()).toBeVisible({
       timeout: isPerTestContext ? 20000 : 10000,
     });
+
+    // Refresh once so the app re-reads onboarding/tour state before we test the actual persistence reload.
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: isPerTestContext ? 20000 : 15000 });
+    } catch (err) {
+      console.warn('page.reload failed during preflight; falling back to page.goto:', err);
+      await page.goto('/', { waitUntil: 'domcontentloaded', timeout: isPerTestContext ? 20000 : 15000 });
+    }
+    const wizardDialog = page.locator('[role="dialog"]').filter({ hasText: /passo\s+\d+\s+de\s+\d+/i });
+    await expect(wizardDialog).toBeHidden({ timeout: 20000 });
 
     // Refresh the page
     try {

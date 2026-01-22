@@ -102,6 +102,18 @@ export function LottieIllustration({
   }
 
   if (!animationData) {
+    if (staticFallback) {
+      return (
+        <div
+          className={cn('flex items-center justify-center', className)}
+          role={ariaLabel ? 'img' : 'presentation'}
+          aria-label={ariaLabel}
+          aria-hidden={ariaLabel ? undefined : true}
+        >
+          {staticFallback}
+        </div>
+      )
+    }
     return (
       <div
         className={cn('flex items-center justify-center', className)}
@@ -112,6 +124,18 @@ export function LottieIllustration({
   }
 
   if (!LottieComponent) {
+    if (staticFallback) {
+      return (
+        <div
+          className={cn('flex items-center justify-center', className)}
+          role={ariaLabel ? 'img' : 'presentation'}
+          aria-label={ariaLabel}
+          aria-hidden={ariaLabel ? undefined : true}
+        >
+          {staticFallback}
+        </div>
+      )
+    }
     return (
       <div
         className={cn('flex items-center justify-center', className)}

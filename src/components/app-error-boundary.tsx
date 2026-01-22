@@ -1,7 +1,7 @@
 import React from 'react'
-import { BrandSymbol } from '@/components/brand'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { StatusScreen } from '@/components/status/status-screen'
+import { AlertTriangle } from 'lucide-react'
 import { captureEvent } from '@/lib/analytics/posthog'
 
 type AppErrorBoundaryProps = {
@@ -51,22 +51,18 @@ export class AppErrorBoundary extends React.Component<
         : 'Ocorreu um erro inesperado. Tente recarregar a página.'
 
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full p-6 space-y-6">
-          <div className="flex justify-center">
-            <BrandSymbol className="h-10 w-10 text-foreground" aria-hidden="true" />
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">Algo deu errado</h1>
-            <p className="text-muted-foreground break-words">{message}</p>
-          </div>
-
-          <div className="flex justify-end">
-            <Button onClick={this.handleReload}>Recarregar</Button>
-          </div>
-        </Card>
-      </div>
+      <StatusScreen
+        tone="error"
+        title="Algo deu errado"
+        description={<span className="break-words">{message}</span>}
+        illustration={{
+          animationLoader: () => import('@/assets/lottie/snapshot-empty.json'),
+          ariaLabel: 'Ilustração de erro',
+          staticFallback: <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />,
+        }}
+        primaryAction={<Button onClick={this.handleReload}>Recarregar</Button>}
+        footer={IS_DEV ? 'Dica: abra o console para ver mais detalhes do erro.' : 'Se persistir, tente novamente mais tarde.'}
+      />
     )
   }
 }
