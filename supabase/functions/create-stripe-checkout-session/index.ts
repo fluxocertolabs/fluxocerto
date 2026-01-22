@@ -59,22 +59,32 @@ function isOriginAllowed(origin: string, allowedPatterns: string[]): boolean {
   return false
 }
 
+function normalizeOrigin(value: string): string {
+  try {
+    return new URL(value).origin
+  } catch {
+    return value
+  }
+}
+
 function getAllowedPatterns(baseUrl: string): string[] {
+  const baseOrigin = normalizeOrigin(baseUrl)
   return [
     ...getAllowedOrigins(),
     // Treat APP_BASE_URL as implicitly allowed (helps local dev if APP_ALLOWED_ORIGINS isn't set).
-    baseUrl,
+    baseOrigin,
   ]
 }
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const headerOrigin = req.headers.get('origin')
   const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
+  const baseOrigin = normalizeOrigin(baseUrl)
   const allowedPatterns = getAllowedPatterns(baseUrl)
 
   // Only reflect the origin if it's validated.
   // If there's no Origin header (server-to-server), use the base URL as a safe default.
-  const allowOrigin = headerOrigin ? headerOrigin : baseUrl
+  const allowOrigin = headerOrigin ? headerOrigin : baseOrigin
 
   return {
     ...(headerOrigin && isOriginAllowed(headerOrigin, allowedPatterns)
@@ -94,14 +104,27 @@ function getBearerToken(authHeader: string): string | null {
 function getBaseUrl(req: Request): string {
   const headerOrigin = req.headers.get('origin')
   const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
+  const baseOrigin = normalizeOrigin(baseUrl)
 
   const allowedPatterns = getAllowedPatterns(baseUrl)
 
   if (headerOrigin && isOriginAllowed(headerOrigin, allowedPatterns)) {
-    return headerOrigin
+    // Prefer the full APP_BASE_URL (which may include a path like /app) when the request origin
+    // matches it exactly. Otherwise fall back to the request origin (useful for previews).
+    return headerOrigin === baseOrigin ? baseUrl : headerOrigin
   }
 
   return baseUrl
+}
+
+function createTimeoutSignal(ms: number): { signal: AbortSignal; cleanup: () => void } {
+  const maybeTimeout = (AbortSignal as unknown as { timeout?: (ms: number) => AbortSignal }).timeout
+  if (typeof maybeTimeout === 'function') {
+    return { signal: maybeTimeout(ms), cleanup: () => {} }
+  }
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), ms)
+  return { signal: controller.signal, cleanup: () => clearTimeout(timeout) }
 }
 
 async function createCheckoutSession(options: {
@@ -136,14 +159,27 @@ async function createCheckoutSession(options: {
   body.append('metadata[group_id]', groupId)
   body.append('metadata[user_id]', userId)
 
-  const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${stripeSecretKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  })
+  // Stripe's API calls should not hang indefinitely; use a reasonable timeout for user-facing checkout creation.
+  const { signal, cleanup } = createTimeoutSignal(15_000)
+  let response: Response
+  try {
+    response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${stripeSecretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+      signal,
+    })
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Stripe request timed out')
+    }
+    throw err
+  } finally {
+    cleanup()
+  }
 
   const data = await response.json()
   if (!response.ok) {

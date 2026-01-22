@@ -216,8 +216,10 @@ test.describe('Authentication Flow', () => {
       return hasAuthToken || hasSessionAuth;
     }, null, { timeout: isPerTestContext ? 30000 : 20000 });
 
-    // Prevent onboarding/tour overlays from affecting dashboard mount/reload stability in this auth-only spec.
-    // (We only care about session persistence here.)
+    // Prevent UI overlays from affecting dashboard mount/reload stability in this auth-only spec.
+    // We only care about session persistence here:
+    // - Mark onboarding as completed + dismiss tours so they don't cover the dashboard
+    // - Seed an active billing subscription so BillingGate doesn't block the dashboard
     const userId = await getUserIdFromEmail(TEST_EMAIL);
     const groupRows = await executeSQLWithResult<{ group_id: string | null }>(
       `SELECT group_id FROM public.profiles WHERE email = $1 LIMIT 1`,
@@ -227,6 +229,25 @@ test.describe('Authentication Flow', () => {
     if (!groupId) {
       throw new Error(`Expected profiles.group_id for ${TEST_EMAIL} but none found`);
     }
+
+    await executeSQL(
+      `
+        INSERT INTO public.billing_subscriptions (
+          group_id,
+          status,
+          trial_end,
+          current_period_end,
+          cancel_at_period_end
+        ) VALUES ($1, 'active', NULL, now() + interval '30 days', false)
+        ON CONFLICT (group_id)
+        DO UPDATE SET
+          status = EXCLUDED.status,
+          trial_end = EXCLUDED.trial_end,
+          current_period_end = EXCLUDED.current_period_end,
+          cancel_at_period_end = EXCLUDED.cancel_at_period_end
+      `,
+      [groupId]
+    );
 
     await executeSQL(
       `
