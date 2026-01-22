@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/smoke-test-base';
 import { getUserIdFromEmail } from '../utils/supabase-admin';
 
-test('billing gate blocks the app when no subscription exists', async ({ page, db, groupId }) => {
+test('billing gate blocks the app when no subscription exists', async ({ page, db, groupId: _groupId }) => {
   await db.clearBillingSubscription();
   await db.seedAccounts([{ name: 'Conta Teste', balance: 10000 }]);
   await db.seedProjects([{ name: 'Renda Teste', amount: 10000 }]);

@@ -239,11 +239,17 @@ Deno.serve(async (req) => {
     let groupId: string | null = null
 
     if (customerId) {
-      const { data: existing } = await adminClient
+      const { data: existing, error: lookupError } = await adminClient
         .from('billing_subscriptions')
         .select('group_id')
         .eq('stripe_customer_id', customerId)
         .maybeSingle()
+
+      if (lookupError) {
+        throw new Error(
+          `Failed to resolve group_id for customerId=${customerId}: ${lookupError.message}`
+        )
+      }
 
       groupId = existing?.group_id ?? null
     }

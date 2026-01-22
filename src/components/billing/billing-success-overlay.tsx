@@ -77,7 +77,9 @@ export function BillingSuccessOverlay() {
         if (!alive) return
         setLottieComponent(() => mod.default as unknown as LottieComponentType)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('Failed to load lottie-react:', err)
+      })
 
     void loadingAnimation()
       .then((mod) => {
@@ -85,7 +87,9 @@ export function BillingSuccessOverlay() {
         const resolved = resolveDefault(mod)
         if (resolved && typeof resolved === 'object') setLoadingData(resolved as object)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('Failed to load loading animation:', err)
+      })
 
     void completeAnimation()
       .then((mod) => {
@@ -93,7 +97,9 @@ export function BillingSuccessOverlay() {
         const resolved = resolveDefault(mod)
         if (resolved && typeof resolved === 'object') setCompleteData(resolved as object)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('Failed to load complete animation:', err)
+      })
 
     return () => {
       alive = false
