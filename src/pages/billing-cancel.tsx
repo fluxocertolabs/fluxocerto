@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { BrandSymbol } from '@/components/brand'
+import { StatusScreen } from '@/components/status/status-screen'
+import { XCircle } from 'lucide-react'
 import { captureEvent } from '@/lib/analytics/posthog'
+
+const snapshotAnimation = () => import('@/assets/lottie/snapshot-empty.json')
 
 export function BillingCancelPage() {
   const navigate = useNavigate()
@@ -17,24 +19,27 @@ export function BillingCancelPage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <BrandSymbol className="h-10 w-10 text-foreground" aria-hidden="true" />
-          </div>
-          <CardTitle>Checkout cancelado</CardTitle>
-          <CardDescription>
-            Você pode tentar novamente quando estiver pronto para ativar o teste grátis.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button className="w-full" onClick={() => navigate('/')}>
-            Tentar novamente
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <StatusScreen
+      tone="warning"
+      title="Checkout cancelado"
+      description="Você pode tentar novamente quando estiver pronto para ativar o teste grátis."
+      illustration={{
+        animationLoader: snapshotAnimation,
+        ariaLabel: 'Ilustração de cancelamento',
+        staticFallback: <XCircle className="h-10 w-10 text-amber-600" aria-hidden="true" />,
+      }}
+      primaryAction={
+        <Button className="w-full" onClick={() => navigate('/')}>
+          Tentar novamente
+        </Button>
+      }
+      secondaryAction={
+        <Button className="w-full" variant="outline" onClick={() => navigate('/manage')}>
+          Ver planos e detalhes
+        </Button>
+      }
+      footer="Você não foi cobrado. O teste só começa após concluir o checkout."
+    />
   )
 }
 
