@@ -6,12 +6,6 @@ interface CheckoutSessionResponse {
   error?: string
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
 function getAllowedOrigins(): string[] {
   const raw = Deno.env.get('APP_ALLOWED_ORIGINS') || ''
   return raw
@@ -20,15 +14,87 @@ function getAllowedOrigins(): string[] {
     .filter((value) => value.length > 0)
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function matchesHostPattern(host: string, pattern: string): boolean {
+  const regex = new RegExp(`^${escapeRegex(pattern).replace(/\\\*/g, '.*')}$`, 'i')
+  return regex.test(host)
+}
+
+function isOriginAllowed(origin: string, allowedPatterns: string[]): boolean {
+  let originUrl: URL
+  try {
+    originUrl = new URL(origin)
+  } catch {
+    return false
+  }
+
+  const originHost = originUrl.host // includes port if present
+  const originScheme = originUrl.protocol // includes trailing ':'
+
+  for (const pattern of allowedPatterns) {
+    if (!pattern) continue
+
+    // Exact origin match.
+    if (!pattern.includes('*') && pattern === origin) {
+      return true
+    }
+
+    // Pattern includes scheme (e.g. https://*.vercel.app)
+    if (pattern.includes('://')) {
+      const [scheme, rest] = pattern.split('://', 2)
+      if (!scheme) continue
+      const normalizedScheme = `${scheme.toLowerCase()}:`
+      if (normalizedScheme !== originScheme.toLowerCase()) continue
+      if (matchesHostPattern(originHost, rest)) return true
+      continue
+    }
+
+    // Host-only patterns (e.g. *.vercel.app)
+    if (matchesHostPattern(originHost, pattern)) return true
+  }
+
+  return false
+}
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const headerOrigin = req.headers.get('origin')
+  const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
+
+  const allowedPatterns = [
+    ...getAllowedOrigins(),
+    // Treat APP_BASE_URL as implicitly allowed (helps local dev if APP_ALLOWED_ORIGINS isn't set).
+    baseUrl,
+  ]
+
+  const allowOrigin =
+    headerOrigin && isOriginAllowed(headerOrigin, allowedPatterns) ? headerOrigin : baseUrl
+
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    Vary: 'Origin',
+  }
+}
+
 function getBaseUrl(req: Request): string {
   const headerOrigin = req.headers.get('origin')
-  const allowedOrigins = getAllowedOrigins()
+  const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
 
-  if (headerOrigin && allowedOrigins.includes(headerOrigin)) {
+  const allowedPatterns = [
+    ...getAllowedOrigins(),
+    // Treat APP_BASE_URL as implicitly allowed (helps local dev if APP_ALLOWED_ORIGINS isn't set).
+    baseUrl,
+  ]
+
+  if (headerOrigin && isOriginAllowed(headerOrigin, allowedPatterns)) {
     return headerOrigin
   }
 
-  return Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
+  return baseUrl
 }
 
 async function createStripeCustomer(
@@ -106,6 +172,8 @@ async function createCheckoutSession(options: {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders })
   }
