@@ -236,13 +236,18 @@ Deno.serve(async (req) => {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
-      accessToken: async () => bearerToken,
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+      },
     },
   })
   const adminClient = createClient(supabaseUrl, supabaseServiceKey)
 
   try {
-    const { data: { user }, error: userError } = await userClient.auth.getUser()
+    // Explicitly pass the JWT to avoid relying on local session persistence.
+    const { data: { user }, error: userError } = await userClient.auth.getUser(bearerToken)
     if (userError || !user) {
       return new Response(JSON.stringify({ ok: false, error: 'unauthorized' }), {
         status: 401,

@@ -15,7 +15,7 @@ import { useBillingStatus } from '@/hooks/use-billing-status'
 import { useOnboardingState } from '@/hooks/use-onboarding-state'
 import { createStripeCheckoutSession } from '@/lib/supabase'
 import { captureEvent } from '@/lib/analytics/posthog'
-import { AlertTriangle, ArrowRight, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Loader2, ShieldCheck } from 'lucide-react'
 
 // Animation source: https://lottiefiles.com/free-animation/fake-3d-vector-coin-0N5eblUHrK
 // Free to use under the Lottie Simple License.
@@ -123,7 +123,9 @@ export function BillingGate() {
                   animationLoader={coinAnimation}
                   className="h-24 w-24 sm:h-28 sm:w-28 drop-shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
                   ariaLabel="Ilustração de moedas"
-                  staticFallback={<ShieldCheck className="h-12 w-12 text-primary" aria-hidden="true" />}
+                  staticFallback={
+                    <Loader2 className="h-10 w-10 text-primary animate-spin" aria-hidden="true" />
+                  }
                 />
               </div>
 
