@@ -54,6 +54,7 @@ export function BillingSuccessOverlay() {
   const [LottieComponent, setLottieComponent] = useState<LottieComponentType | null>(null)
   const completionSequenceStarted = useRef(false)
   const completionDurationMsRef = useRef<number>(FALLBACK_DURATION_MS)
+  const wasActiveRef = useRef(false)
 
   // Activate overlay if a success flag exists.
   useEffect(() => {
@@ -118,7 +119,17 @@ export function BillingSuccessOverlay() {
 
   // Drive the phase machine.
   useEffect(() => {
-    if (!isActive) return
+    if (!isActive) {
+      wasActiveRef.current = false
+      return
+    }
+
+    // Reset sequence on re-activation to avoid getting stuck if hasAccess is already true.
+    if (!wasActiveRef.current) {
+      wasActiveRef.current = true
+      completionSequenceStarted.current = false
+      setPhase('loading')
+    }
     if (!hasAccess) {
       completionSequenceStarted.current = false
     }

@@ -45,15 +45,18 @@ async function capturePosthogEvent(
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 3000)
-    const response = await fetch(`${config.host}/capture`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    })
-    clearTimeout(timeout)
-    if (!response.ok) {
-      console.warn('PostHog capture failed', { status: response.status })
+    try {
+      const response = await fetch(`${config.host}/capture`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      })
+      if (!response.ok) {
+        console.warn('PostHog capture failed', { status: response.status })
+      }
+    } finally {
+      clearTimeout(timeout)
     }
   } catch (err) {
     const isAbort =

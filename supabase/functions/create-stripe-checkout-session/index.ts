@@ -252,11 +252,19 @@ Deno.serve(async (req) => {
 
     const groupId = profile.group_id as string
 
-    const { data: existingBilling } = await adminClient
+    const { data: existingBilling, error: existingBillingError } = await adminClient
       .from('billing_subscriptions')
       .select('stripe_customer_id')
       .eq('group_id', groupId)
       .maybeSingle()
+
+    if (existingBillingError) {
+      console.error('Failed to read existing billing subscription', {
+        groupId,
+        error: existingBillingError,
+      })
+      throw new Error('Failed to read billing record')
+    }
 
     const stripeCustomerId = existingBilling?.stripe_customer_id ?? null
 
