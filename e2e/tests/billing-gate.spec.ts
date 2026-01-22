@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/smoke-test-base';
-import { executeSQL, getUserIdFromEmail } from '../utils/supabase-admin';
+import { getUserIdFromEmail } from '../utils/supabase-admin';
 
 test('billing gate blocks the app when no subscription exists', async ({ page, db, groupId }) => {
   await db.clearBillingSubscription();
@@ -8,15 +8,7 @@ test('billing gate blocks the app when no subscription exists', async ({ page, d
   await db.seedExpenses([{ name: 'Despesa Teste', amount: 5000 }]);
 
   const userId = await getUserIdFromEmail('dev@local');
-  const completedAt = new Date().toISOString();
-
-  await executeSQL(
-    `INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, completed_at)
-     VALUES ($1, $2, 'completed', 'done', $3)
-     ON CONFLICT (user_id, group_id)
-     DO UPDATE SET status = EXCLUDED.status, current_step = EXCLUDED.current_step, completed_at = EXCLUDED.completed_at`,
-    [userId, groupId, completedAt]
-  );
+  await db.completeOnboarding(userId);
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 

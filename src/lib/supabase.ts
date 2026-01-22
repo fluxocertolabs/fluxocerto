@@ -846,14 +846,23 @@ export async function createStripeCheckoutSession(): Promise<Result<{ url: strin
       return { success: false, error: 'Supabase não está configurado' }
     }
 
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: anonKey,
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    })
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 10_000)
+
+    let response: Response
+    try {
+      response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anonKey,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        signal: controller.signal,
+      })
+    } finally {
+      window.clearTimeout(timeout)
+    }
 
     let payload: { ok: boolean; url?: string; error?: string } | null = null
     try {

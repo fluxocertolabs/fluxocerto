@@ -12,14 +12,14 @@ export function BillingSuccessPage() {
   const hasTracked = useRef(false)
 
   useEffect(() => {
-    if (!hasTracked.current) {
+    if (!hasTracked.current && !isLoading) {
       hasTracked.current = true
       captureEvent('billing_checkout_returned', {
         result: 'success',
         status: subscription?.status ?? 'unknown',
       })
     }
-  }, [subscription?.status])
+  }, [isLoading, subscription?.status])
 
   useEffect(() => {
     if (hasAccess) return

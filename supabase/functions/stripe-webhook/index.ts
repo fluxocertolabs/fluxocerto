@@ -137,6 +137,11 @@ Deno.serve(async (req) => {
     }
 
     if (!groupId) {
+      console.warn('Stripe webhook: unable to resolve group_id for subscription', {
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        metadata_group_id: subscription.metadata?.group_id ?? null,
+      })
       return null
     }
 

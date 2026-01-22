@@ -71,6 +71,8 @@ interface SmokeDbFixture {
   }): Promise<void>;
   /** Remove billing subscription for the group */
   clearBillingSubscription(): Promise<void>;
+  /** Mark onboarding as completed for a specific user in this group */
+  completeOnboarding(userId: string): Promise<void>;
   /** Seed bank accounts */
   seedAccounts(accounts: Array<{
     name: string;
@@ -160,6 +162,17 @@ function createSmokeDbFixture(groupId: string): SmokeDbFixture {
 
     async clearBillingSubscription() {
       await executeSQL(`DELETE FROM public.billing_subscriptions WHERE group_id = $1`, [groupId]);
+    },
+
+    async completeOnboarding(userId: string) {
+      const completedAt = new Date().toISOString();
+      await executeSQL(
+        `INSERT INTO public.onboarding_states (user_id, group_id, status, current_step, completed_at)
+         VALUES ($1, $2, 'completed', 'done', $3)
+         ON CONFLICT (user_id, group_id)
+         DO UPDATE SET status = EXCLUDED.status, current_step = EXCLUDED.current_step, completed_at = EXCLUDED.completed_at`,
+        [userId, groupId, completedAt]
+      );
     },
 
     async seedAccounts(accounts) {

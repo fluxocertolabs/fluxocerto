@@ -59,36 +59,43 @@ function isOriginAllowed(origin: string, allowedPatterns: string[]): boolean {
   return false
 }
 
-function getCorsHeaders(req: Request): Record<string, string> {
-  const headerOrigin = req.headers.get('origin')
-  const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
-
-  const allowedPatterns = [
+function getAllowedPatterns(baseUrl: string): string[] {
+  return [
     ...getAllowedOrigins(),
     // Treat APP_BASE_URL as implicitly allowed (helps local dev if APP_ALLOWED_ORIGINS isn't set).
     baseUrl,
   ]
+}
 
-  const allowOrigin =
-    headerOrigin && isOriginAllowed(headerOrigin, allowedPatterns) ? headerOrigin : baseUrl
+function getCorsHeaders(req: Request): Record<string, string> {
+  const headerOrigin = req.headers.get('origin')
+  const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
+  const allowedPatterns = getAllowedPatterns(baseUrl)
+
+  // Only reflect the origin if it's validated.
+  // If there's no Origin header (server-to-server), use the base URL as a safe default.
+  const allowOrigin = headerOrigin ? headerOrigin : baseUrl
 
   return {
-    'Access-Control-Allow-Origin': allowOrigin,
+    ...(headerOrigin && isOriginAllowed(headerOrigin, allowedPatterns)
+      ? { 'Access-Control-Allow-Origin': allowOrigin }
+      : {}),
     'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     Vary: 'Origin',
   }
 }
 
+function getBearerToken(authHeader: string): string | null {
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  return match?.[1] ?? null
+}
+
 function getBaseUrl(req: Request): string {
   const headerOrigin = req.headers.get('origin')
   const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
 
-  const allowedPatterns = [
-    ...getAllowedOrigins(),
-    // Treat APP_BASE_URL as implicitly allowed (helps local dev if APP_ALLOWED_ORIGINS isn't set).
-    baseUrl,
-  ]
+  const allowedPatterns = getAllowedPatterns(baseUrl)
 
   if (headerOrigin && isOriginAllowed(headerOrigin, allowedPatterns)) {
     return headerOrigin
@@ -193,20 +200,44 @@ Deno.serve(async (req) => {
     })
   }
 
+  const bearerToken = getBearerToken(authHeader)
+  if (!bearerToken) {
+    return new Response(JSON.stringify({ ok: false, error: 'unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    })
+  }
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
   const priceId = Deno.env.get('STRIPE_PRICE_ID')
 
-  if (!supabaseUrl || !supabaseServiceKey || !stripeSecretKey || !priceId) {
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey || !stripeSecretKey || !priceId) {
     return new Response(
       JSON.stringify({ ok: false, error: 'server_configuration_error' } satisfies CheckoutSessionResponse),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
 
-  const userClient = createClient(supabaseUrl, supabaseServiceKey, {
-    global: { headers: { Authorization: authHeader } },
+  const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
+  const allowedPatterns = getAllowedPatterns(baseUrl)
+  const origin = req.headers.get('origin')
+  if (origin && !isOriginAllowed(origin, allowedPatterns)) {
+    return new Response(JSON.stringify({ ok: false, error: 'origin_not_allowed' } satisfies CheckoutSessionResponse), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      accessToken: async () => bearerToken,
+    },
   })
   const adminClient = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -268,12 +299,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    const baseUrl = getBaseUrl(req)
+    const checkoutBaseUrl = getBaseUrl(req)
     const session = await createCheckoutSession({
       stripeSecretKey,
       priceId,
       customerId: stripeCustomerId,
-      baseUrl,
+      baseUrl: checkoutBaseUrl,
       groupId,
       userId: user.id,
     })

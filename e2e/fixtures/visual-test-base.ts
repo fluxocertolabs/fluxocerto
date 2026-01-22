@@ -186,8 +186,9 @@ function createVisualDbFixture(groupId: string): VisualDbFixture {
     },
 
     async seedBillingSubscription(options) {
-      const now = new Date();
-      const nextPeriod = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const nextPeriod = new Date(
+        VISUAL_TEST_FIXED_DATE.getTime() + 30 * 24 * 60 * 60 * 1000
+      ).toISOString();
       const status = options?.status ?? 'active';
       const trialEnd = options?.trial_end ?? null;
       const currentPeriodEnd = options?.current_period_end ?? nextPeriod;

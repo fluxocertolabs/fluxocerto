@@ -72,7 +72,12 @@ export function BillingGate() {
       source: 'billing_gate',
       status: subscription?.status ?? 'none',
     })
-    window.location.href = result.data.url
+    try {
+      window.location.href = result.data.url
+    } catch {
+      setErrorMessage('Não foi possível redirecionar. Tente novamente.')
+      setIsSubmitting(false)
+    }
   }
 
   return (
