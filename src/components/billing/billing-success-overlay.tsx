@@ -132,16 +132,13 @@ export function BillingSuccessOverlay() {
       return
     }
 
-    // Wait until we have the completion animation loaded so timing is stable.
-    if (!completeData) {
-      return
-    }
-
     if (completionSequenceStarted.current) {
       return
     }
     completionSequenceStarted.current = true
-    completionDurationMsRef.current = completeDurationMs
+    // If the completion animation failed to load, we still proceed and close
+    // the overlay using a fallback duration (the placeholder will render).
+    completionDurationMsRef.current = completeData ? completeDurationMs : 1200
 
     // Access granted: run shrink -> complete -> done.
     setPhase('shrink')

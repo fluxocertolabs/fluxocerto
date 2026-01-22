@@ -43,16 +43,22 @@ async function capturePosthogEvent(
   }
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 3000)
     const response = await fetch(`${config.host}/capture`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
     if (!response.ok) {
       console.warn('PostHog capture failed', { status: response.status })
     }
   } catch (err) {
-    console.warn('PostHog capture failed', { err })
+    const isAbort =
+      err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
+    console.warn('PostHog capture failed', { err: isAbort ? 'timeout' : err })
   }
 }
 
@@ -134,15 +140,27 @@ async function stripeRetrieveSubscription(
   stripeSecretKey: string,
   subscriptionId: string
 ): Promise<StripeSubscription> {
-  const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-    headers: { Authorization: `Bearer ${stripeSecretKey}` },
-  })
-  const data = await response.json()
-  if (!response.ok) {
-    const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
-    throw new Error(message)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5000)
+  try {
+    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: `Bearer ${stripeSecretKey}` },
+      signal: controller.signal,
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+      throw new Error(message)
+    }
+    return data as StripeSubscription
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Stripe request timed out')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeout)
   }
-  return data as StripeSubscription
 }
 
 async function stripeUpdateSubscriptionMetadata(
@@ -154,18 +172,30 @@ async function stripeUpdateSubscriptionMetadata(
   for (const [key, value] of Object.entries(metadata)) {
     body.append(`metadata[${key}]`, value)
   }
-  const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${stripeSecretKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  })
-  const data = await response.json()
-  if (!response.ok) {
-    const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
-    throw new Error(message)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5000)
+  try {
+    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${stripeSecretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+      signal: controller.signal,
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+      throw new Error(message)
+    }
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Stripe request timed out')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
@@ -264,7 +294,9 @@ Deno.serve(async (req) => {
         stripe_subscription_id: subscriptionId,
         metadata_group_id: subscription.metadata?.group_id ?? null,
       })
-      return null
+      throw new Error(
+        `Unable to resolve group_id for subscription (customerId=${customerId ?? 'null'} subscriptionId=${subscriptionId} metadata_group_id=${subscription.metadata?.group_id ?? 'null'})`
+      )
     }
 
     const { data, error } = await adminClient
