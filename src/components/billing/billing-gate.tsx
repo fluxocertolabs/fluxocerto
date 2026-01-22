@@ -15,6 +15,7 @@ import { useBillingStatus } from '@/hooks/use-billing-status'
 import { useOnboardingState } from '@/hooks/use-onboarding-state'
 import { createStripeCheckoutSession } from '@/lib/supabase'
 import { captureEvent } from '@/lib/analytics/posthog'
+import { readBillingSuccessFlag } from '@/components/billing/billing-success-flag'
 import { AlertTriangle, ArrowRight, Loader2, ShieldCheck } from 'lucide-react'
 
 // Animation source: https://lottiefiles.com/free-animation/fake-3d-vector-coin-0N5eblUHrK
@@ -39,6 +40,7 @@ export function BillingGate() {
   }, [isMinimumSetupComplete, onboardingState])
 
   const isBillingRoute = location.pathname.startsWith('/billing/')
+  const isCheckoutReturnPending = typeof window !== 'undefined' && readBillingSuccessFlag()
   const shouldShowGate =
     isAuthenticated &&
     !authLoading &&
@@ -46,7 +48,8 @@ export function BillingGate() {
     isOnboardingFinished &&
     !billingLoading &&
     !hasAccess &&
-    !isBillingRoute
+    !isBillingRoute &&
+    !isCheckoutReturnPending
 
   useEffect(() => {
     if (shouldShowGate && !hasTracked.current) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
+import { useLocation } from 'react-router-dom'
 import { useBillingStatus } from '@/hooks/use-billing-status'
 import { clearBillingSuccessFlag, readBillingSuccessFlag } from '@/components/billing/billing-success-flag'
 
@@ -39,6 +40,7 @@ type OverlayPhase = 'loading' | 'shrink' | 'complete' | 'done'
  * - Then disappears
  */
 export function BillingSuccessOverlay() {
+  const location = useLocation()
   const shouldReduceMotion = useReducedMotion()
   const { hasAccess, refetch } = useBillingStatus()
   const [isActive, setIsActive] = useState(false)
@@ -52,9 +54,8 @@ export function BillingSuccessOverlay() {
   // Activate overlay if a success flag exists.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const active = readBillingSuccessFlag()
-    setIsActive(active)
-  }, [])
+    setIsActive(readBillingSuccessFlag())
+  }, [location.key])
 
   // Poll billing status only while the overlay is active.
   useEffect(() => {

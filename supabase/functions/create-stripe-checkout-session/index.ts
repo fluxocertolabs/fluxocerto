@@ -104,52 +104,32 @@ function getBaseUrl(req: Request): string {
   return baseUrl
 }
 
-async function createStripeCustomer(
-  stripeSecretKey: string,
-  email: string | null,
-  groupId: string,
-  userId: string
-): Promise<{ id: string }> {
-  const body = new URLSearchParams()
-  if (email) body.append('email', email)
-  body.append('metadata[group_id]', groupId)
-  body.append('metadata[user_id]', userId)
-
-  const response = await fetch('https://api.stripe.com/v1/customers', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${stripeSecretKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  })
-
-  const data = await response.json()
-  if (!response.ok) {
-    const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
-    throw new Error(message)
-  }
-
-  return data as { id: string }
-}
-
 async function createCheckoutSession(options: {
   stripeSecretKey: string
   priceId: string
-  customerId: string
+  customerId: string | null
+  customerEmail: string | null
   baseUrl: string
   groupId: string
   userId: string
 }): Promise<{ url: string }> {
-  const { stripeSecretKey, priceId, customerId, baseUrl, groupId, userId } = options
+  const { stripeSecretKey, priceId, customerId, customerEmail, baseUrl, groupId, userId } = options
 
   const body = new URLSearchParams()
   body.append('mode', 'subscription')
-  body.append('customer', customerId)
+  if (customerId) {
+    body.append('customer', customerId)
+  } else if (customerEmail) {
+    // Avoid a separate "create customer" API call; Stripe will create/attach a customer during checkout.
+    body.append('customer_email', customerEmail)
+  }
   body.append('line_items[0][price]', priceId)
   body.append('line_items[0][quantity]', '1')
   body.append('subscription_data[trial_period_days]', '14')
   body.append('subscription_data[trial_settings][end_behavior][missing_payment_method]', 'cancel')
+  // Ensure we can always resolve the group from subscription events (even if customer mapping fails).
+  body.append('subscription_data[metadata][group_id]', groupId)
+  body.append('subscription_data[metadata][user_id]', userId)
   body.append('payment_method_collection', 'always')
   body.append('success_url', `${baseUrl}/billing/success`)
   body.append('cancel_url', `${baseUrl}/billing/cancel`)
@@ -278,30 +258,27 @@ Deno.serve(async (req) => {
       .eq('group_id', groupId)
       .maybeSingle()
 
-    let stripeCustomerId = existingBilling?.stripe_customer_id ?? null
-    if (!stripeCustomerId) {
-      const customer = await createStripeCustomer(stripeSecretKey, email, groupId, user.id)
-      stripeCustomerId = customer.id
+    const stripeCustomerId = existingBilling?.stripe_customer_id ?? null
 
-      const { error: upsertError } = await adminClient
-        .from('billing_subscriptions')
-        .upsert(
-          {
-            group_id: groupId,
-            stripe_customer_id: stripeCustomerId,
-            status: 'pending',
-          },
-          { onConflict: 'group_id' }
-        )
+    // Ensure the billing row exists so webhooks have a place to write state.
+    const { error: ensureBillingError } = await adminClient
+      .from('billing_subscriptions')
+      .upsert(
+        {
+          group_id: groupId,
+          ...(stripeCustomerId ? { stripe_customer_id: stripeCustomerId } : {}),
+          status: 'pending',
+        },
+        { onConflict: 'group_id' }
+      )
 
-      if (upsertError) {
-        console.error('Failed to upsert billing subscription', {
-          groupId,
-          stripeCustomerId,
-          error: upsertError,
-        })
-        throw new Error('Failed to persist billing record')
-      }
+    if (ensureBillingError) {
+      console.error('Failed to upsert billing subscription', {
+        groupId,
+        stripeCustomerId,
+        error: ensureBillingError,
+      })
+      throw new Error('Failed to persist billing record')
     }
 
     const checkoutBaseUrl = getBaseUrl(req)
@@ -309,6 +286,7 @@ Deno.serve(async (req) => {
       stripeSecretKey,
       priceId,
       customerId: stripeCustomerId,
+      customerEmail: email,
       baseUrl: checkoutBaseUrl,
       groupId,
       userId: user.id,

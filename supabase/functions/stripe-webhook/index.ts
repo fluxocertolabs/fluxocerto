@@ -341,7 +341,6 @@ Deno.serve(async (req) => {
                 group_id: metadataGroupId,
                 stripe_customer_id: customerId,
                 stripe_subscription_id: subscriptionId,
-                status: 'checkout_completed',
               },
               { onConflict: 'group_id' }
             )
@@ -351,6 +350,13 @@ Deno.serve(async (req) => {
               `Failed to mark checkout_completed for groupId=${metadataGroupId} customerId=${customerId ?? 'null'} subscriptionId=${subscriptionId ?? 'null'}: ${error.message}`
             )
           }
+        }
+
+        // If the session includes a subscription, sync it immediately. This avoids getting stuck in
+        // "checkout_completed" if events arrive out-of-order or subscription webhooks are delayed.
+        if (subscriptionId) {
+          const subscription = await stripeRetrieveSubscription(stripeSecretKey, subscriptionId)
+          await upsertBillingSubscription(subscription)
         }
         break
       }
