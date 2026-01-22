@@ -16,6 +16,8 @@ visualTest.describe('Dashboard Visual Regression @visual', () => {
     visualTest.setTimeout(120000);
 
     await db.clear();
+    // Visual baseline assumes subscription is active so the billing gate doesn't overlay the dashboard.
+    await db.seedBillingSubscription();
 
     // Seed a typical populated scenario
     // Amounts are in cents (e.g. 100_000_00 === R$100,000.00)

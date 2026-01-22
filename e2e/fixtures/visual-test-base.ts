@@ -79,7 +79,14 @@ export async function waitForStableUI(page: Page): Promise<void> {
  */
 export async function setTheme(page: Page, theme: ThemeMode): Promise<void> {
   await page.evaluate((t) => {
-    localStorage.setItem('theme', t);
+    // App theme store is persisted by Zustand under `fluxo-certo-theme`.
+    // Keep this in sync with `src/stores/theme-store.ts`.
+    localStorage.setItem(
+      'fluxo-certo-theme',
+      JSON.stringify({ state: { theme: t }, version: 0 })
+    );
+
+    // Apply immediately so the first paint matches the stored preference.
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(t === 'system' ? 'light' : t);
   }, theme);
