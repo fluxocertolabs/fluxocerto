@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useBillingStatus } from '@/hooks/use-billing-status'
 import { useOnboardingStore } from '@/stores/onboarding-store'
 import { useTourStore } from '@/stores/tour-store'
 import { getTourState, upsertTourState } from '@/lib/supabase'
@@ -91,6 +92,7 @@ export interface UsePageTourReturn {
 
 export function usePageTour(tourKey: TourKey): UsePageTourReturn {
   const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth()
+  const { hasAccess, isLoading: isBillingLoading } = useBillingStatus()
   const isWizardActive = useOnboardingStore(s => s.isWizardOpen)
   const { activeTourKey, stopTour: stopGlobalTour } = useTourStore()
   
@@ -128,6 +130,12 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
   // Respond to global tour store triggers (from header "Mostrar tour" button)
   useEffect(() => {
     if (activeTourKey === tourKey && !isTourActive && !isWizardActive) {
+      // Don't start a tour if billing is unresolved or the user doesn't have access.
+      // This prevents the tour from rendering over the billing gate.
+      if (isBillingLoading || !hasAccess) {
+        stopGlobalTour()
+        return
+      }
       setIsTourActive(true)
       setCurrentStepIndex(0)
       trackTourStart('manual')
@@ -137,7 +145,16 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
       // Clear the trigger but don't start tour - wizard is active
       stopGlobalTour()
     }
-  }, [activeTourKey, tourKey, isTourActive, isWizardActive, stopGlobalTour, trackTourStart])
+  }, [
+    activeTourKey,
+    tourKey,
+    isTourActive,
+    isWizardActive,
+    isBillingLoading,
+    hasAccess,
+    stopGlobalTour,
+    trackTourStart,
+  ])
 
   // Compute whether auto-show should happen
   const shouldAutoShow = useMemo(() => {
@@ -156,6 +173,10 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
     if (isWizardActive) return false
     // Don't auto-show if tour is already active
     if (isTourActive) return false
+    // Don't auto-show while billing is resolving, or when user doesn't have access.
+    // This ensures the billing gate takes priority and the tour only starts post-subscription.
+    if (isBillingLoading) return false
+    if (!hasAccess) return false
     
     // Auto-show if:
     // 1. No state exists (first visit)
@@ -165,7 +186,20 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
     if (effective.status === 'completed' && isTourUpdated(tourKey, effective.version)) return true
     
     return false
-  }, [isAuthLoading, isAuthenticated, isLoading, error, localCache, hasAutoShown, isWizardActive, isTourActive, state, tourKey])
+  }, [
+    isAuthLoading,
+    isAuthenticated,
+    isLoading,
+    error,
+    localCache,
+    hasAutoShown,
+    isWizardActive,
+    isTourActive,
+    isBillingLoading,
+    hasAccess,
+    state,
+    tourKey,
+  ])
 
   // Fetch tour state
   useEffect(() => {
@@ -232,6 +266,16 @@ export function usePageTour(tourKey: TourKey): UsePageTourReturn {
       hasTrackedStart.current = false
     }
   }, [isWizardActive, isTourActive])
+
+  // Stop tour if billing access is lost (e.g., paywall should take priority)
+  useEffect(() => {
+    if (!isBillingLoading && !hasAccess && isTourActive) {
+      setIsTourActive(false)
+      setCurrentStepIndex(0)
+      setHasAutoShown(false)
+      hasTrackedStart.current = false
+    }
+  }, [isBillingLoading, hasAccess, isTourActive])
 
   const refetch = useCallback(() => {
     setRetryCount(c => c + 1)

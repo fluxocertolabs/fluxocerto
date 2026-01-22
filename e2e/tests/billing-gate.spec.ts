@@ -18,5 +18,8 @@ test('billing gate blocks the app when no subscription exists', async ({ page, d
   await expect(page.getByRole('button', { name: 'Começar teste grátis' })).toBeVisible({
     timeout: 15000,
   });
+
+  // Regression guard: the page tour should never render over the billing gate.
+  await expect(page.getByLabel('Fechar tour')).toHaveCount(0);
 });
 

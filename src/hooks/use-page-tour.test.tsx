@@ -27,6 +27,20 @@ vi.mock('@/hooks/use-auth', () => ({
   })),
 }))
 
+const mockBillingRefetch = vi.fn()
+let mockHasBillingAccess = true
+let mockBillingIsLoading = false
+
+vi.mock('@/hooks/use-billing-status', () => ({
+  useBillingStatus: vi.fn(() => ({
+    subscription: null,
+    isLoading: mockBillingIsLoading,
+    error: null,
+    hasAccess: mockHasBillingAccess,
+    refetch: mockBillingRefetch,
+  })),
+}))
+
 vi.mock('@/stores/onboarding-store', () => ({
   useOnboardingStore: vi.fn((selector) => {
     const state = { isWizardOpen: false, openReason: null }
@@ -70,10 +84,12 @@ vi.mock('@/lib/tours/definitions', () => ({
 
 // Import mocked modules for manipulation
 import { useAuth } from '@/hooks/use-auth'
+import { useBillingStatus } from '@/hooks/use-billing-status'
 import { useOnboardingStore } from '@/stores/onboarding-store'
 import { useTourStore } from '@/stores/tour-store'
 
 const mockedUseAuth = vi.mocked(useAuth)
+const mockedUseBillingStatus = vi.mocked(useBillingStatus)
 const mockedUseOnboardingStore = vi.mocked(useOnboardingStore)
 const mockedUseTourStore = vi.mocked(useTourStore)
 
@@ -84,6 +100,8 @@ describe('usePageTour', () => {
     vi.clearAllMocks()
     mockActiveTourKey = null
     localStorage.clear()
+    mockHasBillingAccess = true
+    mockBillingIsLoading = false
 
     // Default mock implementations
     mockedUseAuth.mockReturnValue({
@@ -91,6 +109,14 @@ describe('usePageTour', () => {
       isLoading: false,
       user: { id: 'test-user-id', email: 'test@example.com' } as TestUser,
     } as AuthState)
+
+    mockedUseBillingStatus.mockReturnValue({
+      subscription: null,
+      isLoading: false,
+      error: null,
+      hasAccess: true,
+      refetch: mockBillingRefetch,
+    })
 
     mockedUseOnboardingStore.mockImplementation((selector) => {
       const state = {
@@ -131,6 +157,63 @@ describe('usePageTour', () => {
   })
 
   describe('shouldAutoShow', () => {
+    it('does not auto-show when billing access is not granted', async () => {
+      mockHasBillingAccess = false
+      mockedUseBillingStatus.mockReturnValue({
+        subscription: null,
+        isLoading: false,
+        error: null,
+        hasAccess: false,
+        refetch: mockBillingRefetch,
+      })
+      mockGetTourState.mockResolvedValue({ success: true, data: null })
+
+      const { result } = renderHook(() => usePageTour('dashboard'))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(result.current.shouldAutoShow).toBe(false)
+      expect(result.current.isTourActive).toBe(false)
+    })
+
+    it('auto-starts once billing access becomes available', async () => {
+      // Start without access
+      mockHasBillingAccess = false
+      mockedUseBillingStatus.mockReturnValue({
+        subscription: null,
+        isLoading: false,
+        error: null,
+        hasAccess: false,
+        refetch: mockBillingRefetch,
+      })
+      mockGetTourState.mockResolvedValue({ success: true, data: null })
+
+      const { result, rerender } = renderHook(() => usePageTour('dashboard'))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(result.current.isTourActive).toBe(false)
+
+      // Now grant access and rerender
+      mockHasBillingAccess = true
+      mockedUseBillingStatus.mockReturnValue({
+        subscription: null,
+        isLoading: false,
+        error: null,
+        hasAccess: true,
+        refetch: mockBillingRefetch,
+      })
+      rerender()
+
+      await waitFor(() => {
+        expect(result.current.isTourActive).toBe(true)
+      })
+    })
+
     it('returns true for first visit (no state, no cache)', async () => {
       mockGetTourState.mockResolvedValue({ success: true, data: null })
 
@@ -428,6 +511,48 @@ describe('usePageTour', () => {
   })
 
   describe('manual trigger via tour store', () => {
+    it('clears trigger but does not start tour when billing access is not granted', async () => {
+      mockHasBillingAccess = false
+      mockedUseBillingStatus.mockReturnValue({
+        subscription: null,
+        isLoading: false,
+        error: null,
+        hasAccess: false,
+        refetch: mockBillingRefetch,
+      })
+
+      mockGetTourState.mockResolvedValue({
+        success: true,
+        data: {
+          id: 'state-id',
+          userId: 'test-user-id',
+          tourKey: 'dashboard',
+          status: 'completed',
+          version: 1,
+          completedAt: new Date(),
+          dismissedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      })
+
+      mockActiveTourKey = 'dashboard'
+      mockedUseTourStore.mockReturnValue({
+        activeTourKey: 'dashboard',
+        startTour: mockStartTour,
+        stopTour: mockStopTour,
+      })
+
+      const { result } = renderHook(() => usePageTour('dashboard'))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(result.current.isTourActive).toBe(false)
+      expect(mockStopTour).toHaveBeenCalled()
+    })
+
     it('starts tour when activeTourKey matches and wizard is closed', async () => {
       mockGetTourState.mockResolvedValue({
         success: true,
