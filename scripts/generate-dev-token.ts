@@ -33,6 +33,10 @@ const DEV_PROFILE_NAME = 'Dev User';
 const DEV_ACCOUNT_NAME = 'Dev Checking';
 const DEV_ACCOUNT_BALANCE = 1000000; // $10,000.00 in cents
 
+// Billing seed (keeps dev + CI E2E unblocked by paywall)
+const DEV_SUBSCRIPTION_STATUS = 'trialing';
+const DEV_TRIAL_DAYS = 14;
+
 const SUPABASE_URL = 'http://127.0.0.1:54321';
 const PG_CONFIG = {
   host: '127.0.0.1',
@@ -481,6 +485,33 @@ async function ensureToursDismissed(userId: string): Promise<void> {
 }
 
 // ============================================================================
+// Billing subscription seed (keep dev workflow unblocked)
+// ============================================================================
+
+async function ensureDevBillingSubscription(groupId: string): Promise<void> {
+  log('Ensuring dev billing subscription exists...');
+
+  const now = new Date();
+  const trialEnd = new Date(now.getTime() + DEV_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  // Use direct SQL instead of PostgREST to avoid schema-cache races in CI.
+  await executeSQL(
+    `INSERT INTO public.billing_subscriptions
+      (group_id, status, trial_end, current_period_end, cancel_at_period_end)
+     VALUES
+      ($1, $2, $3, $3, false)
+     ON CONFLICT (group_id) DO UPDATE SET
+      status = EXCLUDED.status,
+      trial_end = EXCLUDED.trial_end,
+      current_period_end = EXCLUDED.current_period_end,
+      cancel_at_period_end = EXCLUDED.cancel_at_period_end`,
+    [groupId, DEV_SUBSCRIPTION_STATUS, trialEnd]
+  );
+
+  logSuccess('Billing subscription ensured');
+}
+
+// ============================================================================
 // Token Generation (US1)
 // ============================================================================
 
@@ -557,6 +588,9 @@ async function main(): Promise<void> {
     // Ensure onboarding/tours don't block the dashboard in local dev and CI E2E.
     await ensureOnboardingCompleted(devUser.id, group.id);
     await ensureToursDismissed(devUser.id);
+
+    // Ensure billing subscription exists so paywall doesn't block dev/CI.
+    await ensureDevBillingSubscription(group.id);
     
     console.log('');
     
