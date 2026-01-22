@@ -10,6 +10,8 @@ import { FloatingHelpButton } from '@/components/help'
 import { BrandSymbol } from '@/components/brand'
 import { SetupRequired } from '@/components/setup-required'
 import { BillingGate } from '@/components/billing/billing-gate'
+import { BillingSuccessOverlay } from '@/components/billing/billing-success-overlay'
+import { BillingSuccessRedirectPage } from '@/components/billing/billing-success-redirect'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { PosthogPageviews } from '@/components/analytics/posthog-pageviews'
 import { Dashboard } from '@/pages/dashboard'
@@ -18,7 +20,6 @@ import { HistoryPage } from '@/pages/history'
 import { SnapshotDetailPage } from '@/pages/snapshot-detail'
 import { NotificationsPage } from '@/pages/notifications'
 import { ProfilePage } from '@/pages/profile'
-import { BillingSuccessPage } from '@/pages/billing-success'
 import { BillingCancelPage } from '@/pages/billing-cancel'
 import { LoginPage } from '@/pages/login'
 import { AuthCallbackPage } from '@/pages/auth-callback'
@@ -46,6 +47,7 @@ function AuthenticatedLayout() {
       <Header />
       <Outlet />
       <BillingGate />
+      <BillingSuccessOverlay />
       {/* Onboarding wizard - renders as dialog overlay when active */}
       <OnboardingWizard />
       {/* Floating help button - bottom right corner (desktop/tablet only) */}
@@ -86,7 +88,7 @@ function AppRoutes() {
         <Route path="history/:snapshotId" element={<SnapshotDetailPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="billing/success" element={<BillingSuccessPage />} />
+        <Route path="billing/success" element={<BillingSuccessRedirectPage />} />
         <Route path="billing/cancel" element={<BillingCancelPage />} />
       </Route>
 

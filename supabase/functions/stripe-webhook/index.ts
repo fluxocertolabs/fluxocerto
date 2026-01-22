@@ -1,8 +1,18 @@
-import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8'
 
-type StripeEvent = Stripe.Event
-type StripeSubscription = Stripe.Subscription
+type StripeEvent = { type: string; data: { object: unknown } }
+type StripeSubscription = {
+  id: string
+  status: string
+  customer: string | { id?: string } | null
+  items?: { data?: Array<{ price?: { id?: string; recurring?: { interval?: string } } }> }
+  cancel_at_period_end?: boolean
+  trial_end?: number | null
+  current_period_end?: number | null
+  metadata?: Record<string, string>
+}
+type StripeInvoice = { id: string; subscription: string | null; amount_paid?: number; amount_due?: number; currency?: string; created?: number }
+type StripeCheckoutSession = { customer: string | null; subscription: string | null; metadata?: Record<string, string> }
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,11 +63,103 @@ function subscriptionMetadata(subscription: StripeSubscription) {
   }
 }
 
-function normalizeStripeId(id: string | Stripe.Customer | Stripe.DeletedCustomer | null): string | null {
+function normalizeStripeId(id: string | { id?: string } | null): string | null {
   if (!id) return null
   if (typeof id === 'string') return id
-  if ('id' in id && typeof id.id === 'string') return id.id
+  if (typeof id === 'object' && 'id' in id && typeof (id as { id?: unknown }).id === 'string') {
+    return (id as { id: string }).id
+  }
   return null
+}
+
+function parseStripeSignature(header: string): { timestamp: number; signatures: string[] } | null {
+  const parts = header.split(',').map((p) => p.trim())
+  const tPart = parts.find((p) => p.startsWith('t='))
+  const v1 = parts.filter((p) => p.startsWith('v1=')).map((p) => p.slice(3))
+  if (!tPart) return null
+  const ts = Number(tPart.slice(2))
+  if (!Number.isFinite(ts) || ts <= 0) return null
+  return { timestamp: ts, signatures: v1 }
+}
+
+function bytesToHex(bytes: ArrayBuffer): string {
+  return Array.from(new Uint8Array(bytes))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let out = 0
+  for (let i = 0; i < a.length; i++) {
+    out |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return out === 0
+}
+
+async function verifyStripeWebhookSignature(options: {
+  payload: string
+  signatureHeader: string
+  secret: string
+  toleranceSeconds?: number
+}): Promise<boolean> {
+  const parsed = parseStripeSignature(options.signatureHeader)
+  if (!parsed) return false
+
+  const tolerance = options.toleranceSeconds ?? 300
+  const nowSeconds = Math.floor(Date.now() / 1000)
+  if (Math.abs(nowSeconds - parsed.timestamp) > tolerance) return false
+
+  const signedPayload = `${parsed.timestamp}.${options.payload}`
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(options.secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedPayload))
+  const expected = bytesToHex(signature)
+  return parsed.signatures.some((sig) => timingSafeEqual(sig, expected))
+}
+
+async function stripeRetrieveSubscription(
+  stripeSecretKey: string,
+  subscriptionId: string
+): Promise<StripeSubscription> {
+  const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+    headers: { Authorization: `Bearer ${stripeSecretKey}` },
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+    throw new Error(message)
+  }
+  return data as StripeSubscription
+}
+
+async function stripeUpdateSubscriptionMetadata(
+  stripeSecretKey: string,
+  subscriptionId: string,
+  metadata: Record<string, string>
+): Promise<void> {
+  const body = new URLSearchParams()
+  for (const [key, value] of Object.entries(metadata)) {
+    body.append(`metadata[${key}]`, value)
+  }
+  const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${stripeSecretKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+    throw new Error(message)
+  }
 }
 
 Deno.serve(async (req) => {
@@ -92,16 +194,23 @@ Deno.serve(async (req) => {
     })
   }
 
-  const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2023-10-16',
-    httpClient: Stripe.createFetchHttpClient(),
-  })
-
   let event: StripeEvent
   const body = await req.text()
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    const ok = await verifyStripeWebhookSignature({
+      payload: body,
+      signatureHeader: signature,
+      secret: webhookSecret,
+    })
+    if (!ok) {
+      return new Response(JSON.stringify({ ok: false, error: 'invalid_signature' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      })
+    }
+
+    event = JSON.parse(body) as StripeEvent
   } catch (err) {
     const message = err instanceof Error ? err.message : 'invalid_signature'
     return new Response(JSON.stringify({ ok: false, error: message }), {
@@ -168,7 +277,7 @@ Deno.serve(async (req) => {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
+        const session = event.data.object as StripeCheckoutSession
         const customerId = normalizeStripeId(session.customer)
         const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null
         const metadataGroupId = session.metadata?.group_id ?? null
@@ -216,10 +325,10 @@ Deno.serve(async (req) => {
         break
       }
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice
+        const invoice = event.data.object as StripeInvoice
         const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null
         if (subscriptionId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          const subscription = await stripeRetrieveSubscription(stripeSecretKey, subscriptionId)
           const groupId = await upsertBillingSubscription(subscription)
           if (groupId) {
             await capturePosthogEvent(groupId, 'billing_subscription_updated', subscriptionMetadata(subscription))
@@ -241,11 +350,9 @@ Deno.serve(async (req) => {
 
             if (shouldMarkConversion) {
               await capturePosthogEvent(groupId, 'billing_trial_converted', subscriptionMetadata(subscription))
-              await stripe.subscriptions.update(subscription.id, {
-                metadata: {
-                  ...subscription.metadata,
-                  trial_converted_sent: 'true',
-                },
+              await stripeUpdateSubscriptionMetadata(stripeSecretKey, subscription.id, {
+                ...(subscription.metadata ?? {}),
+                trial_converted_sent: 'true',
               })
             }
           }
@@ -253,10 +360,10 @@ Deno.serve(async (req) => {
         break
       }
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice
+        const invoice = event.data.object as StripeInvoice
         const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null
         if (subscriptionId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          const subscription = await stripeRetrieveSubscription(stripeSecretKey, subscriptionId)
           const groupId = await upsertBillingSubscription(subscription)
           if (groupId) {
             await capturePosthogEvent(groupId, 'billing_payment_failed', {
