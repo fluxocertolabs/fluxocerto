@@ -350,6 +350,7 @@ jobs:
           supabase functions deploy send-welcome-email
           supabase functions deploy before-user-created
           supabase functions deploy create-stripe-checkout-session
+          supabase functions deploy create-stripe-customer-portal-session
           supabase functions deploy stripe-webhook
 
   deploy-preview:
@@ -532,6 +533,7 @@ jobs:
           supabase functions deploy send-welcome-email
           supabase functions deploy before-user-created
           supabase functions deploy create-stripe-checkout-session
+          supabase functions deploy create-stripe-customer-portal-session
           supabase functions deploy stripe-webhook
 
   deploy-production:

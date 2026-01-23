@@ -111,7 +111,7 @@ export function SkeletonTabs({ className }: { className?: string }) {
       className={cn('animate-pulse', className)}
     >
       <div className="w-full max-w-full overflow-x-auto">
-        <div className="flex gap-2 p-1 rounded-lg bg-muted/50 w-max min-w-full">
+        <div className="flex gap-2 p-1 rounded-lg bg-muted/50 w-max min-w-full justify-center">
           {[...Array(5)].map((_, i) => (
             <SkeletonLine key={i} width="w-20" height="h-9" className="rounded-md" />
           ))}

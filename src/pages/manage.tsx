@@ -92,6 +92,7 @@ export function ManagePage() {
   const [pillStyle, setPillStyle] = useState<{ width: number; x: number } | null>(null)
   const [isHoveringTab, setIsHoveringTab] = useState(false)
   const [isPillReady, setIsPillReady] = useState(false)
+  const didInitPillRef = useRef(false)
 
   const [dialogState, setDialogState] = useState<DialogState>({ type: 'none' })
   const [deleteState, setDeleteState] = useState<DeleteState>({ type: 'none' })
@@ -181,7 +182,7 @@ export function ManagePage() {
     if (!isHoveringTab) {
       setPillStyle(nextStyle)
     }
-  }, [])
+  }, [isHoveringTab])
 
   const updateHoverIndicator = useCallback((element: HTMLElement | null) => {
     if (!tabsListRef.current || !element) {
@@ -191,7 +192,8 @@ export function ManagePage() {
       }
       return
     }
-    setIsHoveringTab(true)
+    const isHoveringActive = element.getAttribute('data-state') === 'active'
+    setIsHoveringTab(!isHoveringActive)
     setPillStyle({
       width: element.offsetWidth,
       x: element.offsetLeft,
@@ -200,11 +202,12 @@ export function ManagePage() {
 
   useLayoutEffect(() => {
     updateIndicator()
+    if (!didInitPillRef.current) {
+      didInitPillRef.current = true
+      setIsPillReady(false)
+      queueMicrotask(() => setIsPillReady(true))
+    }
   }, [activeTab, updateIndicator])
-
-  useEffect(() => {
-    setIsPillReady(true)
-  }, [])
 
   useEffect(() => {
     if (!tabsListRef.current) return
@@ -686,20 +689,20 @@ export function ManagePage() {
                 <motion.span
                   aria-hidden="true"
                   className="absolute inset-y-1 left-0 rounded-md bg-background shadow"
+                  style={
+                    !isPillReady && pillStyle
+                      ? { width: pillStyle.width, transform: `translateX(${pillStyle.x}px)` }
+                      : undefined
+                  }
                   animate={
-                    pillStyle
-                      ? {
-                          width: pillStyle.width,
-                          x: pillStyle.x,
-                          opacity: 1,
-                        }
-                      : { opacity: 0 }
-                  }
-                  transition={
                     isPillReady
-                      ? { type: 'spring', stiffness: 520, damping: 42 }
-                      : { duration: 0 }
+                      ? pillStyle
+                        ? { width: pillStyle.width, x: pillStyle.x, opacity: 1 }
+                        : { opacity: 0 }
+                      : undefined
                   }
+                  transition={isPillReady ? { type: 'spring', stiffness: 520, damping: 42 } : undefined}
+                  initial={false}
                 />
                 <TabsTrigger
                   value="accounts"

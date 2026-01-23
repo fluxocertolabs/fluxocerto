@@ -1,9 +1,10 @@
 /**
  * Manage page skeleton component.
  * Matches the exact layout of the Manage (Gerenciar) page including:
- * - Tab bar with 4 tabs
- * - Add button placeholder
- * - List of entity items
+ * - Tab bar
+ * - Optional filter placeholder
+ * - Grid/list of entity items
+ * - Full-width add button placeholder
  */
 
 import { cn } from '@/lib/utils'
@@ -25,19 +26,25 @@ export function ManageSkeleton({ className }: PageSkeletonProps) {
       {/* Screen reader text */}
       <span className="sr-only">Carregando dados financeiros...</span>
 
-      {/* Tab bar and add button row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      {/* Tab bar */}
+      <div className="mb-6">
         <SkeletonTabs />
-        {/* Add button placeholder */}
+      </div>
+
+      {/* Filter/controls row placeholder */}
+      <div className="flex justify-end mb-4">
         <SkeletonLine width="w-36" height="h-10" className="rounded-md" />
       </div>
 
-      {/* Entity list skeleton - 5 items */}
-      <div className="space-y-3">
-        {[...Array(5)].map((_, i) => (
+      {/* Entity grid/list skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[...Array(4)].map((_, i) => (
           <SkeletonListItem key={i} />
         ))}
       </div>
+
+      {/* Add button placeholder */}
+      <SkeletonLine width="w-full" height="h-10" className="rounded-md mt-4" />
     </div>
   )
 }
