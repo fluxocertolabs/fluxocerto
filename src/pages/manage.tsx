@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -35,6 +36,7 @@ import { CreditCardForm } from '@/components/manage/credit-cards/credit-card-for
 import { DeleteConfirmation } from '@/components/manage/shared/delete-confirmation'
 import { MembersList } from '@/components/group'
 import { PageLoadingWrapper, ManageSkeleton, SkeletonLine } from '@/components/loading'
+import { BillingManagementCard } from '@/components/billing/billing-management-card'
 import { cn } from '@/lib/utils'
 import type {
   BankAccount,
@@ -85,6 +87,11 @@ export function ManagePage() {
     }
     return 'accounts'
   })
+  const tabsListRef = useRef<HTMLDivElement | null>(null)
+  const [activeStyle, setActiveStyle] = useState<{ width: number; x: number } | null>(null)
+  const [pillStyle, setPillStyle] = useState<{ width: number; x: number } | null>(null)
+  const [isHoveringTab, setIsHoveringTab] = useState(false)
+  const [isPillReady, setIsPillReady] = useState(false)
 
   const [dialogState, setDialogState] = useState<DialogState>({ type: 'none' })
   const [deleteState, setDeleteState] = useState<DeleteState>({ type: 'none' })
@@ -159,6 +166,56 @@ export function ManagePage() {
     sessionStorage.setItem('manage-active-tab', tabValue)
     captureEvent('manage_tab_changed', { tab: tabValue })
   }
+
+  const updateIndicator = useCallback(() => {
+    if (!tabsListRef.current) return
+    const activeTrigger = tabsListRef.current.querySelector(
+      '[data-state="active"]'
+    ) as HTMLElement | null
+    if (!activeTrigger) return
+    const nextStyle = {
+      width: activeTrigger.offsetWidth,
+      x: activeTrigger.offsetLeft,
+    }
+    setActiveStyle(nextStyle)
+    if (!isHoveringTab) {
+      setPillStyle(nextStyle)
+    }
+  }, [])
+
+  const updateHoverIndicator = useCallback((element: HTMLElement | null) => {
+    if (!tabsListRef.current || !element) {
+      setIsHoveringTab(false)
+      if (activeStyle) {
+        setPillStyle(activeStyle)
+      }
+      return
+    }
+    setIsHoveringTab(true)
+    setPillStyle({
+      width: element.offsetWidth,
+      x: element.offsetLeft,
+    })
+  }, [activeStyle])
+
+  useLayoutEffect(() => {
+    updateIndicator()
+  }, [activeTab, updateIndicator])
+
+  useEffect(() => {
+    setIsPillReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!tabsListRef.current) return
+    const observer = new ResizeObserver(() => updateIndicator())
+    observer.observe(tabsListRef.current)
+    window.addEventListener('resize', updateIndicator)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updateIndicator)
+    }
+  }, [updateIndicator])
 
   const closeDialog = () => {
     setDialogState({ type: 'none' })
@@ -618,193 +675,305 @@ export function ManagePage() {
         skeleton={<ManageSkeleton />}
       >
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex flex-col gap-4 mb-6">
             <div className="w-full overflow-x-auto sm:overflow-visible">
-              <TabsList className="w-max min-w-full sm:w-auto justify-start sm:justify-center" data-tour="manage-tabs">
-                <TabsTrigger value="accounts" data-tour="accounts-tab">Contas</TabsTrigger>
-                <TabsTrigger value="projects" data-tour="projects-tab">Receitas</TabsTrigger>
-                <TabsTrigger value="expenses" data-tour="expenses-tab">Despesas</TabsTrigger>
-                <TabsTrigger value="cards" data-tour="cards-tab">Cartões</TabsTrigger>
-                <TabsTrigger value="group">Grupo</TabsTrigger>
+              <TabsList
+                ref={tabsListRef}
+                className="relative w-max min-w-full sm:w-auto justify-start sm:justify-center overflow-hidden"
+                data-tour="manage-tabs"
+                onPointerLeave={() => updateHoverIndicator(null)}
+              >
+                <motion.span
+                  aria-hidden="true"
+                  className="absolute inset-y-1 left-0 rounded-md bg-background shadow"
+                  animate={
+                    pillStyle
+                      ? {
+                          width: pillStyle.width,
+                          x: pillStyle.x,
+                          opacity: 1,
+                        }
+                      : { opacity: 0 }
+                  }
+                  transition={
+                    isPillReady
+                      ? { type: 'spring', stiffness: 520, damping: 42 }
+                      : { duration: 0 }
+                  }
+                />
+                <TabsTrigger
+                  value="accounts"
+                  data-tour="accounts-tab"
+                  className={cn(
+                    'relative z-10 cursor-pointer font-normal transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                    isHoveringTab ? 'data-[state=active]:text-muted-foreground' : 'data-[state=active]:text-foreground'
+                  )}
+                  onPointerEnter={(event) => updateHoverIndicator(event.currentTarget)}
+                >
+                  Contas
+                </TabsTrigger>
+                <TabsTrigger
+                  value="projects"
+                  data-tour="projects-tab"
+                  className={cn(
+                    'relative z-10 cursor-pointer font-normal transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                    isHoveringTab ? 'data-[state=active]:text-muted-foreground' : 'data-[state=active]:text-foreground'
+                  )}
+                  onPointerEnter={(event) => updateHoverIndicator(event.currentTarget)}
+                >
+                  Receitas
+                </TabsTrigger>
+                <TabsTrigger
+                  value="expenses"
+                  data-tour="expenses-tab"
+                  className={cn(
+                    'relative z-10 cursor-pointer font-normal transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                    isHoveringTab ? 'data-[state=active]:text-muted-foreground' : 'data-[state=active]:text-foreground'
+                  )}
+                  onPointerEnter={(event) => updateHoverIndicator(event.currentTarget)}
+                >
+                  Despesas
+                </TabsTrigger>
+                <TabsTrigger
+                  value="cards"
+                  data-tour="cards-tab"
+                  className={cn(
+                    'relative z-10 cursor-pointer font-normal transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                    isHoveringTab ? 'data-[state=active]:text-muted-foreground' : 'data-[state=active]:text-foreground'
+                  )}
+                  onPointerEnter={(event) => updateHoverIndicator(event.currentTarget)}
+                >
+                  Cartões
+                </TabsTrigger>
+                <TabsTrigger
+                  value="group"
+                  className={cn(
+                    'relative z-10 cursor-pointer font-normal transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                    isHoveringTab ? 'data-[state=active]:text-muted-foreground' : 'data-[state=active]:text-foreground'
+                  )}
+                  onPointerEnter={(event) => updateHoverIndicator(event.currentTarget)}
+                >
+                  Grupo
+                </TabsTrigger>
               </TabsList>
             </div>
-
-            {activeTab === 'accounts' && (
-              <Button onClick={() => setDialogState({ type: 'add-account' })}>
-                Adicionar Conta
-              </Button>
-            )}
-            {/* Projects add button removed - handled inside ProjectSection tabs */}
-            {/* Expenses add button removed - handled inside ExpenseSection tabs */}
-            {activeTab === 'cards' && (
-              <Button onClick={() => setDialogState({ type: 'add-card' })}>
-                Adicionar Cartão de Crédito
-              </Button>
-            )}
           </div>
 
           <TabsContent value="accounts">
-            <AccountList
-              accounts={accounts}
-              profiles={profiles}
-              onAdd={() => setDialogState({ type: 'add-account' })}
-              onEdit={(account) => setDialogState({ type: 'edit-account', account })}
-              onDelete={(id) => {
-                const account = accounts.find((a) => a.id === id)
-                if (account) {
-                  setDeleteState({ type: 'account', id, name: account.name })
-                }
-              }}
-              onUpdateBalance={handleUpdateAccountBalance}
-              onStartSetup={openWizard}
-            />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="accounts"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <AccountList
+                  accounts={accounts}
+                  profiles={profiles}
+                  onAdd={() => setDialogState({ type: 'add-account' })}
+                  onEdit={(account) => setDialogState({ type: 'edit-account', account })}
+                  onDelete={(id) => {
+                    const account = accounts.find((a) => a.id === id)
+                    if (account) {
+                      setDeleteState({ type: 'account', id, name: account.name })
+                    }
+                  }}
+                  onUpdateBalance={handleUpdateAccountBalance}
+                  onStartSetup={openWizard}
+                />
+              </motion.div>
+            </AnimatePresence>
           </TabsContent>
 
           <TabsContent value="projects">
-            <ProjectSection
-              recurringProjects={projects}
-              singleShotIncome={singleShotIncome}
-              onAddRecurring={() => setDialogState({ type: 'add-project' })}
-              onAddSingleShot={() => setDialogState({ type: 'add-single-shot-income' })}
-              onEditRecurring={(project) => setDialogState({ type: 'edit-project', project })}
-              onEditSingleShot={(income) => setDialogState({ type: 'edit-single-shot-income', income })}
-              onDeleteRecurring={(id) => {
-                const project = projects.find((p) => p.id === id)
-                if (project) {
-                  setDeleteState({ type: 'project', id, name: project.name })
-                }
-              }}
-              onDeleteSingleShot={(id) => {
-                const income = singleShotIncome.find((i) => i.id === id)
-                if (income) {
-                  setDeleteState({ type: 'single-shot-income', id, name: income.name })
-                }
-              }}
-              onToggleRecurringActive={handleToggleProjectActive}
-              onStartSetup={openWizard}
-            />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="projects"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <ProjectSection
+                  recurringProjects={projects}
+                  singleShotIncome={singleShotIncome}
+                  onAddRecurring={() => setDialogState({ type: 'add-project' })}
+                  onAddSingleShot={() => setDialogState({ type: 'add-single-shot-income' })}
+                  onEditRecurring={(project) => setDialogState({ type: 'edit-project', project })}
+                  onEditSingleShot={(income) => setDialogState({ type: 'edit-single-shot-income', income })}
+                  onDeleteRecurring={(id) => {
+                    const project = projects.find((p) => p.id === id)
+                    if (project) {
+                      setDeleteState({ type: 'project', id, name: project.name })
+                    }
+                  }}
+                  onDeleteSingleShot={(id) => {
+                    const income = singleShotIncome.find((i) => i.id === id)
+                    if (income) {
+                      setDeleteState({ type: 'single-shot-income', id, name: income.name })
+                    }
+                  }}
+                  onToggleRecurringActive={handleToggleProjectActive}
+                  onStartSetup={openWizard}
+                />
+              </motion.div>
+            </AnimatePresence>
           </TabsContent>
 
           <TabsContent value="expenses">
-            <ExpenseSection
-              fixedExpenses={fixedExpenses}
-              singleShotExpenses={singleShotExpenses}
-              onAddFixed={() => setDialogState({ type: 'add-expense' })}
-              onAddSingleShot={() => setDialogState({ type: 'add-single-shot-expense' })}
-              onEditFixed={(expense) => setDialogState({ type: 'edit-expense', expense })}
-              onEditSingleShot={(expense) => setDialogState({ type: 'edit-single-shot-expense', expense })}
-              onDeleteFixed={(id) => {
-                const expense = fixedExpenses.find((e) => e.id === id)
-                if (expense) {
-                  setDeleteState({ type: 'expense', id, name: expense.name })
-                }
-              }}
-              onDeleteSingleShot={(id) => {
-                const expense = singleShotExpenses.find((e) => e.id === id)
-                if (expense) {
-                  setDeleteState({ type: 'single-shot-expense', id, name: expense.name })
-                }
-              }}
-              onToggleFixedActive={handleToggleExpenseActive}
-              onStartSetup={openWizard}
-            />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="expenses"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <ExpenseSection
+                  fixedExpenses={fixedExpenses}
+                  singleShotExpenses={singleShotExpenses}
+                  onAddFixed={() => setDialogState({ type: 'add-expense' })}
+                  onAddSingleShot={() => setDialogState({ type: 'add-single-shot-expense' })}
+                  onEditFixed={(expense) => setDialogState({ type: 'edit-expense', expense })}
+                  onEditSingleShot={(expense) => setDialogState({ type: 'edit-single-shot-expense', expense })}
+                  onDeleteFixed={(id) => {
+                    const expense = fixedExpenses.find((e) => e.id === id)
+                    if (expense) {
+                      setDeleteState({ type: 'expense', id, name: expense.name })
+                    }
+                  }}
+                  onDeleteSingleShot={(id) => {
+                    const expense = singleShotExpenses.find((e) => e.id === id)
+                    if (expense) {
+                      setDeleteState({ type: 'single-shot-expense', id, name: expense.name })
+                    }
+                  }}
+                  onToggleFixedActive={handleToggleExpenseActive}
+                  onStartSetup={openWizard}
+                />
+              </motion.div>
+            </AnimatePresence>
           </TabsContent>
 
           <TabsContent value="cards">
-            <CreditCardList
-              creditCards={creditCards}
-              futureStatements={futureStatements}
-              profiles={profiles}
-              onAdd={() => setDialogState({ type: 'add-card' })}
-              onEdit={(card) => setDialogState({ type: 'edit-card', card })}
-              onDelete={(id) => {
-                const card = creditCards.find((c) => c.id === id)
-                if (card) {
-                  setDeleteState({ type: 'card', id, name: card.name })
-                }
-              }}
-              onUpdateBalance={handleUpdateCreditCardBalance}
-              onAddFutureStatement={handleAddFutureStatement}
-              onUpdateFutureStatement={handleUpdateFutureStatement}
-              onDeleteFutureStatement={handleDeleteFutureStatement}
-              onStartSetup={openWizard}
-            />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="cards"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <CreditCardList
+                  creditCards={creditCards}
+                  futureStatements={futureStatements}
+                  profiles={profiles}
+                  onAdd={() => setDialogState({ type: 'add-card' })}
+                  onEdit={(card) => setDialogState({ type: 'edit-card', card })}
+                  onDelete={(id) => {
+                    const card = creditCards.find((c) => c.id === id)
+                    if (card) {
+                      setDeleteState({ type: 'card', id, name: card.name })
+                    }
+                  }}
+                  onUpdateBalance={handleUpdateCreditCardBalance}
+                  onAddFutureStatement={handleAddFutureStatement}
+                  onUpdateFutureStatement={handleUpdateFutureStatement}
+                  onDeleteFutureStatement={handleDeleteFutureStatement}
+                  onStartSetup={openWizard}
+                />
+              </motion.div>
+            </AnimatePresence>
           </TabsContent>
 
           <TabsContent value="group">
-            <Card>
-              <CardHeader>
-                <CardTitle>Membros do Grupo</CardTitle>
-                <CardDescription>
-                  {group ? (
-                    <>Membros do grupo <strong data-testid="group-name">{group.name}</strong></>
-                  ) : (
-                    'Carregando...'
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {groupLoading ? (
-                  <div className="space-y-2">
-                    <SkeletonLine width="w-full" height="h-10" />
-                    <SkeletonLine width="w-full" height="h-10" />
-                  </div>
-                ) : groupError ? (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                      {groupError}
-                    </div>
-                    {groupIsRecoverable && (
-                      <div className="flex flex-col gap-2">
-                        <Button onClick={handleGroupRecovery} disabled={isRecoveringGroup}>
-                          {isRecoveringGroup ? 'Tentando...' : 'Tentar Novamente'}
-                        </Button>
-                        <Button variant="outline" onClick={handleSignOut}>
-                          Sair
-                        </Button>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              Ajuda
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Precisa de Ajuda?</DialogTitle>
-                              <DialogDescription className="space-y-4">
-                                <p>
-                                  Ocorreu um erro ao carregar os dados do seu grupo. Tente as seguintes soluções:
-                                </p>
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                  <li>Verifique sua conexão com a internet</li>
-                                  <li>Clique em "Tentar Novamente"</li>
-                                  <li>Se o problema persistir, saia e faça login novamente</li>
-                                </ul>
-                                <p className="text-sm text-muted-foreground">
-                                  Se precisar de suporte, copie os detalhes abaixo e entre em contato conosco.
-                                </p>
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="mt-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={handleCopyDiagnostics}
-                              >
-                                {copied ? 'Copiado!' : 'Copiar Detalhes'}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="group"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div className="space-y-4">
+                  <BillingManagementCard />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Membros do Grupo</CardTitle>
+                      <CardDescription>
+                        {group ? (
+                          <>Membros do grupo <strong data-testid="group-name">{group.name}</strong></>
+                        ) : (
+                          'Carregando...'
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {groupLoading ? (
+                        <div className="space-y-2">
+                          <SkeletonLine width="w-full" height="h-10" />
+                          <SkeletonLine width="w-full" height="h-10" />
+                        </div>
+                      ) : groupError ? (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                            {groupError}
+                          </div>
+                          {groupIsRecoverable && (
+                            <div className="flex flex-col gap-2">
+                              <Button onClick={handleGroupRecovery} disabled={isRecoveringGroup}>
+                                {isRecoveringGroup ? 'Tentando...' : 'Tentar Novamente'}
                               </Button>
+                              <Button variant="outline" onClick={handleSignOut}>
+                                Sair
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    Ajuda
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Precisa de Ajuda?</DialogTitle>
+                                    <DialogDescription className="space-y-4">
+                                      <p>
+                                        Ocorreu um erro ao carregar os dados do seu grupo. Tente as seguintes soluções:
+                                      </p>
+                                      <ul className="list-disc list-inside space-y-1 text-sm">
+                                        <li>Verifique sua conexão com a internet</li>
+                                        <li>Clique em "Tentar Novamente"</li>
+                                        <li>Se o problema persistir, saia e faça login novamente</li>
+                                      </ul>
+                                      <p className="text-sm text-muted-foreground">
+                                        Se precisar de suporte, copie os detalhes abaixo e entre em contato conosco.
+                                      </p>
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="mt-4">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={handleCopyDiagnostics}
+                                    >
+                                      {copied ? 'Copiado!' : 'Copiar Detalhes'}
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <MembersList members={members} />
-                )}
-              </CardContent>
-            </Card>
+                          )}
+                        </div>
+                      ) : (
+                        <MembersList members={members} />
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </TabsContent>
         </Tabs>
       </PageLoadingWrapper>

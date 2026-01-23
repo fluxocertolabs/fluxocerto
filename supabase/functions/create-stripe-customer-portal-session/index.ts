@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8'
 
-interface CheckoutSessionResponse {
+interface PortalSessionResponse {
   ok: boolean
   url?: string
   error?: string
@@ -143,43 +143,25 @@ function createTimeoutSignal(ms: number): { signal: AbortSignal; cleanup: () => 
   return { signal: controller.signal, cleanup: () => clearTimeout(timeout) }
 }
 
-async function createCheckoutSession(options: {
+async function createPortalSession(options: {
   stripeSecretKey: string
-  priceId: string
-  customerId: string | null
-  customerEmail: string | null
-  baseUrl: string
-  groupId: string
-  userId: string
+  customerId: string
+  returnUrl: string
+  configurationId?: string | null
 }): Promise<{ url: string }> {
-  const { stripeSecretKey, priceId, customerId, customerEmail, baseUrl, groupId, userId } = options
+  const { stripeSecretKey, customerId, returnUrl, configurationId } = options
 
   const body = new URLSearchParams()
-  body.append('mode', 'subscription')
-  if (customerId) {
-    body.append('customer', customerId)
-  } else if (customerEmail) {
-    // Avoid a separate "create customer" API call; Stripe will create/attach a customer during checkout.
-    body.append('customer_email', customerEmail)
+  body.append('customer', customerId)
+  body.append('return_url', returnUrl)
+  if (configurationId) {
+    body.append('configuration', configurationId)
   }
-  body.append('line_items[0][price]', priceId)
-  body.append('line_items[0][quantity]', '1')
-  body.append('subscription_data[trial_period_days]', '14')
-  body.append('subscription_data[trial_settings][end_behavior][missing_payment_method]', 'cancel')
-  // Ensure we can always resolve the group from subscription events (even if customer mapping fails).
-  body.append('subscription_data[metadata][group_id]', groupId)
-  body.append('subscription_data[metadata][user_id]', userId)
-  body.append('payment_method_collection', 'always')
-  body.append('success_url', `${baseUrl}/billing/success`)
-  body.append('cancel_url', `${baseUrl}/billing/cancel`)
-  body.append('metadata[group_id]', groupId)
-  body.append('metadata[user_id]', userId)
 
-  // Stripe's API calls should not hang indefinitely; use a reasonable timeout for user-facing checkout creation.
   const { signal, cleanup } = createTimeoutSignal(15_000)
   let response: Response
   try {
-    response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    response = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${stripeSecretKey}`,
@@ -205,7 +187,7 @@ async function createCheckoutSession(options: {
 
   const url = data?.url
   if (typeof url !== 'string') {
-    throw new Error('Stripe session URL missing')
+    throw new Error('Stripe portal URL missing')
   }
   return { url }
 }
@@ -218,7 +200,7 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ ok: false, error: 'method_not_allowed' }), {
+    return new Response(JSON.stringify({ ok: false, error: 'method_not_allowed' } satisfies PortalSessionResponse), {
       status: 405,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
@@ -244,20 +226,20 @@ Deno.serve(async (req) => {
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
-  const priceId = Deno.env.get('STRIPE_PRICE_ID')
+  const portalConfigId = Deno.env.get('STRIPE_PORTAL_CONFIGURATION_ID')
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey || !stripeSecretKey || !priceId) {
-    return new Response(
-      JSON.stringify({ ok: false, error: 'server_configuration_error' } satisfies CheckoutSessionResponse),
-      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-    )
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey || !stripeSecretKey) {
+    return new Response(JSON.stringify({ ok: false, error: 'server_configuration_error' } satisfies PortalSessionResponse), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    })
   }
 
   const baseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'
   const allowedPatterns = getAllowedPatterns(baseUrl)
   const origin = req.headers.get('origin')
   if (origin && !isOriginAllowed(origin, allowedPatterns)) {
-    return new Response(JSON.stringify({ ok: false, error: 'origin_not_allowed' } satisfies CheckoutSessionResponse), {
+    return new Response(JSON.stringify({ ok: false, error: 'origin_not_allowed' } satisfies PortalSessionResponse), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
     })
@@ -278,7 +260,6 @@ Deno.serve(async (req) => {
   const adminClient = createClient(supabaseUrl, supabaseServiceKey)
 
   try {
-    // Explicitly pass the JWT to avoid relying on local session persistence.
     const { data: { user }, error: userError } = await userClient.auth.getUser(bearerToken)
     if (userError || !user) {
       return new Response(JSON.stringify({ ok: false, error: 'unauthorized' }), {
@@ -311,7 +292,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (existingBillingError) {
-      console.error('Failed to read existing billing subscription', {
+      console.error('Failed to read billing subscription', {
         groupId,
         error: existingBillingError,
       })
@@ -319,49 +300,30 @@ Deno.serve(async (req) => {
     }
 
     const stripeCustomerId = existingBilling?.stripe_customer_id ?? null
-
-    // Ensure the billing row exists so webhooks have a place to write state.
-    const { error: ensureBillingError } = await adminClient
-      .from('billing_subscriptions')
-      .upsert(
-        {
-          group_id: groupId,
-          ...(stripeCustomerId ? { stripe_customer_id: stripeCustomerId } : {}),
-          status: 'pending',
-        },
-        { onConflict: 'group_id' }
-      )
-
-    if (ensureBillingError) {
-      console.error('Failed to upsert billing subscription', {
-        groupId,
-        stripeCustomerId,
-        error: ensureBillingError,
+    if (!stripeCustomerId) {
+      return new Response(JSON.stringify({ ok: false, error: 'billing_customer_not_found' } satisfies PortalSessionResponse), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       })
-      throw new Error('Failed to persist billing record')
     }
 
-    const checkoutBaseUrl = getBaseUrl(req)
-    const session = await createCheckoutSession({
+    const returnBaseUrl = getBaseUrl(req)
+    const portalSession = await createPortalSession({
       stripeSecretKey,
-      priceId,
       customerId: stripeCustomerId,
-      customerEmail: email,
-      baseUrl: checkoutBaseUrl,
-      groupId,
-      userId: user.id,
+      returnUrl: `${returnBaseUrl}/manage`,
+      configurationId: portalConfigId,
     })
 
-    return new Response(JSON.stringify({ ok: true, url: session.url } satisfies CheckoutSessionResponse), {
+    return new Response(JSON.stringify({ ok: true, url: portalSession.url } satisfies PortalSessionResponse), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'internal_error'
-    return new Response(JSON.stringify({ ok: false, error: message } satisfies CheckoutSessionResponse), {
+    return new Response(JSON.stringify({ ok: false, error: message } satisfies PortalSessionResponse), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 })
-

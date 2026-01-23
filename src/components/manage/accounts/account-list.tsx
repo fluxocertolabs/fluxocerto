@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import type { BankAccount, Profile } from '@/types'
 import { EntityEmptyState } from '@/components/manage/shared/entity-empty-state'
+import { Button } from '@/components/ui/button'
 import { AccountCard } from './account-card'
 import {
   Select,
@@ -81,6 +82,9 @@ export function AccountList({
           ))}
         </div>
       )}
+      <Button onClick={onAdd} variant="outline" className="w-full">
+        Adicionar Conta
+      </Button>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import type { CreditCard, Profile, FutureStatement, FutureStatementInput } from '@/types'
 import { EntityEmptyState } from '@/components/manage/shared/entity-empty-state'
+import { Button } from '@/components/ui/button'
 import { CreditCardCard } from './credit-card-card'
 import {
   Select,
@@ -93,6 +94,9 @@ export function CreditCardList({
           ))}
         </div>
       )}
+      <Button onClick={onAdd} variant="outline" className="w-full">
+        Adicionar Cartão de Crédito
+      </Button>
     </div>
   )
 }

@@ -884,6 +884,76 @@ export async function createStripeCheckoutSession(): Promise<Result<{ url: strin
   }
 }
 
+/**
+ * Create a Stripe Customer Portal Session for the current group.
+ * Returns the Stripe-hosted portal URL.
+ */
+export async function createStripeCustomerPortalSession(): Promise<Result<{ url: string }>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const { data: { session }, error: sessionError } = await client.auth.getSession()
+    if (sessionError || !session) {
+      return { success: false, error: 'Você precisa estar autenticado' }
+    }
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const functionUrl = `${supabaseUrl}/functions/v1/create-stripe-customer-portal-session`
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!anonKey) {
+      return { success: false, error: 'Supabase não está configurado' }
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 10_000)
+
+    let response: Response
+    try {
+      response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anonKey,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        signal: controller.signal,
+      })
+    } finally {
+      window.clearTimeout(timeout)
+    }
+
+    let payload: { ok: boolean; url?: string; error?: string } | null = null
+    try {
+      payload = await response.json()
+    } catch {
+      payload = null
+    }
+
+    if (!response.ok || !payload?.ok || !payload.url) {
+      const errorKey = payload?.error ?? 'Falha ao abrir portal'
+      const errorMessages: Record<string, string> = {
+        billing_customer_not_found: 'Nenhuma assinatura encontrada para este grupo.',
+        group_not_found: 'Grupo não encontrado.',
+        unauthorized: 'Você precisa estar autenticado.',
+        origin_not_allowed: 'Origem não permitida.',
+        server_configuration_error: 'Configuração do servidor indisponível.',
+      }
+      return {
+        success: false,
+        error: errorMessages[errorKey] ?? errorKey,
+      }
+    }
+
+    return { success: true, data: { url: payload.url } }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
 // ============================================================================
 // TOUR STATE HELPERS
 // ============================================================================
