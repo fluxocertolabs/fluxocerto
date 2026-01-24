@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setBillingSuccessFlag } from '@/components/billing/billing-success-flag'
+import { captureEvent } from '@/lib/analytics/posthog'
 
 /**
  * Stripe redirects the user back to `/billing/success` after checkout.
@@ -12,6 +13,8 @@ export function BillingSuccessRedirectPage() {
 
   useEffect(() => {
     setBillingSuccessFlag()
+    // Mirror the cancel page event so funnels can track Stripe return outcomes.
+    captureEvent('billing_checkout_returned', { result: 'success' })
     navigate('/', { replace: true })
   }, [navigate])
 

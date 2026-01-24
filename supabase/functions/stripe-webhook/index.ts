@@ -20,6 +20,16 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+type StripeSubscriptionUpdatedEvent = StripeEvent & {
+  data: {
+    object: StripeSubscription
+    previous_attributes?: {
+      cancel_at_period_end?: boolean
+      status?: string
+    }
+  }
+}
+
 function getPosthogConfig() {
   const key = Deno.env.get('POSTHOG_PROJECT_KEY')
   if (!key) return null
@@ -63,6 +73,40 @@ async function capturePosthogEvent(
       err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
     console.warn('PostHog capture failed', { err: isAbort ? 'timeout' : err })
   }
+}
+
+function getUserIdFromMetadata(metadata: Record<string, string> | undefined): string | null {
+  if (!metadata) return null
+  const userId = metadata.user_id
+  return typeof userId === 'string' && userId.length > 0 ? userId : null
+}
+
+function withGroups(properties: Record<string, unknown>, groupId: string): Record<string, unknown> {
+  return {
+    ...properties,
+    group_id: groupId,
+    // Connect server-side billing events to PostHog Group Analytics ("group" is the group type used in the app).
+    $groups: { group: groupId },
+  }
+}
+
+async function captureBillingEvent(options: {
+  groupId: string
+  userId: string | null
+  event: string
+  properties: Record<string, unknown>
+}): Promise<void> {
+  const { groupId, userId, event, properties } = options
+  const payload = withGroups(properties, groupId)
+
+  // Prefer user-level attribution so funnels that start on the landing/app (person distinct_id) can end on billing events.
+  if (userId) {
+    await capturePosthogEvent(userId, event, payload)
+    return
+  }
+
+  // Fallback: preserve legacy behavior if user_id wasn't available.
+  await capturePosthogEvent(groupId, event, payload)
 }
 
 function subscriptionMetadata(subscription: StripeSubscription) {
@@ -335,6 +379,7 @@ Deno.serve(async (req) => {
         const customerId = normalizeStripeId(session.customer)
         const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null
         const metadataGroupId = session.metadata?.group_id ?? null
+        const metadataUserId = getUserIdFromMetadata(session.metadata)
 
         if (metadataGroupId) {
           const { error } = await adminClient
@@ -361,15 +406,40 @@ Deno.serve(async (req) => {
           const subscription = await stripeRetrieveSubscription(stripeSecretKey, subscriptionId)
           await upsertBillingSubscription(subscription)
         }
+
+        // Record a “checkout completed” event for funnel step alignment (best-effort).
+        // Use userId when available so it joins funnels; include $groups for group analytics.
+        if (metadataGroupId) {
+          await captureBillingEvent({
+            groupId: metadataGroupId,
+            userId: metadataUserId,
+            event: 'billing_checkout_completed',
+            properties: {
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId,
+            },
+          })
+        }
         break
       }
       case 'customer.subscription.created': {
         const subscription = event.data.object as StripeSubscription
         const groupId = await upsertBillingSubscription(subscription)
         if (groupId) {
-          await capturePosthogEvent(groupId, 'billing_subscription_created', subscriptionMetadata(subscription))
+          const userId = getUserIdFromMetadata(subscription.metadata)
+          await captureBillingEvent({
+            groupId,
+            userId,
+            event: 'billing_subscription_created',
+            properties: subscriptionMetadata(subscription),
+          })
           if (subscription.status === 'trialing') {
-            await capturePosthogEvent(groupId, 'billing_trial_started', subscriptionMetadata(subscription))
+            await captureBillingEvent({
+              groupId,
+              userId,
+              event: 'billing_trial_started',
+              properties: subscriptionMetadata(subscription),
+            })
           }
         }
         break
@@ -378,7 +448,37 @@ Deno.serve(async (req) => {
         const subscription = event.data.object as StripeSubscription
         const groupId = await upsertBillingSubscription(subscription)
         if (groupId) {
-          await capturePosthogEvent(groupId, 'billing_subscription_updated', subscriptionMetadata(subscription))
+          const userId = getUserIdFromMetadata(subscription.metadata)
+          await captureBillingEvent({
+            groupId,
+            userId,
+            event: 'billing_subscription_updated',
+            properties: subscriptionMetadata(subscription),
+          })
+
+          // Track user-initiated cancellation intent (most users "cancel" by setting cancel_at_period_end=true).
+          // Stripe includes `previous_attributes` for updated events which lets us detect toggles.
+          const updatedEvent = event as StripeSubscriptionUpdatedEvent
+          const previousCancelAtPeriodEnd = updatedEvent.data.previous_attributes?.cancel_at_period_end
+          if (typeof previousCancelAtPeriodEnd === 'boolean') {
+            const currentCancelAtPeriodEnd = subscription.cancel_at_period_end === true
+            if (!previousCancelAtPeriodEnd && currentCancelAtPeriodEnd) {
+              await captureBillingEvent({
+                groupId,
+                userId,
+                event: 'billing_cancellation_scheduled',
+                properties: subscriptionMetadata(subscription),
+              })
+            }
+            if (previousCancelAtPeriodEnd && !currentCancelAtPeriodEnd) {
+              await captureBillingEvent({
+                groupId,
+                userId,
+                event: 'billing_cancellation_unscheduled',
+                properties: subscriptionMetadata(subscription),
+              })
+            }
+          }
         }
         break
       }
@@ -386,7 +486,13 @@ Deno.serve(async (req) => {
         const subscription = event.data.object as StripeSubscription
         const groupId = await upsertBillingSubscription(subscription)
         if (groupId) {
-          await capturePosthogEvent(groupId, 'billing_subscription_canceled', subscriptionMetadata(subscription))
+          const userId = getUserIdFromMetadata(subscription.metadata)
+          await captureBillingEvent({
+            groupId,
+            userId,
+            event: 'billing_subscription_canceled',
+            properties: subscriptionMetadata(subscription),
+          })
         }
         break
       }
@@ -397,12 +503,23 @@ Deno.serve(async (req) => {
           const subscription = await stripeRetrieveSubscription(stripeSecretKey, subscriptionId)
           const groupId = await upsertBillingSubscription(subscription)
           if (groupId) {
-            await capturePosthogEvent(groupId, 'billing_subscription_updated', subscriptionMetadata(subscription))
-            await capturePosthogEvent(groupId, 'billing_payment_succeeded', {
-              ...subscriptionMetadata(subscription),
-              invoice_id: invoice.id,
-              value_cents: invoice.amount_paid ?? null,
-              currency: invoice.currency ?? null,
+            const userId = getUserIdFromMetadata(subscription.metadata)
+            await captureBillingEvent({
+              groupId,
+              userId,
+              event: 'billing_subscription_updated',
+              properties: subscriptionMetadata(subscription),
+            })
+            await captureBillingEvent({
+              groupId,
+              userId,
+              event: 'billing_payment_succeeded',
+              properties: {
+                ...subscriptionMetadata(subscription),
+                invoice_id: invoice.id,
+                value_cents: invoice.amount_paid ?? null,
+                currency: invoice.currency ?? null,
+              },
             })
             const trialEnd = subscription.trial_end ? subscription.trial_end * 1000 : null
             const paymentAt = invoice.created ? invoice.created * 1000 : null
@@ -415,7 +532,12 @@ Deno.serve(async (req) => {
               !alreadyMarked
 
             if (shouldMarkConversion) {
-              await capturePosthogEvent(groupId, 'billing_trial_converted', subscriptionMetadata(subscription))
+              await captureBillingEvent({
+                groupId,
+                userId,
+                event: 'billing_trial_converted',
+                properties: subscriptionMetadata(subscription),
+              })
               await stripeUpdateSubscriptionMetadata(stripeSecretKey, subscription.id, {
                 ...(subscription.metadata ?? {}),
                 trial_converted_sent: 'true',
@@ -432,11 +554,17 @@ Deno.serve(async (req) => {
           const subscription = await stripeRetrieveSubscription(stripeSecretKey, subscriptionId)
           const groupId = await upsertBillingSubscription(subscription)
           if (groupId) {
-            await capturePosthogEvent(groupId, 'billing_payment_failed', {
-              ...subscriptionMetadata(subscription),
-              invoice_id: invoice.id,
-              value_cents: invoice.amount_due ?? null,
-              currency: invoice.currency ?? null,
+            const userId = getUserIdFromMetadata(subscription.metadata)
+            await captureBillingEvent({
+              groupId,
+              userId,
+              event: 'billing_payment_failed',
+              properties: {
+                ...subscriptionMetadata(subscription),
+                invoice_id: invoice.id,
+                value_cents: invoice.amount_due ?? null,
+                currency: invoice.currency ?? null,
+              },
             })
           }
         }

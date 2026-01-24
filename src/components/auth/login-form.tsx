@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { signInWithMagicLink } from '@/lib/supabase'
 import { getAuthErrorMessage } from '@/lib/auth-errors'
+import { captureEvent } from '@/lib/analytics/posthog'
 
 interface LoginFormProps {
   onSuccess?: () => void
@@ -25,12 +26,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setIsLoading(false)
 
     if (signInError) {
+      captureEvent('login_magic_link_request_failed')
       // Map error to user-friendly message
       const errorMessage = getAuthErrorMessage(signInError)
       setError(errorMessage)
       return
     }
 
+    captureEvent('login_magic_link_requested')
     // Always show success message to prevent email enumeration
     setIsSubmitted(true)
     onSuccess?.()
