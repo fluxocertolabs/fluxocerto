@@ -28,7 +28,7 @@ export function BillingGate() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const { subscription, isLoading: billingLoading, hasAccess } = useBillingStatus()
   const { state: onboardingState, isMinimumSetupComplete, isLoading: onboardingLoading } =
-    useOnboardingState()
+    useOnboardingState({ manageWizard: false })
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const hasTracked = useRef(false)

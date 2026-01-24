@@ -62,7 +62,17 @@ export interface UseOnboardingStateReturn {
   refetch: () => void
 }
 
-export function useOnboardingState(): UseOnboardingStateReturn {
+export function useOnboardingState(options?: {
+  /**
+   * When false, this hook will not auto-open/resume the onboarding wizard.
+   * Use this when you only need to *read* onboarding state (e.g. for gating),
+   * to avoid multiple instances competing to control global wizard UI state.
+   *
+   * Defaults to true.
+   */
+  manageWizard?: boolean
+}): UseOnboardingStateReturn {
+  const manageWizard = options?.manageWizard ?? true
   const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth()
   const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, isLoading: financeLoading } = useFinanceData()
   const { isWizardOpen, openWizard: openWizardUi, closeWizard: closeWizardUi } = useOnboardingStore()
@@ -234,6 +244,7 @@ export function useOnboardingState(): UseOnboardingStateReturn {
 
   // Auto-open the wizard when eligible or when resuming an in-progress onboarding
   useEffect(() => {
+    if (!manageWizard) return
     if ((shouldAutoShow || shouldResume) && !isWizardOpen) {
       openWizardUi('auto')
       setHasAutoShown(true)
@@ -253,7 +264,7 @@ export function useOnboardingState(): UseOnboardingStateReturn {
         })()
       }
     }
-  }, [shouldAutoShow, shouldResume, isWizardOpen, currentStep, openWizardUi])
+  }, [manageWizard, shouldAutoShow, shouldResume, isWizardOpen, currentStep, openWizardUi])
 
   const refetch = useCallback(() => {
     setRetryCount(c => c + 1)
