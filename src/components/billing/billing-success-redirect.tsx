@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setBillingSuccessFlag } from '@/components/billing/billing-success-flag'
 import { captureEvent } from '@/lib/analytics/posthog'
+import { metaTrack } from '@/lib/analytics/meta-pixel'
 
 /**
  * Stripe redirects the user back to `/billing/success` after checkout.
@@ -15,6 +16,8 @@ export function BillingSuccessRedirectPage() {
     setBillingSuccessFlag()
     // Mirror the cancel page event so funnels can track Stripe return outcomes.
     captureEvent('billing_checkout_returned', { result: 'success' })
+    // Stripe success return indicates trial activation (subscription created in Stripe).
+    metaTrack('StartTrial')
     navigate('/', { replace: true })
   }, [navigate])
 

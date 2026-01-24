@@ -15,6 +15,7 @@ import { useBillingStatus } from '@/hooks/use-billing-status'
 import { useOnboardingState } from '@/hooks/use-onboarding-state'
 import { createStripeCheckoutSession } from '@/lib/supabase'
 import { captureEvent } from '@/lib/analytics/posthog'
+import { metaTrack } from '@/lib/analytics/meta-pixel'
 import { readBillingSuccessFlag } from '@/components/billing/billing-success-flag'
 import { AlertTriangle, ArrowRight, Loader2, ShieldCheck } from 'lucide-react'
 
@@ -71,6 +72,8 @@ export function BillingGate() {
       source: 'billing_gate',
       status: subscription?.status ?? 'none',
     })
+    // Mirror the analytics funnel step in Meta for ads attribution.
+    metaTrack('InitiateCheckout')
 
     const result = await createStripeCheckoutSession()
     if (!result.success) {

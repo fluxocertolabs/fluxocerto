@@ -14,6 +14,7 @@ import { BillingSuccessOverlay } from '@/components/billing/billing-success-over
 import { BillingSuccessRedirectPage } from '@/components/billing/billing-success-redirect'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { PosthogPageviews } from '@/components/analytics/posthog-pageviews'
+import { MetaPixelPageviews } from '@/components/analytics/meta-pixel-pageviews'
 import { Dashboard } from '@/pages/dashboard'
 import { ManagePage } from '@/pages/manage'
 import { HistoryPage } from '@/pages/history'
@@ -101,7 +102,12 @@ function AppRoutes() {
 function AnalyticsBridge() {
   useAnalyticsConsent()
   usePosthogGroup()
-  return <PosthogPageviews />
+  return (
+    <>
+      <PosthogPageviews />
+      <MetaPixelPageviews />
+    </>
+  )
 }
 
 function App() {

@@ -37,6 +37,86 @@ function getPosthogConfig() {
   return { key, host }
 }
 
+function getMetaCapiConfig() {
+  const pixelId = Deno.env.get('META_PIXEL_ID')
+  const accessToken = Deno.env.get('META_CAPI_ACCESS_TOKEN')
+  if (!pixelId || !accessToken) return null
+  const testEventCode = Deno.env.get('META_TEST_EVENT_CODE') || null
+  const eventSourceUrl = Deno.env.get('META_EVENT_SOURCE_URL') || null
+  const apiVersion = Deno.env.get('META_GRAPH_API_VERSION') || 'v19.0'
+  return { pixelId, accessToken, testEventCode, eventSourceUrl, apiVersion }
+}
+
+function normalizeForHash(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+async function captureMetaEvent(options: {
+  externalId: string | null
+  eventName: string
+  eventId: string
+  eventTimeSeconds?: number
+  customData?: Record<string, unknown>
+}): Promise<void> {
+  const config = getMetaCapiConfig()
+  if (!config) return
+  if (!options.externalId) return
+
+  const eventTimeSeconds = options.eventTimeSeconds ?? Math.floor(Date.now() / 1000)
+  const externalIdHash = await sha256Hex(normalizeForHash(options.externalId))
+
+  const payload: Record<string, unknown> = {
+    data: [
+      {
+        event_name: options.eventName,
+        event_time: eventTimeSeconds,
+        event_id: options.eventId,
+        action_source: 'website',
+        ...(config.eventSourceUrl ? { event_source_url: config.eventSourceUrl } : {}),
+        user_data: {
+          external_id: [externalIdHash],
+        },
+        ...(options.customData ? { custom_data: options.customData } : {}),
+      },
+    ],
+  }
+
+  if (config.testEventCode) {
+    payload.test_event_code = config.testEventCode
+  }
+
+  const url = `https://graph.facebook.com/${config.apiVersion}/${config.pixelId}/events?access_token=${encodeURIComponent(config.accessToken)}`
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 3000)
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      })
+      if (!response.ok) {
+        console.warn('Meta CAPI event failed', { status: response.status, event: options.eventName })
+      }
+    } finally {
+      clearTimeout(timeout)
+    }
+  } catch (err) {
+    const isAbort =
+      err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
+    console.warn('Meta CAPI event failed', { err: isAbort ? 'timeout' : err, event: options.eventName })
+  }
+}
+
 async function capturePosthogEvent(
   distinctId: string,
   event: string,
@@ -440,6 +520,11 @@ Deno.serve(async (req) => {
               event: 'billing_trial_started',
               properties: subscriptionMetadata(subscription),
             })
+            await captureMetaEvent({
+              externalId: userId ?? groupId,
+              eventName: 'StartTrial',
+              eventId: `stripe_sub_${subscription.id}_trial_started`,
+            })
           }
         }
         break
@@ -538,6 +623,20 @@ Deno.serve(async (req) => {
                 event: 'billing_trial_converted',
                 properties: subscriptionMetadata(subscription),
               })
+              const amountCents = invoice.amount_paid ?? null
+              const currency = invoice.currency ?? null
+              if (typeof amountCents === 'number' && amountCents > 0 && typeof currency === 'string' && currency) {
+                await captureMetaEvent({
+                  externalId: userId ?? groupId,
+                  eventName: 'Purchase',
+                  eventId: `stripe_invoice_${invoice.id}_trial_conversion`,
+                  eventTimeSeconds: invoice.created ?? undefined,
+                  customData: {
+                    currency,
+                    value: amountCents / 100,
+                  },
+                })
+              }
               await stripeUpdateSubscriptionMetadata(stripeSecretKey, subscription.id, {
                 ...(subscription.metadata ?? {}),
                 trial_converted_sent: 'true',
