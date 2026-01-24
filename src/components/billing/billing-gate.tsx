@@ -13,6 +13,7 @@ import { LottieIllustration } from '@/components/illustrations/lottie-illustrati
 import { useAuth } from '@/hooks/use-auth'
 import { useBillingStatus } from '@/hooks/use-billing-status'
 import { useOnboardingState } from '@/hooks/use-onboarding-state'
+import { useOnboardingStore } from '@/stores/onboarding-store'
 import { createStripeCheckoutSession } from '@/lib/supabase'
 import { captureEvent } from '@/lib/analytics/posthog'
 import { metaTrack } from '@/lib/analytics/meta-pixel'
@@ -27,11 +28,17 @@ export function BillingGate() {
   const location = useLocation()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const { subscription, isLoading: billingLoading, hasAccess } = useBillingStatus()
-  const { state: onboardingState, isMinimumSetupComplete, isLoading: onboardingLoading } =
-    useOnboardingState({ manageWizard: false })
+  const isWizardOpen = useOnboardingStore((s) => s.isWizardOpen)
+  const {
+    state: onboardingState,
+    isMinimumSetupComplete,
+    isLoading: onboardingLoading,
+    refetch: refetchOnboarding,
+  } = useOnboardingState({ manageWizard: false })
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const hasTracked = useRef(false)
+  const prevWizardOpen = useRef(false)
   const shouldReduceMotion = useReducedMotion()
 
   const isOnboardingFinished = useMemo(() => {
@@ -46,11 +53,22 @@ export function BillingGate() {
     isAuthenticated &&
     !authLoading &&
     !onboardingLoading &&
+    !isWizardOpen &&
     isOnboardingFinished &&
     !billingLoading &&
     !hasAccess &&
     !isBillingRoute &&
     !isCheckoutReturnPending
+
+  // When the onboarding wizard closes, refetch onboarding state so the paywall can react
+  // immediately (this BillingGate instance runs the hook in read-only mode).
+  useEffect(() => {
+    const wasOpen = prevWizardOpen.current
+    prevWizardOpen.current = isWizardOpen
+    if (wasOpen && !isWizardOpen) {
+      refetchOnboarding()
+    }
+  }, [isWizardOpen, refetchOnboarding])
 
   useEffect(() => {
     if (shouldShowGate && !hasTracked.current) {
