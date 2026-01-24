@@ -120,9 +120,6 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
         console.warn('Failed to ensure welcome notification:', welcomeResult.error)
         // Don't fail initialization - continue to fetch existing notifications
       }
-      // #region agent log
-      fetch('http://localhost:7245/ingest/158be8d1-062b-42b2-98bb-ffafb90f1f2e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A',location:'notifications-store.ts:124',message:'welcome_notification_ensured',data:{success:welcomeResult.success,created:welcomeResult.success ? welcomeResult.data?.created ?? null : null,hasNotificationId:welcomeResult.success ? Boolean(welcomeResult.data?.notificationId) : false},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       // Step 2: Trigger the welcome email (idempotent, safe to retry)
       // This is fire-and-forget - we don't wait for it or fail if it errors
