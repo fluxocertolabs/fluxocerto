@@ -100,13 +100,7 @@ export function initSentry(): void {
   const environment = import.meta.env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE
   const release = import.meta.env.VITE_SENTRY_RELEASE
 
-  const traceTargets = [
-    window.location.origin,
-    /localhost/i,
-    /supabase\.co/i,
-  ]
-
-  const integrations: Sentry.Integration[] = []
+  const integrations: Array<ReturnType<typeof Sentry.browserTracingIntegration>> = []
   if (Sentry.reactRouterV6BrowserTracingIntegration) {
     integrations.push(
       Sentry.reactRouterV6BrowserTracingIntegration({
@@ -115,16 +109,14 @@ export function initSentry(): void {
         useNavigationType,
         createRoutesFromChildren,
         matchRoutes,
-        tracePropagationTargets: traceTargets,
-      }),
+      }) as ReturnType<typeof Sentry.browserTracingIntegration>,
     )
   } else {
-    integrations.push(
-      Sentry.browserTracingIntegration({
-        tracePropagationTargets: traceTargets,
-      }),
-    )
+    integrations.push(Sentry.browserTracingIntegration())
   }
+
+  const beforeSend: NonNullable<Parameters<typeof Sentry.init>[0]['beforeSend']> = (event) =>
+    scrubEvent(event as Sentry.Event) as ReturnType<NonNullable<Parameters<typeof Sentry.init>[0]['beforeSend']>>
 
   Sentry.init({
     dsn,
@@ -132,14 +124,13 @@ export function initSentry(): void {
     release,
     tracesSampleRate,
     integrations,
-    beforeSend: scrubEvent,
+    beforeSend,
   })
 }
 
-export function startSentrySpan<T>(
-  context: Sentry.StartSpanOptions,
-  callback: () => T,
-): T {
+type StartSpanContext = Parameters<typeof Sentry.startSpan>[0]
+
+export function startSentrySpan<T>(context: StartSpanContext, callback: () => T): T {
   if (typeof Sentry.startSpan === 'function') {
     return Sentry.startSpan(context, callback)
   }

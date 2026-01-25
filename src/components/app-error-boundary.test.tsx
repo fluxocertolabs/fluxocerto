@@ -19,6 +19,7 @@ describe('AppErrorBoundary', () => {
 
     function Boom() {
       throw new Error('Boom')
+      return <div />
     }
 
     render(

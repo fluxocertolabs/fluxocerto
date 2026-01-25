@@ -26,7 +26,7 @@ describe('initSentry', () => {
 
   it('scrubs sensitive fields in beforeSend', () => {
     initSentry()
-    const options = initSpy.mock.calls[0]?.[0] as { beforeSend?: (event: any) => any }
+    const options = initSpy.mock.calls[0]?.[0] as { beforeSend?: (event: unknown) => unknown }
     expect(options?.beforeSend).toBeTypeOf('function')
 
     const event = {
@@ -40,7 +40,7 @@ describe('initSentry', () => {
       breadcrumbs: [{ data: { email: 'test@example.com', safe: 'ok' } }],
     }
 
-    const scrubbed = options.beforeSend?.(event)
+    const scrubbed = options.beforeSend?.(event) as typeof event
     expect(scrubbed.user.email).toBeUndefined()
     expect(scrubbed.request.headers.authorization).toBeUndefined()
     expect(scrubbed.request.headers.accept).toBe('application/json')

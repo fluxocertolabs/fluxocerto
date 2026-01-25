@@ -91,20 +91,21 @@ export function initSentry(): void {
   const environment = process.env.SENTRY_ENVIRONMENT ?? process.env.VERCEL_ENV ?? 'production'
   const release = process.env.SENTRY_RELEASE ?? undefined
 
+  const beforeSend = (event: Sentry.Event) => scrubEvent(event)
+
   Sentry.init({
     dsn,
     environment,
     release,
     tracesSampleRate,
-    beforeSend: scrubEvent,
+    beforeSend,
     sendDefaultPii: false,
-  })
+  } as Sentry.NodeOptions)
 }
 
-export function startApiSpan<T>(
-  context: Sentry.StartSpanOptions,
-  callback: () => T,
-): T {
+type StartSpanContext = Parameters<typeof Sentry.startSpan>[0]
+
+export function startApiSpan<T>(context: StartSpanContext, callback: () => T): T {
   if (typeof Sentry.startSpan === 'function') {
     return Sentry.startSpan(context, callback)
   }
