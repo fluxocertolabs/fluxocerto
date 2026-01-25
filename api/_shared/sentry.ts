@@ -75,7 +75,7 @@ function scrubEvent(event: Sentry.Event): Sentry.Event | null {
     event.tags = scrubObject(event.tags) as Record<string, string>
   }
   if (event.breadcrumbs) {
-    event.breadcrumbs = event.breadcrumbs.map((crumb) => ({
+    event.breadcrumbs = event.breadcrumbs.map((crumb: Sentry.Breadcrumb) => ({
       ...crumb,
       data: crumb.data ? (scrubObject(crumb.data) as Record<string, unknown>) : crumb.data,
     }))
