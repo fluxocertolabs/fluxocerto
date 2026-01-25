@@ -1,5 +1,14 @@
 /// <reference types="node" />
 import { createClient } from '@supabase/supabase-js'
+import {
+  captureApiException,
+  initSentry,
+  setApiTag,
+  setRequestContext,
+  startApiSpan,
+} from './_shared/sentry'
+
+initSentry()
 
 type PreviewAuthBypassResponse =
   | { accessToken: string; refreshToken: string; email: string }
@@ -91,77 +100,84 @@ async function followRedirectsForSession(
  * - PREVIEW_AUTH_BYPASS_EMAIL=preview-auth-bypass@example.test
  */
 export default async function handler(req: PreviewAuthBypassRequest, res: PreviewAuthBypassResponseWriter): Promise<void> {
-  try {
-    // We hide this endpoint outside Preview deployments by returning 404.
-    if (process.env.VERCEL_ENV !== 'preview') {
-      return sendJson(res, 404, { error: 'Not found' })
-    }
+  setRequestContext(req)
+  setApiTag('route', 'preview-auth-bypass')
+  setApiTag('vercel_env', process.env.VERCEL_ENV ?? 'unknown')
 
-    if (process.env.PREVIEW_AUTH_BYPASS_ENABLED !== 'true') {
-      return sendJson(res, 404, { error: 'Not found' })
-    }
+  return startApiSpan({ op: 'http.server', name: `${req.method ?? 'GET'} /api/preview-auth-bypass` }, async () => {
+    try {
+      // We hide this endpoint outside Preview deployments by returning 404.
+      if (process.env.VERCEL_ENV !== 'preview') {
+        return sendJson(res, 404, { error: 'Not found' })
+      }
 
-    if (req.method !== 'GET') {
-      res.setHeader('Allow', 'GET')
-      return sendJson(res, 405, { error: 'Method not allowed' })
-    }
+      if (process.env.PREVIEW_AUTH_BYPASS_ENABLED !== 'true') {
+        return sendJson(res, 404, { error: 'Not found' })
+      }
 
-    const supabaseUrl = process.env.VITE_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const email = process.env.PREVIEW_AUTH_BYPASS_EMAIL ?? 'preview-auth-bypass@example.test'
+      if (req.method !== 'GET') {
+        res.setHeader('Allow', 'GET')
+        return sendJson(res, 405, { error: 'Method not allowed' })
+      }
 
-    if (!supabaseUrl) {
-      return sendJson(res, 500, { error: 'Missing env var: VITE_SUPABASE_URL' })
-    }
-    if (!serviceRoleKey) {
-      return sendJson(res, 500, { error: 'Missing env var: SUPABASE_SERVICE_ROLE_KEY' })
-    }
+      const supabaseUrl = process.env.VITE_SUPABASE_URL
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      const email = process.env.PREVIEW_AUTH_BYPASS_EMAIL ?? 'preview-auth-bypass@example.test'
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    })
+      if (!supabaseUrl) {
+        return sendJson(res, 500, { error: 'Missing env var: VITE_SUPABASE_URL' })
+      }
+      if (!serviceRoleKey) {
+        return sendJson(res, 500, { error: 'Missing env var: SUPABASE_SERVICE_ROLE_KEY' })
+      }
 
-    // Vercel's TS builder can resolve Supabase auth types differently depending on runtime conditions.
-    // Avoid relying on `SupabaseAuthClient.admin` being present in the type surface by using a narrow cast.
-    const authAdmin = adminClient.auth as unknown as AuthWithAdmin
-
-    const { data, error } = await authAdmin.admin.generateLink({
-      type: 'magiclink',
-      email,
-    })
-
-    if (error) {
-      return sendJson(res, 500, { error: `generateLink failed: ${error.message}` })
-    }
-
-    const typedData = data as GenerateLinkData | null
-    const actionLink: string | undefined =
-      typedData?.properties?.action_link ??
-      // Defensive fallback for potential API shape changes
-      typedData?.action_link ??
-      typedData?.properties?.actionLink
-
-    if (!actionLink) {
-      return sendJson(res, 500, { error: 'generateLink returned no action_link' })
-    }
-
-    const tokens = await followRedirectsForSession(actionLink)
-    if (!tokens) {
-      return sendJson(res, 500, {
-        error:
-          'Failed to resolve session tokens from magiclink redirect. Check Supabase Auth settings (Site URL / Redirect URLs) and ensure email auth is enabled.',
+      const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
       })
-    }
 
-    return sendJson(res, 200, { ...tokens, email })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return sendJson(res, 500, { error: `Preview auth bypass failed: ${message}` })
-  }
+      // Vercel's TS builder can resolve Supabase auth types differently depending on runtime conditions.
+      // Avoid relying on `SupabaseAuthClient.admin` being present in the type surface by using a narrow cast.
+      const authAdmin = adminClient.auth as unknown as AuthWithAdmin
+
+      const { data, error } = await authAdmin.admin.generateLink({
+        type: 'magiclink',
+        email,
+      })
+
+      if (error) {
+        return sendJson(res, 500, { error: `generateLink failed: ${error.message}` })
+      }
+
+      const typedData = data as GenerateLinkData | null
+      const actionLink: string | undefined =
+        typedData?.properties?.action_link ??
+        // Defensive fallback for potential API shape changes
+        typedData?.action_link ??
+        typedData?.properties?.actionLink
+
+      if (!actionLink) {
+        return sendJson(res, 500, { error: 'generateLink returned no action_link' })
+      }
+
+      const tokens = await followRedirectsForSession(actionLink)
+      if (!tokens) {
+        return sendJson(res, 500, {
+          error:
+            'Failed to resolve session tokens from magiclink redirect. Check Supabase Auth settings (Site URL / Redirect URLs) and ensure email auth is enabled.',
+        })
+      }
+
+      return sendJson(res, 200, { ...tokens, email })
+    } catch (err) {
+      captureApiException(err, { tags: { scope: 'preview-auth-bypass' } })
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return sendJson(res, 500, { error: `Preview auth bypass failed: ${message}` })
+    }
+  })
 }
 
 

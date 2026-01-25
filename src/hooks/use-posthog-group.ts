@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { getGroupId } from '@/lib/supabase'
 import { setGroup } from '@/lib/analytics/posthog'
+import { setSentryTag } from '@/lib/observability/sentry'
 
 export function usePosthogGroup() {
   const { user } = useAuth()
@@ -10,6 +11,7 @@ export function usePosthogGroup() {
   useEffect(() => {
     if (!user) {
       lastGroupIdRef.current = null
+      setSentryTag('group_id', null)
       return
     }
     let isActive = true
@@ -20,6 +22,7 @@ export function usePosthogGroup() {
       if (lastGroupIdRef.current === groupId) return
       lastGroupIdRef.current = groupId
       setGroup(groupId)
+      setSentryTag('group_id', groupId)
     }
 
     void fetchGroup()

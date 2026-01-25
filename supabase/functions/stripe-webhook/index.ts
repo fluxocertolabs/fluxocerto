@@ -1,4 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8'
+import {
+  addEdgeBreadcrumb,
+  captureEdgeException,
+  initSentry,
+  setEdgeTag,
+  setRequestContext,
+  startEdgeSpan,
+} from '../_shared/sentry.ts'
 
 type StripeEvent = { type: string; data: { object: unknown } }
 type StripeSubscription = {
@@ -94,27 +102,30 @@ async function captureMetaEvent(options: {
   }
 
   const url = `https://graph.facebook.com/${config.apiVersion}/${config.pixelId}/events?access_token=${encodeURIComponent(config.accessToken)}`
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
+  await startEdgeSpan({ op: 'http.client', name: 'meta.capi' }, async () => {
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      })
-      if (!response.ok) {
-        console.warn('Meta CAPI event failed', { status: response.status, event: options.eventName })
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 3000)
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
+        if (!response.ok) {
+          console.warn('Meta CAPI event failed', { status: response.status, event: options.eventName })
+        }
+      } finally {
+        clearTimeout(timeout)
       }
-    } finally {
-      clearTimeout(timeout)
+    } catch (err) {
+      const isAbort =
+        err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
+      console.warn('Meta CAPI event failed', { err: isAbort ? 'timeout' : err, event: options.eventName })
+      captureEdgeException(err, { tags: { scope: 'meta.capi' } })
     }
-  } catch (err) {
-    const isAbort =
-      err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
-    console.warn('Meta CAPI event failed', { err: isAbort ? 'timeout' : err, event: options.eventName })
-  }
+  })
 }
 
 async function capturePosthogEvent(
@@ -132,27 +143,30 @@ async function capturePosthogEvent(
     properties,
   }
 
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
+  await startEdgeSpan({ op: 'http.client', name: 'posthog.capture' }, async () => {
     try {
-      const response = await fetch(`${config.host}/capture`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      })
-      if (!response.ok) {
-        console.warn('PostHog capture failed', { status: response.status })
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 3000)
+      try {
+        const response = await fetch(`${config.host}/capture`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
+        if (!response.ok) {
+          console.warn('PostHog capture failed', { status: response.status })
+        }
+      } finally {
+        clearTimeout(timeout)
       }
-    } finally {
-      clearTimeout(timeout)
+    } catch (err) {
+      const isAbort =
+        err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
+      console.warn('PostHog capture failed', { err: isAbort ? 'timeout' : err })
+      captureEdgeException(err, { tags: { scope: 'posthog.capture' } })
     }
-  } catch (err) {
-    const isAbort =
-      err instanceof Error && (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
-    console.warn('PostHog capture failed', { err: isAbort ? 'timeout' : err })
-  }
+  })
 }
 
 function getUserIdFromMetadata(metadata: Record<string, string> | undefined): string | null {
@@ -267,27 +281,29 @@ async function stripeRetrieveSubscription(
   stripeSecretKey: string,
   subscriptionId: string
 ): Promise<StripeSubscription> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 5000)
-  try {
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-      headers: { Authorization: `Bearer ${stripeSecretKey}` },
-      signal: controller.signal,
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
-      throw new Error(message)
+  return startEdgeSpan({ op: 'http.client', name: 'stripe.subscriptions.retrieve' }, async () => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    try {
+      const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+        headers: { Authorization: `Bearer ${stripeSecretKey}` },
+        signal: controller.signal,
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+        throw new Error(message)
+      }
+      return data as StripeSubscription
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('Stripe request timed out')
+      }
+      throw err
+    } finally {
+      clearTimeout(timeout)
     }
-    return data as StripeSubscription
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Stripe request timed out')
-    }
-    throw err
-  } finally {
-    clearTimeout(timeout)
-  }
+  })
 }
 
 async function stripeUpdateSubscriptionMetadata(
@@ -299,34 +315,41 @@ async function stripeUpdateSubscriptionMetadata(
   for (const [key, value] of Object.entries(metadata)) {
     body.append(`metadata[${key}]`, value)
   }
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 5000)
-  try {
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body,
-      signal: controller.signal,
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
-      throw new Error(message)
+  await startEdgeSpan({ op: 'http.client', name: 'stripe.subscriptions.update' }, async () => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    try {
+      const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+        signal: controller.signal,
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+        throw new Error(message)
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('Stripe request timed out')
+      }
+      throw err
+    } finally {
+      clearTimeout(timeout)
     }
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Stripe request timed out')
-    }
-    throw err
-  } finally {
-    clearTimeout(timeout)
-  }
+  })
 }
 
+initSentry()
+
 Deno.serve(async (req) => {
+  setRequestContext(req)
+  setEdgeTag('function', 'stripe-webhook')
+  return startEdgeSpan({ op: 'http.server', name: `${req.method} /stripe-webhook` }, async () => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders })
   }
@@ -359,6 +382,7 @@ Deno.serve(async (req) => {
   }
 
   let event: StripeEvent
+  let eventType: string | null = null
   const body = await req.text()
 
   try {
@@ -375,6 +399,7 @@ Deno.serve(async (req) => {
     }
 
     event = JSON.parse(body) as StripeEvent
+    eventType = event.type ?? null
   } catch (err) {
     const message = err instanceof Error ? err.message : 'invalid_signature'
     return new Response(JSON.stringify({ ok: false, error: message }), {
@@ -678,11 +703,20 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   } catch (err) {
+    addEdgeBreadcrumb({
+      category: 'stripe.webhook',
+      level: 'error',
+      message: 'Stripe webhook handler failed',
+    })
+    captureEdgeException(err, {
+      tags: { stripe_event_type: eventType ?? 'unknown' },
+    })
     const message = err instanceof Error ? err.message : 'internal_error'
     return new Response(JSON.stringify({ ok: false, error: message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
+  })
 })
 

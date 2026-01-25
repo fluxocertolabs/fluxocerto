@@ -8,6 +8,7 @@ import {
 } from '../lib/supabase'
 import { notifyFinanceDataInvalidated } from '../lib/finance-data-events'
 import { captureEvent } from '../lib/analytics/posthog'
+import { captureSentryException, startSentrySpan } from '@/lib/observability/sentry'
 import {
   BankAccountInputSchema,
   ProjectInputSchema,
@@ -152,9 +153,21 @@ function captureFinanceEvent(
   })
 }
 
+function reportMutationError(action: string, error: unknown): void {
+  captureSentryException(error, { tags: { action } })
+}
+
+function withMutationSpan<T>(
+  name: string,
+  action: () => Promise<Result<T>>
+): Promise<Result<T>> {
+  return startSentrySpan({ op: 'finance.mutation', name }, action)
+}
+
 export const useFinanceStore = create<FinanceStore>()(() => ({
   // === Bank Account Actions ===
   addAccount: async (input, meta) => {
+    return withMutationSpan('account.add', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -192,11 +205,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: data.id }
     } catch (error) {
+      reportMutationError('account.add', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateAccount: async (id, input, meta) => {
+    return withMutationSpan('account.update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -235,11 +251,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('account.update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   deleteAccount: async (id, meta) => {
+    return withMutationSpan('account.delete', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -263,12 +282,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('account.delete', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   // === Project Actions ===
   addProject: async (input, meta) => {
+    return withMutationSpan('project.add', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -306,11 +328,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: data.id }
     } catch (error) {
+      reportMutationError('project.add', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateProject: async (id, input, meta) => {
+    return withMutationSpan('project.update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -346,11 +371,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('project.update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   deleteProject: async (id, meta) => {
+    return withMutationSpan('project.delete', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -374,11 +402,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('project.delete', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   toggleProjectActive: async (id, meta) => {
+    return withMutationSpan('project.toggle_active', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -414,12 +445,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('project.toggle_active', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   // === Fixed Expense Actions ===
   addExpense: async (input, meta) => {
+    return withMutationSpan('expense.add', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -457,11 +491,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: data.id }
     } catch (error) {
+      reportMutationError('expense.add', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateExpense: async (id, input, meta) => {
+    return withMutationSpan('expense.update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -495,11 +532,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('expense.update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   deleteExpense: async (id, meta) => {
+    return withMutationSpan('expense.delete', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -523,11 +563,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('expense.delete', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   toggleExpenseActive: async (id, meta) => {
+    return withMutationSpan('expense.toggle_active', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -563,12 +606,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('expense.toggle_active', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   // === Single-Shot Expense Actions ===
   addSingleShotExpense: async (input, meta) => {
+    return withMutationSpan('single_shot_expense.add', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -605,11 +651,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: data.id }
     } catch (error) {
+      reportMutationError('single_shot_expense.add', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateSingleShotExpense: async (id, input, meta) => {
+    return withMutationSpan('single_shot_expense.update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -639,11 +688,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('single_shot_expense.update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   deleteSingleShotExpense: async (id, meta) => {
+    return withMutationSpan('single_shot_expense.delete', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -668,12 +720,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('single_shot_expense.delete', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   // === Single-Shot Income Actions ===
   addSingleShotIncome: async (input, meta) => {
+    return withMutationSpan('single_shot_income.add', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -712,11 +767,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: data.id }
     } catch (error) {
+      reportMutationError('single_shot_income.add', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateSingleShotIncome: async (id, input, meta) => {
+    return withMutationSpan('single_shot_income.update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -747,11 +805,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('single_shot_income.update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   deleteSingleShotIncome: async (id, meta) => {
+    return withMutationSpan('single_shot_income.delete', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -776,12 +837,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('single_shot_income.delete', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   // === Credit Card Actions ===
   addCreditCard: async (input, meta) => {
+    return withMutationSpan('credit_card.add', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -819,11 +883,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: data.id }
     } catch (error) {
+      reportMutationError('credit_card.add', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateCreditCard: async (id, input, meta) => {
+    return withMutationSpan('credit_card.update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -862,11 +929,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('credit_card.update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   deleteCreditCard: async (id, meta) => {
+    return withMutationSpan('credit_card.delete', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -890,12 +960,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('credit_card.delete', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   // === Future Statement Actions ===
   addFutureStatement: async (input, meta) => {
+    return withMutationSpan('future_statement.add', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -934,11 +1007,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: data.id }
     } catch (error) {
+      reportMutationError('future_statement.add', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateFutureStatement: async (id, input, meta) => {
+    return withMutationSpan('future_statement.update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -974,11 +1050,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('future_statement.update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   deleteFutureStatement: async (id, meta) => {
+    return withMutationSpan('future_statement.delete', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -1002,12 +1081,15 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('future_statement.delete', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   // === Balance Update Actions ===
   updateAccountBalance: async (id, balance, meta) => {
+    return withMutationSpan('account.balance_update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -1040,11 +1122,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('account.balance_update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   updateCreditCardBalance: async (id, statementBalance, meta) => {
+    return withMutationSpan('credit_card.balance_update', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -1077,11 +1162,14 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('credit_card.balance_update', error)
       return handleDatabaseError(error)
     }
+    })
   },
 
   markAllBalancesUpdated: async (meta) => {
+    return withMutationSpan('balances.mark_all_updated', async () => {
     const configError = checkSupabaseConfigured()
     if (configError) return configError
 
@@ -1115,7 +1203,9 @@ export const useFinanceStore = create<FinanceStore>()(() => ({
       })
       return { success: true, data: undefined }
     } catch (error) {
+      reportMutationError('balances.mark_all_updated', error)
       return handleDatabaseError(error)
     }
+    })
   },
 }))

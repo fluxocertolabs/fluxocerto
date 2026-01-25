@@ -3,6 +3,7 @@ import type { User, Session } from '@supabase/supabase-js'
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
 import type { AuthState } from '@/types/auth'
 import { captureEvent, identifyUser, resetAnalytics } from '@/lib/analytics/posthog'
+import { setSentryUser } from '@/lib/observability/sentry'
 
 /**
  * Hook for managing authentication state.
@@ -74,10 +75,12 @@ export function useAuth(): AuthState {
     if (currentUserId && currentUserId !== previousUserId) {
       identifyUser(currentUserId)
       captureEvent('login_succeeded')
+      setSentryUser({ id: currentUserId })
     }
 
     if (!currentUserId && previousUserId) {
       resetAnalytics()
+      setSentryUser(null)
     }
 
     lastUserIdRef.current = currentUserId

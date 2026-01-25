@@ -1,4 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8'
+import {
+  addEdgeBreadcrumb,
+  captureEdgeException,
+  initSentry,
+  setEdgeTag,
+  setRequestContext,
+  startEdgeSpan,
+} from '../_shared/sentry.ts'
 
 interface CheckoutSessionResponse {
   ok: boolean
@@ -154,63 +162,70 @@ async function createCheckoutSession(options: {
 }): Promise<{ url: string }> {
   const { stripeSecretKey, priceId, customerId, customerEmail, baseUrl, groupId, userId } = options
 
-  const body = new URLSearchParams()
-  body.append('mode', 'subscription')
-  if (customerId) {
-    body.append('customer', customerId)
-  } else if (customerEmail) {
-    // Avoid a separate "create customer" API call; Stripe will create/attach a customer during checkout.
-    body.append('customer_email', customerEmail)
-  }
-  body.append('line_items[0][price]', priceId)
-  body.append('line_items[0][quantity]', '1')
-  body.append('subscription_data[trial_period_days]', '14')
-  body.append('subscription_data[trial_settings][end_behavior][missing_payment_method]', 'cancel')
-  // Ensure we can always resolve the group from subscription events (even if customer mapping fails).
-  body.append('subscription_data[metadata][group_id]', groupId)
-  body.append('subscription_data[metadata][user_id]', userId)
-  body.append('payment_method_collection', 'always')
-  body.append('success_url', `${baseUrl}/billing/success`)
-  body.append('cancel_url', `${baseUrl}/billing/cancel`)
-  body.append('metadata[group_id]', groupId)
-  body.append('metadata[user_id]', userId)
-
-  // Stripe's API calls should not hang indefinitely; use a reasonable timeout for user-facing checkout creation.
-  const { signal, cleanup } = createTimeoutSignal(15_000)
-  let response: Response
-  try {
-    response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body,
-      signal,
-    })
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Stripe request timed out')
+  return startEdgeSpan({ op: 'http.client', name: 'stripe.checkout.create_session' }, async () => {
+    const body = new URLSearchParams()
+    body.append('mode', 'subscription')
+    if (customerId) {
+      body.append('customer', customerId)
+    } else if (customerEmail) {
+      // Avoid a separate "create customer" API call; Stripe will create/attach a customer during checkout.
+      body.append('customer_email', customerEmail)
     }
-    throw err
-  } finally {
-    cleanup()
-  }
+    body.append('line_items[0][price]', priceId)
+    body.append('line_items[0][quantity]', '1')
+    body.append('subscription_data[trial_period_days]', '14')
+    body.append('subscription_data[trial_settings][end_behavior][missing_payment_method]', 'cancel')
+    // Ensure we can always resolve the group from subscription events (even if customer mapping fails).
+    body.append('subscription_data[metadata][group_id]', groupId)
+    body.append('subscription_data[metadata][user_id]', userId)
+    body.append('payment_method_collection', 'always')
+    body.append('success_url', `${baseUrl}/billing/success`)
+    body.append('cancel_url', `${baseUrl}/billing/cancel`)
+    body.append('metadata[group_id]', groupId)
+    body.append('metadata[user_id]', userId)
 
-  const data = await response.json()
-  if (!response.ok) {
-    const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
-    throw new Error(message)
-  }
+    // Stripe's API calls should not hang indefinitely; use a reasonable timeout for user-facing checkout creation.
+    const { signal, cleanup } = createTimeoutSignal(15_000)
+    let response: Response
+    try {
+      response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+        signal,
+      })
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('Stripe request timed out')
+      }
+      throw err
+    } finally {
+      cleanup()
+    }
 
-  const url = data?.url
-  if (typeof url !== 'string') {
-    throw new Error('Stripe session URL missing')
-  }
-  return { url }
+    const data = await response.json()
+    if (!response.ok) {
+      const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+      throw new Error(message)
+    }
+
+    const url = data?.url
+    if (typeof url !== 'string') {
+      throw new Error('Stripe session URL missing')
+    }
+    return { url }
+  })
 }
 
+initSentry()
+
 Deno.serve(async (req) => {
+  setRequestContext(req)
+  setEdgeTag('function', 'create-stripe-checkout-session')
+  return startEdgeSpan({ op: 'http.server', name: `${req.method} /create-stripe-checkout-session` }, async () => {
   const corsHeaders = getCorsHeaders(req)
 
   if (req.method === 'OPTIONS') {
@@ -357,11 +372,18 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   } catch (err) {
+    addEdgeBreadcrumb({
+      category: 'create-stripe-checkout-session',
+      level: 'error',
+      message: 'Checkout session creation failed',
+    })
+    captureEdgeException(err, { tags: { scope: 'create-stripe-checkout-session' } })
     const message = err instanceof Error ? err.message : 'internal_error'
     return new Response(JSON.stringify({ ok: false, error: message } satisfies CheckoutSessionResponse), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
+  })
 })
 

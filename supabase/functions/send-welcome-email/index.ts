@@ -16,6 +16,14 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8'
 import { welcomeTemplate } from './welcome-template.ts'
+import {
+  addEdgeBreadcrumb,
+  captureEdgeException,
+  initSentry,
+  setEdgeTag,
+  setRequestContext,
+  startEdgeSpan,
+} from '../_shared/sentry.ts'
 
 interface SendWelcomeEmailRequest {
   notification_id: string
@@ -105,41 +113,43 @@ async function sendEmailViaResend(
   html: string,
   fromEmail: string
 ): Promise<{ success: boolean; error?: string }> {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), RESEND_API_TIMEOUT_MS)
+  return startEdgeSpan({ op: 'http.client', name: 'resend.send_email' }, async () => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), RESEND_API_TIMEOUT_MS)
 
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [to],
-        subject,
-        html,
-      }),
-      signal: controller.signal,
-    })
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [to],
+          subject,
+          html,
+        }),
+        signal: controller.signal,
+      })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = (errorData as { message?: string }).message || response.statusText
-      return { success: false, error: errorMessage }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = (errorData as { message?: string }).message || response.statusText
+        return { success: false, error: errorMessage }
+      }
+
+      return { success: true }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return { success: false, error: `Request timed out after ${RESEND_API_TIMEOUT_MS}ms` }
+      }
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return { success: false, error: message }
+    } finally {
+      clearTimeout(timeoutId)
     }
-
-    return { success: true }
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      return { success: false, error: `Request timed out after ${RESEND_API_TIMEOUT_MS}ms` }
-    }
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { success: false, error: message }
-  } finally {
-    clearTimeout(timeoutId)
-  }
+  })
 }
 
 const corsHeaders = {
@@ -148,7 +158,12 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+initSentry()
+
 Deno.serve(async (req) => {
+  setRequestContext(req)
+  setEdgeTag('function', 'send-welcome-email')
+  return startEdgeSpan({ op: 'http.server', name: `${req.method} /send-welcome-email` }, async () => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders })
@@ -352,11 +367,18 @@ Deno.serve(async (req) => {
     )
 
   } catch (err) {
+    addEdgeBreadcrumb({
+      category: 'send-welcome-email',
+      level: 'error',
+      message: 'Unhandled send-welcome-email error',
+    })
+    captureEdgeException(err, { tags: { scope: 'send-welcome-email' } })
     console.error('Unexpected error in send-welcome-email:', err)
     return new Response(
       JSON.stringify({ ok: false, sent: false, skipped_reason: 'internal_error' }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
+  })
 })
 

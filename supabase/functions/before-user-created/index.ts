@@ -1,4 +1,12 @@
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
+import {
+  addEdgeBreadcrumb,
+  captureEdgeException,
+  initSentry,
+  setEdgeTag,
+  setRequestContext,
+  startEdgeSpan,
+} from '../_shared/sentry.ts'
 
 interface BeforeUserCreatedPayload {
   metadata: {
@@ -37,7 +45,12 @@ interface BeforeUserCreatedPayload {
  * 
  * The hook still validates the webhook signature for security.
  */
+initSentry()
+
 Deno.serve(async (req) => {
+  setRequestContext(req)
+  setEdgeTag('function', 'before-user-created')
+  return startEdgeSpan({ op: 'http.server', name: `${req.method} /before-user-created` }, async () => {
   // Get the webhook secret from environment
   const hookSecret = Deno.env.get('BEFORE_USER_CREATED_HOOK_SECRET')
   
@@ -92,6 +105,12 @@ Deno.serve(async (req) => {
     })
     
   } catch (error) {
+    addEdgeBreadcrumb({
+      category: 'before-user-created',
+      level: 'error',
+      message: 'Auth hook failed',
+    })
+    captureEdgeException(error, { tags: { scope: 'before-user-created' } })
     // Fail closed on any error (signature verification, etc.)
     console.error('Error in before-user-created hook:', error)
     return new Response(
@@ -104,4 +123,5 @@ Deno.serve(async (req) => {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
+  })
 })

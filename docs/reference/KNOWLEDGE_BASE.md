@@ -148,6 +148,7 @@ Deployment notes:
   - **Tawk.to** (support chat): Configured via `VITE_TAWK_PROPERTY_ID` and `VITE_TAWK_WIDGET_ID` env vars. Widget appearance is configured in the Tawk.to dashboard, not code.
   - **Canny.io** (feedback): External link to `https://fluxo-certo.canny.io`. No code integration required.
   - **PostHog** (product analytics): Initialized in `src/main.tsx` with a wrapper in `src/lib/analytics/posthog.ts`. Controlled by `VITE_POSTHOG_KEY`, optional `VITE_POSTHOG_HOST`, and `VITE_POSTHOG_DISABLED`. User preferences live in `user_preferences` (`analytics_enabled`, `session_recordings_enabled`) and are surfaced in `src/pages/profile.tsx`. Session recordings are enabled by default but masked (all inputs + all text).
+- **Sentry** (observability): Initialized in `src/main.tsx` via `src/lib/observability/sentry.ts` for the browser, with shared helpers in `supabase/functions/_shared/sentry.ts` (Edge Functions) and `api/_shared/sentry.ts` (Vercel API routes). Browser env vars: `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE`, `VITE_SENTRY_TRACES_SAMPLE_RATE`. Server env vars: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, `SENTRY_TRACES_SAMPLE_RATE`. CI sourcemap upload uses `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`.
   - **Stripe** (billing): Group-level subscription state lives in `billing_subscriptions`. Checkout session creation and webhook handling live in Supabase Edge Functions (`supabase/functions/create-stripe-checkout-session`, `supabase/functions/stripe-webhook`).
   - Customer portal access is handled by `supabase/functions/create-stripe-customer-portal-session` (deploy this function to avoid 404s on the hosted project).
     - Edge Function **timeouts**: Prefer bounded Stripe API calls. `create-stripe-checkout-session` uses a ~15s timeout (via `AbortSignal.timeout` when available, with a safe fallback).
@@ -190,14 +191,30 @@ Deployment notes:
   - A best-effort trigger on `auth.users` tries to provision immediately; the client can also call the RPC for recovery.
 - **Onboarding + tours are persisted server-side**:
   - `onboarding_states` (per user + group) and `tour_states` (per user + tour key) are real tables with RLS (see `20260105123100_onboarding_and_tour_state.sql`).
+  - Client helpers live in `src/lib/supabase.ts` (`getOnboardingState`, `upsertOnboardingState`, `getTourState`, `upsertTourState`).
+    - **Gotcha (new users / missing rows)**: When a row may not exist yet, prefer `.maybeSingle()` over `.single()` to avoid noisy `406 Not Acceptable` responses from PostgREST when there are zero rows.
   - E2E setup often marks onboarding completed and tours dismissed to avoid overlays blocking tests.
   - **Auth callback must not force-open wizard**: The onboarding wizard auto-shows based on `canAutoShow()` in `src/lib/onboarding/steps.ts` (checks status, `autoShownAt`, and `isMinimumSetupComplete`). Do not add code to `src/pages/auth-callback.tsx` that calls `openWizard()`—this breaks E2E tests that authenticate via magic link and rely on the natural auto-show flow.
+
+- **Onboarding completion can trigger billing gate**:
+  - The paywall modal is `src/components/billing/billing-gate.tsx` and is mounted in `src/App.tsx`’s authenticated layout.
+  - **Avoid infinite update loops (React error #185)**:
+    - React error #185 (production) maps to “Maximum update depth exceeded” (infinite state updates).
+    - `useOnboardingState()` includes effects that can auto-open/resume the wizard via the global `useOnboardingStore()` state. If multiple components mount `useOnboardingState()` and each tries to manage wizard UI, they can “compete” and create an update loop.
+    - Pattern: use `useOnboardingState({ manageWizard: false })` for *read-only* consumers (e.g. paywall gating) and keep **exactly one** wizard-managing instance (the wizard component).
+  - **Immediate paywall after onboarding**:
+    - When `BillingGate` uses `manageWizard: false`, it refetches onboarding state on wizard close to react immediately (no “reload required”).
+    - See `src/components/billing/billing-gate.tsx` (calls `refetch()` when `isWizardOpen` transitions from true → false).
 - **Third-party widget styling (Tawk.to, etc.)**:
   - Widgets like Tawk.to use **cross-origin iframes** that cannot be styled from our application code.
   - CSS injection, `MutationObserver` tricks, and `contentDocument` access are blocked by browser security policies.
   - Widget appearance (colors, buttons, padding, branding) must be configured in the vendor's dashboard.
   - We can only control: (1) when to load the script, (2) when to show/hide the widget container, (3) visitor attributes passed via their API.
   - See `src/lib/support-chat/tawk.ts` for the implementation pattern.
+
+- **Do not commit localhost-only telemetry / debug endpoints**:
+  - Shipping `fetch('http://localhost:…')` calls in production bundles causes mixed-content/CORS failures on HTTPS origins.
+  - Guardrail test: `src/guardrails/no-localhost-ingest.test.ts` ensures committed code does not include the known localhost ingest instrumentation markers.
 - **Preferences are split into two tables**:
   - `group_preferences`: group-scoped settings (keyed by `group_id` + `key`). Examples: theme preference, display preferences.
   - `user_preferences`: user-scoped settings (keyed by `user_id` + `key`). Examples: `email_notifications_enabled`.

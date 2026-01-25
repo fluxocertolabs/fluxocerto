@@ -1,4 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8'
+import {
+  addEdgeBreadcrumb,
+  captureEdgeException,
+  initSentry,
+  setEdgeTag,
+  setRequestContext,
+  startEdgeSpan,
+} from '../_shared/sentry.ts'
 
 interface PortalSessionResponse {
   ok: boolean
@@ -151,48 +159,55 @@ async function createPortalSession(options: {
 }): Promise<{ url: string }> {
   const { stripeSecretKey, customerId, returnUrl, configurationId } = options
 
-  const body = new URLSearchParams()
-  body.append('customer', customerId)
-  body.append('return_url', returnUrl)
-  if (configurationId) {
-    body.append('configuration', configurationId)
-  }
-
-  const { signal, cleanup } = createTimeoutSignal(15_000)
-  let response: Response
-  try {
-    response = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body,
-      signal,
-    })
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Stripe request timed out')
+  return startEdgeSpan({ op: 'http.client', name: 'stripe.portal.create_session' }, async () => {
+    const body = new URLSearchParams()
+    body.append('customer', customerId)
+    body.append('return_url', returnUrl)
+    if (configurationId) {
+      body.append('configuration', configurationId)
     }
-    throw err
-  } finally {
-    cleanup()
-  }
 
-  const data = await response.json()
-  if (!response.ok) {
-    const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
-    throw new Error(message)
-  }
+    const { signal, cleanup } = createTimeoutSignal(15_000)
+    let response: Response
+    try {
+      response = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+        signal,
+      })
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('Stripe request timed out')
+      }
+      throw err
+    } finally {
+      cleanup()
+    }
 
-  const url = data?.url
-  if (typeof url !== 'string') {
-    throw new Error('Stripe portal URL missing')
-  }
-  return { url }
+    const data = await response.json()
+    if (!response.ok) {
+      const message = typeof data?.error?.message === 'string' ? data.error.message : 'Stripe error'
+      throw new Error(message)
+    }
+
+    const url = data?.url
+    if (typeof url !== 'string') {
+      throw new Error('Stripe portal URL missing')
+    }
+    return { url }
+  })
 }
 
+initSentry()
+
 Deno.serve(async (req) => {
+  setRequestContext(req)
+  setEdgeTag('function', 'create-stripe-customer-portal-session')
+  return startEdgeSpan({ op: 'http.server', name: `${req.method} /create-stripe-customer-portal-session` }, async () => {
   const corsHeaders = getCorsHeaders(req)
 
   if (req.method === 'OPTIONS') {
@@ -320,10 +335,17 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   } catch (err) {
+    addEdgeBreadcrumb({
+      category: 'create-stripe-customer-portal-session',
+      level: 'error',
+      message: 'Customer portal session failed',
+    })
+    captureEdgeException(err, { tags: { scope: 'create-stripe-customer-portal-session' } })
     const message = err instanceof Error ? err.message : 'internal_error'
     return new Response(JSON.stringify({ ok: false, error: message } satisfies PortalSessionResponse), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
+  })
 })

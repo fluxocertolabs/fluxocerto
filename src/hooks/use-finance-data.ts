@@ -28,6 +28,11 @@ import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/
 import { parse } from 'date-fns'
 import { FINANCE_DATA_INVALIDATED_EVENT } from '@/lib/finance-data-events'
 import { upsertUniqueById } from '@/lib/utils'
+import {
+  addSentryBreadcrumb,
+  captureSentryException,
+  startSentrySpan,
+} from '@/lib/observability/sentry'
 
 // =============================================================================
 // SORTING UTILITIES
@@ -333,32 +338,45 @@ export function useFinanceData(): UseFinanceDataReturn {
     try {
       setError(null)
 
-      const client = getSupabase()
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        const controller = new AbortController()
-        const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+      await startSentrySpan({ op: 'finance.fetch_all', name: 'finance.fetch_all' }, async () => {
+        const client = getSupabase()
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          const controller = new AbortController()
+          const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
-        try {
-          // Fetch all tables in parallel - no user_id filter needed (shared family data)
-          const [accountsResult, projectsResult, expensesResult, creditCardsResult, futureStatementsResult, profilesResult] = await Promise.all([
-            client.from('accounts').select(`
-              id, name, type, balance, balance_updated_at, owner_id,
-              owner:profiles!owner_id(id, name),
-              created_at, updated_at
-            `).abortSignal(controller.signal),
-            client.from('projects').select('*').abortSignal(controller.signal),
-            client.from('expenses').select('*').abortSignal(controller.signal),
-            client.from('credit_cards').select(`
-              id, name, statement_balance, due_day, balance_updated_at, owner_id,
-              owner:profiles!owner_id(id, name),
-              created_at, updated_at
-            `).abortSignal(controller.signal),
-            client.from('future_statements').select('*')
-              .order('target_year', { ascending: true })
-              .order('target_month', { ascending: true })
-              .abortSignal(controller.signal),
-            client.from('profiles').select('id, name, group_id').order('name').abortSignal(controller.signal),
-          ])
+          try {
+            // Fetch all tables in parallel - no user_id filter needed (shared family data)
+            const [accountsResult, projectsResult, expensesResult, creditCardsResult, futureStatementsResult, profilesResult] = await Promise.all([
+              startSentrySpan({ op: 'supabase.select', name: 'accounts.select' }, () =>
+                client.from('accounts').select(`
+                  id, name, type, balance, balance_updated_at, owner_id,
+                  owner:profiles!owner_id(id, name),
+                  created_at, updated_at
+                `).abortSignal(controller.signal),
+              ),
+              startSentrySpan({ op: 'supabase.select', name: 'projects.select' }, () =>
+                client.from('projects').select('*').abortSignal(controller.signal),
+              ),
+              startSentrySpan({ op: 'supabase.select', name: 'expenses.select' }, () =>
+                client.from('expenses').select('*').abortSignal(controller.signal),
+              ),
+              startSentrySpan({ op: 'supabase.select', name: 'credit_cards.select' }, () =>
+                client.from('credit_cards').select(`
+                  id, name, statement_balance, due_day, balance_updated_at, owner_id,
+                  owner:profiles!owner_id(id, name),
+                  created_at, updated_at
+                `).abortSignal(controller.signal),
+              ),
+              startSentrySpan({ op: 'supabase.select', name: 'future_statements.select' }, () =>
+                client.from('future_statements').select('*')
+                  .order('target_year', { ascending: true })
+                  .order('target_month', { ascending: true })
+                  .abortSignal(controller.signal),
+              ),
+              startSentrySpan({ op: 'supabase.select', name: 'profiles.select' }, () =>
+                client.from('profiles').select('id, name, group_id').order('name').abortSignal(controller.signal),
+              ),
+            ])
 
           // Check for errors
           if (accountsResult.error) throw accountsResult.error
@@ -403,29 +421,30 @@ export function useFinanceData(): UseFinanceDataReturn {
           setFutureStatements(mappedFutureStatements)
           setProfiles(mappedProfiles)
 
-          // Success
-          window.clearTimeout(timeoutId)
-          break
-        } catch (err) {
-          // Abort any in-flight requests before retrying
-          controller.abort()
-          window.clearTimeout(timeoutId)
+            // Success
+            window.clearTimeout(timeoutId)
+            break
+          } catch (err) {
+            // Abort any in-flight requests before retrying
+            controller.abort()
+            window.clearTimeout(timeoutId)
 
-          const isAbort =
-            (err instanceof DOMException && err.name === 'AbortError') ||
-            (err instanceof Error && err.name === 'AbortError')
+            const isAbort =
+              (err instanceof DOMException && err.name === 'AbortError') ||
+              (err instanceof Error && err.name === 'AbortError')
 
-          const isRetryable = isAbort || (err instanceof TypeError && /fetch/i.test(err.message))
+            const isRetryable = isAbort || (err instanceof TypeError && /fetch/i.test(err.message))
 
-          if (attempt < MAX_ATTEMPTS && isRetryable) {
-            console.warn(`[FinanceData] Fetch attempt ${attempt} failed (${isAbort ? 'timeout' : 'network'}); retrying...`)
-            await new Promise((resolve) => setTimeout(resolve, 300))
-            continue
+            if (attempt < MAX_ATTEMPTS && isRetryable) {
+              console.warn(`[FinanceData] Fetch attempt ${attempt} failed (${isAbort ? 'timeout' : 'network'}); retrying...`)
+              await new Promise((resolve) => setTimeout(resolve, 300))
+              continue
+            }
+
+            throw err
           }
-
-          throw err
         }
-      }
+      })
     } catch (err) {
       const isAbort =
         (err instanceof DOMException && err.name === 'AbortError') ||
@@ -433,6 +452,9 @@ export function useFinanceData(): UseFinanceDataReturn {
       const message = isAbort ? 'A requisição demorou muito. Por favor, tente novamente.' : (err instanceof Error ? err.message : 'Falha ao carregar dados')
       setError(message)
       console.error('Error fetching finance data:', err)
+      captureSentryException(err, {
+        tags: { scope: 'finance.fetch_all' },
+      })
     } finally {
       setIsLoading(false)
     }
@@ -715,9 +737,20 @@ export function useFinanceData(): UseFinanceDataReturn {
           if (status === 'CHANNEL_ERROR') {
             console.error('Realtime channel error:', err)
             setError('Falha ao conectar às atualizações em tempo real')
+            addSentryBreadcrumb({
+              category: 'realtime',
+              level: 'error',
+              message: 'Realtime channel error',
+              data: err ? { error: String(err) } : undefined,
+            })
           }
           if (status === 'TIMED_OUT') {
             console.warn('Realtime subscription timed out')
+            addSentryBreadcrumb({
+              category: 'realtime',
+              level: 'warning',
+              message: 'Realtime subscription timed out',
+            })
           }
         })
     }

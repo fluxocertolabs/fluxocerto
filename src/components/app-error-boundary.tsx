@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { StatusScreen } from '@/components/status/status-screen'
 import { AlertTriangle } from 'lucide-react'
 import { captureEvent } from '@/lib/analytics/posthog'
+import { captureSentryException } from '@/lib/observability/sentry'
 
 type AppErrorBoundaryProps = {
   children: React.ReactNode
@@ -33,6 +34,13 @@ export class AppErrorBoundary extends React.Component<
     console.error('App crashed:', error, info)
     captureEvent('app_error_boundary_triggered', {
       error_name: error.name,
+    })
+    captureSentryException(error, {
+      contexts: {
+        react: {
+          componentStack: info.componentStack,
+        },
+      },
     })
   }
 
