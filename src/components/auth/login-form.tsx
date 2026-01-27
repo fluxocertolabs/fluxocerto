@@ -8,9 +8,15 @@ import { captureEvent } from '@/lib/analytics/posthog'
 
 interface LoginFormProps {
   onSuccess?: () => void
+  emailPlaceholder?: string
+  submitLabel?: string
 }
 
-export function LoginForm({ onSuccess }: LoginFormProps) {
+export function LoginForm({
+  onSuccess,
+  emailPlaceholder = 'seu@email.com',
+  submitLabel = 'Enviar link de acesso',
+}: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -86,7 +92,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         <Input
           id="email"
           type="email"
-          placeholder="voce@exemplo.com"
+          placeholder={emailPlaceholder}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -126,7 +132,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             Enviando...
           </>
         ) : (
-          'Enviar Link de Acesso'
+          submitLabel
         )}
       </Button>
     </form>
