@@ -689,6 +689,57 @@ export async function ensureCurrentUserGroup(): Promise<Result<{ groupId: string
 }
 
 // ============================================================================
+// ONBOARDING / MINIMUM SETUP HELPERS
+// ============================================================================
+
+export interface MinimumSetupCounts {
+  accountCount: number
+  incomeCount: number
+  expenseCount: number
+}
+
+/**
+ * Fetch lightweight counts needed to decide whether "minimum setup" is complete,
+ * without loading all finance data or subscribing to realtime.
+ *
+ * Notes:
+ * - RLS already scopes these tables by group_id, so we intentionally do not
+ *   add a group filter here.
+ * - We count *all* rows for onboarding purposes (mirrors the existing logic that
+ *   checks array lengths from `useFinanceData()`).
+ */
+export async function getMinimumSetupCounts(): Promise<Result<MinimumSetupCounts>> {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase não está configurado' }
+  }
+
+  const client = getSupabase()
+
+  try {
+    const [accountsRes, projectsRes, expensesRes] = await Promise.all([
+      client.from('accounts').select('id', { head: true, count: 'exact' }),
+      client.from('projects').select('id', { head: true, count: 'exact' }),
+      client.from('expenses').select('id', { head: true, count: 'exact' }),
+    ])
+
+    if (accountsRes.error) return handleSupabaseError(accountsRes.error)
+    if (projectsRes.error) return handleSupabaseError(projectsRes.error)
+    if (expensesRes.error) return handleSupabaseError(expensesRes.error)
+
+    return {
+      success: true,
+      data: {
+        accountCount: accountsRes.count ?? 0,
+        incomeCount: projectsRes.count ?? 0,
+        expenseCount: expensesRes.count ?? 0,
+      },
+    }
+  } catch (err) {
+    return handleSupabaseError(err)
+  }
+}
+
+// ============================================================================
 // ONBOARDING STATE HELPERS
 // ============================================================================
 

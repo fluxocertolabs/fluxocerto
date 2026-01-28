@@ -36,6 +36,7 @@ import { notifyGroupDataInvalidated } from '@/lib/group-data-events'
 import { cn } from '@/lib/utils'
 import { getStepConfig, isFirstStep, getNextStep, getTotalSteps, getStepIndex } from '@/lib/onboarding/steps'
 import { captureEvent } from '@/lib/analytics/posthog'
+import { startSentrySpan } from '@/lib/observability/sentry'
 import type { BankAccount, OnboardingStep } from '@/types'
 
 function triggerShake(el: HTMLElement | null): void {
@@ -89,12 +90,43 @@ export function OnboardingWizard() {
   const { toast, showError, hideToast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const hasTrackedStart = useRef(false)
+  const hasTrackedOpenPerf = useRef(false)
 
   useEffect(() => {
     if (onboardingError) {
       showError(onboardingError, refetch)
     }
   }, [onboardingError, refetch, showError])
+
+  useEffect(() => {
+    if (isWizardActive && !hasTrackedOpenPerf.current) {
+      hasTrackedOpenPerf.current = true
+
+      const nextPaint = () =>
+        new Promise<void>((resolve) => {
+          const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb: FrameRequestCallback) =>
+            window.setTimeout(() => cb(performance.now()), 0)
+          raf(() => raf(() => resolve()))
+        })
+
+      void startSentrySpan(
+        {
+          op: 'ui.onboarding',
+          name: 'onboarding_wizard_open',
+          attributes: {
+            entrypoint: openReason ?? 'auto',
+            step: currentStep,
+          },
+        },
+        async () => {
+          await nextPaint()
+        },
+      )
+    }
+    if (!isWizardActive) {
+      hasTrackedOpenPerf.current = false
+    }
+  }, [isWizardActive, openReason, currentStep])
 
   useEffect(() => {
     if (isWizardActive && !hasTrackedStart.current) {

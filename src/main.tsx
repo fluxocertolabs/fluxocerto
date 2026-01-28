@@ -15,7 +15,7 @@ import {
 import { AppErrorBoundary } from '@/components/app-error-boundary'
 import { withTimeout } from '@/lib/utils/promise'
 import { initPosthog } from '@/lib/analytics/posthog'
-import { initSentry } from '@/lib/observability/sentry'
+import { initBrowserLongTaskObserver, initSentry } from '@/lib/observability/sentry'
 import './index.css'
 
 /**
@@ -101,6 +101,7 @@ function showAuthBypassError(titleText: string, message: string): void {
  */
 async function bootstrap() {
   initSentry()
+  initBrowserLongTaskObserver()
   initPosthog()
   const rootElement = document.getElementById('root')
   if (!rootElement) {

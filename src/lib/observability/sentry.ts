@@ -137,6 +137,86 @@ export function startSentrySpan<T>(context: StartSpanContext, callback: () => T)
   return callback()
 }
 
+/**
+ * Best-effort browser "long task" observer.
+ *
+ * Why:
+ * - Firefox's "page is slowing down" warning often correlates with long main-thread tasks.
+ * - Capturing long tasks as breadcrumbs helps correlate user-reported slowness with
+ *   specific flows (e.g., onboarding wizard auto-show).
+ *
+ * Notes:
+ * - The `longtask` entry type isn't supported in all browsers.
+ * - We record breadcrumbs (not errors) to avoid event spam.
+ */
+export function initBrowserLongTaskObserver(options?: {
+  thresholdMs?: number
+  maxBreadcrumbsPerMinute?: number
+}): void {
+  const thresholdMs = options?.thresholdMs ?? 50
+  const maxBreadcrumbsPerMinute = options?.maxBreadcrumbsPerMinute ?? 30
+
+  const perf = typeof performance !== 'undefined' ? performance : null
+  const observerCtor = typeof PerformanceObserver !== 'undefined' ? PerformanceObserver : null
+  if (!perf || !observerCtor) return
+
+  const supported = (PerformanceObserver as unknown as { supportedEntryTypes?: string[] }).supportedEntryTypes
+  if (!supported || !supported.includes('longtask')) return
+
+  let windowStart = Date.now()
+  let countInWindow = 0
+
+  const observer = new PerformanceObserver((list) => {
+    const now = Date.now()
+    if (now - windowStart > 60_000) {
+      windowStart = now
+      countInWindow = 0
+    }
+
+    for (const entry of list.getEntries()) {
+      // @ts-expect-error: entry type isn't in lib.dom for all TS configs
+      const duration = typeof entry.duration === 'number' ? entry.duration : 0
+      if (duration < thresholdMs) continue
+      if (countInWindow >= maxBreadcrumbsPerMinute) break
+      countInWindow += 1
+
+      const startTime = typeof entry.startTime === 'number' ? entry.startTime : undefined
+      const name = typeof entry.name === 'string' ? entry.name : 'longtask'
+
+      // Some browsers expose attribution; keep it minimal and non-identifying.
+      const attribution = (entry as unknown as { attribution?: Array<Record<string, unknown>> }).attribution
+      const attributionSummary =
+        Array.isArray(attribution) && attribution.length > 0
+          ? attribution.map((a) => ({
+              // `name` can be "script", "event", etc. Avoid copying URLs.
+              name: typeof a.name === 'string' ? a.name : undefined,
+              entryType: typeof a.entryType === 'string' ? a.entryType : undefined,
+              startTime: typeof a.startTime === 'number' ? a.startTime : undefined,
+              duration: typeof a.duration === 'number' ? a.duration : undefined,
+            }))
+          : undefined
+
+      addSentryBreadcrumb({
+        category: 'performance.longtask',
+        message: 'Long task detected',
+        level: 'info',
+        data: {
+          duration_ms: Math.round(duration),
+          startTime_ms: startTime != null ? Math.round(startTime) : undefined,
+          name,
+          attribution: attributionSummary,
+        },
+      })
+    }
+  })
+
+  try {
+    observer.observe({ entryTypes: ['longtask'] })
+  } catch {
+    // Ignore: some browsers throw even if supportedEntryTypes lies.
+  }
+}
+
 export function addSentryBreadcrumb(breadcrumb: Sentry.Breadcrumb): void {
   Sentry.addBreadcrumb(breadcrumb)
 }
