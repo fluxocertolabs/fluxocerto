@@ -15,7 +15,12 @@ import {
 import { AppErrorBoundary } from '@/components/app-error-boundary'
 import { withTimeout } from '@/lib/utils/promise'
 import { initPosthog } from '@/lib/analytics/posthog'
-import { initBrowserLongTaskObserver, initSentry } from '@/lib/observability/sentry'
+import {
+  flushPersistedEventLoopLag,
+  initBrowserEventLoopLagObserver,
+  initBrowserLongTaskObserver,
+  initSentry,
+} from '@/lib/observability/sentry'
 import './index.css'
 
 /**
@@ -102,6 +107,9 @@ function showAuthBypassError(titleText: string, message: string): void {
 async function bootstrap() {
   initSentry()
   initBrowserLongTaskObserver()
+  // Safari/Firefox-friendly freeze detection (timer drift). Persisted samples are flushed on next load.
+  flushPersistedEventLoopLag()
+  initBrowserEventLoopLagObserver()
   initPosthog()
   const rootElement = document.getElementById('root')
   if (!rootElement) {

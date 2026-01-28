@@ -216,6 +216,148 @@ export function initBrowserLongTaskObserver(options?: {
   }
 }
 
+// ============================================================================
+// SAFARI/FF FRIENDLY: EVENT LOOP LAG ("FREEZE") OBSERVER
+// ============================================================================
+
+const EVENT_LOOP_LAG_STORAGE_KEY = 'fluxo-certo:sentry:event-loop-lag:v1'
+
+type PersistedLagSample = {
+  ts: number
+  drift_ms: number
+  path?: string
+  visibility?: string
+}
+
+function safeReadLagSamples(): PersistedLagSample[] {
+  try {
+    const raw = window.localStorage.getItem(EVENT_LOOP_LAG_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((v): v is PersistedLagSample => Boolean(v && typeof v === 'object'))
+      .slice(-50)
+  } catch {
+    return []
+  }
+}
+
+function safeWriteLagSamples(samples: PersistedLagSample[]): void {
+  try {
+    window.localStorage.setItem(EVENT_LOOP_LAG_STORAGE_KEY, JSON.stringify(samples.slice(-50)))
+  } catch {
+    // ignore quota / private mode issues
+  }
+}
+
+function safeClearLagSamples(): void {
+  try {
+    window.localStorage.removeItem(EVENT_LOOP_LAG_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Flush persisted "event loop lag" samples (recorded during a previous page session)
+ * into Sentry as a single breadcrumb summary.
+ *
+ * Why:
+ * - If the tab hard-freezes, we often can't send anything during the freeze.
+ * - Persisting + flushing on the next load gives us a trail that correlates with
+ *   "I had to reload and it worked."
+ */
+export function flushPersistedEventLoopLag(): void {
+  if (typeof window === 'undefined') return
+  const samples = safeReadLagSamples()
+  if (samples.length === 0) return
+
+  safeClearLagSamples()
+
+  const max = samples.reduce((acc, s) => Math.max(acc, s.drift_ms ?? 0), 0)
+  const last = samples[samples.length - 1]
+  addSentryBreadcrumb({
+    category: 'performance.event_loop_lag',
+    message: 'Recovered from prior event loop lag',
+    level: 'info',
+    data: {
+      sample_count: samples.length,
+      max_drift_ms: max,
+      last_drift_ms: last?.drift_ms,
+      last_path: last?.path,
+      last_visibility: last?.visibility,
+    },
+  })
+}
+
+/**
+ * Safari-friendly "freeze detector" using timer drift:
+ * we schedule a periodic timer and measure how late it fires.
+ */
+export function initBrowserEventLoopLagObserver(options?: {
+  intervalMs?: number
+  thresholdMs?: number
+  maxBreadcrumbsPerMinute?: number
+  persist?: boolean
+}): void {
+  if (typeof window === 'undefined') return
+  const intervalMs = options?.intervalMs ?? 250
+  const thresholdMs = options?.thresholdMs ?? 250
+  const maxBreadcrumbsPerMinute = options?.maxBreadcrumbsPerMinute ?? 20
+  const persist = options?.persist ?? true
+
+  if (typeof performance === 'undefined' || typeof window.setInterval !== 'function') return
+
+  let last = performance.now()
+  let windowStart = Date.now()
+  let countInWindow = 0
+
+  window.setInterval(() => {
+    const now = performance.now()
+    const drift = now - last - intervalMs
+    last = now
+
+    const wallNow = Date.now()
+    if (wallNow - windowStart > 60_000) {
+      windowStart = wallNow
+      countInWindow = 0
+    }
+
+    if (drift < thresholdMs) return
+    if (countInWindow >= maxBreadcrumbsPerMinute) return
+    countInWindow += 1
+
+    const path = (() => {
+      try {
+        return window.location?.pathname
+      } catch {
+        return undefined
+      }
+    })()
+
+    const sample: PersistedLagSample = {
+      ts: wallNow,
+      drift_ms: Math.round(drift),
+      path,
+      visibility: typeof document !== 'undefined' ? document.visibilityState : undefined,
+    }
+
+    if (persist) {
+      const prev = safeReadLagSamples()
+      prev.push(sample)
+      safeWriteLagSamples(prev)
+    }
+
+    addSentryBreadcrumb({
+      category: 'performance.event_loop_lag',
+      message: 'Event loop lag detected',
+      level: 'info',
+      data: sample,
+    })
+  }, intervalMs)
+}
+
 export function addSentryBreadcrumb(breadcrumb: Sentry.Breadcrumb): void {
   Sentry.addBreadcrumb(breadcrumb)
 }
