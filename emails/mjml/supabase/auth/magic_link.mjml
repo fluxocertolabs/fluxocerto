@@ -17,7 +17,7 @@
           Olá! Clique no botão abaixo para entrar no Fluxo Certo.
         </mj-text>
 
-        <mj-button href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type={{ .Type }}" padding="0 0 16px">
+        <mj-button href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email" padding="0 0 16px">
           Entrar no Fluxo Certo
         </mj-button>
 
@@ -32,8 +32,8 @@
           Se o botão não funcionar, copie e cole este link no seu navegador:
         </mj-text>
         <mj-text padding="0" css-class="fc-small fc-linkWrap">
-          <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type={{ .Type }}">
-            {{ .RedirectTo }}?token_hash={{ .TokenHash }}&type={{ .Type }}
+          <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">
+            {{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email
           </a>
         </mj-text>
       </mj-column>

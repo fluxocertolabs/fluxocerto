@@ -125,7 +125,7 @@ export function AuthCallbackPage() {
       // we must exchange the hash for a session before reading session state.
       if (tokenHash && otpType) {
         captureEvent('magic_link_verifyotp_attempted')
-        const { error: verifyError } = await client.auth.verifyOtp({
+        const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
           // Supabase expects a token_hash from the email template.
           token_hash: tokenHash,
           // Type varies by template: e.g. "magiclink", "signup", "recovery", etc.
@@ -145,6 +145,18 @@ export function AuthCallbackPage() {
             isExpired: isExpiredLinkError(verifyError),
           })
           return
+        }
+
+        // Defensive: in some environments, verifyOtp can succeed but the session may not be
+        // immediately readable via getSession() yet. If Supabase returns a session payload,
+        // explicitly persist it.
+        const sessionFromVerify = verifyData && typeof verifyData === 'object' && 'session' in verifyData
+          ? (verifyData as { session?: { access_token?: string; refresh_token?: string } | null }).session
+          : null
+        const access = sessionFromVerify?.access_token ?? null
+        const refresh = sessionFromVerify?.refresh_token ?? null
+        if (access && refresh) {
+          await client.auth.setSession({ access_token: access, refresh_token: refresh })
         }
       }
 

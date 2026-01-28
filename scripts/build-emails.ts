@@ -42,7 +42,8 @@ function assertAuthLinkPlaceholders(templateId: string, html: string): void {
 
   // First-party token hash flow.
   // NOTE: we use RedirectTo so preview/staging can redirect to the correct origin.
-  const required = ['{{ .RedirectTo }}', '{{ .TokenHash }}', '{{ .Type }}']
+  // For PKCE-style email links, Supabase recommends `type=email` (literal).
+  const required = ['{{ .RedirectTo }}', '{{ .TokenHash }}']
   const missing = required.filter((needle) => !html.includes(needle))
   if (missing.length > 0) {
     throw new Error(

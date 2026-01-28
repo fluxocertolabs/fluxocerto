@@ -60,7 +60,7 @@ export const SUPABASE_EMAIL_TEMPLATES: SupabaseEmailTemplate[] = [
     subject: 'Seu link de acesso — Fluxo Certo',
     mjmlPath: 'emails/mjml/supabase/auth/magic_link.mjml',
     htmlPath: 'supabase/templates/magic_link.html',
-    variables: ['TokenHash', 'Type', 'Email', 'SiteURL', 'RedirectTo'],
+    variables: ['TokenHash', 'Email', 'SiteURL', 'RedirectTo'],
   },
   {
     kind: 'auth',
@@ -76,7 +76,7 @@ export const SUPABASE_EMAIL_TEMPLATES: SupabaseEmailTemplate[] = [
     subject: 'Confirme seu cadastro — Fluxo Certo',
     mjmlPath: 'emails/mjml/supabase/auth/confirmation.mjml',
     htmlPath: 'supabase/templates/confirmation.html',
-    variables: ['TokenHash', 'Type', 'Email', 'SiteURL', 'RedirectTo'],
+    variables: ['TokenHash', 'Email', 'SiteURL', 'RedirectTo'],
   },
   {
     kind: 'auth',
