@@ -92,6 +92,8 @@ export function AuthCallbackPage() {
       // Check for error in URL params (from Supabase redirect)
       const errorParam = searchParams.get('error')
       const errorDescription = searchParams.get('error_description')
+      const tokenHash = searchParams.get('token_hash')
+      const otpType = searchParams.get('type')
 
       // Track that the user reached the callback page (i.e. clicked the link / attempted auth).
       // IMPORTANT: never send raw URL/tokens; only boolean flags.
@@ -101,6 +103,7 @@ export function AuthCallbackPage() {
         has_code_param: searchParams.has('code'),
         has_token_param: searchParams.has('token'),
         has_type_param: searchParams.has('type'),
+        has_token_hash_param: searchParams.has('token_hash'),
       })
       
       if (errorParam) {
@@ -116,6 +119,33 @@ export function AuthCallbackPage() {
           isExpired: isExpiredLinkError(errorObj),
         })
         return
+      }
+
+      // If the email template links directly to our app (token_hash flow),
+      // we must exchange the hash for a session before reading session state.
+      if (tokenHash && otpType) {
+        captureEvent('magic_link_verifyotp_attempted')
+        const { error: verifyError } = await client.auth.verifyOtp({
+          // Supabase expects a token_hash from the email template.
+          token_hash: tokenHash,
+          // Type varies by template: e.g. "magiclink", "signup", "recovery", etc.
+          // We keep this flexible to support multiple Supabase email flows.
+          type: otpType as never,
+        })
+
+        if (verifyError) {
+          captureEvent('magic_link_callback_error', {
+            reason: 'verify_otp_failed',
+            error: verifyError.name,
+            is_expired: isExpiredLinkError(verifyError),
+          })
+          setState({
+            type: 'auth_error',
+            message: getAuthErrorMessage(verifyError),
+            isExpired: isExpiredLinkError(verifyError),
+          })
+          return
+        }
       }
 
       // Try to get the session (Supabase client handles token extraction)

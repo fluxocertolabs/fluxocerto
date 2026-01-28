@@ -29,6 +29,29 @@ function assertIncludes(templateId: string, haystack: string, needle: string): v
 }
 
 /**
+ * Some Supabase auth templates can be implemented either using the default
+ * `{{ .ConfirmationURL }}` (which points to `*.supabase.co/auth/v1/verify`)
+ * OR using a first-party link that includes `token_hash` + `type`, where the app
+ * calls `supabase.auth.verifyOtp({ token_hash, type })`.
+ *
+ * We allow either pattern to keep deliverability options open without breaking builds.
+ */
+function assertAuthLinkPlaceholders(templateId: string, html: string): void {
+  const hasConfirmationUrl = html.includes('{{ .ConfirmationURL }}')
+  if (hasConfirmationUrl) return
+
+  // First-party token hash flow.
+  // NOTE: we use RedirectTo so preview/staging can redirect to the correct origin.
+  const required = ['{{ .RedirectTo }}', '{{ .TokenHash }}', '{{ .Type }}']
+  const missing = required.filter((needle) => !html.includes(needle))
+  if (missing.length > 0) {
+    throw new Error(
+      `Template ${templateId} is missing required placeholders for auth link: ${missing.join(', ')}`,
+    )
+  }
+}
+
+/**
  * Normalizes MJML error output into a readable string for CI and local runs.
  */
 function formatMjmlErrors(errors: unknown): string {
@@ -134,7 +157,7 @@ async function buildSupabaseTemplates(): Promise<void> {
         if (template.type === 'reauthentication') {
           assertIncludes(templateId, html, '{{ .Token }}')
         } else {
-          assertIncludes(templateId, html, '{{ .ConfirmationURL }}')
+          assertAuthLinkPlaceholders(templateId, html)
         }
 
         if (template.type === 'magic_link') {
