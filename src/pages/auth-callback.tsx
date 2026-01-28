@@ -75,7 +75,6 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      const __cbStart = Date.now()
       addSentryBreadcrumb({
         category: 'debug.auth',
         message: 'auth_callback_enter',

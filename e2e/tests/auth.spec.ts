@@ -9,8 +9,12 @@ import { InbucketClient } from '../utils/inbucket';
 import { ensureTestUser, executeSQL, executeSQLWithResult, getUserIdFromEmail } from '../utils/supabase-admin';
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'e2e-test@example.com';
-// For self-serve signup testing: generate unique email per test run
-const SELF_SERVE_EMAIL = `self-serve-${Date.now()}@example.com`;
+
+function createUniqueEmail(prefix: string): string {
+  // Keep deterministic-enough uniqueness without relying on crypto APIs (Node+browser portability in PW).
+  const nonce = Math.random().toString(16).slice(2);
+  return `${prefix}-${Date.now()}-${nonce}@example.com`;
+}
 
 /**
  * Supabase magic links often route through the Auth service with a `redirect_to` query param.
@@ -59,7 +63,6 @@ test.describe('Authentication Flow', () => {
     await ensureTestUser(TEST_EMAIL);
     // Purge all mailboxes at the start
     await inbucket.purgeMailbox(TEST_EMAIL.split('@')[0]);
-    await inbucket.purgeMailbox(SELF_SERVE_EMAIL.split('@')[0]);
   });
 
   test.beforeEach(async () => {
@@ -90,9 +93,10 @@ test.describe('Authentication Flow', () => {
     page,
   }) => {
     const loginPage = new LoginPage(page);
+    const email = createUniqueEmail('self-serve');
 
     await loginPage.goto({ disableDevAuthBypass: true });
-    await loginPage.requestMagicLink(SELF_SERVE_EMAIL);
+    await loginPage.requestMagicLink(email);
     
     // Should show same success message (no enumeration)
     // Self-serve signups are now allowed for any email
@@ -103,7 +107,8 @@ test.describe('Authentication Flow', () => {
     page,
   }) => {
     const loginPage = new LoginPage(page);
-    const mailbox = SELF_SERVE_EMAIL.split('@')[0];
+    const email = createUniqueEmail('self-serve-new');
+    const mailbox = email.split('@')[0];
 
     // Purge mailbox to ensure clean state
     await inbucket.purgeMailbox(mailbox);
@@ -111,7 +116,7 @@ test.describe('Authentication Flow', () => {
 
     // Request magic link for a never-before-seen email
     await loginPage.goto({ disableDevAuthBypass: true });
-    await loginPage.requestMagicLink(SELF_SERVE_EMAIL);
+    await loginPage.requestMagicLink(email);
     await loginPage.expectMagicLinkSent();
 
     // Get magic link from Inbucket using poll-based wait

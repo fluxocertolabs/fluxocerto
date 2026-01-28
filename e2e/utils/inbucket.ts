@@ -195,8 +195,10 @@ export class InbucketClient {
   extractMagicLink(message: InbucketMessage): string | null {
     // Try HTML body first, then text body
     const content = message.body.html || message.body.text;
-    // Match Supabase magic link URL pattern
-    const urlMatch = content.match(/https?:\/\/[^\s"'<>]+token=[^\s"'<>]+/);
+    // Match Supabase magic link URL pattern.
+    // - Existing users often get `token=...`
+    // - Signups/confirmations can use `token_hash=...` + `type=signup`
+    const urlMatch = content.match(/https?:\/\/[^\s"'<>]+(token_hash|token)=[^\s"'<>]+/);
     if (!urlMatch) {
       return null;
     }
