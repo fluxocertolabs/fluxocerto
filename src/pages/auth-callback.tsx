@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getSupabase, isSupabaseConfigured, ensureCurrentUserGroup, signOut } from '@/lib/supabase'
 import { getAuthErrorMessage, isExpiredLinkError } from '@/lib/auth-errors'
 import { captureEvent } from '@/lib/analytics/posthog'
+import { addSentryBreadcrumb } from '@/lib/observability/sentry'
 import { Button } from '@/components/ui/button'
 import { StatusScreen } from '@/components/status/status-screen'
 import {
@@ -74,6 +75,18 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     const handleCallback = async () => {
+      const __cbStart = Date.now()
+      addSentryBreadcrumb({
+        category: 'debug.auth',
+        message: 'auth_callback_enter',
+        level: 'info',
+        data: {
+          has_error_param: searchParams.has('error'),
+          has_token_hash_param: searchParams.has('token_hash'),
+          has_type_param: searchParams.has('type'),
+          path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        },
+      })
       // Guard against unconfigured Supabase
       if (!isSupabaseConfigured()) {
         captureEvent('magic_link_callback_error', {
@@ -124,14 +137,39 @@ export function AuthCallbackPage() {
       // If the email template links directly to our app (token_hash flow),
       // we must exchange the hash for a session before reading session state.
       if (tokenHash && otpType) {
-        captureEvent('magic_link_verifyotp_attempted')
-        const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
-          // Supabase expects a token_hash from the email template.
-          token_hash: tokenHash,
-          // Type varies by template: e.g. "magiclink", "signup", "recovery", etc.
-          // We keep this flexible to support multiple Supabase email flows.
-          type: otpType as never,
-        })
+        const __verifyStart = Date.now()
+        let __verifyOk = false
+        let __verifyErrorName: string | undefined = undefined
+        let __verifyHasData = false
+        let verifyData: unknown = null
+        let verifyError: Error | null = null
+        try {
+          captureEvent('magic_link_verifyotp_attempted')
+          const res = await client.auth.verifyOtp({
+            // Supabase expects a token_hash from the email template.
+            token_hash: tokenHash,
+            // Type varies by template: e.g. "magiclink", "signup", "recovery", etc.
+            // We keep this flexible to support multiple Supabase email flows.
+            type: otpType as never,
+          })
+          verifyData = res.data
+          verifyError = res.error
+          __verifyOk = !verifyError
+          __verifyErrorName = verifyError?.name
+          __verifyHasData = Boolean(verifyData)
+        } finally {
+          addSentryBreadcrumb({
+            category: 'debug.auth',
+            message: 'verify_otp_result',
+            level: __verifyOk ? 'info' : 'error',
+            data: {
+              durationMs: Date.now() - __verifyStart,
+              ok: __verifyOk,
+              hasVerifyData: __verifyHasData,
+              errorName: __verifyErrorName,
+            },
+          })
+        }
 
         if (verifyError) {
           captureEvent('magic_link_callback_error', {
@@ -161,7 +199,20 @@ export function AuthCallbackPage() {
       }
 
       // Try to get the session (Supabase client handles token extraction)
+      const __getSessionStart = Date.now()
       const { data: { session }, error: sessionError } = await client.auth.getSession()
+      addSentryBreadcrumb({
+        category: 'debug.auth',
+        message: 'get_session_result',
+        level: sessionError ? 'error' : 'info',
+        data: {
+          durationMs: Date.now() - __getSessionStart,
+          ok: !sessionError,
+          hasSession: Boolean(session),
+          errorName: sessionError?.name,
+          hasUserId: Boolean(session?.user?.id),
+        },
+      })
 
       if (sessionError) {
         captureEvent('magic_link_callback_error', {

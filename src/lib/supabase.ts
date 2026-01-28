@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import type { Result } from '@/stores/finance-store'
+import { addSentryBreadcrumb } from '@/lib/observability/sentry'
 import type {
   OnboardingStateRow,
   OnboardingState,
@@ -661,10 +662,18 @@ export async function ensureCurrentUserGroup(): Promise<Result<{ groupId: string
 
   const client = getSupabase()
 
+  const __egStart = Date.now()
+  let __egOk = false
+  let __egErrorCode: string | undefined = undefined
+  let __egCreated: boolean | undefined = undefined
+  let __egGroupId: string | undefined = undefined
+  addSentryBreadcrumb({ category: 'debug.auth', message: 'ensure_group_start', level: 'info', data: {} })
+
   try {
     const { data, error } = await client.rpc('ensure_current_user_group')
 
     if (error) {
+      __egErrorCode = typeof (error as { code?: unknown }).code === 'string' ? (error as { code?: string }).code : undefined
       // Handle specific error codes
       if (error.code === 'P0001') {
         return { success: false, error: 'Você precisa estar autenticado para continuar' }
@@ -676,6 +685,9 @@ export async function ensureCurrentUserGroup(): Promise<Result<{ groupId: string
     }
 
     const result = data as { group_id: string; created: boolean }
+    __egCreated = result.created
+    __egGroupId = result.group_id
+    __egOk = true
     return {
       success: true,
       data: {
@@ -685,6 +697,19 @@ export async function ensureCurrentUserGroup(): Promise<Result<{ groupId: string
     }
   } catch (err) {
     return handleSupabaseError(err)
+  } finally {
+    addSentryBreadcrumb({
+      category: 'debug.auth',
+      message: 'ensure_group_end',
+      level: __egOk ? 'info' : 'error',
+      data: {
+        durationMs: Date.now() - __egStart,
+        ok: __egOk,
+        errorCode: __egErrorCode,
+        created: __egCreated,
+        groupIdPresent: Boolean(__egGroupId),
+      },
+    })
   }
 }
 

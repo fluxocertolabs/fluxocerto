@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { signInWithMagicLink } from '@/lib/supabase'
 import { getAuthErrorMessage } from '@/lib/auth-errors'
 import { captureEvent } from '@/lib/analytics/posthog'
+import { addSentryBreadcrumb } from '@/lib/observability/sentry'
 
 interface LoginFormProps {
   onSuccess?: () => void
@@ -27,9 +28,27 @@ export function LoginForm({
     setError(null)
     setIsLoading(true)
 
+    const __fcStart = Date.now()
+    addSentryBreadcrumb({
+      category: 'debug.auth',
+      message: 'magic_link_request_start',
+      level: 'info',
+      data: { identifierPresent: Boolean(email), identifierLen: email?.length ?? 0 },
+    })
     const { error: signInError } = await signInWithMagicLink(email)
 
     setIsLoading(false)
+
+    addSentryBreadcrumb({
+      category: 'debug.auth',
+      message: 'magic_link_request_end',
+      level: signInError ? 'error' : 'info',
+      data: {
+        durationMs: Date.now() - __fcStart,
+        ok: !signInError,
+        errorName: signInError ? (signInError as Error).name : undefined,
+      },
+    })
 
     if (signInError) {
       captureEvent('login_magic_link_request_failed')
