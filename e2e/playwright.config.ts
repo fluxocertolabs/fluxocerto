@@ -52,7 +52,26 @@ function getSupabaseConfig() {
   }
 }
 
-const supabase = getSupabaseConfig();
+function normalizeLocalhostUrl(raw: string): string {
+  try {
+    const url = new URL(raw);
+    // In some environments Supabase reports 127.0.0.1, but the app/tests assume localhost.
+    // Normalize to avoid host-mismatch issues (CORS / redirect allowlists / webServer URL checks).
+    if (url.hostname === '127.0.0.1') {
+      url.hostname = 'localhost';
+    }
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return raw;
+  }
+}
+
+const supabaseRaw = getSupabaseConfig();
+const supabase = {
+  ...supabaseRaw,
+  url: normalizeLocalhostUrl(supabaseRaw.url),
+  inbucketUrl: normalizeLocalhostUrl(supabaseRaw.inbucketUrl),
+};
 
 /**
  * Read .env values without pulling in dotenv.

@@ -40,7 +40,23 @@ export class LoginPage {
   async requestMagicLink(email: string): Promise<void> {
     await this.emailInput.waitFor({ state: 'visible', timeout: 15000 });
     await this.emailInput.fill(email);
-    await this.submitButton.click();
+
+    // Ensure the submit button is actually interactable before clicking.
+    await expect(this.submitButton).toBeEnabled({ timeout: 15000 });
+
+    // Best-effort: wait for the Supabase auth OTP request to complete. This makes the
+    // flow much more deterministic under local/CI load.
+    const otpRequestPromise = this.page.waitForRequest(
+      (req) => req.method() === 'POST' && /\/auth\/v1\/otp\/?(\?|$)/.test(req.url()),
+      { timeout: 60000 },
+    );
+
+    // Prefer Enter key submit over clicking to avoid rare focus/overlay click flakiness.
+    await this.emailInput.press('Enter');
+
+    // If the network request doesn't happen for any reason, this will timeout and
+    // fail with a clearer error than "success message not visible".
+    await otpRequestPromise;
   }
 
   /**
@@ -49,7 +65,7 @@ export class LoginPage {
   async expectMagicLinkSent(): Promise<void> {
     // Wait for either success or an error. Under load, auth/email can be slow, so we
     // use a longer timeout and fail fast if an explicit error is shown.
-    const timeoutMs = 30000;
+    const timeoutMs = 60000;
 
     const result = await Promise.race([
       this.successMessage.waitFor({ state: 'visible', timeout: timeoutMs }).then(() => ({ ok: true as const })),

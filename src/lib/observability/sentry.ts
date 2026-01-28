@@ -174,7 +174,6 @@ export function initBrowserLongTaskObserver(options?: {
     }
 
     for (const entry of list.getEntries()) {
-      // @ts-expect-error: entry type isn't in lib.dom for all TS configs
       const duration = typeof entry.duration === 'number' ? entry.duration : 0
       if (duration < thresholdMs) continue
       if (countInWindow >= maxBreadcrumbsPerMinute) break
