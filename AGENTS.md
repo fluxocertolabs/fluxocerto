@@ -2,8 +2,8 @@
 
 **Universal collaboration protocols for AI agents**
 
-> **Project-specific facts**: see `.specify/memory/constitution.md`  
-> **Durable repo knowledge**: see `docs/reference/KNOWLEDGE_BASE.md` (keep it updated)
+> **Project-specific facts**: see `docs/CONSTITUTION.md`  
+> **Durable project/context knowledge**: use Graphiti → read/write canonical markdown in `~/.memory` (commit + push)
 
 ---
 
@@ -18,55 +18,25 @@
 
 ---
 
-## LOCAL DEVELOPMENT AUTH BYPASS
-
-**Skip manual login for local development.** This project has a dev auth bypass that auto-authenticates AI agents and developers.
-
-### First-Time Setup (Once)
-```bash
-pnpm db:start          # Start local Supabase
-pnpm run gen:token     # Generate session tokens + seed data
-# Script writes tokens to .env:
-# VITE_DEV_ACCESS_TOKEN=<token>
-# VITE_DEV_REFRESH_TOKEN=<token>
-```
-
-### Every Session
-```bash
-pnpm db:start          # Start local Supabase
-pnpm dev:app           # Dashboard loads immediately - no login!
-```
-
-### What It Creates
-- `dev@local` user with confirmed email
-- "Dev Household" with "Dev Checking" account ($10,000)
-- Valid Supabase session tokens
-
-### Security
-- ✅ Only works in DEV mode (`import.meta.env.DEV`)
-- ✅ Disabled in production builds
-- ✅ Full RLS policies remain active
-
-### Notes
-- Dev data persists between sessions in your local Supabase instance
-- Tokens expire after ~1 hour; re-run `pnpm run gen:token` if auth fails
-- Supabase auto-refreshes tokens during active sessions
-
----
-
 ## EXECUTION SEQUENCE
 
 ### 1. SEARCH FIRST
 - Use `codebase_search`/`grep`/`web_search`/MCP tools before writing code
 - **Dependencies**: Use Context7 (`resolve-library-id` → `get-library-docs`)
 - Find existing implementations, patterns, conventions
+- **Project/context knowledge (routing-first)**:
+  - Infer a stable context name (prefer `pwd`, else git remote → `org/repo`)
+  - Query Graphiti first for **canonical markdown file paths** (Graphiti results are pointers only)
+  - Immediately open/read the canonical markdown under `~/.memory` before acting
+  - If Graphiti is unavailable/errors/has no hits, follow `~/.memory/docs/handbook/retrieval-playbook.md` (summaries → grep entries/tags)
+- **Memory sources (content artifacts only):** if an entry cites external PDFs/docs/images, copy them into `~/.memory/sources/<context>/` and cite repo-relative `sources/<context>/<file>` paths (keep it flat; optionally prefix filenames like `<Category>__<file>`). Do not copy source code/config into `sources/`; cite repo-relative workspace paths (e.g. `../Workspaces/src/<repo>/...`) plus exact commands instead.
 
 ### 2. RESEARCH & UNDERSTAND
 - Read relevant files completely - don't skim
 - Use `.aid` folder if it exists
 - Understand **why** current code works the way it does
-- Read `docs/reference/KNOWLEDGE_BASE.md` to bootstrap repo context
-- When you learn durable repo knowledge, update `docs/reference/KNOWLEDGE_BASE.md`
+- For project/context background, read relevant `~/.memory/contexts/<context>/summaries/` and `~/.memory/contexts/<context>/entries/`
+- If you learn something durable about the project/context, persist it in `~/.memory` and **commit + push** (follow the `~/.memory` repo structure and templates)
 
 ### 3. REUSE FIRST
 - Extend existing patterns before creating new
@@ -172,7 +142,7 @@ Query latest via: Context7 → BrightData → web_search
 - ❌ Swallow errors
 - ❌ Loop >3 attempts without asking
 - ❌ Breaking changes without approval
-- ❌ Auto-commit without explicit request
+- ❌ Auto-commit code changes in the current repo without explicit request (when you add durable knowledge to `~/.memory`, committing/pushing `~/.memory` is expected)
 - ❌ **Workarounds/hacks** (fix root cause properly)
 
 ### Decision Thresholds
@@ -192,5 +162,4 @@ Query latest via: Context7 → BrightData → web_search
 ---
 
 > **AGENTS.md**: Universal "how to work" protocols
-> **constitution.md**: Project-specific "what it is" facts  
-> **KNOWLEDGE_BASE.md**: Durable repo knowledge
+> **CONSTITUTION.md**: Project-specific "what it is" facts
