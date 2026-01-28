@@ -34,6 +34,11 @@ function isPosthogDisabled(): boolean {
   return false
 }
 
+function isSessionRecordingEnabledByFlag(): boolean {
+  const raw = import.meta.env.VITE_POSTHOG_RECORDING_ENABLED
+  return raw === 'true' || raw === '1'
+}
+
 function readStoredConsent(): AnalyticsConsent {
   if (!isBrowser()) return DEFAULT_CONSENT
   try {
@@ -82,6 +87,7 @@ export function initPosthog(): void {
 
   const apiHost = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com'
   const consent = readStoredConsent()
+  const recordingsEnabled = isSessionRecordingEnabledByFlag() && consent.recordings
   const beforeSend: BeforeSendFn = (event) => {
     if (!event || typeof event !== 'object') return event
     const payload = event as CaptureResult & { properties?: Record<string, unknown> }
@@ -95,7 +101,7 @@ export function initPosthog(): void {
     api_host: apiHost,
     autocapture: false,
     capture_pageview: false,
-    disable_session_recording: !consent.recordings,
+    disable_session_recording: !recordingsEnabled,
     session_recording: {
       maskAllInputs: true,
       maskTextSelector: '*',
@@ -118,7 +124,7 @@ export function setAnalyticsConsent(consent: AnalyticsConsent): void {
   }
 
   posthog.set_config({
-    disable_session_recording: !consent.recordings || !consent.analytics,
+    disable_session_recording: !(isSessionRecordingEnabledByFlag() && consent.recordings && consent.analytics),
   })
 }
 

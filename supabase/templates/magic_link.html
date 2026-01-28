@@ -204,7 +204,7 @@
         <tbody>
           <tr>
             <td align="center" bgcolor="#0369a1" role="presentation" style="border:none;border-radius:10px;cursor:auto;mso-padding-alt:14px 22px;background:#0369a1;" valign="middle">
-              <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #0369a1; color: #f8fafd; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 120%; margin: 0; text-decoration: none; text-transform: none; padding: 14px 22px; mso-padding-alt: 0px; border-radius: 10px;" target="_blank">
+              <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email" style="display: inline-block; background: #0369a1; color: #f8fafd; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 120%; margin: 0; text-decoration: none; text-transform: none; padding: 14px 22px; mso-padding-alt: 0px; border-radius: 10px;" target="_blank">
                 Entrar no Fluxo Certo
               </a>
             </td>
@@ -247,7 +247,9 @@
               <tr>
                 <td align="left" class="fc-small fc-linkWrap" style="line-height: 18px; font-size: 0px; padding: 0; word-break: break-word;">
                   
-      <div style="font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#26284b;"><a href="{{ .ConfirmationURL }}" style="color: #0369a1; overflow-wrap: break-word; word-break: break-word;">{{ .ConfirmationURL }}</a></div>
+      <div style="font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#26284b;"><a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email" style="color: #0369a1; overflow-wrap: break-word; word-break: break-word;">
+            {{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email
+          </a></div>
     
                 </td>
               </tr>

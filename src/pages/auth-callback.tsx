@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getSupabase, isSupabaseConfigured, ensureCurrentUserGroup, signOut } from '@/lib/supabase'
 import { getAuthErrorMessage, isExpiredLinkError } from '@/lib/auth-errors'
+import { captureEvent } from '@/lib/analytics/posthog'
 import { Button } from '@/components/ui/button'
 import { StatusScreen } from '@/components/status/status-screen'
 import {
@@ -75,6 +76,9 @@ export function AuthCallbackPage() {
     const handleCallback = async () => {
       // Guard against unconfigured Supabase
       if (!isSupabaseConfigured()) {
+        captureEvent('magic_link_callback_error', {
+          reason: 'supabase_not_configured',
+        })
         setState({
           type: 'auth_error',
           message: 'Aplicação não está configurada corretamente. Entre em contato com o suporte.',
@@ -88,9 +92,27 @@ export function AuthCallbackPage() {
       // Check for error in URL params (from Supabase redirect)
       const errorParam = searchParams.get('error')
       const errorDescription = searchParams.get('error_description')
+      const tokenHash = searchParams.get('token_hash')
+      const otpType = searchParams.get('type')
+
+      // Track that the user reached the callback page (i.e. clicked the link / attempted auth).
+      // IMPORTANT: never send raw URL/tokens; only boolean flags.
+      captureEvent('magic_link_callback_opened', {
+        has_error_param: Boolean(errorParam),
+        has_error_description: Boolean(errorDescription),
+        has_code_param: searchParams.has('code'),
+        has_token_param: searchParams.has('token'),
+        has_type_param: searchParams.has('type'),
+        has_token_hash_param: searchParams.has('token_hash'),
+      })
       
       if (errorParam) {
         const errorObj = new Error(errorDescription || errorParam)
+        captureEvent('magic_link_callback_error', {
+          reason: 'redirect_error_param',
+          error: errorParam,
+          is_expired: isExpiredLinkError(errorObj),
+        })
         setState({
           type: 'auth_error',
           message: getAuthErrorMessage(errorObj),
@@ -99,10 +121,54 @@ export function AuthCallbackPage() {
         return
       }
 
+      // If the email template links directly to our app (token_hash flow),
+      // we must exchange the hash for a session before reading session state.
+      if (tokenHash && otpType) {
+        captureEvent('magic_link_verifyotp_attempted')
+        const { data: verifyData, error: verifyError } = await client.auth.verifyOtp({
+          // Supabase expects a token_hash from the email template.
+          token_hash: tokenHash,
+          // Type varies by template: e.g. "magiclink", "signup", "recovery", etc.
+          // We keep this flexible to support multiple Supabase email flows.
+          type: otpType as never,
+        })
+
+        if (verifyError) {
+          captureEvent('magic_link_callback_error', {
+            reason: 'verify_otp_failed',
+            error: verifyError.name,
+            is_expired: isExpiredLinkError(verifyError),
+          })
+          setState({
+            type: 'auth_error',
+            message: getAuthErrorMessage(verifyError),
+            isExpired: isExpiredLinkError(verifyError),
+          })
+          return
+        }
+
+        // Defensive: in some environments, verifyOtp can succeed but the session may not be
+        // immediately readable via getSession() yet. If Supabase returns a session payload,
+        // explicitly persist it.
+        const sessionFromVerify = verifyData && typeof verifyData === 'object' && 'session' in verifyData
+          ? (verifyData as { session?: { access_token?: string; refresh_token?: string } | null }).session
+          : null
+        const access = sessionFromVerify?.access_token ?? null
+        const refresh = sessionFromVerify?.refresh_token ?? null
+        if (access && refresh) {
+          await client.auth.setSession({ access_token: access, refresh_token: refresh })
+        }
+      }
+
       // Try to get the session (Supabase client handles token extraction)
       const { data: { session }, error: sessionError } = await client.auth.getSession()
 
       if (sessionError) {
+        captureEvent('magic_link_callback_error', {
+          reason: 'get_session_failed',
+          error: sessionError.name,
+          is_expired: isExpiredLinkError(sessionError),
+        })
         setState({
           type: 'auth_error',
           message: getAuthErrorMessage(sessionError),
@@ -112,6 +178,10 @@ export function AuthCallbackPage() {
       }
 
       if (!session) {
+        captureEvent('magic_link_callback_error', {
+          reason: 'no_session',
+          is_expired: true,
+        })
         // No session and no error - might be a stale callback
         setState({
           type: 'auth_error',
@@ -121,15 +191,19 @@ export function AuthCallbackPage() {
         return
       }
 
+      captureEvent('magic_link_session_established')
+
       // Successfully authenticated - now ensure user has group/profile
       setState({ type: 'provisioning' })
       
       const result = await ensureCurrentUserGroup()
       
       if (result.success) {
+        captureEvent('magic_link_provisioning_succeeded')
         // Provisioning successful, redirect to dashboard
         navigate('/', { replace: true })
       } else {
+        captureEvent('magic_link_provisioning_failed')
         // Provisioning failed - show recoverable error
         const diagnosticPayload = JSON.stringify({
           error: result.error,

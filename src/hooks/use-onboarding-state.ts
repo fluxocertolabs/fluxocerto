@@ -3,16 +3,15 @@
  * 
  * Handles:
  * - Fetching and persisting onboarding state from/to the server
- * - Computing minimum setup status from finance data
+ * - Computing minimum setup status via lightweight counts (no full finance data/realtime)
  * - Auto-show eligibility
  * - Step navigation and progress tracking
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { useFinanceData } from '@/hooks/use-finance-data'
 import { useOnboardingStore } from '@/stores/onboarding-store'
-import { getGroupId, getOnboardingState, upsertOnboardingState } from '@/lib/supabase'
+import { getGroupId, getMinimumSetupCounts, getOnboardingState, upsertOnboardingState } from '@/lib/supabase'
 import {
   canAutoShow,
   isMinimumSetupComplete,
@@ -21,6 +20,7 @@ import {
   calculateProgress,
   determineInitialStep,
 } from '@/lib/onboarding/steps'
+import { startSentrySpan } from '@/lib/observability/sentry'
 import type { BankAccount, OnboardingState, OnboardingStep } from '@/types'
 
 export interface UseOnboardingStateReturn {
@@ -74,7 +74,6 @@ export function useOnboardingState(options?: {
 }): UseOnboardingStateReturn {
   const manageWizard = options?.manageWizard ?? true
   const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth()
-  const { accounts, projects, singleShotIncome, fixedExpenses, singleShotExpenses, isLoading: financeLoading } = useFinanceData()
   const { isWizardOpen, openWizard: openWizardUi, closeWizard: closeWizardUi } = useOnboardingStore()
   
   const [state, setState] = useState<OnboardingState | null>(null)
@@ -84,14 +83,17 @@ export function useOnboardingState(options?: {
   const [retryCount, setRetryCount] = useState(0)
   const [hasGroupAssociation, setHasGroupAssociation] = useState<boolean | null>(null)
   const [isGroupAssociationLoading, setIsGroupAssociationLoading] = useState(true)
+  const [setupCounts, setSetupCounts] = useState<{ accountCount: number; incomeCount: number; expenseCount: number }>({
+    accountCount: 0,
+    incomeCount: 0,
+    expenseCount: 0,
+  })
+  const [isSetupCountsLoading, setIsSetupCountsLoading] = useState(true)
 
-  // Compute minimum setup status from finance data
+  // Compute minimum setup status from lightweight counts (avoids loading full finance data + realtime)
   const minimumSetupComplete = useMemo(() => {
-    const accountCount = accounts.length
-    const incomeCount = projects.length + singleShotIncome.length
-    const expenseCount = fixedExpenses.length + singleShotExpenses.length
-    return isMinimumSetupComplete(accountCount, incomeCount, expenseCount)
-  }, [accounts.length, projects.length, singleShotIncome.length, fixedExpenses.length, singleShotExpenses.length])
+    return isMinimumSetupComplete(setupCounts.accountCount, setupCounts.incomeCount, setupCounts.expenseCount)
+  }, [setupCounts.accountCount, setupCounts.incomeCount, setupCounts.expenseCount])
 
   // Compute whether auto-show should happen
   const shouldAutoShow = useMemo(() => {
@@ -103,7 +105,7 @@ export function useOnboardingState(options?: {
     // do not auto-open the onboarding wizard. In that state, the app should instead
     // surface recovery UI ("Tentar Novamente") and avoid blocking it with a non-dismissable wizard.
     if (isGroupAssociationLoading || hasGroupAssociation !== true) return false
-    if (financeLoading || isLoading) return false
+    if (isSetupCountsLoading || isLoading) return false
     if (hasAutoShown) return false
     return canAutoShow(
       state?.status ?? null,
@@ -118,7 +120,7 @@ export function useOnboardingState(options?: {
     state?.status,
     state?.autoShownAt,
     minimumSetupComplete,
-    financeLoading,
+    isSetupCountsLoading,
     isLoading,
     hasAutoShown,
   ])
@@ -129,7 +131,7 @@ export function useOnboardingState(options?: {
     if (isAuthLoading) return false
     if (!isAuthenticated) return false
     if (isGroupAssociationLoading || hasGroupAssociation !== true) return false
-    if (financeLoading || isLoading) return false
+    if (isSetupCountsLoading || isLoading) return false
     if (minimumSetupComplete) return false
     return state?.status === 'in_progress'
   }, [
@@ -139,7 +141,7 @@ export function useOnboardingState(options?: {
     hasGroupAssociation,
     state?.status,
     minimumSetupComplete,
-    financeLoading,
+    isSetupCountsLoading,
     isLoading,
   ])
 
@@ -150,13 +152,13 @@ export function useOnboardingState(options?: {
       return stateCurrentStep
     }
     // Compute initial step based on existing data
-    const hasAccount = accounts.length > 0
-    const hasIncome = projects.length + singleShotIncome.length > 0
-    const hasExpense = fixedExpenses.length + singleShotExpenses.length > 0
+    const hasAccount = setupCounts.accountCount > 0
+    const hasIncome = setupCounts.incomeCount > 0
+    const hasExpense = setupCounts.expenseCount > 0
     // For profile/group, we don't have easy access to check if they're set,
     // so we start from the beginning
     return determineInitialStep(false, false, hasAccount, hasIncome, hasExpense)
-  }, [stateCurrentStep, accounts.length, projects.length, singleShotIncome.length, fixedExpenses.length, singleShotExpenses.length])
+  }, [stateCurrentStep, setupCounts.accountCount, setupCounts.incomeCount, setupCounts.expenseCount])
 
   // Progress percentage
   const progress = useMemo(() => calculateProgress(currentStep), [currentStep])
@@ -241,6 +243,50 @@ export function useOnboardingState(options?: {
       mounted = false
     }
   }, [isAuthLoading, isAuthenticated, user?.email])
+
+  // Fetch lightweight setup counts (accounts/projects/expenses) needed for auto-show decisions.
+  useEffect(() => {
+    if (isAuthLoading) {
+      setIsSetupCountsLoading(true)
+      setSetupCounts({ accountCount: 0, incomeCount: 0, expenseCount: 0 })
+      return
+    }
+    if (!isAuthenticated) {
+      setIsSetupCountsLoading(false)
+      setSetupCounts({ accountCount: 0, incomeCount: 0, expenseCount: 0 })
+      return
+    }
+    if (isGroupAssociationLoading || hasGroupAssociation !== true) {
+      setIsSetupCountsLoading(true)
+      return
+    }
+
+    let mounted = true
+
+    async function fetchCounts() {
+      setIsSetupCountsLoading(true)
+      const result = await startSentrySpan(
+        { op: 'supabase.select', name: 'onboarding.minimum_setup_counts' },
+        () => getMinimumSetupCounts(),
+      )
+      if (!mounted) return
+
+      if (result.success) {
+        setSetupCounts(result.data)
+      } else {
+        // Don't block onboarding UX on count fetch failures; treat as "incomplete" and surface error.
+        setSetupCounts({ accountCount: 0, incomeCount: 0, expenseCount: 0 })
+        setError(result.error ?? 'Failed to load setup status')
+      }
+      setIsSetupCountsLoading(false)
+    }
+
+    fetchCounts()
+
+    return () => {
+      mounted = false
+    }
+  }, [isAuthLoading, isAuthenticated, isGroupAssociationLoading, hasGroupAssociation, retryCount])
 
   // Auto-open the wizard when eligible or when resuming an in-progress onboarding
   useEffect(() => {
@@ -352,13 +398,13 @@ export function useOnboardingState(options?: {
 
   return {
     state,
-    isLoading: isLoading || financeLoading,
+    isLoading: isLoading || isSetupCountsLoading,
     error,
     isWizardActive: isWizardOpen,
     shouldAutoShow,
     isMinimumSetupComplete: minimumSetupComplete,
-    accounts,
-    isFinanceLoading: financeLoading,
+    accounts: [],
+    isFinanceLoading: isSetupCountsLoading,
     currentStep,
     progress,
     openWizard,

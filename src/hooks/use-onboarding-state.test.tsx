@@ -21,17 +21,6 @@ vi.mock('@/hooks/use-auth', () => ({
   })),
 }))
 
-vi.mock('@/hooks/use-finance-data', () => ({
-  useFinanceData: vi.fn(() => ({
-    accounts: [],
-    projects: [],
-    singleShotIncome: [],
-    fixedExpenses: [],
-    singleShotExpenses: [],
-    isLoading: false,
-  })),
-}))
-
 const mockOpenWizard = vi.fn()
 const mockCloseWizard = vi.fn()
 let mockIsWizardOpen = false
@@ -47,20 +36,20 @@ vi.mock('@/stores/onboarding-store', () => ({
 const mockGetOnboardingState = vi.fn()
 const mockUpsertOnboardingState = vi.fn()
 const mockGetGroupId = vi.fn()
+const mockGetMinimumSetupCounts = vi.fn()
 
 vi.mock('@/lib/supabase', () => ({
   getOnboardingState: () => mockGetOnboardingState(),
   upsertOnboardingState: (...args: unknown[]) => mockUpsertOnboardingState(...args),
   getGroupId: () => mockGetGroupId(),
+  getMinimumSetupCounts: () => mockGetMinimumSetupCounts(),
 }))
 
 // Import mocked modules for manipulation
 import { useAuth } from '@/hooks/use-auth'
-import { useFinanceData } from '@/hooks/use-finance-data'
 import { useOnboardingStore } from '@/stores/onboarding-store'
 
 const mockedUseAuth = vi.mocked(useAuth)
-const mockedUseFinanceData = vi.mocked(useFinanceData)
 const mockedUseOnboardingStore = vi.mocked(useOnboardingStore)
 
 describe('useOnboardingState', () => {
@@ -75,24 +64,6 @@ describe('useOnboardingState', () => {
       user: { id: 'test-user-id', email: 'test@example.com' } as never,
     })
 
-    // Default finance data mock (empty - minimum setup not complete)
-    mockedUseFinanceData.mockReturnValue({
-      accounts: [],
-      projects: [],
-      singleShotIncome: [],
-      expenses: [],
-      fixedExpenses: [],
-      singleShotExpenses: [],
-      creditCards: [],
-      futureStatements: [],
-      profiles: [],
-      isLoading: false,
-      error: null,
-      retry: vi.fn(),
-      refresh: vi.fn(),
-      optimisticallyRemoveExpense: vi.fn(),
-    })
-
     // Default onboarding store mock
     mockedUseOnboardingStore.mockReturnValue({
       isWizardOpen: mockIsWizardOpen,
@@ -103,6 +74,10 @@ describe('useOnboardingState', () => {
     // Default supabase mocks
     mockGetOnboardingState.mockResolvedValue({ success: true, data: null })
     mockGetGroupId.mockResolvedValue('group-id')
+    mockGetMinimumSetupCounts.mockResolvedValue({
+      success: true,
+      data: { accountCount: 0, incomeCount: 0, expenseCount: 0 },
+    })
     mockUpsertOnboardingState.mockResolvedValue({
       success: true,
       data: {
@@ -141,21 +116,9 @@ describe('useOnboardingState', () => {
 
     it('should not auto-show when minimum setup is complete', async () => {
       // Setup complete: 1 account, 1 income, 1 expense
-      mockedUseFinanceData.mockReturnValue({
-        accounts: [{ id: '1', name: 'Account', type: 'checking', balance: 1000, owner: null, createdAt: new Date(), updatedAt: new Date() }] as never,
-        projects: [{ id: '1', name: 'Salary', amount: 5000 }] as never,
-        singleShotIncome: [],
-        expenses: [],
-        fixedExpenses: [{ id: '1', name: 'Rent', amount: 1000 }] as never,
-        singleShotExpenses: [],
-        creditCards: [],
-        futureStatements: [],
-        profiles: [],
-        isLoading: false,
-        error: null,
-        retry: vi.fn(),
-        refresh: vi.fn(),
-        optimisticallyRemoveExpense: vi.fn(),
+      mockGetMinimumSetupCounts.mockResolvedValue({
+        success: true,
+        data: { accountCount: 1, incomeCount: 1, expenseCount: 1 },
       })
 
       mockGetOnboardingState.mockResolvedValue({ success: true, data: null })
