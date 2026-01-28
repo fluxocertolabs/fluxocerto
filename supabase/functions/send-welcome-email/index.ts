@@ -307,7 +307,9 @@ Deno.serve(async (req) => {
 
     // Check for email provider credentials
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
-    const fromEmail = Deno.env.get('EMAIL_FROM') || 'noreply@fluxocerto.app'
+    // Avoid "no-reply" senders — they reduce trust and can be flagged by deliverability tooling.
+    // Use an address that can receive replies (or at least a monitored alias).
+    const fromEmail = Deno.env.get('EMAIL_FROM') || 'Fluxo Certo <suporte@fluxocerto.app>'
 
     if (!resendApiKey) {
       // Dev/test mode: return safe preview without sending (FR-013)

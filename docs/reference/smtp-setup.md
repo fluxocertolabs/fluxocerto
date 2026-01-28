@@ -100,7 +100,7 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 | Port | `465` |
 | Username | `resend` |
 | Password | (paste your Resend API key) |
-| Sender email | `noreply@fluxocerto.app` |
+| Sender email | `suporte@fluxocerto.app` |
 | Sender name | `Fluxo Certo` |
 
 5. Click **Save**
@@ -117,10 +117,13 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 
 ### 5.2 Verify Email Details
 
-- **From**: Should show `noreply@fluxocerto.app`
+- **From**: Should show `suporte@fluxocerto.app` (avoid `no-reply` addresses)
 - **Subject**: Should be Supabase's default Magic Link subject
-- **Link**: Should point to `https://fluxocerto.app/auth/confirm?...` (NOT localhost!)
-- **Link**: Should work and complete authentication
+- **Link**: Expect a Supabase verification URL like `https://<project>.supabase.co/auth/v1/verify?...&redirect_to=https://fluxocerto.app/auth/confirm` (NOT localhost!)
+- **Link**: Should work and complete authentication (the app callback is `/auth/confirm`)
+
+> Note: Resend may warn “Link URLs match sending domain” because the verification link is on `*.supabase.co`.
+> The clean fix is to configure a **Supabase custom domain** for Auth (so the verify URL uses your domain).
 
 ### 5.3 Verify Local Development Unchanged
 
@@ -139,7 +142,7 @@ The Site URL determines the base URL used in Magic Link emails. **If this is wro
 - [ ] Supabase SMTP configured with Resend credentials
 - [ ] Production Magic Link emails delivered successfully
 - [ ] Magic Link URL in email points to `https://fluxocerto.app` (NOT localhost!)
-- [ ] Sender shows `noreply@fluxocerto.app`
+- [ ] Sender shows `suporte@fluxocerto.app` (not `no-reply`)
 - [ ] Repository contains no secrets
 - [ ] Local development still uses Inbucket
 
