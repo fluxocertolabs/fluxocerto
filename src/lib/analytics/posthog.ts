@@ -134,10 +134,24 @@ export function captureEvent(event: string, properties?: Record<string, unknown>
   posthog.capture(event, properties ? sanitizeProperties(properties) : undefined)
 }
 
-export function identifyUser(userId: string): void {
+/**
+ * Identify the current user for PostHog and optionally set non-PII person properties.
+ *
+ * Note: We intentionally sanitize properties to avoid accidentally storing PII in PostHog.
+ * Prefer boolean/enum/cohort-style properties (e.g., `is_first_login`) over identifiers.
+ */
+export function identifyUser(
+  userId: string,
+  properties?: Record<string, unknown>,
+  propertiesOnce?: Record<string, unknown>,
+): void {
   if (isPosthogDisabled()) return
   if (!userId) return
-  posthog.identify(userId)
+  const nextProps = properties ? sanitizeProperties(properties) : undefined
+  const nextPropsOnce = propertiesOnce ? sanitizeProperties(propertiesOnce) : undefined
+  // posthog-js supports passing person properties in identify()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(posthog as any).identify(userId, nextProps, nextPropsOnce)
 }
 
 export function setGroup(groupId: string): void {

@@ -87,18 +87,42 @@ export class InbucketClient {
    * List all messages for a specific email address, sorted by date descending
    */
   async listMessages(mailbox: string): Promise<InbucketMessageHeader[]> {
-    // Mailpit uses a different API - search by recipient
-    const response = await fetch(`${this.baseUrl}/api/v1/messages`);
-    if (!response.ok) {
-      throw new Error(`Failed to list messages: ${response.statusText}`);
+    // Mailpit doesn't have per-mailbox listing. We page through messages and filter by recipient.
+    // IMPORTANT: Do not assume any particular sort order from the API response.
+    const limit = 200;
+    const maxPages = 5; // scan up to ~1000 messages for stability in busy suites
+    const mailboxLower = mailbox.toLowerCase();
+
+    const matchesRecipient = (msg: MailpitMessageSummary): boolean => {
+      return msg.To.some((to) => {
+        const addr = to.Address?.toLowerCase?.() ?? '';
+        if (!addr) return false;
+        // If caller passed full email, match exactly.
+        if (mailbox.includes('@')) {
+          return addr === mailboxLower;
+        }
+        // Otherwise match by local-part (before @) so TEST_USER_EMAIL can use any domain.
+        const local = addr.split('@')[0] ?? '';
+        return local === mailboxLower;
+      });
+    };
+
+    const filteredMessages: MailpitMessageSummary[] = [];
+    for (let page = 0; page < maxPages; page++) {
+      const start = page * limit;
+      const url = new URL(`${this.baseUrl}/api/v1/messages`);
+      url.searchParams.set('limit', String(limit));
+      url.searchParams.set('start', String(start));
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error(`Failed to list messages: ${response.statusText}`);
+      }
+      const data: MailpitMessagesResponse = await response.json();
+      if (!data?.messages?.length) break;
+      filteredMessages.push(...data.messages.filter(matchesRecipient));
+      // If we got fewer than `limit`, we've reached the end.
+      if (data.messages.length < limit) break;
     }
-    const data: MailpitMessagesResponse = await response.json();
-    
-    // Filter messages by recipient email (mailbox is the email prefix or full email)
-    const targetEmail = mailbox.includes('@') ? mailbox : `${mailbox}@example.com`;
-    const filteredMessages = data.messages.filter((msg) =>
-      msg.To.some((to) => to.Address.toLowerCase() === targetEmail.toLowerCase())
-    );
 
     // Convert to backwards-compatible format
     return filteredMessages
@@ -195,8 +219,11 @@ export class InbucketClient {
   extractMagicLink(message: InbucketMessage): string | null {
     // Try HTML body first, then text body
     const content = message.body.html || message.body.text;
-    // Match Supabase magic link URL pattern
-    const urlMatch = content.match(/https?:\/\/[^\s"'<>]+token=[^\s"'<>]+/);
+    // Match Supabase magic link URL patterns:
+    // - older: token=...
+    // - newer: token_hash=... (+ type=...)
+    // - fallback: code=...
+    const urlMatch = content.match(/https?:\/\/[^\s"'<>]+(?:token_hash|token|code)=[^\s"'<>]+/);
     if (!urlMatch) {
       return null;
     }

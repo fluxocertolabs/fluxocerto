@@ -127,7 +127,7 @@ test.describe('Authentication Flow', () => {
     expect(magicLink).not.toBeNull();
 
     // Click magic link - should complete auth and redirect to dashboard
-    await page.goto(magicLink!);
+    await page.goto(normalizeSupabaseMagicLink(magicLink!));
 
     // Verify redirected to dashboard (self-serve user is provisioned automatically)
     await expect(page).toHaveURL(/\/(dashboard)?$/, { timeout: 15000 });
@@ -159,7 +159,7 @@ test.describe('Authentication Flow', () => {
         magicLink = inbucket.extractMagicLink(message);
       }
       return magicLink;
-    }, { timeout: 10000, intervals: [500, 500, 1000, 1000, 1000] }).not.toBeNull();
+    }, { timeout: 20000, intervals: [500, 500, 1000, 1000, 2000, 2000, 2000] }).not.toBeNull();
 
     expect(magicLink).not.toBeNull();
 

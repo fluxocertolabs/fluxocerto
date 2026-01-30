@@ -5,6 +5,31 @@ import type { AuthState } from '@/types/auth'
 import { captureEvent, identifyUser, resetAnalytics } from '@/lib/analytics/posthog'
 import { setSentryUser } from '@/lib/observability/sentry'
 
+function safeParseDateMs(value: unknown): number | null {
+  if (typeof value !== 'string' || !value) return null
+  const ms = new Date(value).getTime()
+  return Number.isFinite(ms) ? ms : null
+}
+
+function getAuthAnalyticsProps(user: User): { isFirstLogin: boolean | null; accountAgeDays: number | null } {
+  // Supabase User has created_at and last_sign_in_at as ISO strings (may be null/undefined depending on provider).
+  const createdMs = safeParseDateMs((user as unknown as { created_at?: string }).created_at)
+  const lastSignInMs = safeParseDateMs((user as unknown as { last_sign_in_at?: string | null }).last_sign_in_at)
+
+  let isFirstLogin: boolean | null = null
+  if (createdMs !== null && lastSignInMs !== null) {
+    // Heuristic: first login typically has created_at ~= last_sign_in_at.
+    // Use a small tolerance to account for server timestamps.
+    isFirstLogin = Math.abs(lastSignInMs - createdMs) <= 5 * 60 * 1000
+  }
+
+  const now = Date.now()
+  const accountAgeDays =
+    createdMs !== null && createdMs <= now ? Math.floor((now - createdMs) / (24 * 60 * 60 * 1000)) : null
+
+  return { isFirstLogin, accountAgeDays }
+}
+
 /**
  * Hook for managing authentication state.
  * Subscribes to auth state changes and provides current user info.
@@ -73,8 +98,21 @@ export function useAuth(): AuthState {
     const previousUserId = lastUserIdRef.current
 
     if (currentUserId && currentUserId !== previousUserId) {
-      identifyUser(currentUserId)
-      captureEvent('login_succeeded')
+      const { isFirstLogin, accountAgeDays } = user ? getAuthAnalyticsProps(user) : { isFirstLogin: null, accountAgeDays: null }
+      identifyUser(
+        currentUserId,
+        {
+          is_first_login: isFirstLogin,
+        },
+        {
+          // "Once" properties are useful for cohorting and won't flap on subsequent logins.
+          supabase_account_age_days_at_first_seen: accountAgeDays,
+        }
+      )
+      captureEvent('login_succeeded', {
+        is_first_login: isFirstLogin,
+        supabase_account_age_days: accountAgeDays,
+      })
       setSentryUser({ id: currentUserId })
     }
 
@@ -84,7 +122,7 @@ export function useAuth(): AuthState {
     }
 
     lastUserIdRef.current = currentUserId
-  }, [user?.id])
+  }, [user])
 
   return {
     user,
