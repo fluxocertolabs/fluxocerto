@@ -76,6 +76,7 @@ export function OnboardingWizard() {
     nextStep,
     previousStep,
     complete,
+    dismiss,
     closeWizard,
     accounts,
     isFinanceLoading,
@@ -171,6 +172,15 @@ export function OnboardingWizard() {
     }
   }, [currentStep, complete, nextStep])
 
+  const handleDismiss = useCallback(async () => {
+    captureEvent('onboarding_dismissed', {
+      step: currentStep,
+      entrypoint: openReason ?? 'auto',
+      reason: 'skip_button',
+    })
+    await dismiss()
+  }, [currentStep, dismiss, openReason])
+
   const handleBack = useCallback(async () => {
     await previousStep()
   }, [previousStep])
@@ -205,6 +215,15 @@ export function OnboardingWizard() {
                 <span className="text-sm text-muted-foreground">
                   Passo {stepNumber} de {totalSteps}
                 </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => void handleDismiss()}
+                >
+                  Pular por agora
+                </Button>
               </div>
               <Progress value={progress} className="h-2 mb-4" />
               <DialogTitle>{stepConfig.title}</DialogTitle>

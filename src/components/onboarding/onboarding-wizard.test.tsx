@@ -16,6 +16,7 @@ const mockOnboardingState = {
   nextStep: vi.fn(async () => {}),
   previousStep: vi.fn(async () => {}),
   complete: vi.fn(async () => {}),
+  dismiss: vi.fn(async () => {}),
   closeWizard: vi.fn(),
   accounts: [],
   isFinanceLoading: false,
