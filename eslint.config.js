@@ -55,7 +55,7 @@ export default tseslint.config(
     rules: {
       // Disallow flaky Playwright patterns that cause test instability
       // NOTE: Set to 'warn' to surface issues without blocking CI. Upgrade to 'error' once
-      // all existing violations are fixed. See docs/reference/KNOWLEDGE_BASE.md for patterns.
+      // all existing violations are fixed. See e2e/** tests + fixtures for the repo conventions.
       'no-restricted-syntax': [
         'warn',
         {
